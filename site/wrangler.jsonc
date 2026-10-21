@@ -11,5 +11,8 @@
     "not_found_handling": "404-page"
   },
   "r2_buckets": [{ "binding": "RELEASES", "bucket_name": "pktito-releases" }],
+  // the download counts: `npx wrangler@4 d1 create pktito-stats` gives the id
+  "d1_databases": [{ "binding": "STATS", "database_name": "pktito-stats",
+    "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "migrations" }],
   "routes": [{ "pattern": "pktito.net", "custom_domain": true }]
 }

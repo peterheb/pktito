@@ -18,7 +18,8 @@ APP = SITE.parent
 ARTIFACT = "--artifact" in sys.argv
 OUT = pathlib.Path(sys.argv[sys.argv.index("--artifact") + 1]) if ARTIFACT else SITE / "public"
 OUT.mkdir(parents=True, exist_ok=True)
-GITHUB = "https://github.com/peterheb/pktito"
+GITHUB = "https://github.com/peterheb/pktito-app"  # the app, and this site
+LIBRARY = "https://github.com/peterheb/pktito"     # the C library under it
 e = html.escape
 
 
@@ -113,7 +114,7 @@ def footer():
     return f"""<footer class="site-foot">
   <div class="wrap">
     <a class="pk-wordmark" href="{page("")}" aria-label="pktito, home">pktito</a>
-    <p class="legal">MIT. The models are NVIDIA's Parakeet-TDT, under CC-BY-4.0; pktito is not affiliated with NVIDIA. This site sets no cookies and runs no analytics.</p>
+    <p class="legal">MIT. The models are NVIDIA's Parakeet-TDT, under CC-BY-4.0; pktito is not affiliated with NVIDIA. This site sets no cookies, and counts installer downloads and nothing else.</p>
   </div>
 </footer>"""
 
@@ -265,7 +266,7 @@ home = f"""<main>
   <div>
     <h2>Open source</h2>
     <p>MIT licensed. The engine is a C11 library for anything with a C compiler, a Raspberry Pi included.</p>
-    <p>{arrow("github.com/peterheb/pktito", GITHUB)}</p>
+    <p>{arrow("github.com/peterheb/pktito", LIBRARY)}</p>
   </div>
 </section>
 </main>"""
@@ -378,12 +379,12 @@ write("models", "pktito models",
 about = f"""<main class="wrap">
 <section class="page-head">
   <h1 class="display">About</h1>
-  <p class="measure">pktito is a C11 port of NVIDIA's Parakeet-TDT speech recognizers: an app for macOS, Windows and Linux, and a library for anything with a C compiler. It is MIT licensed, and its source is on {arrow("GitHub", GITHUB)}</p>
+  <p class="measure">pktito is a C11 port of NVIDIA's Parakeet-TDT speech recognizers: an app for macOS, Windows and Linux, and a library for anything with a C compiler. Both are MIT licensed, on GitHub: {arrow("the app", GITHUB)} and {arrow("the library", LIBRARY)}</p>
 </section>
 
 <section class="part">
   <h2 class="lead">Privacy</h2>
-  <p class="measure">The app sends nothing anywhere. It downloads the model you choose from models.pktito.net, once; there is no account and no telemetry. This site sets no cookies and runs no analytics.</p>
+  <p class="measure">The app sends nothing anywhere. It downloads the model you choose from models.pktito.net, once; there is no account and no telemetry. This site sets no cookies. It counts how many times each installer is downloaded, a day at a time, and keeps nothing else: no addresses, nothing that tells one visitor from another.</p>
 </section>
 
 <section class="part">
@@ -412,6 +413,18 @@ if not ARTIFACT:
 <section class="page-head">
   <h1 class="display">Not here.</h1>
   <p class="measure">Nothing lives at this address. {arrow("pktito.net", page(""))}</p>
+</section>
+</main>""")
+
+# ------------------------------------------------------------------ soon --
+# where /download/<system> goes while no release names a file for it
+if not ARTIFACT:
+    write("soon", "pktito: coming soon",
+          "The first release of the pktito app is on its way.",
+          f"""<main class="wrap">
+<section class="page-head">
+  <h1 class="display">Coming soon.</h1>
+  <p class="measure">The first release is on its way. {arrow("The source is on GitHub", GITHUB)}</p>
 </section>
 </main>""")
 

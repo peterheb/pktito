@@ -73,9 +73,11 @@ computer can be used instead.
 Each file lives under the first twelve digits of its SHA-256, as
 `https://models.pktito.net/8bfa6750b83c/parakeet-tdt-0.6b-v2.pkf`, so an
 address never serves two different files and a CDN can keep each one
-forever. `scripts/models-tree.sh` lays converted models out that way, for
-uploading or for a local server; `PKTITO_MODEL_BASE` points the download at
-another server, such as a mirror or that local one:
+forever. models.pktito.net is a bunny.net pull zone, and
+`scripts/models-upload.sh` puts converted models in its storage that way
+(site/README.md). `scripts/models-tree.sh` lays them out the same way for a
+local server, and `PKTITO_MODEL_BASE` points the download at another
+server, such as a mirror or that local one:
 
 ```sh
 scripts/models-tree.sh ../pktito/models/*.pkf /tmp/models
