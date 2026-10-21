@@ -253,9 +253,9 @@ async fn use_model_file(app: AppHandle, state: State<'_, AppState>) -> Result<bo
 }
 
 /// Of these paths, the files that are there: the window queues no others.
-/// The Open dialog takes a typed name of nothing when it takes several
-/// files (rfd 0.16 sets only FOS_ALLOWMULTISELECT, dropping
-/// FOS_FILEMUSTEXIST), and a drop or the command line can name one too.
+/// A drop or the command line can name one that is not; Windows' Open
+/// dialog refuses a typed name of nothing itself (the Windows test,
+/// 2026-10-21), though rfd 0.16 sets only FOS_ALLOWMULTISELECT.
 #[tauri::command]
 fn existing(paths: Vec<String>) -> Vec<String> {
     paths.into_iter().filter(|p| Path::new(p).is_file()).collect()

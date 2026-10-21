@@ -168,6 +168,7 @@ ul { list-style: none; padding: 0; }
 .pk-wave i.head { background: var(--beak); }
 .pk-wave.is-idle i { background: var(--term-line); }
 .pk-wave.is-idle i.head { background: var(--beak); }
+.pk-wave.is-off { opacity: .45; }
 .pk-wavebtn { flex: 1; min-width: 0; border: 0; padding: 0; background: none; display: block; border-radius: 2px; }
 .pk-wavebtn:not([disabled]) { cursor: pointer; }
 .pk-play { flex: none; width: 40px; height: 40px; border-radius: var(--radius-ui); border: 0; display: grid; place-items: center; cursor: pointer;

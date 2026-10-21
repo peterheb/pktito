@@ -28,6 +28,11 @@ pub enum DecodeError {
 }
 
 const UNREADABLE: &str = "Can't read this file";
+/// What ffmpeg, which reads nearly every format there is, cannot open as
+/// media at all. The OS's media libraries say nothing so clear: Windows'
+/// MF_E_UNSUPPORTED_BYTESTREAM_TYPE is also an Ogg file it has no reader
+/// for, which ffmpeg reads.
+const NOT_MEDIA: &str = "Not audio or video";
 
 impl DecodeError {
     /// What happened, in a few words.
@@ -190,8 +195,15 @@ fn decode_ffmpeg(ffmpeg: &Path, path: &Path) -> Result<Vec<f32>, DecodeError> {
         if stderr.contains("matches no streams") || stderr.contains("does not contain any stream") {
             return Err(DecodeError::NoAudio);
         }
-        // ffmpeg's last line is the one that says why
+        // ffmpeg's last line is the one that says why. Of a text file named
+        // .mp3, ffmpeg 7 says "Error opening input files: Invalid data found
+        // when processing input" (the Mac), and the Windows test's
+        // "C:\pktito-test\fake.mp3: Invalid argument".
         let why = stderr.lines().last().unwrap_or("ffmpeg could not read it").trim().trim_end_matches('.');
+        let opening = stderr.contains("Error opening input") || why.starts_with(&format!("{}: ", path.display()));
+        if opening && (why.contains("Invalid data") || why.ends_with("Invalid argument")) {
+            return Err(DecodeError::Unreadable(NOT_MEDIA, String::new()));
+        }
         return Err(DecodeError::Unreadable(UNREADABLE, why.into()));
     }
     read.unwrap_or_else(|| Err(DecodeError::Unreadable(UNREADABLE, "ffmpeg did not hand over what was asked of it".into())))

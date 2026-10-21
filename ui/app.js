@@ -756,6 +756,8 @@ function buildMain(f, mode, key) {
     $("wavebtn").removeAttribute("aria-label");
   }
   $("wavebtn").disabled = !review || !playable(f);
+  // a transcript whose audio is gone: its waveform dims with the play button
+  wave.classList.toggle("is-off", review && !playable(f));
   renderTranscript(f, mode);
   tr.scrollTop = top;
   drawMainWave();
@@ -776,8 +778,9 @@ function updateHead(f, mode) {
   $("save-as").hidden = !review;
   $("save-as").innerHTML = `Save as${ICON.down}`;
   $("save-as").disabled = !has;
-  // not for a file gone from its place: added again from where it is now, it is a new row
-  $("again").hidden = !(f.step === "stopped" || (f.step === "error" && f.message !== "Not found"));
+  // not for a file gone from its place (added again from where it is now,
+  // it is a new row) or one that is not media: neither can go better
+  $("again").hidden = !(f.step === "stopped" || (f.step === "error" && !["Not found", "Not audio or video"].includes(f.message)));
   $("again").title = f.step === "stopped" ? `Stopped at ${percent(f.done)}%` : "";
   $("stop").hidden = mode !== "running";
 }
@@ -1019,6 +1022,7 @@ player.addEventListener("error", () => {
   if (current() !== f) return;
   setPlayIcon();
   $("wavebtn").disabled = true;
+  $("wave").classList.add("is-off");
 });
 
 function tick() {
