@@ -36,7 +36,7 @@ pub const CATALOG: &[Entry] = &[
     Entry {
         name: "parakeet-tdt-0.6b-v2",
         label: "English",
-        about: "English only, with punctuation and capitals.",
+        about: "English only",
         languages: &["en"],
         bytes: 624_480_196,
         sha256: "8bfa6750b83cd7c447bad82057c7a12473563b72b3d35487fcca6da0786d83c7",
@@ -44,7 +44,7 @@ pub const CATALOG: &[Entry] = &[
     Entry {
         name: "parakeet-tdt-0.6b-v3",
         label: "Multilingual",
-        about: "25 European languages, English included. It detects the language on its own.",
+        about: "25 European languages",
         languages: &[
             "bg", "cs", "da", "de", "el", "en", "es", "et", "fi", "fr", "hr", "hu", "it", "lt", "lv", "mt", "nl", "pl",
             "pt", "ro", "ru", "sk", "sl", "sv", "uk",
@@ -152,9 +152,9 @@ pub enum Stop {
     /// The network or the server, for now: worth trying again by itself.
     /// What happened, in a line, and the request it happened to.
     Net { why: String, detail: String },
-    /// What trying again will not mend by itself: what happened, what to
-    /// do about it, and the particulars.
-    Hard { why: String, text: String, detail: String },
+    /// What trying again will not mend by itself: what happened, in a few
+    /// words, and the particulars.
+    Hard { why: String, detail: String },
 }
 
 /// Download e into dir, from where a download that stopped left off,
@@ -190,8 +190,7 @@ pub fn download(e: &Entry, dir: &Path, ctl: &Ctl, mut progress: impl FnMut(u64, 
     if digest != e.sha256 {
         let _ = fs::remove_file(&part);
         return Err(Stop::Hard {
-            why: "The download did not match the published file".into(),
-            text: "It has been deleted. Try again to download it from the start.".into(),
+            why: "Didn't match its checksum".into(),
             detail: format!("SHA-256 {digest}\nexpected {}", e.sha256),
         });
     }
@@ -232,13 +231,9 @@ fn fetch(
         Err(ureq::Error::Status(code, r)) => {
             let what = format!("{code} {}", r.status_text());
             return Err(if code >= 500 || code == 429 {
-                Stop::Net { why: format!("{host} is not answering as it should"), detail: request(&what) }
+                Stop::Net { why: format!("{host} isn't answering"), detail: request(&what) }
             } else {
-                Stop::Hard {
-                    why: format!("{host} does not have this model"),
-                    text: "It answered that the file is not there. A newer pktito may know where it is, or use a model file you already have.".into(),
-                    detail: request(&what),
-                }
+                Stop::Hard { why: "Model not found".into(), detail: request(&what) }
             });
         }
         Err(ureq::Error::Transport(t)) => {
@@ -275,7 +270,7 @@ fn fetch(
             Ok(k) => k,
             Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
             Err(err) => {
-                return Err(Stop::Net { why: format!("The connection to {host} was lost"), detail: request(&err.to_string()) })
+                return Err(Stop::Net { why: "Connection lost".into(), detail: request(&err.to_string()) })
             }
         };
         if k == 0 {
@@ -285,8 +280,7 @@ fn fetch(
             // a server that sends more than the file would fill the disk
             file.set_len(0).map_err(|err| written(part, err))?;
             return Err(Stop::Hard {
-                why: format!("{host} sent more than the published file"),
-                text: "What it sent has been deleted. Try again later, or use a model file you already have.".into(),
+                why: format!("{host} sent too much"),
                 detail: request(&format!("more than {} bytes", e.bytes)),
             });
         }
@@ -296,7 +290,7 @@ fn fetch(
     }
     if got < e.bytes {
         return Err(Stop::Net {
-            why: format!("The connection to {host} was lost"),
+            why: "Connection lost".into(),
             detail: request(&format!("it ended at {got} of {} bytes", e.bytes)),
         });
     }
@@ -304,11 +298,7 @@ fn fetch(
 }
 
 fn sha256(file: &mut File, ctl: &Ctl) -> Result<String, Stop> {
-    let read_err = |err: io::Error| Stop::Hard {
-        why: "The download could not be read back to check it".into(),
-        text: "Try again.".into(),
-        detail: err.to_string(),
-    };
+    let read_err = |err: io::Error| Stop::Hard { why: "Couldn't check the download".into(), detail: err.to_string() };
     file.seek(SeekFrom::Start(0)).map_err(read_err)?;
     let mut hash = Sha256::new();
     let mut buf = vec![0u8; 1 << 20];
@@ -329,12 +319,8 @@ fn sha256(file: &mut File, ctl: &Ctl) -> Result<String, Stop> {
 fn written(path: &Path, err: io::Error) -> Stop {
     let detail = format!("{err}\n{}", path.display());
     if err.kind() == io::ErrorKind::StorageFull {
-        Stop::Hard {
-            why: "There is no room on this computer for the model".into(),
-            text: "Make room on the disk, then try again; what has downloaded is kept.".into(),
-            detail,
-        }
+        Stop::Hard { why: "Not enough disk space".into(), detail }
     } else {
-        Stop::Hard { why: "The model could not be saved on this computer".into(), text: "Try again.".into(), detail }
+        Stop::Hard { why: "Couldn't save the model".into(), detail }
     }
 }

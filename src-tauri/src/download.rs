@@ -22,9 +22,8 @@ pub struct State {
     /// Bytes a second over the last few seconds; 0 until known.
     pub speed: f64,
     pub host: String,
-    /// A failure: what happened, what to do, and the particulars.
+    /// A failure: what happened, in a few words, and the particulars.
     pub why: String,
-    pub text: String,
     pub detail: String,
     /// A failure it is trying again after, by itself.
     pub retry: bool,
@@ -54,7 +53,6 @@ impl Job {
                 speed: 0.0,
                 host: model::host(&model::download_url(e)).into(),
                 why: String::new(),
-                text: String::new(),
                 detail: String::new(),
                 retry: false,
                 trying: false,
@@ -159,11 +157,11 @@ impl Job {
                     self.set(|s| s.step = "cancelled");
                     return None;
                 }
-                Err(Stop::Hard { why, text, detail }) => {
+                Err(Stop::Hard { why, detail }) => {
                     let got = model::partial(dir, e);
                     self.set(|s| {
                         (s.step, s.got, s.speed, s.retry, s.trying) = ("failed", got, 0.0, false, false);
-                        (s.why, s.text, s.detail) = (why, text, detail);
+                        (s.why, s.detail) = (why, detail);
                     });
                     return None;
                 }
@@ -175,7 +173,7 @@ impl Job {
                     }
                     self.set(|s| {
                         (s.step, s.got, s.speed, s.retry, s.trying) = ("failed", got, 0.0, true, false);
-                        (s.why, s.text, s.detail) = (why, String::new(), detail);
+                        (s.why, s.detail) = (why, detail);
                     });
                     tell(&self.state());
                     let until = Instant::now() + wait;

@@ -80,13 +80,6 @@ function when(t) {
   if (d.getFullYear() !== now.getFullYear()) o.year = "numeric";
   return d.toLocaleDateString(undefined, o);
 }
-function langName(tag) {
-  try {
-    return new Intl.DisplayNames([tag], { type: "language", languageDisplay: "standard" }).of(tag) || tag;
-  } catch {
-    return tag;
-  }
-}
 const baseName = (p) => p.split(/[\\/]/).pop();
 const stemOf = (p) => baseName(p).replace(/\.[^.]+$/, "");
 const extOf = (p) => (baseName(p).match(/\.([^.]+)$/) || ["", ""])[1].toLowerCase();
@@ -156,7 +149,7 @@ async function startDownload(m) {
   } catch (e) {
     dl = null;
     render();
-    toast(String(e), { err: true });
+    toastErr(e);
   }
 }
 
@@ -166,7 +159,7 @@ async function useOwnFile() {
     if (dl) await invoke("cancel_download");
     await refresh();
   } catch (e) {
-    toast(String(e), { err: true });
+    toastErr(e);
   }
 }
 
@@ -195,9 +188,9 @@ function modelMenu(anchor, keys) {
       try {
         await invoke("choose_model", { name: entry.name });
         await refresh();
-        toast(`The ${entry.label} model transcribes the next files`);
+        toast(`Using the ${entry.label} model`);
       } catch (err) {
-        toast(String(err), { err: true });
+        toastErr(err);
       }
     };
   });
@@ -226,35 +219,29 @@ function renderSetup() {
     return updateChoose();
   }
   body.innerHTML = mode === "failed" ? failedHtml() : downloadHtml();
-  $("dl-cancel").onclick = () => invoke("cancel_download").catch((e) => toast(String(e), { err: true }));
+  $("dl-cancel").onclick = () => invoke("cancel_download").catch((e) => toastErr(e));
   if (mode === "failed") {
-    $("dl-retry").onclick = () => invoke("download_model", { name: dl.name }).catch((e) => toast(String(e), { err: true }));
+    $("dl-retry").onclick = () => invoke("download_model", { name: dl.name }).catch((e) => toastErr(e));
     $("dl-file").onclick = useOwnFile;
   } else {
     $("dl-pause").onclick = () => (dl.step === "paused" ? invoke("download_model", { name: dl.name }) : invoke("pause_download"))
-      .catch((e) => toast(String(e), { err: true }));
+      .catch((e) => toastErr(e));
   }
   updateDownload();
 }
 
+/* The model that speaks the system's language is picked to begin with:
+   the cards and the button say the rest. */
 function chooseHtml() {
-  const tag = navigator.language || "en", base = tag.slice(0, 2).toLowerCase(), name = langName(tag);
+  const base = (navigator.language || "en").slice(0, 2).toLowerCase();
   const fits = st.catalog.find((m) => m.languages.includes(base));
   if (!st.catalog.some((m) => m.name === choice)) choice = (inUse() || fits || st.catalog[0]).name;
-  const [first, wide] = [st.catalog[0], st.catalog[st.catalog.length - 1]];
-  const intro = fits
-    ? "pktito needs one model on this computer to transcribe. We picked the one that fits your system language."
-    : `Neither model transcribes ${name} yet. ${first.label} is selected; ${wide.label} covers ${wide.languages.length} European languages.`;
-  const cards = st.catalog.map((m) => {
-    const match = fits && fits.name === m.name
-      ? `<span class="pk-match">${ICON.check}${m.languages.length === 1 ? "Matches" : "Covers"} your system language, ${esc(name)}</span>`
-      : "";
-    return `<label class="pk-choice"><input type="radio" name="model" value="${m.name}"${m.name === choice ? " checked" : ""}>` +
-      `<span class="pk-name">${esc(m.label)}</span><span class="pk-stamp">${m.have ? "on this computer" : `${mb(m.bytes)} MB`}</span>` +
-      `<span class="pk-desc">${esc(m.name)} · ${esc(m.about)}</span>${match}</label>`;
-  }).join("");
+  const cards = st.catalog.map((m) =>
+    `<label class="pk-choice"><input type="radio" name="model" value="${m.name}"${m.name === choice ? " checked" : ""}>` +
+    `<span class="pk-name">${esc(m.label)}</span><span class="pk-stamp">${m.have ? "on this computer" : `${mb(m.bytes)} MB`}</span>` +
+    `<span class="pk-desc">${esc(m.name)} · ${esc(m.about)}</span></label>`).join("");
   return `<span class="pk-wm">pktito</span>
-    <div class="pk-intro"><h1 class="pk-lead">Choose a speech model</h1><p class="pk-text">${esc(intro)}</p></div>
+    <div class="pk-intro"><h1 class="pk-lead">Choose a speech model</h1></div>
     <fieldset class="pk-choices"><legend>Speech model</legend>${cards}</fieldset>
     <div class="pk-foot-col">
       <button class="pk-btn pk-btn-primary pk-btn-lg pk-wide" id="go" type="button"></button>
@@ -273,7 +260,7 @@ function updateChoose() {
     : `Download the ${m.label} model · ${mb(m.bytes)} MB`;
   $("go").innerHTML = `${m.have ? ICON.check : ICON.download}${esc(go)}`;
   const w = waiting();
-  $("go-note").textContent = w ? `Downloads once, then your ${plural(w, "file")} start.` : "Downloads once. Then pktito works offline.";
+  $("go-note").textContent = w ? `${plural(w, "file")} waiting` : "";
 }
 
 async function go() {
@@ -283,7 +270,7 @@ async function go() {
     await invoke("choose_model", { name: m.name });
     await refresh();
   } catch (e) {
-    toast(String(e), { err: true });
+    toastErr(e);
   }
 }
 
@@ -296,11 +283,6 @@ function downloadHtml() {
       <div class="pk-spread"><span class="pk-figure" id="dl-pct"></span><span class="pk-stamp" id="dl-nums"></span></div>
       <div class="pk-bar" id="dl-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Model download"><i></i></div>
     </div>
-    <ul class="pk-ticks pk-text">
-      <li>${ICON.check}It downloads once. After that pktito works offline.</li>
-      <li>${ICON.check}If the connection drops, it picks up where it stopped.</li>
-      <li>${ICON.check}The file is checked against its published checksum before first use.</li>
-    </ul>
     <div class="pk-foot-row">
       <button class="pk-btn" id="dl-pause" type="button"></button>
       <button class="pk-btn pk-btn-ghost" id="dl-cancel" type="button">Cancel</button>
@@ -308,21 +290,21 @@ function downloadHtml() {
     </div>`;
 }
 
+/* What stopped it in a few words, what it has kept, and the particulars
+   folded away */
 function failedHtml() {
-  const kept = dl.got ? ` The ${mb(dl.got)} MB already downloaded is kept, so the download picks up from there.` : "";
-  const text = dl.retry ? `Check the connection, then try again.${kept}` : dl.text;
-  const stopped = dl.got ? `Stopped at ${mb(dl.got)} of ${mb(dl.total)} MB` : "Nothing has downloaded yet";
+  const stopped = dl.got ? `Stopped at ${mb(dl.got)} of ${mb(dl.total)} MB` : "Nothing downloaded yet";
   return `<span class="pk-wm">pktito</span>
-    <div class="pk-intro"><h1 class="pk-lead">${esc(dl.why)}</h1><p class="pk-text">${esc(text)}</p></div>
+    <div class="pk-intro"><h1 class="pk-lead">${esc(dl.why)}</h1></div>
     <div class="pk-stopped">
       <div class="pk-bar is-paused" id="dl-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Model download, stopped"><i></i></div>
       <div class="pk-spread"><span class="pk-small pk-err">${ICON.alert}${stopped}</span>
         ${dl.retry ? `<span class="pk-small" id="dl-auto"></span>` : ""}</div>
     </div>
-    <details class="pk-details" open><summary class="pk-ui">${ICON.down}Details</summary><p class="pk-stamp">${esc(dl.detail)}</p></details>
+    <details class="pk-details"><summary class="pk-ui">${ICON.down}Details</summary><p class="pk-stamp">${esc(dl.detail)}</p></details>
     <div class="pk-foot-row">
       <button class="pk-btn pk-btn-primary pk-btn-lg" id="dl-retry" type="button">Try again</button>
-      <button class="pk-btn pk-btn-lg" id="dl-file" type="button">Use a model file I already have…</button>
+      <button class="pk-btn pk-btn-lg" id="dl-file" type="button">Use a model file…</button>
       <button class="pk-btn pk-btn-ghost pk-btn-lg" id="dl-cancel" type="button">Cancel</button>
     </div>`;
 }
@@ -336,14 +318,14 @@ function updateDownload() {
   bar.classList.toggle("is-paused", mode !== "downloading");
   if (mode === "failed") {
     $("dl-retry").disabled = dl.trying;
-    $("dl-retry").textContent = dl.trying ? "Trying again…" : "Try again";
-    if ($("dl-auto")) $("dl-auto").textContent = dl.trying ? "Trying again now" : "Tries again by itself when the network returns";
+    $("dl-retry").textContent = dl.trying ? "Trying…" : "Try again";
+    if ($("dl-auto")) $("dl-auto").textContent = dl.trying ? "" : "Retries by itself";
     return;
   }
   $("dl-host").textContent = dl.host || "models.pktito.net";
   $("dl-pct").textContent = `${percent(dl.step === "checking" ? 1 : p)}%`;
   let nums = `${mb(dl.got)} of ${mb(dl.total)} MB`;
-  if (dl.step === "checking") nums = "Checking it against its published checksum";
+  if (dl.step === "checking") nums = "Checking";
   else if (dl.step === "paused") nums += " · paused";
   else if (dl.speed > 0) nums += ` · ${(dl.speed / 1e6).toFixed(1)} MB/s · ${timeLeft((dl.total - dl.got) / dl.speed)}`;
   $("dl-nums").textContent = nums;
@@ -352,7 +334,7 @@ function updateDownload() {
   pause.classList.toggle("pk-btn-primary", dl.step === "paused");
   pause.disabled = dl.step === "checking";
   const w = waiting();
-  $("dl-next").textContent = w ? `Next: your ${plural(w, "file")}.` : "";
+  $("dl-next").textContent = w ? `${plural(w, "file")} waiting` : "";
 }
 
 listen("download", async (e) => {
@@ -362,7 +344,7 @@ listen("download", async (e) => {
     setupKey = "";
     await refresh();
     const m = st.catalog.find((x) => x.name === s.name);
-    if (s.step === "done") toast(`The ${m ? m.label : s.name} model is ready`);
+    if (s.step === "done") toast(`${m ? m.label : s.name} model ready`);
     return;
   }
   dl = s;
@@ -413,21 +395,21 @@ async function openRecent(id) {
     render();
     if (!f.audio) reloadAudio(f);
   } catch (e) {
-    toast(String(e), { err: true });
+    toastErr(e);
   }
 }
 
 /* The cache let its audio go: read it again from the original, if it is
-   there. Until then, or if it cannot be, the play button says why. */
+   there. Until then, or if it cannot be, the play button says why, and
+   the transcript reads as ever. */
 async function reloadAudio(f) {
-  f.audioWhy = "Reading its audio again…";
+  f.audioWhy = "Reading the audio…";
   if (current() === f) setPlayIcon();
   try {
     f.audio = await invoke("reload_audio", { id: f.recentId });
     f.audioWhy = "";
   } catch (e) {
     f.audioWhy = String(e);
-    if (current() === f) toast(f.audioWhy, { err: true });
   }
   if (current() === f) {
     mainKey = "";
@@ -450,7 +432,7 @@ $("clear-recent").onclick = async () => {
       render();
     }
   } catch (e) {
-    toast(String(e), { err: true });
+    toastErr(e);
   }
 };
 $("choose").onclick = () => chooseFiles();
@@ -460,29 +442,33 @@ $("ready-model").onclick = (e) => modelMenu(e.currentTarget, !e.detail);
 
 function newFile(path) {
   return { id: nextId++, path, name: baseName(path), kind: kindOf(path), step: "waiting", done: 0, eta: -1, duration: null,
-    peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], took: 0, model: "", recentId: null, message: "" };
+    peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], took: 0, model: "", recentId: null, message: "", detail: "" };
 }
 
 async function chooseFiles() {
   if (!st) return;
   try {
-    addPaths(await invoke("pick_files"));
+    await addPaths(await invoke("pick_files"));
   } catch (e) {
-    toast(String(e), { err: true });
+    toastErr(e);
   }
 }
 
-/* Files dropped or chosen join the queue, from any screen. The first of
-   them is shown if it is next, since nothing else is under way. */
-function addPaths(paths) {
-  const refused = [];
+/* Files dropped or chosen join the queue, from any screen, if they are
+   audio or video and there: a name typed into the Open dialog can name
+   nothing. The first of them is shown if it is next, since nothing else
+   is under way. */
+async function addPaths(paths) {
+  const media = paths.filter(isMedia);
+  let here = media;
+  try {
+    if (media.length) here = await invoke("existing", { paths: media });
+  } catch {
+    // the transcription says so, of one that is not there
+  }
   const next = !files.some(live);
   let first = null;
-  for (const p of paths) {
-    if (!isMedia(p)) {
-      refused.push(baseName(p));
-      continue;
-    }
+  for (const p of here) {
     const f = newFile(p);
     files.push(f);
     first = first || f;
@@ -491,7 +477,9 @@ function addPaths(paths) {
     if (next || !current()) sel = first.id;
     home = false;
   }
-  if (refused.length) toast(`pktito reads audio and video files. Not added: ${refused.join(", ")}`, { err: true });
+  const gone = media.filter((p) => !here.includes(p)).map(baseName), other = paths.filter((p) => !isMedia(p)).map(baseName);
+  const say = [gone.length && `Not found: ${gone.join(", ")}`, other.length && `Not audio or video: ${other.join(", ")}`];
+  if (gone.length || other.length) toast(say.filter(Boolean).join(" · "), { err: true });
   render();
   pump();
 }
@@ -527,7 +515,7 @@ listen("job", (e) => {
     f.eta = j.eta;
   }
   f.segments.push(...j.segments);
-  if (j.step === "error") f.message = j.message;
+  if (j.step === "error") Object.assign(f, { message: j.message, detail: j.detail });
   if (j.step === "done") {
     Object.assign(f, { done: 1, took: j.took, model: j.model, recentId: j.recent });
     finished(f);
@@ -549,9 +537,9 @@ async function finished(f) {
   if (prefs.save_each && f.segments.length) {
     try {
       const r = await invoke("save_text", { original: f.path, ext: "txt", text: textOf(f, "txt"), nextTo: true });
-      if (r) toast(`Saved ${baseName(r.path)}${r.beside ? " next to the original" : ""}`, { reveal: r.path });
+      if (r) toast(`Saved ${baseName(r.path)}`, { reveal: r.path });
     } catch (e) {
-      toast(String(e), { err: true });
+      toastErr(e);
     }
   }
 }
@@ -580,7 +568,7 @@ function dropFile(f) {
 }
 
 function removeFile(f) {
-  if (busy(f)) return toast("It is being transcribed. Stop it first.", { err: true });
+  if (busy(f)) return toast("Stop it first", { err: true });
   dropFile(f);
   mainKey = "";
   render();
@@ -600,7 +588,7 @@ function goHome() {
 
 function again(f) {
   Object.assign(f, { step: "waiting", done: 0, eta: -1, peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], took: 0,
-    recentId: null, message: "" });
+    recentId: null, message: "", detail: "" });
   mainKey = "";
   render();
   pump();
@@ -629,7 +617,7 @@ function rowBody(f) {
       `<span class="pk-status pk-num">Transcribing ${percent(f.done)}%${f.eta > 0 ? ` · ${timeLeft(f.eta)}` : ""}</span>`;
   } else if (f.step === "done") status = `<span class="pk-status pk-ok">${ICON.check}Done</span>`;
   else if (f.step === "stopped") status = `<span class="pk-status">Stopped at ${percent(f.done)}%</span>`;
-  else status = `<span class="pk-status pk-err">${esc(f.message || "This file could not be transcribed.")}</span>`;
+  else status = `<span class="pk-status pk-err"${f.detail ? ` title="${esc(f.detail)}"` : ""}>${esc(f.message || "Couldn't transcribe")}</span>`;
   return `${f.kind === "video" ? ICON.film : ICON.music}<span class="pk-name">${esc(f.name)}</span>` +
     `<span class="pk-stamp">${f.duration == null ? "" : hms(f.duration)}</span>${status}`;
 }
@@ -788,16 +776,17 @@ function updateHead(f, mode) {
   $("save-as").hidden = !review;
   $("save-as").innerHTML = `Save as${ICON.down}`;
   $("save-as").disabled = !has;
-  $("again").hidden = !["stopped", "error"].includes(f.step);
-  $("again").title = f.step === "stopped" ? `It stopped at ${percent(f.done)}%. Transcribe it from the start.` : "";
+  // not for a file gone from its place: added again from where it is now, it is a new row
+  $("again").hidden = !(f.step === "stopped" || (f.step === "error" && f.message !== "Not found"));
+  $("again").title = f.step === "stopped" ? `Stopped at ${percent(f.done)}%` : "";
   $("stop").hidden = mode !== "running";
 }
 
 function updateRunning(f) {
   const going = f.step === "transcribing";
   $("pct").textContent = `${percent(going ? f.done : 0)}%`;
-  $("eta").textContent = f.step === "reading" ? "Reading the audio" : f.step === "loading" ? "Loading the model"
-    : f.eta > 0 ? timeLeft(f.eta) : f.done > 0 ? "Finishing" : "Just started";
+  $("eta").textContent = f.step === "reading" ? "Reading the audio" : f.step === "loading" ? "Loading the model" : "";
+  $("pct").title = going && f.eta > 0 ? timeLeft(f.eta) : "";
   $("dur").textContent = f.duration == null ? "" : hms(f.duration);
   $("title-dur").textContent = $("dur").textContent;
   const wave = $("wave");
@@ -833,12 +822,13 @@ function renderTranscript(f, mode) {
   curSeg = curWord = null;
   if (mode === "running") markLive();
   let msg = "", err = false;
-  if (mode === "waiting") msg = "Waiting for the files before it.";
+  if (mode === "waiting") msg = "Waiting";
   else if (mode === "error") {
-    msg = f.message || "This file could not be transcribed.";
+    msg = f.message || "Couldn't transcribe";
     err = true;
-  } else if (mode === "review" && !f.segments.length) msg = f.step === "stopped" ? "It stopped before any speech." : "No speech in this file.";
+  } else if (mode === "review" && !f.segments.length) msg = f.step === "stopped" ? "Stopped before any speech" : "No speech in this file";
   $("msg").textContent = msg;
+  $("msg").title = err ? f.detail : "";
   $("msg").hidden = !msg;
   $("msg").classList.toggle("pk-err", err);
 }
@@ -973,7 +963,7 @@ function togglePlay() {
   if (!player.paused) return pausePlayback();
   if (f.pos >= f.duration - 0.05) f.pos = 0;
   player.currentTime = f.pos;
-  player.play().catch((e) => toast(`It could not play: ${e.message}`, { err: true }));
+  player.play().catch((e) => toast("Can't play", { err: true, detail: e.message }));
 }
 
 /* The player stops and its file keeps its place, at once: the pause event
@@ -993,7 +983,7 @@ function seek(t, play) {
   f.pos = Math.max(0, Math.min(f.duration, t));
   player.currentTime = f.pos;
   showTime(f.pos, true);
-  if (play && player.paused) player.play().catch((e) => toast(`It could not play: ${e.message}`, { err: true }));
+  if (play && player.paused) player.play().catch((e) => toast("Can't play", { err: true, detail: e.message }));
 }
 
 player.addEventListener("play", () => {
@@ -1025,9 +1015,8 @@ player.addEventListener("timeupdate", () => {
 player.addEventListener("error", () => {
   const f = files.find((x) => x.id === playId);
   if (!f || !f.audio) return;
-  f.audioWhy = "Its audio could not be played.";
+  f.audioWhy = "Can't play";
   if (current() !== f) return;
-  toast(f.audioWhy, { err: true });
   setPlayIcon();
   $("wavebtn").disabled = true;
 });
@@ -1216,9 +1205,9 @@ async function copyText() {
   if (!f || !f.segments.length) return;
   try {
     await navigator.clipboard.writeText(plain(f));
-    toast(`Copied ${plural(f.segments.length, "segment")}${modeOf(f) === "running" ? " so far" : ""} as plain text`);
+    toast("Copied");
   } catch (e) {
-    toast(`It could not be copied: ${e}`, { err: true });
+    toast("Couldn't copy", { err: true, detail: String(e) });
   }
 }
 
@@ -1228,9 +1217,9 @@ async function save(ext) {
   closeMenu();
   try {
     const r = await invoke("save_text", { original: f.path, ext, text: textOf(f, ext), nextTo: prefs.next_to_original });
-    if (r) toast(`Saved ${baseName(r.path)}${r.beside ? " next to the original" : ""}`, { reveal: r.path });
+    if (r) toast(`Saved ${baseName(r.path)}`, { reveal: r.path });
   } catch (e) {
-    toast(String(e), { err: true });
+    toastErr(e);
   }
 }
 
@@ -1244,13 +1233,13 @@ async function saveAll(kind) {
       if (!dir) return;
       const out = await invoke("save_many", { dir,
         files: ready.flatMap((f) => FORMATS.map((x) => ({ original: f.path, ext: x.ext, text: textOf(f, x.ext) }))) });
-      toast(`Saved ${plural(out.length, "file")} into ${baseName(dir)}`, { reveal: out[0] });
+      toast(`Saved ${plural(out.length, "file")}`, { reveal: out[0] });
     } else {
       const out = await invoke("save_many", { dir: null, files: ready.map((f) => ({ original: f.path, ext: kind, text: textOf(f, kind) })) });
-      toast(`Saved ${plural(out.length, `.${kind} file`)} next to the originals`, { reveal: out[0] });
+      toast(`Saved ${plural(out.length, "file")}`, { reveal: out[0] });
     }
   } catch (e) {
-    toast(String(e), { err: true });
+    toastErr(e);
   }
 }
 
@@ -1259,7 +1248,7 @@ async function setPref(k, v) {
   try {
     await invoke("set_prefs", { prefs });
   } catch (e) {
-    toast(String(e), { err: true });
+    toastErr(e);
   }
 }
 
@@ -1373,13 +1362,21 @@ window.addEventListener("blur", () => closeMenu());
 
 let toastTimer = 0;
 
-function toast(text, { reveal = null, err = false } = {}) {
+/* A command's error, "what happened: what said so", as the Rust side
+   writes them */
+function toastErr(e) {
+  const s = String(e), i = s.indexOf(": ");
+  toast(i < 0 ? s : s.slice(0, i), { err: true, detail: i < 0 ? "" : s.slice(i + 2) });
+}
+
+/* A few words; what said so, if anything, in the tooltip */
+function toast(text, { reveal = null, err = false, detail = "" } = {}) {
   const t = $("toast");
   t.innerHTML = `${err ? ICON.alert : ICON.check}<span></span>` +
     (reveal ? `<button class="pk-linkbtn" type="button">${revealLabel()}</button>` : "");
   t.querySelector("span").textContent = text;
-  t.querySelector("span").title = text;
-  if (reveal) t.querySelector("button").onclick = () => invoke("reveal", { path: reveal }).catch((e) => toast(String(e), { err: true }));
+  t.querySelector("span").title = detail || text;
+  if (reveal) t.querySelector("button").onclick = () => invoke("reveal", { path: reveal }).catch((e) => toastErr(e));
   t.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { t.hidden = true; }, reveal || err ? 6000 : 3500);
@@ -1389,7 +1386,7 @@ function toast(text, { reveal = null, err = false } = {}) {
 
 function showDrop(paths) {
   const ok = paths.filter(isMedia);
-  $("drop-line").textContent = ok.length ? `Drop to transcribe ${plural(ok.length, "file")}` : "pktito reads audio and video files";
+  $("drop-line").textContent = ok.length ? `Drop to transcribe ${plural(ok.length, "file")}` : "Not audio or video";
   const names = (ok.length ? ok : paths).map(baseName);
   const chips = names.slice(0, 6).map((n) => `<li>${esc(n)}</li>`);
   if (names.length > 6) chips.push(`<li>and ${names.length - 6} more</li>`);

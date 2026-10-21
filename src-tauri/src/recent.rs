@@ -91,8 +91,8 @@ pub fn load(data: &Path, id: &str) -> Result<Transcript, String> {
     if !valid(id) {
         return Err("no such transcript".into());
     }
-    let b = fs::read(dir(data).join(format!("{id}.json"))).map_err(|_| "This transcript is not on this computer any more.")?;
-    serde_json::from_slice(&b).map_err(|e| format!("This transcript could not be read: {e}"))
+    let b = fs::read(dir(data).join(format!("{id}.json"))).map_err(|_| "Transcript gone")?;
+    serde_json::from_slice(&b).map_err(|e| format!("Can't read this transcript: {e}"))
 }
 
 pub fn clear(data: &Path) {

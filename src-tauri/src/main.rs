@@ -160,7 +160,7 @@ fn choose_model(app: AppHandle, name: String) -> Result<(), String> {
     let e = model::entry(&name).ok_or("no such model")?;
     let data = data_dir(&app)?;
     if !model::have(&data.join("models"), e) {
-        return Err(format!("The {} model is not on this computer yet.", e.label));
+        return Err("Not downloaded yet".into());
     }
     let mut s = model::load_settings(&data);
     s.model = Some(name);
@@ -243,13 +243,22 @@ async fn use_model_file(app: AppHandle, state: State<'_, AppState>) -> Result<bo
     let path = file.into_path().map_err(|e| e.to_string())?;
     {
         let mut slot = state.engine.lock().unwrap();
-        ensure_engine(&mut slot, &path).map_err(|why| format!("This is not a model pktito can use: {why}"))?;
+        ensure_engine(&mut slot, &path).map_err(|why| format!("Not a pktito model: {why}"))?;
     }
     let data = data_dir(&app)?;
     let mut settings = model::load_settings(&data);
     settings.model_file = Some(path);
     model::save_settings(&data, &settings)?;
     Ok(true)
+}
+
+/// Of these paths, the files that are there: the window queues no others.
+/// The Open dialog takes a typed name of nothing when it takes several
+/// files (rfd 0.16 sets only FOS_ALLOWMULTISELECT, dropping
+/// FOS_FILEMUSTEXIST), and a drop or the command line can name one too.
+#[tauri::command]
+fn existing(paths: Vec<String>) -> Vec<String> {
+    paths.into_iter().filter(|p| Path::new(p).is_file()).collect()
 }
 
 /// Files named on the command line (`pktito-app a.mp4 b.mp3`), to queue at start.
@@ -293,7 +302,9 @@ struct JobEvent {
     model: String,
     /// Its place on the recent list.
     recent: Option<String>,
+    /// An error: what happened, in a few words, and what said so.
     message: String,
+    detail: String,
 }
 
 #[tauri::command]
@@ -308,14 +319,14 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
     let send = |ev: JobEvent| {
         let _ = app.emit("job", JobEvent { id, ..ev });
     };
-    let fail = |message: String| send(JobEvent { step: "error", message, ..Default::default() });
+    let fail = |message: &str, detail: String| send(JobEvent { step: "error", message: message.into(), detail, ..Default::default() });
     // a Stop meant for this file's last run, which failed before it looked
     let _ = state.stop.compare_exchange(id, 0, Ordering::Relaxed, Ordering::Relaxed);
     let t0 = Instant::now();
     send(JobEvent { step: "reading", eta: -1.0, ..Default::default() });
     let x = match decode::decode(path) {
         Ok(x) => x,
-        Err(e) => return fail(e.message()),
+        Err(e) => return fail(e.why(), e.detail()),
     };
     let duration = x.len() as f64 / decode::RATE as f64;
     let key = recent::new_id();
@@ -326,10 +337,10 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
     let peaks = audio::peaks(&x, audio::PEAKS);
     let data = match data_dir(app) {
         Ok(d) => d,
-        Err(why) => return fail(why),
+        Err(why) => return fail("Can't transcribe", why),
     };
     let Some(model_path) = usable(&data, &model::load_settings(&data)) else {
-        return fail("There is no model to transcribe with. Choose one first.".into());
+        return fail("No model", String::new());
     };
     let mut slot = state.engine.lock().unwrap();
     let loading = slot.as_ref().map(|e| e.path != model_path).unwrap_or(true);
@@ -343,7 +354,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
     });
     let Engine { model, asr, .. } = match ensure_engine(&mut slot, &model_path) {
         Ok(e) => e,
-        Err(why) => return fail(format!("The model could not be loaded: {why}")),
+        Err(why) => return fail("Can't load the model", why.to_string()),
     };
     if loading {
         send(JobEvent { step: "transcribing", eta: -1.0, duration, ..Default::default() });
@@ -386,7 +397,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
             send(JobEvent { step: "done", done: 1.0, duration, took, model: name, recent: kept.ok().map(|_| key), ..Default::default() });
         }
         Ok((_, false)) => send(JobEvent { step: "stopped", duration, ..Default::default() }),
-        Err(why) => fail(why),
+        Err(why) => fail("Can't transcribe", why),
     }
 }
 
@@ -423,12 +434,12 @@ async fn reload_audio(app: AppHandle, id: String) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let t = recent::load(&data_dir(&app)?, &id)?;
         if !t.item.path.is_file() {
-            return Err("Its file is not where it was, so it cannot play.".to_string());
+            return Err("File moved or deleted".to_string());
         }
-        let x = decode::decode(&t.item.path).map_err(|e| e.message())?;
+        let x = decode::decode(&t.item.path).map_err(|e| e.why().to_string())?;
         // 0.1 s: two of the encoder's frames; a file edited since is longer or shorter by more
         if (x.len() as f64 / decode::RATE as f64 - t.item.duration).abs() > 0.1 {
-            return Err("Its file has changed since it was transcribed, so it cannot play.".to_string());
+            return Err("File changed since".to_string());
         }
         let p = audio::save(&audio_dir(&app)?, &id, &x, decode::RATE as u32).map_err(|e| e.to_string())?;
         Ok(p.to_string_lossy().into_owned())
@@ -442,7 +453,7 @@ async fn reload_audio(app: AppHandle, id: String) -> Result<String, String> {
 async fn clear_recent(app: AppHandle) -> Result<bool, String> {
     let ask = app
         .dialog()
-        .message("Its transcripts are deleted from this computer. Files you saved stay where they are.")
+        .message("Files you saved are kept.")
         .title("Clear the recent list?")
         .kind(MessageDialogKind::Warning)
         .buttons(MessageDialogButtons::OkCancelCustom("Clear".into(), "Cancel".into()));
@@ -519,7 +530,7 @@ async fn save_text(app: AppHandle, original: String, ext: String, text: String, 
         return Ok(None);
     };
     let path = file.into_path().map_err(|e| e.to_string())?;
-    fs::write(&path, text).map_err(|e| format!("It could not be saved: {e}"))?;
+    fs::write(&path, text).map_err(|e| format!("Couldn't save: {e}"))?;
     Ok(Some(Saved { path: path.to_string_lossy().into_owned(), beside: false }))
 }
 
@@ -542,7 +553,8 @@ async fn save_many(dir: Option<String>, files: Vec<Export>) -> Result<Vec<String
             None => original.parent().map(Path::to_path_buf).unwrap_or_default(),
         };
         let p = free_path(&d, &stem_of(original), &f.ext);
-        fs::write(&p, &f.text).map_err(|e| format!("{} could not be saved: {e}", p.display()))?;
+        let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        fs::write(&p, &f.text).map_err(|e| format!("Couldn't save {name}: {e}"))?;
         written.push(p.to_string_lossy().into_owned());
     }
     Ok(written)
@@ -601,7 +613,7 @@ fn reveal_in_folder(path: &Path) -> Result<(), String> {
             CoUninitialize();
         }
         if hr < 0 {
-            return Err(format!("Explorer could not show {} (0x{:08x}).", path.display(), hr as u32));
+            return Err(format!("Couldn't show it: Explorer said 0x{:08x}", hr as u32));
         }
     }
     Ok(())
@@ -791,6 +803,7 @@ fn main() {
             cancel_download,
             use_model_file,
             initial_files,
+            existing,
             pick_files,
             transcribe,
             stop,

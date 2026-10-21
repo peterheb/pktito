@@ -22,44 +22,65 @@ pub const RATE: usize = 16000;
 pub enum DecodeError {
     /// The file has no audio to transcribe.
     NoAudio,
-    /// It could not be read; the reason, for the user.
-    Unreadable(String),
+    /// It could not be read: what happened in a few words, for the window,
+    /// and what said so, for a tooltip.
+    Unreadable(&'static str, String),
 }
 
+const UNREADABLE: &str = "Can't read this file";
+
 impl DecodeError {
-    pub fn message(&self) -> String {
+    /// What happened, in a few words.
+    pub fn why(&self) -> &'static str {
         match self {
-            DecodeError::NoAudio => "No audio track in this file. Try the original recording.".into(),
-            DecodeError::Unreadable(why) => why.clone(),
+            DecodeError::NoAudio => "No audio track",
+            DecodeError::Unreadable(why, _) => why,
+        }
+    }
+
+    /// What said so; empty when the few words are all there is.
+    pub fn detail(&self) -> String {
+        match self {
+            DecodeError::NoAudio => String::new(),
+            DecodeError::Unreadable(_, detail) => detail.clone(),
+        }
+    }
+
+    /// Both in a line, for the command line.
+    pub fn message(&self) -> String {
+        match self.detail().as_str() {
+            "" => self.why().into(),
+            d => format!("{}: {d}", self.why()),
         }
     }
 }
 
 pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
-    // a name typed into the file dialog, or a file moved since it was added;
-    // Windows' own words for it are "(0x80070002)"
+    // the window queues only files that are there, so this is one moved
+    // while it waited; Windows' own words for it are "(0x80070002)"
     if !path.is_file() {
-        return Err(DecodeError::Unreadable(
-            "There is no file at this path. Add it again from where it is now.".into(),
-        ));
+        return Err(DecodeError::Unreadable("Not found", String::new()));
     }
     let forced = env::var("PKTITO_DECODER").unwrap_or_default().to_lowercase();
     if forced == "ffmpeg" || !cfg!(any(target_os = "macos", target_os = "windows")) {
         return match ffmpeg() {
             Some(ff) => decode_ffmpeg(&ff, path),
             None => Err(DecodeError::Unreadable(
-                "ffmpeg is needed to read media files here. Install it with your package manager.".into(),
+                "Needs ffmpeg",
+                "Install ffmpeg with your package manager to read media files here.".into(),
             )),
         };
     }
     match decode_os(path) {
         Ok(x) => Ok(x),
         Err(DecodeError::NoAudio) => Err(DecodeError::NoAudio),
-        Err(DecodeError::Unreadable(why)) => match (forced.as_str(), ffmpeg()) {
-            ("os", _) => Err(DecodeError::Unreadable(format!("This file could not be read: {why}."))),
-            (_, None) => Err(DecodeError::Unreadable(format!(
-                "This file could not be read: {why}. Installing ffmpeg lets pktito try it another way."
-            ))),
+        Err(DecodeError::Unreadable(why, detail)) => match (forced.as_str(), ffmpeg()) {
+            ("os", _) => Err(DecodeError::Unreadable(why, detail)),
+            (_, None) if why == UNREADABLE => Err(DecodeError::Unreadable(
+                why,
+                format!("{detail}. With ffmpeg installed, pktito tries it another way."),
+            )),
+            (_, None) => Err(DecodeError::Unreadable(why, detail)),
             (_, Some(ff)) => decode_ffmpeg(&ff, path),
         },
     }
@@ -75,7 +96,7 @@ extern "C" {
 }
 
 fn out_of_memory() -> DecodeError {
-    DecodeError::Unreadable("There is not enough memory to read this file.".into())
+    DecodeError::Unreadable("Not enough memory", String::new())
 }
 
 /// A malloc'd signal from C, into a Vec, and freed.
@@ -103,10 +124,10 @@ impl Mix {
     fn new(f: &WavFormat) -> Result<Mix, DecodeError> {
         let m = Mix { m: unsafe { pkapp_mix_new(RATE as c_uint) }, ch: f.ch as usize };
         if m.m.is_null() || unsafe { pkapp_mix_format_wave(m.m, f.rate, f.ch, f.mask) } != 0 {
-            return Err(DecodeError::Unreadable(format!(
-                "This file's audio, {} channels at {} Hz, cannot be converted.",
-                f.ch, f.rate
-            )));
+            return Err(DecodeError::Unreadable(
+                "Can't convert its audio",
+                format!("{} channels at {} Hz", f.ch, f.rate),
+            ));
         }
         Ok(m)
     }
@@ -151,7 +172,7 @@ fn decode_ffmpeg(ffmpeg: &Path, path: &Path) -> Result<Vec<f32>, DecodeError> {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|e| DecodeError::Unreadable(format!("ffmpeg could not be started: {e}.")))?;
+        .map_err(|e| DecodeError::Unreadable("Can't start ffmpeg", e.to_string()))?;
     // read on its own, so that a file ffmpeg complains about at length cannot
     // fill the pipe and stop it while its samples are being read
     let mut stderr = child.stderr.take().unwrap();
@@ -163,7 +184,7 @@ fn decode_ffmpeg(ffmpeg: &Path, path: &Path) -> Result<Vec<f32>, DecodeError> {
     let mut out = child.stdout.take().unwrap();
     let read = wav_format(&mut out).map(|f| read_samples(&mut out, &f));
     drop(out);
-    let status = child.wait().map_err(|e| DecodeError::Unreadable(e.to_string()))?;
+    let status = child.wait().map_err(|e| DecodeError::Unreadable(UNREADABLE, e.to_string()))?;
     let stderr = said.join().unwrap_or_default();
     if !status.success() {
         if stderr.contains("matches no streams") || stderr.contains("does not contain any stream") {
@@ -171,9 +192,9 @@ fn decode_ffmpeg(ffmpeg: &Path, path: &Path) -> Result<Vec<f32>, DecodeError> {
         }
         // ffmpeg's last line is the one that says why
         let why = stderr.lines().last().unwrap_or("ffmpeg could not read it").trim().trim_end_matches('.');
-        return Err(DecodeError::Unreadable(format!("This file could not be read: {why}.")));
+        return Err(DecodeError::Unreadable(UNREADABLE, why.into()));
     }
-    read.unwrap_or_else(|| Err(DecodeError::Unreadable("ffmpeg did not hand over what was asked of it.".into())))
+    read.unwrap_or_else(|| Err(DecodeError::Unreadable(UNREADABLE, "ffmpeg did not hand over what was asked of it".into())))
 }
 
 /// The format of the float WAV ffmpeg writes, read up to its samples. A
@@ -228,7 +249,7 @@ fn read_samples(r: &mut impl Read, f: &WavFormat) -> Result<Vec<f32>, DecodeErro
             Ok(0) => break,
             Ok(got) => got,
             Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
-            Err(e) => return Err(DecodeError::Unreadable(format!("ffmpeg's output could not be read: {e}."))),
+            Err(e) => return Err(DecodeError::Unreadable(UNREADABLE, format!("ffmpeg's output: {e}"))),
         };
         have += got;
         let whole = have / frame * frame;
@@ -247,7 +268,7 @@ fn decode_os(path: &Path) -> Result<Vec<f32>, DecodeError> {
     extern "C" {
         fn pkapp_decode_os(path: *const c_char, rate: c_int, out: *mut *mut f32, n: *mut usize, err: *mut c_char, errlen: usize) -> c_int;
     }
-    let c = CString::new(path.to_string_lossy().as_bytes()).map_err(|_| DecodeError::Unreadable("bad file name".into()))?;
+    let c = CString::new(path.to_string_lossy().as_bytes()).map_err(|_| DecodeError::Unreadable(UNREADABLE, "bad file name".into()))?;
     let mut out: *mut f32 = std::ptr::null_mut();
     let mut n: usize = 0;
     let mut err = [0 as c_char; 512];
@@ -261,11 +282,11 @@ fn decode_os(path: &Path) -> Result<Vec<f32>, DecodeError> {
             Ok(x)
         }
         -1 => Err(DecodeError::NoAudio),
-        _ => Err(DecodeError::Unreadable(unsafe { CStr::from_ptr(err.as_ptr()) }.to_string_lossy().into_owned())),
+        _ => Err(DecodeError::Unreadable(UNREADABLE, unsafe { CStr::from_ptr(err.as_ptr()) }.to_string_lossy().into_owned())),
     }
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn decode_os(_path: &Path) -> Result<Vec<f32>, DecodeError> {
-    Err(DecodeError::Unreadable("no media library to use here".into()))
+    Err(DecodeError::Unreadable(UNREADABLE, "no media library to use here".into()))
 }
