@@ -53,6 +53,9 @@ ul { list-style: none; padding: 0; }
 .pk-linkbtn-sm { font-weight: 400; font-size: 13px; }
 .pk-btn:focus-visible, .pk-linkbtn:focus-visible, .pk-mi:focus-visible, .pk-seg-t:focus-visible, .pk-wavebtn:focus-visible,
 .pk-play:focus-visible, .pk-row:focus-visible, .pk-check input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* on the dark strip and the toast, the dark theme's ring in both themes:
+   the light theme's is the strip's own navy (the Windows test, 2026-10-21) */
+.pk-strip, .pk-toast { --focus: var(--plume); }
 
 /* ------------------------------------------- setup and ready: one column -- */
 .pk-center { height: 100%; overflow: auto; display: grid; place-items: center; }
@@ -104,7 +107,8 @@ ul { list-style: none; padding: 0; }
 .pk-ready-act { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: -6px; }
 .pk-recent { margin-top: auto; display: flex; flex-direction: column; gap: 4px; min-height: 0; }
 .pk-recent .pk-spread { padding: 0 12px 4px; }
-.pk-recent ul { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; }
+/* room inside the scroll for a row's focus ring, 2px out and 2px wide */
+.pk-recent ul { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; padding: 4px; margin: -4px; }
 .pk-recent .pk-row { grid-template-columns: 16px minmax(0, 1fr) auto 72px; }
 .pk-when { text-align: right; }
 
@@ -114,7 +118,7 @@ ul { list-style: none; padding: 0; }
 .pk-side { background: var(--surface); padding: 14px 12px 12px; display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; }
 .pk-side-top { display: flex; gap: 8px; }
 .pk-add { flex: 1; min-width: 0; justify-content: flex-start; }
-.pk-queue { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; flex: 1 1 auto; min-height: 0; padding: 3px; margin: -3px; }
+.pk-queue { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; flex: 1 1 auto; min-height: 0; padding: 4px; margin: -4px; }
 .pk-side-foot { display: flex; align-items: center; gap: 8px; padding: 0 4px; }
 .pk-side-foot .pk-btn { margin-left: auto; }
 .pk-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
