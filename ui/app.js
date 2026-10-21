@@ -657,8 +657,12 @@ function showMain(segs = []) {
 
 function buildMain(f, mode, key) {
   const tr = $("transcript");
-  // the same file in a new mode keeps the reader's place
-  const top = mainKey.split(" ")[0] === String(f.id) ? tr.scrollTop : 0;
+  // The same file in a new mode keeps the reader's place, except that a
+  // transcript just finished starts at its top for a reader who was
+  // following its end as it came.
+  const [was, wasMode] = mainKey.split(" ");
+  const atEnd = tr.scrollHeight - tr.scrollTop - tr.clientHeight < 48;
+  const top = was !== String(f.id) || (wasMode === "running" && mode === "review" && atEnd) ? 0 : tr.scrollTop;
   mainKey = key;
   pausePlayback();
   $("head-ico").innerHTML = f.kind === "video" ? ICON.film : ICON.music;

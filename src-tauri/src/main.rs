@@ -538,21 +538,81 @@ async fn pick_folder(app: AppHandle) -> Result<Option<String>, String> {
     Ok(Some(dir.into_path().map_err(|e| e.to_string())?.to_string_lossy().into_owned()))
 }
 
-/// Show a file in the file manager, selected where the OS can do that.
+/// Show a file in the file manager, selected.
 #[tauri::command]
 fn reveal(path: String) -> Result<(), String> {
-    use std::process::Command;
-    #[cfg(target_os = "macos")]
-    let r = Command::new("open").arg("-R").arg(&path).spawn();
-    #[cfg(target_os = "windows")]
-    let r = {
-        use std::os::windows::process::CommandExt;
-        // Explorer reads /select,"path" whole, its own way, not as quoted arguments
-        Command::new("explorer").raw_arg(format!("/select,\"{path}\"")).spawn()
-    };
-    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-    let r = Command::new("xdg-open").arg(Path::new(&path).parent().unwrap_or(Path::new("/"))).spawn();
-    r.map(|_| ()).map_err(|e| e.to_string())
+    reveal_in_folder(Path::new(&path))
+}
+
+#[cfg(target_os = "macos")]
+fn reveal_in_folder(path: &Path) -> Result<(), String> {
+    std::process::Command::new("open").arg("-R").arg(path).spawn().map(|_| ()).map_err(|e| e.to_string())
+}
+
+/// The shell's own way. `explorer /select,"path"` started from the app
+/// opened nothing in the Windows test (2026-10-21, three toasts): the shell
+/// call is what Explorer itself answers. Given one item's full ID list and no
+/// others, it opens the item's folder with the item selected.
+#[cfg(target_os = "windows")]
+fn reveal_in_folder(path: &Path) -> Result<(), String> {
+    use std::ffi::c_void;
+    use std::os::windows::ffi::OsStrExt;
+    #[link(name = "shell32")]
+    extern "system" {
+        fn ILCreateFromPathW(path: *const u16) -> *mut c_void;
+        fn ILFree(list: *mut c_void);
+        fn SHOpenFolderAndSelectItems(folder: *const c_void, n: u32, items: *const *const c_void, flags: u32) -> i32;
+    }
+    #[link(name = "ole32")]
+    extern "system" {
+        fn CoInitializeEx(reserved: *mut c_void, model: u32) -> i32;
+        fn CoUninitialize();
+    }
+    const COINIT_APARTMENTTHREADED: u32 = 0x2;
+    let wide: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+    unsafe {
+        // the window's thread has COM already (S_FALSE), which still wants
+        // its CoUninitialize; another thread's model refuses (negative)
+        let com = CoInitializeEx(std::ptr::null_mut(), COINIT_APARTMENTTHREADED);
+        let list = ILCreateFromPathW(wide.as_ptr());
+        let hr = if list.is_null() { -1 } else { SHOpenFolderAndSelectItems(list, 0, std::ptr::null(), 0) };
+        if !list.is_null() {
+            ILFree(list);
+        }
+        if com >= 0 {
+            CoUninitialize();
+        }
+        if hr < 0 {
+            return Err(format!("Explorer could not show {} (0x{:08x}).", path.display(), hr as u32));
+        }
+    }
+    Ok(())
+}
+
+/// The file manager's own D-Bus call where there is one (GNOME's Files,
+/// KDE's Dolphin), which selects it; else its folder, opened.
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+fn reveal_in_folder(path: &Path) -> Result<(), String> {
+    use std::process::{Command, Stdio};
+    let mut uri = String::from("file://");
+    for b in path.to_string_lossy().bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'/' | b'-' | b'_' | b'.' | b'~' => uri.push(b as char),
+            _ => uri.push_str(&format!("%{b:02X}")),
+        }
+    }
+    let shown = Command::new("gdbus")
+        .args(["call", "--session", "--dest", "org.freedesktop.FileManager1", "--object-path", "/org/freedesktop/FileManager1"])
+        .args(["--method", "org.freedesktop.FileManager1.ShowItems", &format!("['{uri}']"), ""])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+    if shown {
+        return Ok(());
+    }
+    Command::new("xdg-open").arg(path.parent().unwrap_or(Path::new("/"))).spawn().map(|_| ()).map_err(|e| e.to_string())
 }
 
 /// `pktito-app --transcribe FILE [--model PKF] [--json]`: the window's

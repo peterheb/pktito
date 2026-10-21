@@ -202,7 +202,8 @@ ul { list-style: none; padding: 0; }
   -webkit-user-select: text; user-select: text; cursor: text; }
 .pk-now { box-shadow: inset 0 -2px 0 var(--beak); }
 .pk-hit { background: var(--plume); color: var(--on-plume); border-radius: 2px; }
-.pk-hit.is-on { box-shadow: 0 0 0 2px var(--ink); }
+/* the ring inside the match: outside, it covered the spaces beside it (the Windows test) */
+.pk-hit.is-on { box-shadow: inset 0 0 0 2px var(--ink); }
 @media (max-width: 560px) { .pk-seg { grid-template-columns: 1fr; row-gap: 2px; } }
 
 /* ------------------------------------------------------------ the finder -- */
