@@ -22,7 +22,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{AppHandle, Emitter, Manager, State};
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_dialog::{DialogExt, FileDialogBuilder, MessageDialogButtons, MessageDialogKind};
 
 /// The model and a transcriber over it, loaded once and kept.
 struct Engine {
@@ -93,6 +93,19 @@ fn usable(data: &Path, s: &model::Settings) -> Option<PathBuf> {
     let e = model::entry(s.model.as_deref()?)?;
     let dir = data.join("models");
     model::have(&dir, e).then(|| model::file_in(&dir, e))
+}
+
+/// A file dialog owned by the window on Windows, so that it is modal and in
+/// front of it: one without an owner opened behind the window in the
+/// Windows test (2026-10-21), where it could sit unnoticed. macOS runs its
+/// panels modal for the app already.
+fn file_dialog(app: &AppHandle) -> FileDialogBuilder<tauri::Wry> {
+    let d = app.dialog().file();
+    #[cfg(target_os = "windows")]
+    if let Some(w) = app.get_webview_window("main") {
+        return d.set_parent(&w);
+    }
+    d
 }
 
 /// Load the model at path into the engine, unless it is the one there.
@@ -225,7 +238,7 @@ fn cancel_download(app: AppHandle, state: State<'_, AppState>) -> Result<(), Str
 /// A .pkf already on this computer, checked by loading it.
 #[tauri::command]
 async fn use_model_file(app: AppHandle, state: State<'_, AppState>) -> Result<bool, String> {
-    let Some(file) = app.dialog().file().add_filter("pktito model", &["pkf"]).blocking_pick_file() else {
+    let Some(file) = file_dialog(&app).add_filter("pktito model", &["pkf"]).blocking_pick_file() else {
         return Ok(false);
     };
     let path = file.into_path().map_err(|e| e.to_string())?;
@@ -252,7 +265,7 @@ fn initial_files() -> Vec<String> {
 
 #[tauri::command]
 async fn pick_files(app: AppHandle) -> Result<Vec<String>, String> {
-    let files = app.dialog().file().add_filter("Audio or video", MEDIA).blocking_pick_files();
+    let files = file_dialog(&app).add_filter("Audio or video", MEDIA).blocking_pick_files();
     Ok(files
         .unwrap_or_default()
         .into_iter()
@@ -428,13 +441,19 @@ async fn reload_audio(app: AppHandle, id: String) -> Result<String, String> {
 /// Empty the recent list, once the user says so.
 #[tauri::command]
 async fn clear_recent(app: AppHandle) -> Result<bool, String> {
-    let yes = app
+    let ask = app
         .dialog()
         .message("Its transcripts are deleted from this computer. Files you saved stay where they are.")
         .title("Clear the recent list?")
         .kind(MessageDialogKind::Warning)
-        .buttons(MessageDialogButtons::OkCancelCustom("Clear".into(), "Cancel".into()))
-        .blocking_show();
+        .buttons(MessageDialogButtons::OkCancelCustom("Clear".into(), "Cancel".into()));
+    // owned by the window on Windows, as the file dialogs are (file_dialog)
+    #[cfg(target_os = "windows")]
+    let ask = match app.get_webview_window("main") {
+        Some(w) => ask.parent(&w),
+        None => ask,
+    };
+    let yes = ask.blocking_show();
     if yes {
         let data = data_dir(&app)?;
         let dir = audio_dir(&app)?;
@@ -493,7 +512,7 @@ async fn save_text(app: AppHandle, original: String, ext: String, text: String, 
         "json" => "JSON",
         _ => "Text",
     };
-    let mut dialog = app.dialog().file().set_file_name(format!("{stem}.{ext}")).add_filter(kind, &[ext.as_str()]);
+    let mut dialog = file_dialog(&app).set_file_name(format!("{stem}.{ext}")).add_filter(kind, &[ext.as_str()]);
     if let Some(dir) = original.parent().filter(|d| d.is_dir()) {
         dialog = dialog.set_directory(dir);
     }
@@ -532,7 +551,7 @@ async fn save_many(dir: Option<String>, files: Vec<Export>) -> Result<Vec<String
 
 #[tauri::command]
 async fn pick_folder(app: AppHandle) -> Result<Option<String>, String> {
-    let Some(dir) = app.dialog().file().blocking_pick_folder() else {
+    let Some(dir) = file_dialog(&app).blocking_pick_folder() else {
         return Ok(None);
     };
     Ok(Some(dir.into_path().map_err(|e| e.to_string())?.to_string_lossy().into_owned()))
