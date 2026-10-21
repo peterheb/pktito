@@ -123,6 +123,11 @@ Archivo and Commit Mono with their SIL Open Font License texts.
 `scripts/tokens.py` turns `design/tokens.json` into `ui/tokens.css`; the
 icon set in `src-tauri/icons` comes from `cargo tauri icon design/app-icon.svg`.
 
+## The site
+
+`site/` builds pktito.net from the same design system, and its Cloudflare
+Worker serves the installers (site/README.md).
+
 ## License
 
 MIT (LICENSE). pktito is MIT; the fonts are under the SIL Open Font License
