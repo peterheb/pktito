@@ -11,23 +11,6 @@
 </head>
 <body>
 
-<!-- First run: the model, downloaded once -->
-<section id="setup" class="pk-center" hidden>
-  <div class="pk-setup">
-    <span class="pk-wordmark">pktito</span>
-    <p class="pk-lead">Drop a file. Read it.</p>
-    <p>pktito transcribes on this computer. It needs its model first: one download, then it works offline.</p>
-    <div id="models" class="pk-choices"></div>
-    <div id="dl" class="pk-dl" hidden>
-      <span class="pk-bar" id="dl-bar" style="--p:0%"><i></i></span>
-      <span class="pk-status pk-num" id="dl-text">Downloading</span>
-    </div>
-    <p id="setup-err" class="pk-err" role="alert" hidden></p>
-    <button class="pk-link pk-plain" id="use-file" type="button">Use a model file on this computer</button>
-    <p class="pk-small">A C11 port of NVIDIA's Parakeet-TDT models (CC-BY-4.0), downloaded from pktito.net.</p>
-  </div>
-</section>
-
 <!-- Empty state: nothing in the queue -->
 <section id="empty" class="pk-center" hidden>
   <div class="pk-empty">
@@ -37,7 +20,14 @@
       <strong id="drop-line">Drop audio or video files</strong>
       <span id="drop-hint">or click to choose. The audio stays on this computer.</span>
     </button>
-    <p class="pk-small" id="engine-line"></p>
+    <div id="empty-model">
+      <!-- The language, which picks the model; moved into whichever view shows -->
+      <div id="model-box" class="pk-model">
+        <label for="model">Language</label>
+        <span class="pk-select"><select id="model"></select></span>
+        <p class="pk-small" id="model-line"></p>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -49,6 +39,7 @@
       <strong id="add-line" style="font-size:14px">Add files</strong>
     </button>
     <ul class="pk-queue" id="queue" role="listbox" aria-label="Files"></ul>
+    <div id="side-model"></div>
   </aside>
   <main class="pk-app-main">
     <div class="pk-app-head">

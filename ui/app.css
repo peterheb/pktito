@@ -8,25 +8,32 @@ body { overflow: hidden; font-size: 14px; }
 
 .pk-center { height: 100%; display: grid; place-items: center; padding: var(--space-5); box-sizing: border-box; overflow: auto; }
 
-/* First run */
-.pk-setup { max-width: 34em; display: grid; gap: var(--space-3); }
-.pk-setup > p { margin: 0; font: 400 16px/1.5 var(--font-sans); }
-.pk-lead { font: 500 26px/1.25 var(--font-sans) !important; letter-spacing: -0.01em; text-wrap: balance; }
-.pk-choices { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.pk-dl { display: grid; gap: var(--space-1); }
-.pk-dl .pk-bar { height: 4px; background: var(--sunk); border-radius: var(--radius-dot); overflow: hidden; }
-.pk-dl .pk-status { font-size: 13px; color: var(--ink-muted); }
-.pk-err { color: var(--err); margin: 0; font-size: 14px; }
-.pk-plain { background: none; border: 0; padding: 0; font: 500 14px/1.4 var(--font-sans); cursor: pointer; justify-self: start; }
 .pk-small { margin: 0; font: 400 13px/1.45 var(--font-sans); color: var(--ink-muted); }
+
+/* The language, and where its model stands under it. The select looks like
+   the quiet button beside it, its arrow drawn in currentColor. */
+.pk-model { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--space-2); }
+.pk-model label { font: 500 14px/1.4 var(--font-sans); }
+.pk-select { position: relative; justify-self: start; max-width: 100%; color: var(--ink); }
+.pk-select select { appearance: none; -webkit-appearance: none; max-width: 100%; height: 32px; padding: 0 32px 0 12px;
+  border: 0; border-radius: var(--radius-ui); background: var(--sunk); color: inherit; font: 500 14px/1 var(--font-sans);
+  text-overflow: ellipsis; cursor: pointer; }
+.pk-select select:hover { box-shadow: inset 0 0 0 1px var(--ink-muted); }
+.pk-select select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pk-select::after { content: ""; position: absolute; right: 14px; top: 50%; width: 6px; height: 6px; pointer-events: none;
+  border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: translateY(-75%) rotate(45deg); }
+.pk-model .pk-small { grid-column: 1 / -1; overflow-wrap: anywhere; }
+.pk-model .pk-small.err { color: var(--err); }
 
 /* Empty state */
 .pk-empty { width: min(520px, 100%); display: grid; gap: var(--space-4); justify-items: center; }
 .pk-empty .pk-drop { width: 100%; box-sizing: border-box; padding: var(--space-6) var(--space-4); }
+#empty-model { max-width: 100%; }
 
 /* The work */
 .pk-app { height: 100%; min-height: 0; border-radius: 0; }
 .pk-app-side { overflow-y: auto; }
+#side-model { margin-top: auto; padding: var(--space-2) 2px 0; }
 .pk-app-main { overflow-y: auto; }
 .pk-app-head h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pk-note { margin: 0; font: 400 13px/1.45 var(--font-sans); color: var(--ink-muted); min-height: 0; }
@@ -35,6 +42,9 @@ body { overflow: hidden; font-size: 14px; }
 .pk-seg .pk-stamp { cursor: copy; }
 .pk-seg p { user-select: text; -webkit-user-select: text; }
 .pk-file { cursor: pointer; }
+/* an error in full goes above the transcript; the row keeps three lines of it */
+.pk-file .pk-status.err { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
+  overflow-wrap: anywhere; min-width: 0; }
 .pk-file:focus-visible { outline-offset: 2px; }
 .pk-btn .pk-ico { width: 16px; height: 16px; }
 @media (max-width: 879px) {

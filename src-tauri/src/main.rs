@@ -39,15 +39,20 @@ fn data_dir(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 #[derive(Serialize)]
-struct ModelInfo {
-    name: String,
-    path: String,
+struct Offer {
+    #[serde(flatten)]
+    entry: &'static model::Entry,
+    /// Downloaded and on this computer.
+    have: bool,
 }
 
 #[derive(Serialize)]
 struct Status {
-    model: Option<ModelInfo>,
-    catalog: &'static [model::Entry],
+    /// The catalog model chosen, by name: None until the window chooses one.
+    model: Option<String>,
+    /// A model file of the user's own, used instead when set.
+    model_file: Option<PathBuf>,
+    catalog: Vec<Offer>,
     backend: String,
     media: &'static [&'static str],
     video: &'static [&'static str],
@@ -65,42 +70,50 @@ fn ensure_engine<'a>(slot: &'a mut Option<Engine>, path: &Path) -> Result<&'a mu
 }
 
 #[tauri::command]
-fn status(app: AppHandle, state: State<AppState>) -> Result<Status, String> {
-    let settings = model::load_settings(&data_dir(&app)?);
-    let mut model_info = None;
-    if let Some(p) = settings.model_path.filter(|p| p.is_file()) {
-        let mut slot = state.engine.lock().unwrap();
-        if let Ok(e) = ensure_engine(&mut slot, &p) {
-            model_info = Some(ModelInfo { name: e.model.name(), path: p.to_string_lossy().into_owned() });
-        }
-    }
-    Ok(Status { model: model_info, catalog: model::CATALOG, backend: pktito::backend(), media: MEDIA, video: VIDEO })
-}
-
-#[derive(Clone, Serialize)]
-struct DownloadProgress {
-    name: String,
-    got: u64,
-    total: u64,
-}
-
-#[tauri::command]
-async fn download_model(app: AppHandle, name: String) -> Result<(), String> {
-    let entry = model::entry(&name).ok_or("no such model")?;
+fn status(app: AppHandle) -> Result<Status, String> {
     let data = data_dir(&app)?;
-    let app2 = app.clone();
-    let path = tauri::async_runtime::spawn_blocking(move || {
-        model::download(entry, &data.join("models"), |got, total| {
-            let _ = app2.emit("model-progress", DownloadProgress { name: entry.name.into(), got, total });
-        })
+    let settings = model::load_settings(&data);
+    let dir = data.join("models");
+    Ok(Status {
+        model: settings.model,
+        model_file: settings.model_file,
+        catalog: model::CATALOG.iter().map(|e| Offer { entry: e, have: model::have(&dir, e) }).collect(),
+        backend: pktito::backend(),
+        media: MEDIA,
+        video: VIDEO,
     })
-    .await
-    .map_err(|e| e.to_string())?
-    .map_err(|why| format!("The model could not be downloaded: {why}. Check the connection and try again."))?;
+}
+
+/// Choose a model from the catalog. Nothing is downloaded until a file
+/// needs it.
+#[tauri::command]
+fn choose_model(app: AppHandle, name: String) -> Result<(), String> {
+    model::entry(&name).ok_or("no such model")?;
     let data = data_dir(&app)?;
     let mut settings = model::load_settings(&data);
-    settings.model_path = Some(path);
+    settings.model = Some(name);
+    settings.model_file = None;
     model::save_settings(&data, &settings)
+}
+
+/// The chosen model's file. A catalog model not on this computer yet is
+/// downloaded first, reporting (the model, bytes so far, total) as it goes.
+fn ready_model(app: &AppHandle, mut progress: impl FnMut(&model::Entry, u64, u64)) -> Result<PathBuf, String> {
+    let data = data_dir(app)?;
+    let settings = model::load_settings(&data);
+    if let Some(p) = settings.model_file {
+        if !p.is_file() {
+            return Err(format!("The model file {} is not there any more. Choose another.", p.display()));
+        }
+        return Ok(p);
+    }
+    let e = settings.model.as_deref().and_then(model::entry).ok_or("Choose a language first.")?;
+    let dir = data.join("models");
+    if model::have(&dir, e) {
+        return Ok(model::file_in(&dir, e));
+    }
+    model::download(e, &dir, |got, total| progress(e, got, total))
+        .map_err(|why| format!("The model could not be downloaded: {why}. Check the connection, then add the file again."))
 }
 
 /// A .pkf already on this computer, checked by loading it.
@@ -116,7 +129,7 @@ async fn use_model_file(app: AppHandle, state: State<'_, AppState>) -> Result<bo
     }
     let data = data_dir(&app)?;
     let mut settings = model::load_settings(&data);
-    settings.model_path = Some(path);
+    settings.model_file = Some(path);
     model::save_settings(&data, &settings)?;
     Ok(true)
 }
@@ -160,8 +173,6 @@ async fn transcribe(app: AppHandle, id: u32, path: String) -> Result<(), String>
             let _ = app2.emit("job", JobEvent { id, step, pct, duration, segments, message });
         };
         let state = app2.state::<AppState>();
-        let settings = model::load_settings(&data_dir(&app2)?);
-        let model_path = settings.model_path.ok_or("no model chosen yet")?;
         emit("extracting", 0, 0.0, vec![], String::new());
         let x = match decode::decode(Path::new(&path)) {
             Ok(x) => x,
@@ -171,6 +182,17 @@ async fn transcribe(app: AppHandle, id: u32, path: String) -> Result<(), String>
             }
         };
         let duration = x.len() as f64 / decode::RATE as f64;
+        // after the audio, so that a file nothing can read costs no download
+        let model_path = match ready_model(&app2, |e, got, total| {
+            let pct = (100 * got / total).min(100) as u32;
+            emit("downloading", pct, duration, vec![], format!("{}, {} of {} MB", e.name, got / 1_000_000, total / 1_000_000));
+        }) {
+            Ok(p) => p,
+            Err(why) => {
+                emit("error", 0, duration, vec![], why);
+                return Ok(());
+            }
+        };
         emit("transcribing", 0, duration, vec![], String::new());
         let mut slot = state.engine.lock().unwrap();
         let engine = match ensure_engine(&mut slot, &model_path) {
@@ -245,7 +267,7 @@ fn headless(args: &[String]) -> Result<(), String> {
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.first().map(|a| a == "--download").unwrap_or(false) {
-        // `--download NAME DIR`: the first-run download alone, checked as the window checks it
+        // `--download NAME DIR`: the window's download alone, checked as the window checks it
         let r = (|| -> Result<PathBuf, String> {
             let e = model::entry(args.get(1).ok_or("--download NAME DIR")?).ok_or("no such model")?;
             let dir = PathBuf::from(args.get(2).ok_or("--download NAME DIR")?);
@@ -310,7 +332,7 @@ fn main() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![status, download_model, use_model_file, initial_files, pick_files, transcribe, save_text])
+        .invoke_handler(tauri::generate_handler![status, choose_model, use_model_file, initial_files, pick_files, transcribe, save_text])
         .run(tauri::generate_context!())
         .expect("pktito could not start");
 }

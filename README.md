@@ -3,8 +3,8 @@
 Drop an audio or video file and read its transcript. The audio comes out
 through the media libraries the operating system already has, and it is
 transcribed on this computer by [pktito](https://pktito.net), a C11 port of
-NVIDIA's Parakeet-TDT models. Nothing leaves the computer except the model's
-one download.
+NVIDIA's Parakeet-TDT models. Nothing leaves the computer, and the one thing
+the app fetches is its model, once.
 
 - **macOS 12 and later**: AVFoundation reads the file.
 - **Windows 10 and later**: Media Foundation reads it. (The N editions of
@@ -57,12 +57,14 @@ HE-AAC most, by a word or two in a minute.
 
 ## The model
 
-On first run the app downloads one model from models.pktito.net, about
-624 MB for English (parakeet-tdt-0.6b-v2) or 648 MB for 25 European
-languages (parakeet-tdt-0.6b-v3), and checks its size and SHA-256 against
-the ones built into the app (src-tauri/src/model.rs) before using it. A
-`.pkf` already on the computer can be used instead ("Use a model file on
-this computer").
+The Language menu picks the model: parakeet-tdt-0.6b-v2 (624 MB) for
+English, or parakeet-tdt-0.6b-v3 (648 MB) for 25 European languages. On the
+first run it names the first one that speaks the system's language. The app
+downloads a model from models.pktito.net the first time a file needs it,
+after the file's audio has come out (a file nothing can read costs no
+download), and checks its size and SHA-256 against the ones built into the
+app (src-tauri/src/model.rs) before using it. A `.pkf` already on the
+computer can be used instead (the menu's last item).
 
 Each file lives under the first twelve digits of its SHA-256, as
 `https://models.pktito.net/8bfa6750b83c/parakeet-tdt-0.6b-v2.pkf`, so an

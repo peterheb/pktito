@@ -1,6 +1,7 @@
 /* pktito's window: a queue of files, each extracted and transcribed in turn
    by the Rust side (src-tauri/src/main.rs), and the selected file's
-   transcript, which fills in as its segments finish. */
+   transcript, which fills in as its segments finish. The language chosen
+   picks the model, downloaded the first time a file needs it. */
 "use strict";
 
 const T = window.__TAURI__;
@@ -49,13 +50,21 @@ const mb = (b) => Math.round(b / 1e6);
 /* --------------------------------------------------------------- views -- */
 
 function show(view) {
-  for (const v of ["setup", "empty", "work"]) $(v).hidden = v !== view;
+  for (const v of ["empty", "work"]) $(v).hidden = v !== view;
+  const slot = $(view === "work" ? "side-model" : "empty-model");
+  if ($("model-box").parentNode !== slot) slot.appendChild($("model-box"));
 }
 
 async function refresh() {
   status = await invoke("status");
-  if (!status.model) return renderSetup();
-  $("engine-line").textContent = `${status.model.name} · ${status.backend.split(" ")[0]}`;
+  if (!status.model && !status.model_file) {
+    // the first run: the first model that speaks the system's language, else English
+    const lang = (navigator.language || "en").slice(0, 2).toLowerCase();
+    const m = status.catalog.find((x) => x.languages.includes(lang)) || status.catalog[0];
+    await invoke("choose_model", { name: m.name });
+    status = await invoke("status");
+  }
+  renderModel();
   render();
   if (!started) {
     started = true;
@@ -65,63 +74,52 @@ async function refresh() {
 }
 let started = false;
 
-/* ----------------------------------------------------------- first run -- */
+/* --------------------------------------------------------------- model -- */
 
-function renderSetup() {
-  show("setup");
-  const box = $("models");
-  box.innerHTML = "";
-  status.catalog.forEach((m, i) => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = `pk-btn pk-btn-app ${i === 0 ? "pk-btn-primary" : "pk-btn-quiet"}`;
-    b.textContent = m.label === "English" ? `Download the English model (${mb(m.bytes)} MB)`
-      : `Download the model for ${m.label} (${mb(m.bytes)} MB)`;
-    b.onclick = () => download(m);
-    box.appendChild(b);
-  });
+function renderModel() {
+  const sel = $("model");
+  sel.innerHTML = "";
+  for (const m of status.catalog) sel.add(new Option(m.label, m.name));
+  if (status.model_file) sel.add(new Option(baseName(status.model_file), "file"));
+  sel.add(new Option("A model file on this computer…", "pick"));
+  sel.value = status.model_file ? "file" : status.model;
+  modelLine();
 }
 
-async function download(m) {
-  $("setup-err").hidden = true;
-  for (const b of $("models").querySelectorAll("button")) b.disabled = true;
-  $("use-file").disabled = true;
-  $("dl").hidden = false;
-  $("dl-bar").style.setProperty("--p", "0%");
-  $("dl-text").textContent = `Downloading ${m.name}`;
-  try {
-    await invoke("download_model", { name: m.name });
-    await refresh();
-  } catch (e) {
-    $("setup-err").textContent = String(e);
-    $("setup-err").hidden = false;
-    $("dl").hidden = true;
-    for (const b of $("models").querySelectorAll("button")) b.disabled = false;
-    $("use-file").disabled = false;
+/* Under the choice, where its model stands: on this computer, downloaded
+   with the first file, or downloading now. */
+function modelLine(text = "", err = false) {
+  const m = status.catalog.find((x) => x.name === status.model);
+  const d = files.find((f) => f.step === "downloading");
+  if (!text) {
+    if (d) text = `Downloading ${d.message}`;
+    else if (status.model_file) text = status.model_file;
+    else if (m && m.have) text = `${m.name}, on this computer`;
+    else if (m) text = `${m.name}: ${mb(m.bytes)} MB, downloaded with the first file`;
   }
+  const line = $("model-line");
+  line.textContent = text;
+  line.title = status.model_file || status.backend;
+  line.classList.toggle("err", err);
 }
 
-listen("model-progress", (e) => {
-  const { got, total } = e.payload;
-  const pct = Math.floor((100 * got) / total);
-  $("dl-bar").style.setProperty("--p", `${pct}%`);
-  $("dl-text").textContent = `Downloading ${pct}%, ${mb(got)} of ${mb(total)} MB`;
-});
-
-$("use-file").onclick = async () => {
-  $("setup-err").hidden = true;
+$("model").onchange = async () => {
+  const v = $("model").value;
   try {
-    if (await invoke("use_model_file")) await refresh();
+    if (v === "pick") await invoke("use_model_file");
+    else if (v !== "file") await invoke("choose_model", { name: v });
+    status = await invoke("status");
+    renderModel();
   } catch (e) {
-    $("setup-err").textContent = String(e);
-    $("setup-err").hidden = false;
+    renderModel();
+    modelLine(String(e), true);
   }
 };
 
 /* --------------------------------------------------------- adding files -- */
 
 async function chooseFiles() {
-  if (!status || !status.model) return;
+  if (!status) return;
   addPaths(await invoke("pick_files"));
 }
 
@@ -162,26 +160,31 @@ async function pump() {
   pump();
 }
 
-listen("job", (e) => {
+listen("job", async (e) => {
   const j = e.payload;
   const f = files.find((x) => x.id === j.id);
   if (!f) return;
+  const was = f.step;
   f.step = j.step;
   f.pct = j.pct;
   if (j.duration) f.duration = j.duration;
-  if (j.message) f.message = j.message;
+  f.message = j.message;
   if (j.segments.length) {
     f.segments.push(...j.segments);
     if (selected === f.id) appendSegments(j.segments);
   }
   renderQueue();
   if (selected === f.id) renderHead();
+  if (was === "downloading" && j.step !== "downloading") {
+    status = await invoke("status");
+    modelLine();
+  } else if (j.step === "downloading") modelLine();
 });
 
 /* ----------------------------------------------------------- rendering -- */
 
 function render() {
-  if (!status || !status.model) return;
+  if (!status) return;
   if (!files.length) {
     selected = null;
     return show("empty");
@@ -198,9 +201,11 @@ function rowHtml(f) {
   else if (f.step === "extracting")
     tail = `<span class="pk-bar is-indeterminate" role="progressbar" aria-label="Extracting audio"><i></i></span>` +
       `<span class="pk-status">Extracting audio</span>`;
-  else if (f.step === "transcribing")
-    tail = `<span class="pk-bar" role="progressbar" aria-valuenow="${f.pct}" aria-valuemin="0" aria-valuemax="100" ` +
-      `style="--p:${f.pct}%"><i></i></span><span class="pk-status pk-num">Transcribing ${f.pct}%</span>`;
+  else if (f.step === "downloading" || f.step === "transcribing") {
+    const what = f.step === "downloading" ? "Downloading the model" : "Transcribing";
+    tail = `<span class="pk-bar" role="progressbar" aria-label="${what}" aria-valuenow="${f.pct}" aria-valuemin="0" ` +
+      `aria-valuemax="100" style="--p:${f.pct}%"><i></i></span><span class="pk-status pk-num">${what} ${f.pct}%</span>`;
+  }
   else if (f.step === "done") tail = `<span class="pk-status ok">${ICON.check}Done</span>`;
   else tail = `<span class="pk-status err">${esc(f.message || "This file could not be transcribed")}</span>`;
   return `<li class="pk-file" role="option" aria-selected="${sel}" tabindex="${sel ? 0 : -1}" data-id="${f.id}" ` +
@@ -231,6 +236,7 @@ function renderHead() {
   if (f) {
     if (f.step === "waiting") line = "Waiting for the files before it.";
     else if (f.step === "extracting") line = "Extracting audio";
+    else if (f.step === "downloading") line = `Downloading ${f.message}. It downloads once; then pktito works offline.`;
     else if (f.step === "transcribing" && !f.segments.length) line = `Transcribing ${f.pct}%`;
     else if (f.step === "done" && !f.segments.length) line = "No speech in this file.";
     else if (f.step === "error") { line = f.message; err = true; }
@@ -321,7 +327,7 @@ $("queue").addEventListener("keydown", (e) => {
     e.preventDefault();
   } else if (e.key === "Delete" || e.key === "Backspace") {
     const f = files[i];
-    if (f.step === "extracting" || f.step === "transcribing") return note("This file is being transcribed. Remove it when it is done.");
+    if (["extracting", "downloading", "transcribing"].includes(f.step)) return note("This file is being transcribed. Remove it when it is done.");
     files.splice(i, 1);
     selected = files.length ? files[Math.min(i, files.length - 1)].id : null;
     e.preventDefault();
@@ -353,7 +359,7 @@ const webview = T.webview && T.webview.getCurrentWebview ? T.webview.getCurrentW
 if (webview && webview.onDragDropEvent) {
   webview.onDragDropEvent((e) => {
     const p = e.payload;
-    if (!status || !status.model) return;
+    if (!status) return;
     if (p.type === "enter") dragOver(p.paths);
     else if (p.type === "drop") { dragEnd(); addPaths(p.paths); }
     else if (p.type === "leave") dragEnd();
