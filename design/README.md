@@ -1,6 +1,6 @@
 pktito is an open-source speech-to-text engine: a small C11 port of NVIDIA's Parakeet-TDT models. It has two faces that share this system. The site, pktito.net, shows that it works and sends the reader to the source or the download. The desktop app, built with Tauri for macOS and Windows, does one thing: you pick mp3 or mp4 files, it pulls the audio out with the operating system's own media libraries (AVFoundation on macOS, Media Foundation on Windows), and it transcribes them on your machine.
 
-The idea: **the transcript is the picture.** The site's hero is a transcript panel filling in word by word over the waveform it came from, on a plume-blue stage. The app is the same panel at working size. Neither describes the product when it can show a real fragment of it.
+The idea: **the transcript is the picture.** The site's hero is a transcript panel filling in word by word over the waveform it came from, on a plume-blue stage. The app is the same thing at working size: the waveform strip over the transcript, and in playback the word being spoken underlined. Neither describes the product when it can show a real fragment of it.
 
 pktito is the sibling of pinfer and shares its type (Archivo and Commit Mono) and its plain, measured voice. The colors are its own.
 
@@ -62,7 +62,7 @@ pktito's pictures are its own interface, built in HTML at true size and marked `
 ## Motion
 
 - The signature move: the stage's transcript fills in a token at a time while the playhead (`beak`) moves along the waveform, and each token's duration block lights from `wave` to `wave-played`. That is the one loud moment on the site.
-- In the app, progress bars move and the transcript appears as segments finish. Nothing else animates.
+- In the app, progress moves along the waveform and the transcript appears as segments finish; in playback the playhead moves and the underline follows the speech. Nothing else animates.
 - Section parts on the site enter once, from a visible resting state, 60–90ms apart.
 - Every control answers hover, press and focus, with transform and opacity only.
 - With `prefers-reduced-motion`, the transcript shows whole, the playhead sits at the end, and progress jumps instead of sliding.
@@ -88,6 +88,6 @@ The app icon (`Logos/app-icon.svg`) is a `plume` rounded square with four `ink` 
 - **DropZone**: where files enter the app.
 - **FileQueue**: each file's step and progress.
 - **Transcript**: timestamped segments, the thing people read and copy.
-- **AppWindow**: the two panes together, as the app opens.
+- **AppWindow**: the queue beside the transcript, once there are several files.
 
 Components are plain HTML and CSS in `components/bundle.css` (classes `pk-*`); there is no script bundle. The Stage preview carries the few lines of script it needs.

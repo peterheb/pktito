@@ -1,7 +1,9 @@
-/* pktito's window: a queue of files, each extracted and transcribed in turn
-   by the Rust side (src-tauri/src/main.rs), and the selected file's
-   transcript, which fills in as its segments finish. The language chosen
-   picks the model, downloaded the first time a file needs it. */
+/* pktito's window. Setup picks a model and downloads it; then each file
+   dropped on the window is transcribed in turn by the Rust side
+   (src-tauri/src/main.rs), shown filling in as its chunks finish, and then
+   played back against its transcript word by word, searched, copied and
+   saved. One file has the window to itself; several get a queue beside
+   it. Finished transcripts stay on the recent list. */
 "use strict";
 
 const T = window.__TAURI__;
@@ -9,22 +11,35 @@ const invoke = T.core.invoke;
 const listen = T.event.listen;
 
 const $ = (id) => document.getElementById(id);
-const svg = (body, sw = 2) =>
-  `<svg class="pk-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" ` +
-  `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+const svg = (body, cls = "pk-ico") => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
 const ICON = {
   music: svg('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'),
-  film: svg('<rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/>' +
-    '<line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/>'),
+  film: svg('<rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/>' +
+    '<line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/>' +
+    '<line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/>'),
+  file: svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>' +
+    '<line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'),
   copy: svg('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'),
-  check: svg('<polyline points="20 6 9 17 4 12"/>', 2.4),
+  check: svg('<polyline points="20 6 9 17 4 12"/>'),
+  down: svg('<polyline points="6 9 12 15 18 9"/>'),
+  up: svg('<polyline points="18 15 12 9 6 15"/>'),
+  download: svg('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>'),
+  plus: svg('<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>'),
+  alert: svg('<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'),
+  x: svg('<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'),
+  play: svg('<polygon points="6 3 20 12 6 21 6 3"/>', "pk-ico pk-ico-20 pk-ico-fill"),
+  pause: svg('<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>', "pk-ico pk-ico-20 pk-ico-fill"),
 };
 
-let status = null;
-const files = [];      // {id, path, name, kind, step, pct, duration, segments, message}
+let st = null;          // the Rust side's status: the model, the catalog, the platform
+let prefs = {};         // how transcripts are saved
+let dl = null;          // the model download, as its last event told it
+let choice = null;      // the model picked on the setup screen
+let recent = [];        // the recent list, newest first
+const files = [];       // the queue
+let sel = null;         // the id of the file shown
 let nextId = 1;
-let selected = null;
-let busy = false;
+let running = false;    // a transcription is under way
 
 /* ---------------------------------------------------------- formatting -- */
 
@@ -37,359 +52,1352 @@ function stamp(s) {
   const cs = Math.max(0, Math.round(s * 100));
   return `${hms(Math.floor(cs / 100))}.${two(cs % 100)}`;
 }
-function srtTime(s) {
+function msTime(s, sep) {
   const ms = Math.max(0, Math.round(s * 1000));
-  return `${hms(Math.floor(ms / 1000))},${String(ms % 1000).padStart(3, "0")}`;
+  return `${hms(Math.floor(ms / 1000))}${sep}${String(ms % 1000).padStart(3, "0")}`;
+}
+/* m:ss, or h:mm:ss from an hour */
+function clock(s) {
+  s = Math.max(0, Math.round(s));
+  const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60;
+  return h ? `${h}:${two(m)}:${two(s % 60)}` : `${m}:${two(s % 60)}`;
+}
+function timeLeft(s) {
+  if (!(s >= 0) || !isFinite(s)) return "";
+  if (s < 50) return `about ${Math.max(5, Math.round(s / 5) * 5)} s left`;
+  return `about ${Math.round(s / 60)} min left`;
+}
+/* "Today", "Yesterday", else the date as the system writes it */
+function when(t) {
+  const d = new Date(t * 1000), now = new Date();
+  const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const ago = Math.round((day(now) - day(d)) / 864e5);
+  if (ago === 0) return "Today";
+  if (ago === 1) return "Yesterday";
+  const o = { month: "short", day: "numeric" };
+  if (d.getFullYear() !== now.getFullYear()) o.year = "numeric";
+  return d.toLocaleDateString(undefined, o);
+}
+function langName(tag) {
+  try {
+    return new Intl.DisplayNames([tag], { type: "language", languageDisplay: "standard" }).of(tag) || tag;
+  } catch {
+    return tag;
+  }
 }
 const baseName = (p) => p.split(/[\\/]/).pop();
-const stem = (p) => baseName(p).replace(/\.[^.]+$/, "");
+const stemOf = (p) => baseName(p).replace(/\.[^.]+$/, "");
 const extOf = (p) => (baseName(p).match(/\.([^.]+)$/) || ["", ""])[1].toLowerCase();
-const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const mb = (b) => Math.round(b / 1e6);
+const percent = (x) => Math.floor(Math.min(1, Math.max(0, x)) * 100);
+const plural = (n, one) => `${n} ${one}${n === 1 ? "" : "s"}`;
+
+const isMac = () => st.platform === "macos";
+const isWin = () => st.platform === "windows";
+const kbd = (k, shift = false) => (isMac() ? `${shift ? "⇧" : ""}⌘${k}` : `Ctrl+${shift ? "Shift+" : ""}${k}`);
+const revealLabel = () => (isMac() ? "Show in Finder" : isWin() ? "Show in File Explorer" : "Show in folder");
+const kindOf = (p) => (st.video.includes(extOf(p)) ? "video" : "audio");
+const isMedia = (p) => st.media.includes(extOf(p));
 
 /* --------------------------------------------------------------- views -- */
 
-function show(view) {
-  for (const v of ["empty", "work"]) $(v).hidden = v !== view;
-  const slot = $(view === "work" ? "side-model" : "empty-model");
-  if ($("model-box").parentNode !== slot) slot.appendChild($("model-box"));
+function viewName() {
+  if (!st) return "";
+  if (!st.ready || dl) return "setup";
+  return files.length ? "work" : "ready";
+}
+
+function render() {
+  const v = viewName();
+  for (const id of ["setup", "ready", "work"]) $(id).hidden = id !== v;
+  if (v !== "work") pausePlayback();
+  if (v === "setup") renderSetup();
+  else if (v === "ready") renderReady();
+  else if (v === "work") renderWork();
 }
 
 async function refresh() {
-  status = await invoke("status");
-  if (!status.model && !status.model_file) {
-    // the first run: the first model that speaks the system's language, else English
-    const lang = (navigator.language || "en").slice(0, 2).toLowerCase();
-    const m = status.catalog.find((x) => x.languages.includes(lang)) || status.catalog[0];
-    await invoke("choose_model", { name: m.name });
-    status = await invoke("status");
-  }
-  renderModel();
+  st = await invoke("status");
+  prefs = st.prefs;
+  dl = st.download;
   render();
-  if (!started) {
-    started = true;
-    const given = await invoke("initial_files");
-    if (given.length) addPaths(given);
-  }
+  pump();
 }
-let started = false;
+
+const current = () => files.find((f) => f.id === sel) || null;
+const waiting = () => files.filter((f) => f.step === "waiting").length;
 
 /* --------------------------------------------------------------- model -- */
 
-function renderModel() {
-  const sel = $("model");
-  sel.innerHTML = "";
-  for (const m of status.catalog) sel.add(new Option(m.label, m.name));
-  if (status.model_file) sel.add(new Option(baseName(status.model_file), "file"));
-  sel.add(new Option("A model file on this computer…", "pick"));
-  sel.value = status.model_file ? "file" : status.model;
-  modelLine();
+const inUse = () => st.catalog.find((m) => m.name === st.model);
+function modelLabel(long) {
+  if (st.model_file) return baseName(st.model_file);
+  const m = inUse();
+  if (!m) return "Choose a model";
+  return long ? `${m.label} · ${m.name}` : `${m.label} model`;
 }
 
-/* Under the choice, where its model stands: on this computer, downloaded
-   with the first file, or downloading now. */
-function modelLine(text = "", err = false) {
-  const m = status.catalog.find((x) => x.name === status.model);
-  const d = files.find((f) => f.step === "downloading");
-  if (!text) {
-    if (d) text = `Downloading ${d.message}`;
-    else if (status.model_file) text = status.model_file;
-    else if (m && m.have) text = `${m.name}, on this computer`;
-    else if (m) text = `${m.name}: ${mb(m.bytes)} MB, downloaded with the first file`;
-  }
-  const line = $("model-line");
-  line.textContent = text;
-  line.title = status.model_file || status.backend;
-  line.classList.toggle("err", err);
-}
-
-$("model").onchange = async () => {
-  const v = $("model").value;
+/* A download starts with what it already has; its first event follows at once. */
+async function startDownload(m) {
+  dl = { name: m.name, step: "downloading", got: m.partial, total: m.bytes, speed: 0, host: "", why: "", text: "", detail: "",
+    retry: false, trying: false };
+  render();
   try {
-    if (v === "pick") await invoke("use_model_file");
-    else if (v !== "file") await invoke("choose_model", { name: v });
-    status = await invoke("status");
-    renderModel();
+    await invoke("download_model", { name: m.name });
   } catch (e) {
-    renderModel();
-    modelLine(String(e), true);
+    dl = null;
+    render();
+    toast(String(e), { err: true });
+  }
+}
+
+async function useOwnFile() {
+  try {
+    if (!(await invoke("use_model_file"))) return;
+    if (dl) await invoke("cancel_download");
+    await refresh();
+  } catch (e) {
+    toast(String(e), { err: true });
+  }
+}
+
+function modelMenu(anchor, keys) {
+  const items = st.catalog.map((m) => {
+    const on = !st.model_file && st.model === m.name;
+    const sub = m.have ? `${m.name} · on this computer` : `${m.name} · ${mb(m.bytes)} MB download`;
+    return `<button class="pk-mi" type="button" role="menuitemradio" aria-checked="${on}" data-model="${m.name}">` +
+      `<span>${esc(m.label)}</span><small>${esc(sub)}</small>${on ? ICON.check : ""}</button>`;
+  });
+  if (st.model_file) {
+    items.push(`<button class="pk-mi" type="button" role="menuitemradio" aria-checked="true" data-model="">` +
+      `<span>${esc(baseName(st.model_file))}</span><small title="${esc(st.model_file)}">${esc(st.model_file)}</small>${ICON.check}</button>`);
+  }
+  items.push(`<div class="pk-menu-sep" aria-hidden="true"></div>` +
+    `<button class="pk-mi" type="button" role="menuitem" data-own="1"><span>A model file on this computer…</span></button>`);
+  openMenu(anchor, keys, items.join(""), anchor.id === "foot-model" ? "up" : "down right", (m) => {
+    m.onclick = async (e) => {
+      const b = e.target.closest(".pk-mi");
+      if (!b) return;
+      closeMenu();
+      if (b.dataset.own) return useOwnFile();
+      const entry = st.catalog.find((x) => x.name === b.dataset.model);
+      if (!entry || (!st.model_file && st.model === entry.name)) return;
+      if (!entry.have) return startDownload(entry);
+      try {
+        await invoke("choose_model", { name: entry.name });
+        await refresh();
+        toast(`The ${entry.label} model transcribes the next files`);
+      } catch (err) {
+        toast(String(err), { err: true });
+      }
+    };
+  });
+}
+
+/* --------------------------------------------------------------- setup -- */
+
+let setupKey = "";
+
+function setupMode() {
+  if (!dl) return "choose";
+  return dl.step === "checking" ? "downloading" : dl.step;
+}
+
+function renderSetup() {
+  const mode = setupMode();
+  const key = mode === "failed" ? `failed ${dl.why} ${dl.retry}` : mode;
+  if (key === setupKey) return mode === "choose" ? updateChoose() : updateDownload();
+  setupKey = key;
+  const body = $("setup-body");
+  if (mode === "choose") {
+    body.innerHTML = chooseHtml();
+    for (const r of body.querySelectorAll('input[name="model"]')) r.onchange = () => { choice = r.value; updateChoose(); };
+    $("go").onclick = go;
+    $("have-file").onclick = useOwnFile;
+    return updateChoose();
+  }
+  body.innerHTML = mode === "failed" ? failedHtml() : downloadHtml();
+  $("dl-cancel").onclick = () => invoke("cancel_download").catch((e) => toast(String(e), { err: true }));
+  if (mode === "failed") {
+    $("dl-retry").onclick = () => invoke("download_model", { name: dl.name }).catch((e) => toast(String(e), { err: true }));
+    $("dl-file").onclick = useOwnFile;
+  } else {
+    $("dl-pause").onclick = () => (dl.step === "paused" ? invoke("download_model", { name: dl.name }) : invoke("pause_download"))
+      .catch((e) => toast(String(e), { err: true }));
+  }
+  updateDownload();
+}
+
+function chooseHtml() {
+  const tag = navigator.language || "en", base = tag.slice(0, 2).toLowerCase(), name = langName(tag);
+  const fits = st.catalog.find((m) => m.languages.includes(base));
+  if (!st.catalog.some((m) => m.name === choice)) choice = (inUse() || fits || st.catalog[0]).name;
+  const [first, wide] = [st.catalog[0], st.catalog[st.catalog.length - 1]];
+  const intro = fits
+    ? "pktito needs one model on this computer to transcribe. We picked the one that fits your system language."
+    : `Neither model transcribes ${name} yet. ${first.label} is selected; ${wide.label} covers ${wide.languages.length} European languages.`;
+  const cards = st.catalog.map((m) => {
+    const match = fits && fits.name === m.name
+      ? `<span class="pk-match">${ICON.check}${m.languages.length === 1 ? "Matches" : "Covers"} your system language, ${esc(name)}</span>`
+      : "";
+    return `<label class="pk-choice"><input type="radio" name="model" value="${m.name}"${m.name === choice ? " checked" : ""}>` +
+      `<span class="pk-name">${esc(m.label)}</span><span class="pk-stamp">${m.have ? "on this computer" : `${mb(m.bytes)} MB`}</span>` +
+      `<span class="pk-desc">${esc(m.name)} · ${esc(m.about)}</span>${match}</label>`;
+  }).join("");
+  return `<span class="pk-wm">pktito</span>
+    <div class="pk-intro"><h1 class="pk-lead">Choose a speech model</h1><p class="pk-text">${esc(intro)}</p></div>
+    <fieldset class="pk-choices"><legend>Speech model</legend>${cards}</fieldset>
+    <div class="pk-foot-col">
+      <button class="pk-btn pk-btn-primary pk-btn-lg pk-wide" id="go" type="button"></button>
+      <div class="pk-spread">
+        <button class="pk-linkbtn" id="have-file" type="button">I already have a model file…</button>
+        <span class="pk-small" id="go-note"></span>
+      </div>
+    </div>`;
+}
+
+function updateChoose() {
+  const m = st.catalog.find((x) => x.name === choice);
+  for (const r of document.querySelectorAll('input[name="model"]')) r.closest(".pk-choice").classList.toggle("is-on", r.value === choice);
+  const go = m.have ? `Use the ${m.label} model`
+    : m.partial ? `Download the ${m.label} model · ${mb(m.bytes - m.partial)} MB to go`
+    : `Download the ${m.label} model · ${mb(m.bytes)} MB`;
+  $("go").innerHTML = `${m.have ? ICON.check : ICON.download}${esc(go)}`;
+  const w = waiting();
+  $("go-note").textContent = w ? `Downloads once, then your ${plural(w, "file")} start.` : "Downloads once. Then pktito works offline.";
+}
+
+async function go() {
+  const m = st.catalog.find((x) => x.name === choice);
+  if (!m.have) return startDownload(m);
+  try {
+    await invoke("choose_model", { name: m.name });
+    await refresh();
+  } catch (e) {
+    toast(String(e), { err: true });
+  }
+}
+
+function downloadHtml() {
+  const m = st.catalog.find((x) => x.name === dl.name) || { label: dl.name };
+  return `<span class="pk-wm">pktito</span>
+    <div class="pk-intro"><h1 class="pk-lead">Downloading the ${esc(m.label)} model</h1>
+      <p class="pk-text">${esc(dl.name)} from <span id="dl-host"></span></p></div>
+    <div class="pk-dl">
+      <div class="pk-spread"><span class="pk-figure" id="dl-pct"></span><span class="pk-stamp" id="dl-nums"></span></div>
+      <div class="pk-bar" id="dl-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Model download"><i></i></div>
+    </div>
+    <ul class="pk-ticks pk-text">
+      <li>${ICON.check}It downloads once. After that pktito works offline.</li>
+      <li>${ICON.check}If the connection drops, it picks up where it stopped.</li>
+      <li>${ICON.check}The file is checked against its published checksum before first use.</li>
+    </ul>
+    <div class="pk-foot-row">
+      <button class="pk-btn" id="dl-pause" type="button"></button>
+      <button class="pk-btn pk-btn-ghost" id="dl-cancel" type="button">Cancel</button>
+      <span class="pk-small" id="dl-next"></span>
+    </div>`;
+}
+
+function failedHtml() {
+  const kept = dl.got ? ` The ${mb(dl.got)} MB already downloaded is kept, so the download picks up from there.` : "";
+  const text = dl.retry ? `Check the connection, then try again.${kept}` : dl.text;
+  const stopped = dl.got ? `Stopped at ${mb(dl.got)} of ${mb(dl.total)} MB` : "Nothing has downloaded yet";
+  return `<span class="pk-wm">pktito</span>
+    <div class="pk-intro"><h1 class="pk-lead">${esc(dl.why)}</h1><p class="pk-text">${esc(text)}</p></div>
+    <div class="pk-stopped">
+      <div class="pk-bar is-paused" id="dl-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Model download, stopped"><i></i></div>
+      <div class="pk-spread"><span class="pk-small pk-err">${ICON.alert}${stopped}</span>
+        ${dl.retry ? `<span class="pk-small" id="dl-auto"></span>` : ""}</div>
+    </div>
+    <details class="pk-details" open><summary class="pk-ui">${ICON.down}Details</summary><p class="pk-stamp">${esc(dl.detail)}</p></details>
+    <div class="pk-foot-row">
+      <button class="pk-btn pk-btn-primary pk-btn-lg" id="dl-retry" type="button">Try again</button>
+      <button class="pk-btn pk-btn-lg" id="dl-file" type="button">Use a model file I already have…</button>
+      <button class="pk-btn pk-btn-ghost pk-btn-lg" id="dl-cancel" type="button">Cancel</button>
+    </div>`;
+}
+
+function updateDownload() {
+  const mode = setupMode();
+  const p = dl.total ? dl.got / dl.total : 0;
+  const bar = $("dl-bar");
+  bar.firstElementChild.style.width = `${(p * 100).toFixed(1)}%`;
+  bar.setAttribute("aria-valuenow", percent(p));
+  bar.classList.toggle("is-paused", mode !== "downloading");
+  if (mode === "failed") {
+    $("dl-retry").disabled = dl.trying;
+    $("dl-retry").textContent = dl.trying ? "Trying again…" : "Try again";
+    if ($("dl-auto")) $("dl-auto").textContent = dl.trying ? "Trying again now" : "Tries again by itself when the network returns";
+    return;
+  }
+  $("dl-host").textContent = dl.host || "models.pktito.net";
+  $("dl-pct").textContent = `${percent(dl.step === "checking" ? 1 : p)}%`;
+  let nums = `${mb(dl.got)} of ${mb(dl.total)} MB`;
+  if (dl.step === "checking") nums = "Checking it against its published checksum";
+  else if (dl.step === "paused") nums += " · paused";
+  else if (dl.speed > 0) nums += ` · ${(dl.speed / 1e6).toFixed(1)} MB/s · ${timeLeft((dl.total - dl.got) / dl.speed)}`;
+  $("dl-nums").textContent = nums;
+  const pause = $("dl-pause");
+  pause.textContent = dl.step === "paused" ? "Resume" : "Pause";
+  pause.classList.toggle("pk-btn-primary", dl.step === "paused");
+  pause.disabled = dl.step === "checking";
+  const w = waiting();
+  $("dl-next").textContent = w ? `Next: your ${plural(w, "file")}.` : "Next: drop audio or video files.";
+}
+
+listen("download", async (e) => {
+  const s = e.payload;
+  if (s.step === "done" || s.step === "cancelled") {
+    dl = null;
+    setupKey = "";
+    await refresh();
+    const m = st.catalog.find((x) => x.name === s.name);
+    if (s.step === "done") toast(`The ${m ? m.label : s.name} model is ready`);
+    return;
+  }
+  dl = s;
+  if (viewName() === "setup") renderSetup();
+});
+
+/* --------------------------------------------------------------- ready -- */
+
+function renderReady() {
+  $("ready-model").innerHTML = `${esc(modelLabel(false))}${ICON.down}`;
+  $("choose").innerHTML = `${ICON.plus}Choose files…`;
+  drawWave($("idle-wave"), null, 0);
+  $("recent").hidden = !recent.length;
+  $("recent-list").innerHTML = recent.map((r) =>
+    `<li><button class="pk-row" type="button" data-recent="${esc(r.id)}" title="${esc(r.path)}">${ICON.file}` +
+    `<span class="pk-name">${esc(r.name)}</span><span class="pk-stamp">${hms(r.duration)}</span>` +
+    `<span class="pk-small pk-when">${esc(when(r.finished))}</span></button></li>`).join("");
+}
+
+async function openRecent(id) {
+  const there = files.find((f) => f.recentId === id);
+  if (there) {
+    sel = there.id;
+    return render();
+  }
+  try {
+    const t = await invoke("open_recent", { id });
+    const f = Object.assign(newFile(t.path), { name: t.name, step: "done", done: 1, duration: t.duration, peaks: t.peaks,
+      audio: t.audio, segments: t.segments, took: t.took, model: t.model, recentId: t.id });
+    files.push(f);
+    sel = f.id;
+    render();
+    if (!f.audio) reloadAudio(f);
+  } catch (e) {
+    toast(String(e), { err: true });
+  }
+}
+
+/* The cache let its audio go: read it again from the original, if it is there. */
+async function reloadAudio(f) {
+  f.audioWhy = "Reading its audio again…";
+  if (current() === f) updateFoot(f, modeOf(f));
+  try {
+    f.audio = await invoke("reload_audio", { id: f.recentId });
+    f.audioWhy = "";
+  } catch (e) {
+    f.audioWhy = String(e);
+  }
+  if (current() === f) {
+    mainKey = "";
+    showMain();
+  }
+}
+
+$("recent-list").onclick = (e) => {
+  const b = e.target.closest("[data-recent]");
+  if (b) openRecent(b.dataset.recent);
+};
+$("clear-recent").onclick = async () => {
+  try {
+    if (await invoke("clear_recent")) {
+      recent = [];
+      render();
+    }
+  } catch (e) {
+    toast(String(e), { err: true });
   }
 };
+$("choose").onclick = () => chooseFiles();
+$("ready-model").onclick = (e) => modelMenu(e.currentTarget, !e.detail);
+$("foot-model").onclick = (e) => modelMenu(e.currentTarget, !e.detail);
 
-/* --------------------------------------------------------- adding files -- */
+/* --------------------------------------------------------------- queue -- */
+
+function newFile(path) {
+  return { id: nextId++, path, name: baseName(path), kind: kindOf(path), step: "waiting", done: 0, eta: -1, duration: null,
+    peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], took: 0, model: "", recentId: null, message: "" };
+}
 
 async function chooseFiles() {
-  if (!status) return;
-  addPaths(await invoke("pick_files"));
+  if (!st) return;
+  try {
+    addPaths(await invoke("pick_files"));
+  } catch (e) {
+    toast(String(e), { err: true });
+  }
 }
 
 function addPaths(paths) {
   const refused = [];
   let first = null;
   for (const p of paths) {
-    if (!status.media.includes(extOf(p))) {
+    if (!isMedia(p)) {
       refused.push(baseName(p));
       continue;
     }
-    const f = { id: nextId++, path: p, name: baseName(p), kind: status.video.includes(extOf(p)) ? "video" : "audio",
-      step: "waiting", pct: 0, duration: null, segments: [], message: "" };
+    const f = newFile(p);
     files.push(f);
     first = first || f;
   }
-  if (first && (selected === null || !files.some((f) => f.id === selected))) selected = first.id;
+  if (first && !current()) sel = first.id;
+  if (refused.length) toast(`pktito reads audio and video files. Not added: ${refused.join(", ")}`, { err: true });
   render();
-  if (refused.length) note(`pktito reads audio and video files. Not added: ${refused.join(", ")}`, true);
   pump();
 }
 
-/* ---------------------------------------------------- transcribing them -- */
-
 async function pump() {
-  if (busy) return;
+  if (running || viewName() === "setup") return;
   const f = files.find((x) => x.step === "waiting");
   if (!f) return;
-  busy = true;
+  running = true;
+  f.step = "reading";
+  update(f);
   try {
     await invoke("transcribe", { id: f.id, path: f.path });
   } catch (e) {
     f.step = "error";
     f.message = String(e);
+    update(f);
   }
-  busy = false;
+  running = false;
+  pump();
+}
+
+listen("job", (e) => {
+  const j = e.payload;
+  const f = files.find((x) => x.id === j.id);
+  if (!f) return;
+  f.step = j.step;
+  if (j.duration) f.duration = j.duration;
+  if (j.peaks.length) f.peaks = j.peaks;
+  if (j.audio) f.audio = j.audio;
+  if (j.step === "transcribing") {
+    f.done = j.done;
+    f.eta = j.eta;
+  }
+  f.segments.push(...j.segments);
+  if (j.step === "error") f.message = j.message;
+  if (j.step === "done") {
+    Object.assign(f, { done: 1, took: j.took, model: j.model, recentId: j.recent });
+    finished(f);
+  }
+  update(f, j.segments);
+});
+
+async function finished(f) {
+  try {
+    recent = await invoke("recent_list");
+  } catch {
+    // the list shows what it had
+  }
+  if (prefs.save_each && f.segments.length) {
+    try {
+      const r = await invoke("save_text", { original: f.path, ext: "txt", text: textOf(f, "txt"), nextTo: true });
+      if (r) toast(`Saved ${baseName(r.path)}${r.beside ? " next to the original" : ""}`, { reveal: r.path });
+    } catch (e) {
+      toast(String(e), { err: true });
+    }
+  }
+}
+
+/* Show what changed in f where it shows. */
+function update(f, segs = []) {
+  const v = viewName();
+  if (v === "setup") return renderSetup();
+  if (v !== "work") return;
+  updateRow(f);
+  if (f.id === sel) showMain(segs);
+}
+
+function removeFile(f) {
+  if (["reading", "loading", "transcribing"].includes(f.step)) return toast("It is being transcribed. Stop it first.", { err: true });
+  const i = files.indexOf(f);
+  files.splice(i, 1);
+  if (playId === f.id) {
+    pausePlayback();
+    player.removeAttribute("src");
+    playId = null;
+  }
+  if (sel === f.id) sel = files.length ? files[Math.min(i, files.length - 1)].id : null;
+  mainKey = "";
+  render();
+}
+
+function again(f) {
+  Object.assign(f, { step: "waiting", done: 0, eta: -1, peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], took: 0,
+    recentId: null, message: "" });
+  mainKey = "";
   render();
   pump();
 }
 
-listen("job", async (e) => {
-  const j = e.payload;
-  const f = files.find((x) => x.id === j.id);
-  if (!f) return;
-  const was = f.step;
-  f.step = j.step;
-  f.pct = j.pct;
-  if (j.duration) f.duration = j.duration;
-  f.message = j.message;
-  if (j.segments.length) {
-    f.segments.push(...j.segments);
-    if (selected === f.id) appendSegments(j.segments);
-  }
-  renderQueue();
-  if (selected === f.id) renderHead();
-  if (was === "downloading" && j.step !== "downloading") {
-    status = await invoke("status");
-    modelLine();
-  } else if (j.step === "downloading") modelLine();
-});
+/* ---------------------------------------------------------------- work -- */
 
-/* ----------------------------------------------------------- rendering -- */
-
-function render() {
-  if (!status) return;
-  if (!files.length) {
-    selected = null;
-    return show("empty");
-  }
-  show("work");
-  renderQueue();
-  renderMain();
+function renderWork() {
+  const batch = files.length > 1;
+  $("work").classList.toggle("is-batch", batch);
+  $("side").hidden = !batch;
+  if (!current()) sel = files[0].id;
+  renderSide();
+  showMain();
 }
 
 function rowHtml(f) {
-  const sel = f.id === selected;
-  let tail = "";
-  if (f.step === "waiting") tail = `<span class="pk-status">Waiting</span>`;
-  else if (f.step === "extracting")
-    tail = `<span class="pk-bar is-indeterminate" role="progressbar" aria-label="Extracting audio"><i></i></span>` +
-      `<span class="pk-status">Extracting audio</span>`;
-  else if (f.step === "downloading" || f.step === "transcribing") {
-    const what = f.step === "downloading" ? "Downloading the model" : "Transcribing";
-    tail = `<span class="pk-bar" role="progressbar" aria-label="${what}" aria-valuenow="${f.pct}" aria-valuemin="0" ` +
-      `aria-valuemax="100" style="--p:${f.pct}%"><i></i></span><span class="pk-status pk-num">${what} ${f.pct}%</span>`;
-  }
-  else if (f.step === "done") tail = `<span class="pk-status ok">${ICON.check}Done</span>`;
-  else tail = `<span class="pk-status err">${esc(f.message || "This file could not be transcribed")}</span>`;
-  return `<li class="pk-file" role="option" aria-selected="${sel}" tabindex="${sel ? 0 : -1}" data-id="${f.id}" ` +
-    `title="${esc(f.path)}">${f.kind === "video" ? ICON.film : ICON.music}<span class="pk-name">${esc(f.name)}</span>` +
-    `<span class="pk-stamp">${f.duration === null ? "" : hms(f.duration)}</span>${tail}</li>`;
+  const on = f.id === sel;
+  let status;
+  if (f.step === "waiting") status = `<span class="pk-status">Waiting</span>`;
+  else if (f.step === "reading") status = `<span class="pk-status">Reading the audio</span>`;
+  else if (f.step === "loading") status = `<span class="pk-status">Loading the model</span>`;
+  else if (f.step === "transcribing") {
+    status = `<span class="pk-bar pk-mini"><i style="width:${(f.done * 100).toFixed(1)}%"></i></span>` +
+      `<span class="pk-status pk-num">Transcribing ${percent(f.done)}%${f.eta > 0 ? ` · ${timeLeft(f.eta)}` : ""}</span>`;
+  } else if (f.step === "done") status = `<span class="pk-status pk-ok">${ICON.check}Done</span>`;
+  else if (f.step === "stopped") status = `<span class="pk-status">Stopped at ${percent(f.done)}%</span>`;
+  else status = `<span class="pk-status pk-err">${esc(f.message || "This file could not be transcribed.")}</span>`;
+  return `<li><button class="pk-row${on ? " is-on" : ""}" type="button" data-id="${f.id}" aria-current="${on}" ` +
+    `tabindex="${on ? 0 : -1}" title="${esc(f.path)}">${f.kind === "video" ? ICON.film : ICON.music}` +
+    `<span class="pk-name">${esc(f.name)}</span><span class="pk-stamp">${f.duration == null ? "" : hms(f.duration)}</span>${status}</button></li>`;
 }
 
-function renderQueue() {
-  const focused = document.activeElement && document.activeElement.closest(".pk-file");
+/* One row anew, in place: progress comes every chunk, and a queue redrawn
+   under the pointer would lose clicks. */
+function updateRow(f) {
+  const row = $("queue").querySelector(`[data-id="${f.id}"]`);
+  if (!row || files.length < 2) return renderSide();
+  const focused = document.activeElement === row;
+  row.parentNode.outerHTML = rowHtml(f);
+  if (focused) $("queue").querySelector(`[data-id="${f.id}"]`).focus();
+  sideFoot();
+}
+
+function sideFoot() {
+  const ready = files.filter((f) => f.step === "done" && f.segments.length).length;
+  $("tally").textContent = `${files.filter((f) => f.step === "done").length} of ${files.length} done`;
+  $("save-all").disabled = !ready;
+}
+
+function renderSide() {
+  if (files.length < 2) return;
+  const focused = document.activeElement && document.activeElement.closest("#queue");
+  $("add").innerHTML = `${ICON.plus}Add files<span class="pk-kbd">${kbd("O")}</span>`;
   $("queue").innerHTML = files.map(rowHtml).join("");
   if (focused) {
-    const row = $("queue").querySelector(`[data-id="${selected}"]`);
+    const row = $("queue").querySelector(`[data-id="${sel}"]`);
     if (row) row.focus();
   }
+  $("save-all").innerHTML = `${ICON.download}Save all${ICON.up}`;
+  sideFoot();
 }
 
-function current() {
-  return files.find((f) => f.id === selected) || null;
+function select(id) {
+  if (id === sel) return;
+  pausePlayback();
+  sel = id;
+  closeMenu();
+  renderSide();
+  showMain();
 }
-
-function renderHead() {
-  const f = current();
-  $("title").textContent = f ? f.name : "";
-  const has = !!(f && f.segments.length);
-  for (const id of ["copy", "save-txt", "save-srt"]) $(id).disabled = !has;
-  if (!$("copy").dataset.copied) $("copy").innerHTML = `${ICON.copy}Copy text`;
-  let line = "", err = false;
-  if (f) {
-    if (f.step === "waiting") line = "Waiting for the files before it.";
-    else if (f.step === "extracting") line = "Extracting audio";
-    else if (f.step === "downloading") line = `Downloading ${f.message}. It downloads once; then pktito works offline.`;
-    else if (f.step === "transcribing" && !f.segments.length) line = `Transcribing ${f.pct}%`;
-    else if (f.step === "done" && !f.segments.length) line = "No speech in this file.";
-    else if (f.step === "error") { line = f.message; err = true; }
-  }
-  note(line, err);
-}
-
-function renderMain() {
-  renderHead();
-  const f = current();
-  $("transcript").innerHTML = "";
-  if (f) appendSegments(f.segments);
-}
-
-function appendSegments(segs) {
-  const frag = document.createDocumentFragment();
-  for (const s of segs) {
-    const row = document.createElement("div");
-    row.className = "pk-seg";
-    const st = document.createElement("span");
-    st.className = "pk-stamp";
-    st.textContent = stamp(s.start);
-    st.title = "Copy this time";
-    st.onclick = () => navigator.clipboard.writeText(st.textContent);
-    const p = document.createElement("p");
-    p.textContent = s.text;
-    row.append(st, p);
-    frag.appendChild(row);
-  }
-  $("transcript").appendChild(frag);
-}
-
-function note(text, err = false) {
-  $("note").textContent = text || "";
-  $("note").classList.toggle("err", err);
-}
-
-/* ------------------------------------------------------------- actions -- */
-
-function plainText(f) {
-  return f.segments.map((s) => s.text).join("\n") + "\n";
-}
-
-function srtText(f) {
-  return f.segments.map((s, i) => `${i + 1}\n${srtTime(s.start)} --> ${srtTime(s.end)}\n${s.text}\n`).join("\n");
-}
-
-$("copy").onclick = async () => {
-  const f = current();
-  if (!f || !f.segments.length) return;
-  await navigator.clipboard.writeText(plainText(f));
-  const b = $("copy");
-  b.dataset.copied = "1";
-  b.innerHTML = `${ICON.check}Copied`;
-  setTimeout(() => { delete b.dataset.copied; renderHead(); }, 1500);
-};
-
-async function save(ext) {
-  const f = current();
-  if (!f || !f.segments.length) return;
-  try {
-    const path = await invoke("save_text", { name: stem(f.path), ext, text: ext === "srt" ? srtText(f) : plainText(f) });
-    if (path) note(`Saved ${baseName(path)}`);
-  } catch (e) {
-    note(String(e), true);
-  }
-}
-$("save-txt").onclick = () => save("txt");
-$("save-srt").onclick = () => save("srt");
-$("drop-big").onclick = chooseFiles;
-$("add-small").onclick = chooseFiles;
 
 $("queue").addEventListener("click", (e) => {
-  const row = e.target.closest(".pk-file");
-  if (!row) return;
-  selected = Number(row.dataset.id);
-  renderQueue();
-  renderMain();
-  row.focus();
+  const row = e.target.closest("[data-id]");
+  if (row) select(Number(row.dataset.id));
 });
-
 $("queue").addEventListener("keydown", (e) => {
-  const i = files.findIndex((f) => f.id === selected);
+  const i = files.findIndex((f) => f.id === sel);
   if (i < 0) return;
   if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-    const j = Math.min(files.length - 1, Math.max(0, i + (e.key === "ArrowDown" ? 1 : -1)));
-    selected = files[j].id;
+    select(files[Math.min(files.length - 1, Math.max(0, i + (e.key === "ArrowDown" ? 1 : -1)))].id);
     $("queue").classList.add("by-keys");
-    e.preventDefault();
   } else if (e.key === "Delete" || e.key === "Backspace") {
-    const f = files[i];
-    if (["extracting", "downloading", "transcribing"].includes(f.step)) return note("This file is being transcribed. Remove it when it is done.");
-    files.splice(i, 1);
-    selected = files.length ? files[Math.min(i, files.length - 1)].id : null;
-    e.preventDefault();
+    removeFile(files[i]);
   } else return;
-  render();
-  const row = $("queue").querySelector(`[data-id="${selected}"]`);
+  e.preventDefault();
+  const row = $("queue").querySelector(`[data-id="${sel}"]`);
   if (row) row.focus();
 });
 $("queue").addEventListener("pointermove", () => $("queue").classList.remove("by-keys"));
+$("add").onclick = () => chooseFiles();
 
-/* On Windows the File menu's shortcuts never reach the menu while the page
-   has the keyboard, which is nearly always: Ctrl+O and Ctrl+S did nothing
-   in the Windows test (2026-10-21). So there the page takes them. */
-if (navigator.userAgent.includes("Windows")) {
-  document.addEventListener("keydown", (e) => {
-    if (!e.ctrlKey || e.altKey || e.metaKey) return;
-    const k = e.key.toLowerCase();
-    if (k === "o" && !e.shiftKey) chooseFiles();
-    else if (k === "s") save(e.shiftKey ? "srt" : "txt");
-    else return;
+/* The selected file: waiting, running, its transcript to review, or why it failed. */
+function modeOf(f) {
+  if (f.step === "waiting") return "waiting";
+  if (["reading", "loading", "transcribing"].includes(f.step)) return "running";
+  return f.step === "error" ? "error" : "review";
+}
+
+let mainKey = "";
+
+function showMain(segs = []) {
+  const f = current();
+  if (!f) return;
+  const mode = modeOf(f);
+  const key = `${f.id} ${mode} ${f.step}`;
+  if (key !== mainKey) return buildMain(f, mode, key);
+  if (mode === "running") {
+    updateRunning(f);
+    if (segs.length) appendSegs(f, segs);
+  }
+}
+
+function buildMain(f, mode, key) {
+  const tr = $("transcript");
+  // the same file in a new mode keeps the reader's place
+  const top = mainKey.split(" ")[0] === String(f.id) ? tr.scrollTop : 0;
+  mainKey = key;
+  pausePlayback();
+  $("head-ico").innerHTML = f.kind === "video" ? ICON.film : ICON.music;
+  $("title").textContent = f.name;
+  $("title").title = f.path;
+  $("find").value = "";
+  query = "";
+  hits = [];
+  findCount();
+  $("stop").disabled = false;
+  updateHead(f, mode);
+  const review = mode === "review";
+  $("strip-wrap").hidden = mode === "error";
+  $("play").hidden = $("time").hidden = !review;
+  $("prog").hidden = review;
+  $("dur").textContent = f.duration == null ? "" : hms(f.duration);
+  const wave = $("wave");
+  if (review) {
+    wave.removeAttribute("role");
+    $("wavebtn").setAttribute("aria-label", "Jump to a point in the audio");
+  } else {
+    wave.setAttribute("role", "progressbar");
+    wave.setAttribute("aria-label", "Transcribed so far");
+    wave.setAttribute("aria-valuemin", "0");
+    wave.setAttribute("aria-valuemax", "100");
+    $("wavebtn").removeAttribute("aria-label");
+  }
+  $("wavebtn").disabled = !review || !f.audio;
+  renderTranscript(f, mode);
+  tr.scrollTop = top;
+  updateFoot(f, mode);
+  drawMainWave();
+  if (review) {
+    loadAudio(f);
+    showTime(f.pos);
+  } else if (mode === "running") updateRunning(f);
+}
+
+function updateHead(f, mode) {
+  $("title-dur").textContent = f.duration == null ? "" : hms(f.duration);
+  const review = mode === "review", has = f.segments.length > 0;
+  $("find-box").hidden = !review || !has;
+  $("copy").hidden = !(review || mode === "running");
+  $("copy").innerHTML = `${ICON.copy}${review ? "Copy text" : "Copy so far"}`;
+  $("copy").classList.toggle("pk-btn-primary", review);
+  $("copy").disabled = !has;
+  $("save-as").hidden = !review;
+  $("save-as").innerHTML = `Save as${ICON.down}`;
+  $("save-as").disabled = !has;
+  $("again").hidden = !["stopped", "error"].includes(f.step);
+  $("stop").hidden = mode !== "running";
+  $("remove").hidden = mode === "running";
+  $("remove").innerHTML = ICON.x;
+  const what = mode === "waiting" ? "Take it off the list" : "Close this file";
+  $("remove").setAttribute("aria-label", what);
+  $("remove").title = what;
+}
+
+function updateFoot(f, mode) {
+  $("foot-model").innerHTML = `${esc(modelLabel(true))}${ICON.down}`;
+  let took = "", hint = "";
+  if (mode === "running") hint = "Text appears as each part finishes. You can copy it now.";
+  else if (mode === "review") {
+    took = f.step === "stopped" ? `Stopped at ${percent(f.done)}%` : f.took ? `Took ${clock(f.took)} on this computer` : "";
+    if (f.segments.length) hint = f.audio ? "Space plays and pauses · click a time to jump there" : f.audioWhy;
+  }
+  $("took").textContent = took;
+  $("hint").textContent = hint;
+  fitHint();
+}
+
+/* The hint goes when the footer has no room for all of it. */
+function fitHint() {
+  const h = $("hint");
+  h.style.visibility = "";
+  if (h.scrollWidth > h.clientWidth + 1) h.style.visibility = "hidden";
+}
+
+function updateRunning(f) {
+  const going = f.step === "transcribing";
+  $("pct").textContent = `${percent(going ? f.done : 0)}%`;
+  $("eta").textContent = f.step === "reading" ? "Reading the audio" : f.step === "loading" ? "Loading the model"
+    : f.eta > 0 ? timeLeft(f.eta) : f.done > 0 ? "Finishing" : "Just started";
+  $("dur").textContent = f.duration == null ? "" : hms(f.duration);
+  $("title-dur").textContent = $("dur").textContent;
+  const wave = $("wave");
+  if (wave._peaks !== f.peaks) drawMainWave();
+  else setHead(wave, Math.floor((going ? f.done : 0) * wave._n));
+  wave.setAttribute("aria-valuenow", percent(going ? f.done : 0));
+}
+
+/* ---------------------------------------------------------- transcript -- */
+
+function segHtml(s, i) {
+  return `<div class="pk-seg" data-i="${i}"><button class="pk-seg-t" type="button" tabindex="-1" aria-label="Play from ${stamp(s.start)}">` +
+    `${stamp(s.start)}</button><p>${query ? hitHtml(s.text) : wordHtml(s)}</p></div>`;
+}
+
+/* The text with each timed word in a span of its own, for the playhead. */
+function wordHtml(s) {
+  let out = "", at = 0;
+  (s.words || []).forEach((w, k) => {
+    const j = s.text.indexOf(w.text, at);
+    if (j < 0) return;
+    out += `${esc(s.text.slice(at, j))}<span data-w="${k}">${esc(w.text)}</span>`;
+    at = j + w.text.length;
+  });
+  return out + esc(s.text.slice(at));
+}
+
+function renderTranscript(f, mode) {
+  const tr = $("transcript");
+  tr.classList.toggle("is-live", mode === "running");
+  tr.innerHTML = f.segments.map(segHtml).join("");
+  curSeg = curWord = null;
+  if (mode === "running") markLive();
+  let msg = "", err = false;
+  if (mode === "waiting") msg = "Waiting for the files before it.";
+  else if (mode === "error") {
+    msg = f.message || "This file could not be transcribed.";
+    err = true;
+  } else if (mode === "review" && !f.segments.length) msg = f.step === "stopped" ? "It stopped before any speech." : "No speech in this file.";
+  $("msg").textContent = msg;
+  $("msg").hidden = !msg;
+  $("msg").classList.toggle("pk-err", err);
+}
+
+/* While transcribing, the newest segment is current and its last word is
+   the one just decoded. */
+function markLive() {
+  const tr = $("transcript");
+  for (const el of tr.querySelectorAll(".is-current, .pk-now")) el.classList.remove("is-current", "pk-now");
+  const last = tr.lastElementChild;
+  if (!last) return;
+  last.classList.add("is-current");
+  const words = last.querySelectorAll("[data-w]");
+  if (words.length) words[words.length - 1].classList.add("pk-now");
+}
+
+function appendSegs(f, segs) {
+  const tr = $("transcript");
+  const atEnd = tr.scrollHeight - tr.scrollTop - tr.clientHeight < 48;
+  const base = f.segments.length - segs.length;
+  tr.insertAdjacentHTML("beforeend", segs.map((s, k) => segHtml(s, base + k)).join(""));
+  markLive();
+  if (atEnd) tr.scrollTop = tr.scrollHeight;
+  updateHead(f, "running");
+}
+
+$("transcript").addEventListener("click", (e) => {
+  const t = e.target.closest(".pk-seg-t");
+  const f = current();
+  if (!t || !f || modeOf(f) !== "review") return;
+  seek(f.segments[Number(t.parentNode.dataset.i)].start, true);
+});
+
+/* ------------------------------------------------------------ waveform -- */
+
+/* A bar and the gap after it: one frame, as on every drawn timeline */
+const BAR = 8;
+
+/* Bars across el from the outline (0-255 a slice), the playhead at bar k;
+   no outline draws the empty strip. */
+function drawWave(el, peaks, k) {
+  const n = Math.max(1, Math.floor((el.clientWidth + 2) / BAR));
+  const top = el.clientHeight || 64;
+  const h = [];
+  for (let i = 0; i < n; i++) {
+    let v = 0;
+    if (peaks && peaks.length) {
+      const a = Math.floor((i * peaks.length) / n), b = Math.max(a + 1, Math.floor(((i + 1) * peaks.length) / n));
+      for (let j = a; j < b; j++) v = Math.max(v, peaks[j]);
+    }
+    // the playhead alone reaches the top
+    h.push(3 + Math.round((v / 255) * (top - 7)));
+  }
+  Object.assign(el, { _peaks: peaks, _n: n, _h: h, _k: -1 });
+  el.classList.toggle("is-idle", !peaks);
+  el.innerHTML = h.map((v) => `<i style="height:${v}px"></i>`).join("");
+  setHead(el, k);
+}
+
+function setHead(el, k) {
+  if (!el._n) return;
+  k = Math.max(0, Math.min(el._n - 1, k || 0));
+  if (k === el._k) return;
+  const bars = el.children;
+  const [a, b] = el._k < 0 ? [0, el._n - 1] : [Math.min(el._k, k), Math.max(el._k, k)];
+  for (let i = a; i <= b; i++) {
+    bars[i].className = i < k ? "on" : "";
+    bars[i].style.height = `${el._h[i]}px`;
+  }
+  bars[k].className = "head";
+  bars[k].style.height = `${el.clientHeight || 64}px`;
+  el._k = k;
+}
+
+function drawMainWave() {
+  const f = current();
+  if (!f || viewName() !== "work") return;
+  const mode = modeOf(f), wave = $("wave");
+  if (mode === "error") return;
+  const n = Math.max(1, Math.floor((wave.clientWidth + 2) / BAR));
+  const at = mode === "review" ? (f.duration ? f.pos / f.duration : 0) : f.step === "transcribing" ? f.done : 0;
+  drawWave(wave, mode === "waiting" ? null : f.peaks, Math.floor(at * n));
+}
+
+/* The drop's strip: a made-up phrase, louder in the middle */
+function drawDecor(el) {
+  const n = Math.max(1, Math.floor((el.clientWidth + 2) / BAR));
+  let seed = 11;
+  const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  el.innerHTML = Array.from({ length: n }, (_, i) =>
+    `<i style="height:${Math.round(6 + Math.sin((Math.PI * (i + 0.5)) / n) * (14 + rnd() * 50))}px"></i>`).join("");
+}
+
+/* Each strip redrawn when its own width changes, as when the queue appears
+   beside it, which leaves the window's size as it was. */
+const resized = new ResizeObserver((entries) => {
+  for (const e of entries) {
+    if (e.target.id === "wave" && viewName() === "work") drawMainWave();
+    else if (e.target.id === "idle-wave" && viewName() === "ready") drawWave($("idle-wave"), null, 0);
+    else if (e.target.classList.contains("pk-foot")) fitHint();
+  }
+});
+for (const el of [$("wave"), $("idle-wave"), document.querySelector(".pk-foot")]) resized.observe(el);
+
+/* ------------------------------------------------------------ playback -- */
+
+const player = $("audio");
+let playId = null;    // the file the player holds
+let playing = false;
+let curSeg = null, curWord = null;
+
+function loadAudio(f) {
+  $("play").disabled = !f.audio;
+  setPlayIcon();
+  if (playId === f.id && player.getAttribute("src")) return;
+  playId = f.id;
+  if (f.audio) player.src = T.core.convertFileSrc(f.audio);
+  else player.removeAttribute("src");
+}
+
+function setPlayIcon() {
+  $("play").innerHTML = playing ? ICON.pause : ICON.play;
+  $("play").setAttribute("aria-label", playing ? "Pause" : "Play");
+}
+
+function togglePlay() {
+  const f = current();
+  if (!f || modeOf(f) !== "review" || !f.audio || playId !== f.id) return;
+  if (!player.paused) return pausePlayback();
+  if (f.pos >= f.duration - 0.05) f.pos = 0;
+  player.currentTime = f.pos;
+  player.play().catch((e) => toast(`It could not play: ${e.message}`, { err: true }));
+}
+
+/* The player stops and its file keeps its place, at once: the pause event
+   comes later, maybe after another file has taken the player. */
+function pausePlayback() {
+  if (player.paused) return;
+  const f = files.find((x) => x.id === playId);
+  if (f) f.pos = player.currentTime;
+  playing = false;
+  player.pause();
+  setPlayIcon();
+}
+
+function seek(t, play) {
+  const f = current();
+  if (!f || !f.audio) return;
+  f.pos = Math.max(0, Math.min(f.duration, t));
+  player.currentTime = f.pos;
+  showTime(f.pos, true);
+  if (play && player.paused) player.play().catch((e) => toast(`It could not play: ${e.message}`, { err: true }));
+}
+
+player.addEventListener("play", () => {
+  playing = true;
+  setPlayIcon();
+  requestAnimationFrame(tick);
+});
+player.addEventListener("pause", () => {
+  playing = false;
+  setPlayIcon();
+});
+player.addEventListener("ended", () => {
+  playing = false;
+  setPlayIcon();
+  const f = files.find((x) => x.id === playId);
+  if (!f) return;
+  f.pos = f.duration;
+  if (current() === f) showTime(f.pos);
+});
+/* a window out of sight gets no animation frames; the player's own few
+   updates a second keep the place there */
+player.addEventListener("timeupdate", () => {
+  const f = current();
+  if (playing && f && playId === f.id) {
+    f.pos = player.currentTime;
+    showTime(f.pos, "smooth");
+  }
+});
+player.addEventListener("error", () => {
+  const f = files.find((x) => x.id === playId);
+  if (!f || !f.audio) return;
+  f.audioWhy = "Its audio could not be played.";
+  if (current() === f) updateFoot(f, modeOf(f));
+});
+
+function tick() {
+  if (!playing) return;
+  const f = current();
+  if (f && playId === f.id) {
+    f.pos = player.currentTime;
+    showTime(f.pos, "smooth");
+  }
+  requestAnimationFrame(tick);
+}
+
+function inSight(el) {
+  const r = el.getBoundingClientRect(), box = $("transcript").getBoundingClientRect();
+  return r.bottom > box.top && r.top < box.bottom;
+}
+
+/* last index whose start is at or before t, or -1 */
+function at(list, t) {
+  let lo = 0, hi = list.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (list[mid].start <= t) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo - 1;
+}
+
+/* The playhead at t: the time, the waveform, and the segment and word
+   under it, brought into sight when follow says how: "smooth" while it
+   plays, at once after a jump. */
+function showTime(t, follow = false) {
+  const f = current();
+  if (!f) return;
+  $("time").textContent = stamp(t);
+  const wave = $("wave");
+  if (wave._n && f.duration) setHead(wave, Math.floor((t / f.duration) * wave._n));
+  let seg = null, word = null;
+  if (t > 0 || playing) {
+    const i = at(f.segments, t);
+    seg = i >= 0 ? $("transcript").children[i] : null;
+    if (seg) {
+      const k = at(f.segments[i].words || [], t);
+      word = k >= 0 ? seg.querySelector(`[data-w="${k}"]`) : null;
+    }
+  }
+  if (seg !== curSeg) {
+    // while it plays, only a reader still with the playhead is taken along
+    const along = follow && (follow !== "smooth" || !curSeg || inSight(curSeg));
+    if (curSeg) curSeg.classList.remove("is-current");
+    if (seg) {
+      seg.classList.add("is-current");
+      if (along) seg.scrollIntoView({ block: "nearest", behavior: follow === "smooth" ? "smooth" : "auto" });
+    }
+    curSeg = seg;
+  }
+  if (word !== curWord) {
+    if (curWord) curWord.classList.remove("pk-now");
+    if (word) word.classList.add("pk-now");
+    curWord = word;
+  }
+}
+
+$("play").onclick = () => togglePlay();
+$("wavebtn").addEventListener("click", (e) => {
+  const f = current();
+  // Enter or Space on it is not a place on it
+  if (!f || !e.detail) return;
+  const r = $("wave").getBoundingClientRect();
+  seek(((e.clientX - r.left) / r.width) * f.duration, false);
+});
+$("wavebtn").addEventListener("keydown", (e) => {
+  const f = current();
+  if (!f) return;
+  const to = { ArrowLeft: f.pos - 5, ArrowRight: f.pos + 5, Home: 0, End: f.duration }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  seek(to, false);
+});
+
+/* ---------------------------------------------------------------- find -- */
+
+let query = "", hits = [], hitAt = -1;
+
+function hitHtml(text) {
+  let low = text.toLowerCase(), q = query.toLowerCase();
+  // a lowercase that changes the length would put the marks in the wrong places
+  if (low.length !== text.length) [low, q] = [text, query];
+  let out = "", from = 0, i;
+  while ((i = low.indexOf(q, from)) >= 0) {
+    out += `${esc(text.slice(from, i))}<mark class="pk-hit">${esc(text.slice(i, i + q.length))}</mark>`;
+    from = i + q.length;
+  }
+  return out + esc(text.slice(from));
+}
+
+function runFind() {
+  const f = current();
+  if (!f || modeOf(f) !== "review") return;
+  query = $("find").value.trim();
+  const tr = $("transcript"), top = tr.scrollTop;
+  tr.innerHTML = f.segments.map(segHtml).join("");
+  tr.scrollTop = top;
+  curSeg = curWord = null;
+  showTime(f.pos);
+  hits = [...tr.querySelectorAll(".pk-hit")];
+  hitAt = -1;
+  if (hits.length) stepHit(1);
+  findCount();
+}
+
+function stepHit(d) {
+  if (!hits.length) return;
+  if (hitAt >= 0) hits[hitAt].classList.remove("is-on");
+  hitAt = (hitAt + d + hits.length) % hits.length;
+  hits[hitAt].classList.add("is-on");
+  hits[hitAt].scrollIntoView({ block: "center" });
+  findCount();
+}
+
+function findCount() {
+  $("find-n").textContent = query ? `${hits.length ? hitAt + 1 : 0}/${hits.length}` : st ? kbd("F") : "";
+  $("find-box").classList.toggle("has-query", !!query);
+}
+
+function openFind() {
+  const f = current();
+  if (viewName() !== "work" || !f || $("find-box").hidden) return;
+  $("find").focus();
+  $("find").select();
+}
+
+$("find").addEventListener("input", runFind);
+$("find").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
     e.preventDefault();
+    stepHit(e.shiftKey ? -1 : 1);
+  } else if (e.key === "Escape") {
+    e.preventDefault();
+    e.stopPropagation();
+    $("find").value = "";
+    runFind();
+    $("find").blur();
+  }
+});
+
+/* -------------------------------------------------------- copy and save -- */
+
+const plain = (f) => f.segments.map((s) => s.text).join("\n") + "\n";
+const r3 = (x) => Math.round(x * 1000) / 1000;
+/* what Markdown would read as markup, as text */
+const mdEsc = (s) => s.replace(/([\\`*_[\]<>])/g, "\\$1").replace(/^(#|\d+\.|[-+] )/, "\\$1");
+
+const FORMATS = [
+  { ext: "txt", label: () => (prefs.times ? "Text with times" : "Text"), key: ["S", false] },
+  { ext: "srt", label: () => "Subtitles", key: ["S", true] },
+  { ext: "vtt", label: () => "Web subtitles" },
+  { ext: "md", label: () => (prefs.times ? "Markdown with times" : "Markdown") },
+  { ext: "json", label: () => "JSON with word timings" },
+];
+
+function textOf(f, ext) {
+  const segs = f.segments;
+  if (ext === "txt") return segs.map((s) => (prefs.times ? `${stamp(s.start)}  ` : "") + s.text).join("\n") + "\n";
+  if (ext === "srt") return segs.map((s, i) => `${i + 1}\n${msTime(s.start, ",")} --> ${msTime(s.end, ",")}\n${s.text}\n`).join("\n");
+  if (ext === "vtt") return "WEBVTT\n\n" + segs.map((s) => `${msTime(s.start, ".")} --> ${msTime(s.end, ".")}\n${s.text}\n`).join("\n");
+  if (ext === "md") {
+    return `# ${mdEsc(f.name)}\n\n` + segs.map((s) => (prefs.times ? `\`${stamp(s.start)}\` ` : "") + mdEsc(s.text)).join("\n\n") + "\n";
+  }
+  // a segment to a few lines, a word to a line
+  const j = JSON.stringify;
+  const seg = (s) => `    {"start": ${r3(s.start)}, "end": ${r3(s.end)}, "text": ${j(s.text)}, "words": [\n` +
+    (s.words || []).map((w) => `      {"start": ${r3(w.start)}, "end": ${r3(w.end)}, "text": ${j(w.text)}}`).join(",\n") + "\n    ]}";
+  return `{\n  "file": ${j(f.name)},\n  "duration": ${r3(f.duration || 0)},\n  "model": ${j(f.model || null)},\n  "segments": [\n` +
+    segs.map(seg).join(",\n") + "\n  ]\n}\n";
+}
+
+async function copyText() {
+  const f = current();
+  if (!f || !f.segments.length) return;
+  try {
+    await navigator.clipboard.writeText(plain(f));
+    toast(`Copied ${plural(f.segments.length, "segment")}${modeOf(f) === "running" ? " so far" : ""} as plain text`);
+  } catch (e) {
+    toast(`It could not be copied: ${e}`, { err: true });
+  }
+}
+
+async function save(ext) {
+  const f = current();
+  if (viewName() !== "work" || !f || modeOf(f) !== "review" || !f.segments.length) return;
+  closeMenu();
+  try {
+    const r = await invoke("save_text", { original: f.path, ext, text: textOf(f, ext), nextTo: prefs.next_to_original });
+    if (r) toast(`Saved ${baseName(r.path)}${r.beside ? " next to the original" : ""}`, { reveal: r.path });
+  } catch (e) {
+    toast(String(e), { err: true });
+  }
+}
+
+async function saveAll(kind) {
+  closeMenu();
+  const ready = files.filter((f) => f.step === "done" && f.segments.length);
+  if (!ready.length) return;
+  try {
+    if (kind === "folder") {
+      const dir = await invoke("pick_folder");
+      if (!dir) return;
+      const out = await invoke("save_many", { dir,
+        files: ready.flatMap((f) => FORMATS.map((x) => ({ original: f.path, ext: x.ext, text: textOf(f, x.ext) }))) });
+      toast(`Saved ${plural(out.length, "file")} into ${baseName(dir)}`, { reveal: out[0] });
+    } else {
+      const out = await invoke("save_many", { dir: null, files: ready.map((f) => ({ original: f.path, ext: kind, text: textOf(f, kind) })) });
+      toast(`Saved ${plural(out.length, `.${kind} file`)} next to the originals`, { reveal: out[0] });
+    }
+  } catch (e) {
+    toast(String(e), { err: true });
+  }
+}
+
+async function setPref(k, v) {
+  prefs[k] = v;
+  try {
+    await invoke("set_prefs", { prefs });
+  } catch (e) {
+    toast(String(e), { err: true });
+  }
+}
+
+const checkHtml = (pref, text, more = "") =>
+  `<label class="pk-check"><input type="checkbox" data-pref="${pref}"${prefs[pref] ? " checked" : ""}>` +
+  `<span>${text}${more ? `<small>${more}</small>` : ""}</span></label>`;
+
+function saveMenu(anchor, keys) {
+  const stem = stemOf(current().path);
+  const html = FORMATS.map((x) => `<button class="pk-mi" type="button" role="menuitem" data-save="${x.ext}"><span>${x.label()}</span>` +
+    `<small>${esc(stem)}.${x.ext}</small>${x.key ? `<span class="pk-kbd">${kbd(...x.key)}</span>` : ""}</button>`).join("") +
+    `<div class="pk-menu-sep" aria-hidden="true"></div>` +
+    checkHtml("next_to_original", "Save next to the original") + checkHtml("times", "Timestamps in .txt and .md");
+  openMenu(anchor, keys, html, "down right", (m) => {
+    m.onclick = (e) => {
+      const b = e.target.closest("[data-save]");
+      if (b) save(b.dataset.save);
+    };
+    m.onchange = (e) => {
+      const c = e.target.closest("[data-pref]");
+      if (!c) return;
+      setPref(c.dataset.pref, c.checked);
+      for (const b of m.querySelectorAll("[data-save]")) b.firstElementChild.textContent = FORMATS.find((x) => x.ext === b.dataset.save).label();
+    };
   });
 }
 
-/* -------------------------------------------------------- drag and drop -- */
+function saveAllMenu(anchor, keys) {
+  const n = files.filter((f) => f.step === "done" && f.segments.length).length;
+  const html = `<button class="pk-mi" type="button" role="menuitem" data-all="txt"><span>Text, next to each original</span><small>${n} × .txt</small></button>` +
+    `<button class="pk-mi" type="button" role="menuitem" data-all="srt"><span>Subtitles, next to each original</span><small>${n} × .srt</small></button>` +
+    `<button class="pk-mi" type="button" role="menuitem" data-all="folder"><span>All of them into one folder…</span><small>.txt .srt .vtt .md .json</small></button>` +
+    `<div class="pk-menu-sep" aria-hidden="true"></div>` +
+    checkHtml("save_each", "Save each one as it finishes", ".txt, next to the original");
+  openMenu(anchor, keys, html, "up side", (m) => {
+    m.onclick = (e) => {
+      const b = e.target.closest("[data-all]");
+      if (b) saveAll(b.dataset.all);
+    };
+    m.onchange = (e) => {
+      const c = e.target.closest("[data-pref]");
+      if (c) setPref(c.dataset.pref, c.checked);
+    };
+  });
+}
 
-const DEFAULT_LINE = $("drop-line").textContent, DEFAULT_HINT = $("drop-hint").textContent;
-function dragOver(paths) {
-  const n = paths ? paths.length : 0;
-  for (const id of ["drop-big", "add-small"]) $(id).classList.add("is-over");
-  if (n) {
-    $("drop-line").textContent = `Release to add ${n} file${n === 1 ? "" : "s"}`;
-    $("drop-hint").textContent = paths.map(baseName).join(", ");
-    $("add-line").textContent = `Release to add ${n} file${n === 1 ? "" : "s"}`;
-  }
+$("copy").onclick = () => copyText();
+$("save-as").onclick = (e) => saveMenu(e.currentTarget, !e.detail);
+$("save-all").onclick = (e) => saveAllMenu(e.currentTarget, !e.detail);
+$("stop").onclick = () => {
+  const f = current();
+  if (!f) return;
+  $("stop").disabled = true;
+  invoke("stop", { id: f.id }).catch(() => {});
+};
+$("again").onclick = () => current() && again(current());
+$("remove").onclick = () => current() && removeFile(current());
+
+/* --------------------------------------------------------------- menus -- */
+
+let menuFor = null;
+
+/* One menu at a time, by its button: below it, or above for "up"; its
+   right edge on the button's for "right", or across the queue for "side".
+   Opened from the keyboard, its first item takes the focus. */
+function openMenu(anchor, keys, html, place, wire) {
+  if (menuFor === anchor) return closeMenu();
+  closeMenu();
+  const m = $("menu");
+  m.innerHTML = html;
+  m.style.width = "";
+  m.hidden = false;
+  menuFor = anchor;
+  anchor.setAttribute("aria-expanded", "true");
+  const side = $("side").getBoundingClientRect();
+  if (place.includes("side")) m.style.width = `${side.width - 24}px`;
+  wire(m);
+  const r = anchor.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
+  const left = place.includes("right") ? r.right - w : place.includes("side") ? side.left + 12 : r.left;
+  let top = place.includes("up") ? r.top - h - 6 : r.bottom + 6;
+  if (top + h > innerHeight - 12) top = r.top - h - 6;
+  m.style.left = `${Math.max(12, Math.min(innerWidth - w - 12, left))}px`;
+  m.style.top = `${Math.max(12, top)}px`;
+  const first = m.querySelector("button, input");
+  if (first && keys) first.focus({ preventScroll: true });
 }
-function dragEnd() {
-  for (const id of ["drop-big", "add-small"]) $(id).classList.remove("is-over");
-  $("drop-line").textContent = DEFAULT_LINE;
-  $("drop-hint").textContent = DEFAULT_HINT;
-  $("add-line").textContent = "Add files";
+
+function closeMenu() {
+  if (!menuFor) return false;
+  $("menu").hidden = true;
+  menuFor.setAttribute("aria-expanded", "false");
+  menuFor = null;
+  return true;
 }
+
+document.addEventListener("pointerdown", (e) => {
+  if (menuFor && !$("menu").contains(e.target) && !menuFor.contains(e.target)) closeMenu();
+}, true);
+$("menu").addEventListener("keydown", (e) => {
+  if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+  const items = [...$("menu").querySelectorAll("button, input")];
+  const i = items.indexOf(document.activeElement);
+  items[(i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length].focus();
+  e.preventDefault();
+});
+window.addEventListener("blur", () => closeMenu());
+
+/* --------------------------------------------------------------- toast -- */
+
+let toastTimer = 0;
+
+function toast(text, { reveal = null, err = false } = {}) {
+  const t = $("toast");
+  t.innerHTML = `${err ? ICON.alert : ICON.check}<span></span>` +
+    (reveal ? `<button class="pk-linkbtn" type="button">${revealLabel()}</button>` : "");
+  t.querySelector("span").textContent = text;
+  t.querySelector("span").title = text;
+  if (reveal) t.querySelector("button").onclick = () => invoke("reveal", { path: reveal }).catch((e) => toast(String(e), { err: true }));
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, reveal || err ? 6000 : 3500);
+}
+
+/* ------------------------------------------------------- drag and drop -- */
+
+function showDrop(paths) {
+  const ok = paths.filter(isMedia);
+  $("drop-line").textContent = ok.length ? `Drop to transcribe ${plural(ok.length, "file")}` : "pktito reads audio and video files";
+  const names = (ok.length ? ok : paths).map(baseName);
+  const chips = names.slice(0, 6).map((n) => `<li>${esc(n)}</li>`);
+  if (names.length > 6) chips.push(`<li>and ${names.length - 6} more</li>`);
+  $("drop-names").innerHTML = chips.join("");
+  $("drop").hidden = false;
+  drawDecor($("drop-wave"));
+}
+
 const webview = T.webview && T.webview.getCurrentWebview ? T.webview.getCurrentWebview() : null;
 if (webview && webview.onDragDropEvent) {
   webview.onDragDropEvent((e) => {
     const p = e.payload;
-    if (!status) return;
-    if (p.type === "enter") dragOver(p.paths);
-    else if (p.type === "drop") { dragEnd(); addPaths(p.paths); }
-    else if (p.type === "leave") dragEnd();
+    if (!st) return;
+    if (p.type === "enter") showDrop(p.paths);
+    else if (p.type === "drop") {
+      $("drop").hidden = true;
+      addPaths(p.paths);
+    } else if (p.type === "leave") $("drop").hidden = true;
   });
 }
 
-/* ---------------------------------------------------------------- menu -- */
+/* ------------------------------------------------------------ keyboard -- */
 
-listen("menu", (e) => {
-  if (e.payload === "add") chooseFiles();
-  else if (e.payload === "save-txt") save("txt");
-  else if (e.payload === "save-srt") save("srt");
+const typing = (el) => el && (el.isContentEditable || el.tagName === "TEXTAREA" ||
+  (el.tagName === "INPUT" && !["checkbox", "radio", "button"].includes(el.type)));
+
+document.addEventListener("keydown", (e) => {
+  if (!st) return;
+  if (e.key === "Escape") {
+    if (closeMenu()) e.preventDefault();
+    return;
+  }
+  /* On Windows the File menu's shortcuts never reach the menu while the page
+     has the keyboard, which is nearly always: Ctrl+O and Ctrl+S did nothing
+     in the Windows test (2026-10-21). So there the page takes them. */
+  if (isWin() && e.ctrlKey && !e.altKey && !e.metaKey) {
+    const k = e.key.toLowerCase();
+    if (k === "o" && !e.shiftKey) chooseFiles();
+    else if (k === "s") save(e.shiftKey ? "srt" : "txt");
+    else if (k === "f" && !e.shiftKey) openFind();
+    else return;
+    e.preventDefault();
+    return;
+  }
+  if (e.key === " " && !menuFor && !typing(e.target) && viewName() === "work") {
+    const f = current();
+    if (f && modeOf(f) === "review" && f.audio) {
+      e.preventDefault();
+      if (!e.repeat) togglePlay();
+    }
+  }
 });
 
-refresh().catch((e) => {
+listen("menu", (e) => {
+  const id = e.payload;
+  if (id === "add") chooseFiles();
+  else if (id === "find") openFind();
+  else if (id.startsWith("save-")) save(id.slice(5));
+});
+
+/* --------------------------------------------------------------- start -- */
+
+async function start() {
+  st = await invoke("status");
+  prefs = st.prefs;
+  dl = st.download;
+  for (const k of document.querySelectorAll("[data-kbd]")) k.textContent = kbd(k.dataset.kbd);
+  try {
+    recent = await invoke("recent_list");
+  } catch {
+    recent = [];
+  }
+  render();
+  const given = await invoke("initial_files");
+  if (given.length) addPaths(given);
+}
+
+start().catch((e) => {
   document.body.textContent = `pktito could not start: ${e}`;
 });

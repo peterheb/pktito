@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """pktito.net: the pages, built into site/public, which the Worker in
 site/worker.js serves along with the installers (site/README.md). The look
-is the design system the app uses: tokens.css from design/tokens.json,
-bundle.css and the fonts from ui/.
+is the design system the app uses: tokens.css from design/tokens.json, its
+components from design/bundle.css, and the app's fonts from ui/fonts.
 
     python3 site/build.py                 # site/public, for wrangler
     python3 site/build.py --artifact DIR  # a preview: relative links, index.html without its head
@@ -151,7 +151,9 @@ ICO = {
     "music": '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
     "check": '<polyline points="20 6 9 17 4 12"/>',
     "copy": '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
-    "plus": '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+    "search": '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+    "down": '<polyline points="6 9 12 15 18 9"/>',
+    "x": '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
 }
 
 
@@ -169,7 +171,8 @@ def stamp(s):
 # The app's own transcript, sentence by sentence as it shows one: LibriSpeech
 # test-clean 1089-134686's nine recordings joined, 64.8 s, read by
 # `pktito-app --transcribe` with parakeet-tdt-0.6b-v2 in 0.580 s on an M4 Pro,
-# 2026-10-20. The seventh's missing full stop is the model's.
+# 2026-10-20. The seventh's missing full stop is the model's. The window shows
+# it paused at 00:00:17.32, on "lamps", which pktito times at 17.15 s.
 JOYCE = [
     (0.51, "He hoped there would be stew for dinner, turnips and carrots and bruised potatoes and fat mutton pieces to be ladled out in thick, peppered, flour fattened sauce."),
     (11.39, "Stuff it into you, his belly counselled him."),
@@ -182,8 +185,38 @@ JOYCE = [
     (52.99, "A cold, lucid indifference reigned in his soul."),
     (57.79, "The chaos in which his ardour extinguished itself was a cold, indifferent knowledge of himself."),
 ]
-segs = "\n".join(f'<div class="pk-seg"><span class="pk-stamp">{stamp(s)}</span><p>{e(x)}</p></div>' for s, x in JOYCE)
+AT, NOW = 17.32, 2  # the playhead, and the segment under it
+
+
+def seg(i, start, text):
+    body = e(text).replace("lamps", '<span class="as-now">lamps</span>', 1) if i == NOW else e(text)
+    return f'<div class="as-seg{" is-current" if i == NOW else ""}"><span class="as-t">{stamp(start)}</span><p>{body}</p></div>'
+
+
+segs = "\n".join(seg(i, s, x) for i, (s, x) in enumerate(JOYCE))
+# The waveform as the app draws that file 120 bars wide: the loudest of
+# audio.rs's 1200 slices under each bar, each slice its RMS in dB over the
+# 48 dB below the loudest, as 3 to 60 px.
+WAVE = [7, 58, 50, 48, 44, 50, 54, 45, 46, 54, 54, 40, 46, 50, 49, 45, 52, 46, 48, 10, 7, 50, 47, 46, 40, 36, 14, 3, 49, 54,
+        49, 47, 52, 49, 47, 49, 50, 43, 50, 4, 3, 51, 60, 48, 56, 54, 3, 51, 55, 37, 56, 57, 52, 47, 52, 54, 47, 3, 49, 50,
+        48, 44, 51, 48, 49, 48, 50, 45, 42, 45, 42, 41, 49, 45, 44, 5, 3, 50, 58, 51, 47, 43, 48, 48, 51, 43, 45, 47, 47, 50,
+        41, 51, 49, 47, 41, 37, 14, 6, 52, 50, 49, 52, 49, 37, 45, 3, 5, 54, 53, 50, 48, 43, 49, 45, 45, 45, 49, 42, 44, 3]
+
+
+def wave(n, cls):
+    """The waveform n bars wide, as the app would draw it in a narrower
+    window: the tallest of the 120 bars under each."""
+    hs = [max(WAVE[i * len(WAVE) // n:(i + 1) * len(WAVE) // n]) for i in range(n)]
+    head = int(AT / 64.825 * n)
+    bars = "".join(f'<i class="{"on" if i < head else "head" if i == head else ""}" style="height:{64 if i == head else h}px"></i>'
+                   for i, h in enumerate(hs))
+    return f'<span class="as-wave {cls}">{bars}</span>'
+
+
+# one for each width the window's strip takes on the page (site.css)
+waves = wave(120, "as-w120") + wave(60, "as-w60") + wave(24, "as-w24")
 FILE = "librispeech-1089-134686.wav"
+PLAY = '<svg class="pk-ico" viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3" fill="currentColor"/></svg>'
 
 home = f"""<main>
 <section class="hero wrap">
@@ -200,27 +233,25 @@ home = f"""<main>
 
 <section class="pk-stage home-stage" aria-label="The app, with a transcript it made">
   <div class="wrap">
-    <div class="pk-app app-shot" data-ui>
-      <aside class="pk-app-side">
-        <div class="pk-drop pk-drop-sm">{ico("plus")}<strong>Add files</strong></div>
-        <ul class="pk-queue" aria-label="Files">
-          <li class="pk-file" aria-selected="true">{ico("music")}<span class="pk-name">{FILE}</span><span class="pk-stamp">00:01:04</span><span class="pk-status ok">{ico("check", 2.4)}Done</span></li>
-        </ul>
-        <div class="app-model">
-          <span class="app-label">Language</span><span class="app-select">English</span>
-          <p>parakeet-tdt-0.6b-v2, on this computer</p>
-        </div>
-      </aside>
-      <div class="pk-app-main">
-        <div class="pk-app-head">
-          <h2>{FILE}</h2>
-          <span class="pk-btn pk-btn-quiet">{ico("copy")}Copy text</span>
-          <span class="pk-btn pk-btn-quiet">Save as .txt</span>
-          <span class="pk-btn pk-btn-quiet">Save as .srt</span>
-        </div>
-        <div class="pk-transcript">
+    <div class="app-shot" data-ui>
+      <div class="as-head">
+        {ico("music")}<h2>{FILE}</h2><span class="pk-stamp">00:01:04</span><span class="as-grow"></span>
+        <span class="as-find">{ico("search")}Find in transcript<span class="pk-stamp">⌘F</span></span>
+        <span class="pk-btn pk-btn-primary">{ico("copy")}Copy text</span>
+        <span class="pk-btn pk-btn-quiet">Save as{ico("down")}</span>
+        <span class="as-x">{ico("x")}</span>
+      </div>
+      <div class="as-strip">
+        <span class="as-play">{PLAY}</span><span class="as-time">{stamp(AT)}</span>
+        {waves}<span class="as-time as-dim">00:01:04</span>
+      </div>
+      <div class="as-transcript">
 {segs}
-        </div>
+      </div>
+      <div class="as-foot">
+        <span class="as-model">English · parakeet-tdt-0.6b-v2{ico("down")}</span>
+        <span>Took 0:01 on this computer</span>
+        <span class="as-hint">Space plays and pauses · click a time to jump there</span>
       </div>
     </div>
   </div>
@@ -232,7 +263,7 @@ home = f"""<main>
 <section class="facts wrap">
   <div>
     <h2>On your computer</h2>
-    <p>The audio never leaves it. The model downloads once, the first time a file needs it, and then the app works offline.</p>
+    <p>The audio never leaves it. The app downloads its model once, when you first open it, and then works offline.</p>
   </div>
   <div>
     <h2>The files you have</h2>
@@ -254,7 +285,7 @@ write("", "pktito.net",
 download = f"""<main class="wrap">
 <section class="page-head">
   <h1 class="display">Download</h1>
-  <p class="measure">The first file you add downloads its model once: 624 MB for English, 648 MB for 25 European languages.</p>
+  <p class="measure">On its first run the app downloads one model, chosen for your system's language: 624 MB for English, 648 MB for 25 European languages.</p>
 </section>
 
 <section class="part">
@@ -319,7 +350,7 @@ def model_html(name, speaks, size, sha):
 models = f"""<main class="wrap">
 <section class="page-head">
   <h1 class="display">Models</h1>
-  <p class="measure">The app downloads the one it needs the first time a file needs it; the C library reads either. Each file's address holds its SHA-256, so it never changes.</p>
+  <p class="measure">The app downloads the one you choose when it first opens; the C library reads either. Each file's address holds its SHA-256, so it never changes.</p>
 </section>
 
 <section class="part">
@@ -359,7 +390,7 @@ about = f"""<main class="wrap">
 
 <section class="part">
   <h2 class="lead">Privacy</h2>
-  <p class="measure">The app sends nothing anywhere. It downloads a model from models.pktito.net the first time it needs one; there is no account and no telemetry. This site sets no cookies and runs no analytics.</p>
+  <p class="measure">The app sends nothing anywhere. It downloads the model you choose from models.pktito.net, once; there is no account and no telemetry. This site sets no cookies and runs no analytics.</p>
 </section>
 
 <section class="part">
@@ -397,7 +428,7 @@ for f in (APP / "ui/fonts").iterdir():
     if f.suffix in (".woff2", ".txt"):
         shutil.copy(f, OUT / "fonts" / f.name)
 (OUT / "tokens.css").write_text(tokens_css)
-shutil.copy(APP / "ui/bundle.css", OUT / "bundle.css")
+shutil.copy(APP / "design/bundle.css", OUT / "bundle.css")
 shutil.copy(SITE / "site.css", OUT / "site.css")
 shutil.copy(APP / "design/app-icon.svg", OUT / "favicon.svg")
 print("\n".join(sorted(str(p.relative_to(OUT)) for p in OUT.rglob("*") if p.is_file())), file=sys.stderr)

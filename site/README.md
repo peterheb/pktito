@@ -1,7 +1,7 @@
 # pktito.net
 
 The site: four pages and a 404 that `build.py` writes into `public/`, in the
-design system the app uses (`design/tokens.json`, `ui/bundle.css`,
+design system the app uses (`design/tokens.json`, `design/bundle.css`,
 `ui/fonts`), served by a Cloudflare Worker (`worker.js`) that also hands out
 the installers from R2.
 

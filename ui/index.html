@@ -5,53 +5,101 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>pktito</title>
 <link rel="stylesheet" href="tokens.css">
-<link rel="stylesheet" href="bundle.css">
 <link rel="stylesheet" href="app.css">
 <script src="app.js" defer></script>
 </head>
 <body>
 
-<!-- Empty state: nothing in the queue -->
-<section id="empty" class="pk-center" hidden>
-  <div class="pk-empty">
-    <span class="pk-wordmark">pktito</span>
-    <button class="pk-drop" id="drop-big" type="button">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      <strong id="drop-line">Drop audio or video files</strong>
-      <span id="drop-hint">or click to choose. The audio stays on this computer.</span>
-    </button>
-    <div id="empty-model">
-      <!-- The language, which picks the model; moved into whichever view shows -->
-      <div id="model-box" class="pk-model">
-        <label for="model">Language</label>
-        <span class="pk-select"><select id="model"></select></span>
-        <p class="pk-small" id="model-line"></p>
-      </div>
+<!-- Setup: choose a model and download it; app.js fills it -->
+<section id="setup" class="pk-center" hidden>
+  <div class="pk-screen" id="setup-body"></div>
+</section>
+
+<!-- Ready: drop files, choose them, or open a recent transcript -->
+<section id="ready" class="pk-center" hidden>
+  <div class="pk-screen pk-ready">
+    <div class="pk-spread">
+      <span class="pk-wm">pktito</span>
+      <button class="pk-btn pk-btn-ghost" id="ready-model" type="button" aria-haspopup="menu" aria-expanded="false"></button>
     </div>
+    <div class="pk-strip pk-strip-idle" aria-hidden="true">
+      <span class="pk-tstamp pk-tdim">00:00:00</span>
+      <span class="pk-wave is-idle" id="idle-wave"></span>
+    </div>
+    <div class="pk-ready-text">
+      <h1 class="pk-lead">Drop audio or video here</h1>
+      <p class="pk-small">mp3, wav, m4a, mp4, mov and more. It stays on this computer.</p>
+    </div>
+    <div class="pk-ready-act">
+      <button class="pk-btn pk-btn-primary pk-btn-lg" id="choose" type="button"></button>
+      <span class="pk-kbd" data-kbd="O"></span>
+    </div>
+    <section class="pk-recent" id="recent" hidden>
+      <div class="pk-spread">
+        <h2 class="pk-ui">Recent</h2>
+        <button class="pk-linkbtn pk-linkbtn-sm" id="clear-recent" type="button">Clear</button>
+      </div>
+      <ul id="recent-list"></ul>
+    </section>
   </div>
 </section>
 
-<!-- The work: queue and transcript -->
-<div id="work" class="pk-app" hidden>
-  <aside class="pk-app-side">
-    <button class="pk-drop pk-drop-sm" id="add-small" type="button">
-      <svg class="pk-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      <strong id="add-line" style="font-size:14px">Add files</strong>
-    </button>
-    <ul class="pk-queue" id="queue" role="listbox" aria-label="Files"></ul>
-    <div id="side-model"></div>
-  </aside>
-  <main class="pk-app-main">
-    <div class="pk-app-head">
-      <h2 id="title"></h2>
-      <button class="pk-btn pk-btn-quiet" id="copy" type="button" disabled></button>
-      <button class="pk-btn pk-btn-quiet" id="save-txt" type="button" disabled>Save as .txt</button>
-      <button class="pk-btn pk-btn-quiet" id="save-srt" type="button" disabled>Save as .srt</button>
+<!-- The work: one file, or the queue beside the one selected -->
+<div id="work" class="pk-work" hidden>
+  <aside class="pk-side" id="side" hidden>
+    <button class="pk-btn pk-add" id="add" type="button"></button>
+    <ul class="pk-queue" id="queue" aria-label="Files"></ul>
+    <div class="pk-side-foot">
+      <span class="pk-small pk-num" id="tally"></span>
+      <button class="pk-btn pk-btn-ground" id="save-all" type="button" aria-haspopup="menu" aria-expanded="false"></button>
     </div>
-    <p class="pk-note" id="note" role="status"></p>
-    <div class="pk-transcript" id="transcript" aria-live="polite"></div>
-  </main>
+  </aside>
+  <section class="pk-main">
+    <header class="pk-head">
+      <span id="head-ico"></span>
+      <h1 class="pk-ui" id="title"></h1>
+      <span class="pk-stamp" id="title-dur"></span>
+      <span class="pk-grow"></span>
+      <label class="pk-find" id="find-box">
+        <svg class="pk-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="find" type="search" placeholder="Find in transcript" aria-label="Find in transcript" autocomplete="off" spellcheck="false">
+        <span class="pk-kbd" id="find-n"></span>
+      </label>
+      <button class="pk-btn" id="copy" type="button"></button>
+      <button class="pk-btn" id="save-as" type="button" aria-haspopup="menu" aria-expanded="false"></button>
+      <button class="pk-btn" id="again" type="button">Start again</button>
+      <button class="pk-btn pk-btn-ghost" id="stop" type="button">Stop</button>
+      <button class="pk-btn pk-btn-ghost pk-btn-ico" id="remove" type="button"></button>
+    </header>
+    <div class="pk-strip-wrap" id="strip-wrap">
+      <div class="pk-strip" id="strip">
+        <button class="pk-play" id="play" type="button"></button>
+        <span class="pk-tstamp pk-time" id="time"></span>
+        <div class="pk-prog" id="prog"><span class="pk-pct" id="pct"></span><span class="pk-small" id="eta"></span></div>
+        <button class="pk-wavebtn" id="wavebtn" type="button"><span class="pk-wave" id="wave"></span></button>
+        <span class="pk-tstamp pk-tdim" id="dur"></span>
+      </div>
+    </div>
+    <p class="pk-msg" id="msg" role="status"></p>
+    <div class="pk-transcript" id="transcript"></div>
+    <footer class="pk-foot">
+      <button class="pk-btn pk-btn-ghost" id="foot-model" type="button" aria-haspopup="menu" aria-expanded="false"></button>
+      <span class="pk-small" id="took"></span>
+      <span class="pk-small pk-hint" id="hint"></span>
+    </footer>
+  </section>
 </div>
+
+<div class="pk-drop" id="drop" hidden>
+  <div class="pk-drop-in">
+    <div class="pk-strip" aria-hidden="true"><span class="pk-wave" id="drop-wave"></span></div>
+    <p class="pk-lead" id="drop-line"></p>
+    <ul class="pk-chips" id="drop-names"></ul>
+  </div>
+</div>
+<div class="pk-menu" id="menu" role="menu" hidden></div>
+<div class="pk-toast" id="toast" role="status" hidden></div>
+<audio id="audio" preload="auto"></audio>
 
 </body>
 </html>

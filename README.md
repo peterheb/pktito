@@ -1,10 +1,12 @@
 # pktito, the desktop app
 
-Drop an audio or video file and read its transcript. The audio comes out
-through the media libraries the operating system already has, and it is
-transcribed on this computer by [pktito](https://pktito.net), a C11 port of
-NVIDIA's Parakeet-TDT models. Nothing leaves the computer, and the one thing
-the app fetches is its model, once.
+Drop audio or video files and read their transcripts as they fill in; then
+play one back with the word being spoken underlined, search it, and save it
+as text, subtitles, Markdown or JSON. The audio comes out through the media
+libraries the operating system already has, and it is transcribed on this
+computer by [pktito](https://pktito.net), a C11 port of NVIDIA's
+Parakeet-TDT models. Nothing leaves the computer, and the one thing the app
+fetches is its model, once.
 
 - **macOS 12 and later**: AVFoundation reads the file.
 - **Windows 10 and later**: Media Foundation reads it. (The N editions of
@@ -57,14 +59,16 @@ HE-AAC most, by a word or two in a minute.
 
 ## The model
 
-The Language menu picks the model: parakeet-tdt-0.6b-v2 (624 MB) for
-English, or parakeet-tdt-0.6b-v3 (648 MB) for 25 European languages. On the
-first run it names the first one that speaks the system's language. The app
-downloads a model from models.pktito.net the first time a file needs it,
-after the file's audio has come out (a file nothing can read costs no
-download), and checks its size and SHA-256 against the ones built into the
-app (src-tauri/src/model.rs) before using it. A `.pkf` already on the
-computer can be used instead (the menu's last item).
+On its first run the window asks for a model, with the one that speaks the
+system's language picked: parakeet-tdt-0.6b-v2 (624 MB) for English, or
+parakeet-tdt-0.6b-v3 (648 MB) for 25 European languages. It downloads from
+models.pktito.net and can be paused. A download that stops keeps what it
+has, and the next asks only for the rest (an HTTP range request); after a
+lost connection it tries again by itself, 2 s later and then twice as long
+each time, 30 s at most. The model is checked against the size and SHA-256
+built into the app (src-tauri/src/model.rs) before it is used. The model
+menu changes it later, and a `.pkf` already on the computer can be used
+instead.
 
 Each file lives under the first twelve digits of its SHA-256, as
 `https://models.pktito.net/8bfa6750b83c/parakeet-tdt-0.6b-v2.pkf`, so an
@@ -79,7 +83,26 @@ scripts/models-tree.sh ../pktito/models/*.pkf /tmp/models
 PKTITO_MODEL_BASE=http://127.0.0.1:8765/ cargo tauri dev
 ```
 
+(Python's server ignores ranges, so a download from it that stops starts
+over; the app takes the whole file when a server sends it whole.)
+
 The models are NVIDIA's (CC-BY-4.0), converted by pktito-tools.
+
+## Transcripts
+
+Text appears as each part of a recording finishes (whole up to 30 s, else
+cut at its silences), and Stop ends it after the part it is on, keeping the
+text so far. Each finished transcript stays on the recent list, the 50
+newest in the app's data folder, with its audio as pktito heard it: a 16 kHz
+16-bit WAV in the cache, so that playback lines up with the timestamps
+whatever the original's format, and whether or not the webview could play
+it. The cache keeps 2 GB of these, letting the oldest go first; a transcript
+whose audio is gone reads its original again to play.
+
+Saving writes `.txt`, `.srt`, `.vtt`, `.md`, or `.json` with every word's
+start and end, beside the original or where the dialog says. It never writes
+over a file: a second save is "name 2.txt" ("name (2).txt" on Windows, as
+Explorer numbers copies).
 
 ## Building
 
@@ -98,10 +121,12 @@ pktito's sources are copied into `vendor/pktito` by
 build compiles every SIMD backend of the target's family, and the CPU picks
 the fastest it can run, so one build runs on any CPU of its kind.
 
-For checking a build without the window:
+For checking a build without the window (`--json` prints the segments and
+their words as the window gets them; `--download` resumes and retries as the
+window does):
 
 ```sh
-src-tauri/target/debug/pktito-app --transcribe talk.mp4 --model parakeet-tdt-0.6b-v2.pkf
+src-tauri/target/debug/pktito-app --transcribe talk.mp4 --model parakeet-tdt-0.6b-v2.pkf [--json]
 PKTITO_MODEL_BASE=http://127.0.0.1:8765/ src-tauri/target/debug/pktito-app --download parakeet-tdt-0.6b-v2 /tmp/m
 ```
 
@@ -118,10 +143,11 @@ PKTITO_DECODER=os scripts/media-check.sh src-tauri/target/debug/pktito-app parak
 ## Design
 
 The interface follows the pktito design system: `design/` holds its tokens,
-brand book and app icon, `ui/bundle.css` its components, and `ui/fonts`
-Archivo and Commit Mono with their SIL Open Font License texts.
-`scripts/tokens.py` turns `design/tokens.json` into `ui/tokens.css`; the
-icon set in `src-tauri/icons` comes from `cargo tauri icon design/app-icon.svg`.
+brand book, app icon and the components the site uses (`bundle.css`), and
+`ui/fonts` Archivo and Commit Mono with their SIL Open Font License texts.
+The window, as redesigned on 2026-10-21, is `ui/app.css` on `ui/tokens.css`,
+which `scripts/tokens.py` makes from `design/tokens.json`; the icon set in
+`src-tauri/icons` comes from `cargo tauri icon design/app-icon.svg`.
 
 ## The site
 
