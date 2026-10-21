@@ -67,8 +67,8 @@ has, and the next asks only for the rest (an HTTP range request); after a
 lost connection it tries again by itself, 2 s later and then twice as long
 each time, 30 s at most. The model is checked against the size and SHA-256
 built into the app (src-tauri/src/model.rs) before it is used. The model
-menu changes it later, and a `.pkf` already on the computer can be used
-instead.
+menu on the start screen changes it later, and a `.pkf` already on the
+computer can be used instead.
 
 Each file lives under the first twelve digits of its SHA-256, as
 `https://models.pktito.net/8bfa6750b83c/parakeet-tdt-0.6b-v2.pkf`, so an
@@ -98,6 +98,16 @@ newest in the app's data folder, with its audio as pktito heard it: a 16 kHz
 whatever the original's format, and whether or not the webview could play
 it. The cache keeps 2 GB of these, letting the oldest go first; a transcript
 whose audio is gone reads its original again to play.
+
+The arrow at the top left, or Esc, goes back to the start screen. A
+finished transcript closes, staying on the recent list; a file still being
+transcribed goes on, at the top of that list, and leads back to itself.
+Files dropped on the window join the queue from any screen.
+
+The window shows no shortcuts; tooltips name them. Only macOS has a menu
+bar. On Windows and Linux the page takes the shortcuts itself: Ctrl+O adds
+files, Ctrl+S and Ctrl+Shift+S save as text and as subtitles, Ctrl+F finds.
+Space plays and pauses.
 
 Saving writes `.txt`, `.srt`, `.vtt`, `.md`, or `.json` with every word's
 start and end, beside the original or where the dialog says. It never writes

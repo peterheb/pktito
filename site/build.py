@@ -148,12 +148,11 @@ def arrow(text, href):
 
 
 ICO = {
-    "music": '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+    "back": '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
     "check": '<polyline points="20 6 9 17 4 12"/>',
     "copy": '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
     "search": '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
     "down": '<polyline points="6 9 12 15 18 9"/>',
-    "x": '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
 }
 
 
@@ -235,11 +234,10 @@ home = f"""<main>
   <div class="wrap">
     <div class="app-shot" data-ui>
       <div class="as-head">
-        {ico("music")}<h2>{FILE}</h2><span class="pk-stamp">00:01:04</span><span class="as-grow"></span>
-        <span class="as-find">{ico("search")}Find in transcript<span class="pk-stamp">⌘F</span></span>
+        <span class="as-back">{ico("back")}</span><h2>{FILE}</h2><span class="pk-stamp">00:01:04</span><span class="as-grow"></span>
+        <span class="as-find">{ico("search")}Find</span>
         <span class="pk-btn pk-btn-primary">{ico("copy")}Copy text</span>
         <span class="pk-btn pk-btn-quiet">Save as{ico("down")}</span>
-        <span class="as-x">{ico("x")}</span>
       </div>
       <div class="as-strip">
         <span class="as-play">{PLAY}</span><span class="as-time">{stamp(AT)}</span>
@@ -247,11 +245,6 @@ home = f"""<main>
       </div>
       <div class="as-transcript">
 {segs}
-      </div>
-      <div class="as-foot">
-        <span class="as-model">English · parakeet-tdt-0.6b-v2{ico("down")}</span>
-        <span>Took 0:01 on this computer</span>
-        <span class="as-hint">Space plays and pauses · click a time to jump there</span>
       </div>
     </div>
   </div>

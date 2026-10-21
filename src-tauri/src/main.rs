@@ -20,7 +20,6 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_dialog::{DialogExt, FileDialogBuilder, MessageDialogButtons, MessageDialogKind};
 
@@ -699,6 +698,58 @@ fn download_alone(args: &[String]) -> Result<PathBuf, String> {
     rx.try_recv().map_err(|_| job.state().why)
 }
 
+/// The menu bar, on macOS alone, where it is outside the window and its Edit
+/// menu is what gives a text field ⌘C and ⌘V. A Windows or Linux window has
+/// none: there it only repeated the window's own controls and shortcuts,
+/// which the page takes itself, and stayed light in dark mode (the Windows
+/// test, 2026-10-21).
+#[cfg(target_os = "macos")]
+fn menu_bar(app: &tauri::App) -> tauri::Result<()> {
+    use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
+    let item = |id: &str, text: &str, key: Option<&str>| {
+        let b = MenuItemBuilder::with_id(id, text);
+        match key {
+            Some(k) => b.accelerator(k).build(app),
+            None => b.build(app),
+        }
+    };
+    let file = SubmenuBuilder::new(app, "File")
+        .item(&item("add", "Add Files…", Some("CmdOrCtrl+O"))?)
+        .separator()
+        .item(&item("save-txt", "Save as Text", Some("CmdOrCtrl+S"))?)
+        .item(&item("save-srt", "Save as Subtitles", Some("CmdOrCtrl+Shift+S"))?)
+        .item(&item("save-vtt", "Save as Web Subtitles", None)?)
+        .item(&item("save-md", "Save as Markdown", None)?)
+        .item(&item("save-json", "Save as JSON", None)?)
+        .separator()
+        .item(&PredefinedMenuItem::close_window(app, None)?)
+        .build()?;
+    let edit = SubmenuBuilder::new(app, "Edit")
+        .item(&PredefinedMenuItem::undo(app, None)?)
+        .item(&PredefinedMenuItem::redo(app, None)?)
+        .separator()
+        .item(&PredefinedMenuItem::cut(app, None)?)
+        .item(&PredefinedMenuItem::copy(app, None)?)
+        .item(&PredefinedMenuItem::paste(app, None)?)
+        .item(&PredefinedMenuItem::select_all(app, None)?)
+        .separator()
+        .item(&item("find", "Find…", Some("CmdOrCtrl+F"))?)
+        .build()?;
+    let pktito = SubmenuBuilder::new(app, "pktito")
+        .item(&PredefinedMenuItem::about(app, None, None)?)
+        .separator()
+        .item(&PredefinedMenuItem::hide(app, None)?)
+        .item(&PredefinedMenuItem::hide_others(app, None)?)
+        .separator()
+        .item(&PredefinedMenuItem::quit(app, None)?)
+        .build()?;
+    app.set_menu(MenuBuilder::new(app).item(&pktito).item(&file).item(&edit).build()?)?;
+    app.on_menu_event(|app, event| {
+        let _ = app.emit("menu", event.id().0.as_str());
+    });
+    Ok(())
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.first().map(|a| a == "--download").unwrap_or(false) {
@@ -727,52 +778,8 @@ fn main() {
             if let (Ok(data), Ok(dir)) = (data_dir(app.handle()), audio_dir(app.handle())) {
                 audio::prune(&dir, &recent::list(&data).into_iter().map(|i| i.id).collect::<Vec<_>>());
             }
-            let item = |id: &str, text: &str, key: Option<&str>| {
-                let b = MenuItemBuilder::with_id(id, text);
-                match key {
-                    Some(k) => b.accelerator(k).build(app),
-                    None => b.build(app),
-                }
-            };
-            let file = SubmenuBuilder::new(app, "File")
-                .item(&item("add", "Add Files…", Some("CmdOrCtrl+O"))?)
-                .separator()
-                .item(&item("save-txt", "Save as Text", Some("CmdOrCtrl+S"))?)
-                .item(&item("save-srt", "Save as Subtitles", Some("CmdOrCtrl+Shift+S"))?)
-                .item(&item("save-vtt", "Save as Web Subtitles", None)?)
-                .item(&item("save-md", "Save as Markdown", None)?)
-                .item(&item("save-json", "Save as JSON", None)?)
-                .separator()
-                .item(&PredefinedMenuItem::close_window(app, None)?)
-                .build()?;
-            let edit = SubmenuBuilder::new(app, "Edit")
-                .item(&PredefinedMenuItem::undo(app, None)?)
-                .item(&PredefinedMenuItem::redo(app, None)?)
-                .separator()
-                .item(&PredefinedMenuItem::cut(app, None)?)
-                .item(&PredefinedMenuItem::copy(app, None)?)
-                .item(&PredefinedMenuItem::paste(app, None)?)
-                .item(&PredefinedMenuItem::select_all(app, None)?)
-                .separator()
-                .item(&item("find", "Find…", Some("CmdOrCtrl+F"))?)
-                .build()?;
-            let menu = MenuBuilder::new(app);
             #[cfg(target_os = "macos")]
-            let menu = menu.item(
-                &SubmenuBuilder::new(app, "pktito")
-                    .item(&PredefinedMenuItem::about(app, None, None)?)
-                    .separator()
-                    .item(&PredefinedMenuItem::hide(app, None)?)
-                    .item(&PredefinedMenuItem::hide_others(app, None)?)
-                    .separator()
-                    .item(&PredefinedMenuItem::quit(app, None)?)
-                    .build()?,
-            );
-            let menu = menu.item(&file).item(&edit).build()?;
-            app.set_menu(menu)?;
-            app.on_menu_event(|app, event| {
-                let _ = app.emit("menu", event.id().0.as_str());
-            });
+            menu_bar(app)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

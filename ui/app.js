@@ -27,6 +27,7 @@ const ICON = {
   plus: svg('<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>'),
   alert: svg('<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'),
   x: svg('<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'),
+  back: svg('<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>'),
   play: svg('<polygon points="6 3 20 12 6 21 6 3"/>', "pk-ico pk-ico-20 pk-ico-fill"),
   pause: svg('<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>', "pk-ico pk-ico-20 pk-ico-fill"),
 };
@@ -40,6 +41,7 @@ const files = [];       // the queue
 let sel = null;         // the id of the file shown
 let nextId = 1;
 let running = false;    // a transcription is under way
+let home = false;       // the start screen is shown, files still under way or not
 
 /* ---------------------------------------------------------- formatting -- */
 
@@ -96,6 +98,9 @@ const plural = (n, one) => `${n} ${one}${n === 1 ? "" : "s"}`;
 const isMac = () => st.platform === "macos";
 const isWin = () => st.platform === "windows";
 const kbd = (k, shift = false) => (isMac() ? `${shift ? "⇧" : ""}⌘${k}` : `Ctrl+${shift ? "Shift+" : ""}${k}`);
+/* A control's tooltip with its shortcut: the window itself shows none,
+   so that its words are the transcript's. */
+const tip = (label, k, shift = false) => `${label} (${kbd(k, shift)})`;
 const revealLabel = () => (isMac() ? "Show in Finder" : isWin() ? "Show in File Explorer" : "Show in folder");
 const kindOf = (p) => (st.video.includes(extOf(p)) ? "video" : "audio");
 const isMedia = (p) => st.media.includes(extOf(p));
@@ -105,7 +110,7 @@ const isMedia = (p) => st.media.includes(extOf(p));
 function viewName() {
   if (!st) return "";
   if (!st.ready || dl) return "setup";
-  return files.length ? "work" : "ready";
+  return files.length && !home ? "work" : "ready";
 }
 
 function render() {
@@ -127,6 +132,9 @@ async function refresh() {
 
 const current = () => files.find((f) => f.id === sel) || null;
 const waiting = () => files.filter((f) => f.step === "waiting").length;
+const busy = (f) => ["reading", "loading", "transcribing"].includes(f.step);
+/* waiting its turn or being transcribed */
+const live = (f) => f.step === "waiting" || busy(f);
 
 /* --------------------------------------------------------------- model -- */
 
@@ -175,7 +183,7 @@ function modelMenu(anchor, keys) {
   }
   items.push(`<div class="pk-menu-sep" aria-hidden="true"></div>` +
     `<button class="pk-mi" type="button" role="menuitem" data-own="1"><span>A model file on this computer…</span></button>`);
-  openMenu(anchor, keys, items.join(""), anchor.id === "foot-model" ? "up" : "down right", (m) => {
+  openMenu(anchor, keys, items.join(""), "down right", (m) => {
     m.onclick = async (e) => {
       const b = e.target.closest(".pk-mi");
       if (!b) return;
@@ -344,7 +352,7 @@ function updateDownload() {
   pause.classList.toggle("pk-btn-primary", dl.step === "paused");
   pause.disabled = dl.step === "checking";
   const w = waiting();
-  $("dl-next").textContent = w ? `Next: your ${plural(w, "file")}.` : "Next: drop audio or video files.";
+  $("dl-next").textContent = w ? `Next: your ${plural(w, "file")}.` : "";
 }
 
 listen("download", async (e) => {
@@ -363,21 +371,36 @@ listen("download", async (e) => {
 
 /* --------------------------------------------------------------- ready -- */
 
+/* The files still under way when the window went back to the start head
+   its recent list, each as the queue shows it, and lead back to the work. */
 function renderReady() {
   $("ready-model").innerHTML = `${esc(modelLabel(false))}${ICON.down}`;
   $("choose").innerHTML = `${ICON.plus}Choose files…`;
+  $("choose").title = tip("Choose files", "O");
   drawWave($("idle-wave"), null, 0);
-  $("recent").hidden = !recent.length;
-  $("recent-list").innerHTML = recent.map((r) =>
+  $("recent").hidden = !recent.length && !files.length;
+  $("clear-recent").hidden = !recent.length;
+  $("recent-list").innerHTML = files.map(liveHtml).join("") + recent.map((r) =>
     `<li><button class="pk-row" type="button" data-recent="${esc(r.id)}" title="${esc(r.path)}">${ICON.file}` +
     `<span class="pk-name">${esc(r.name)}</span><span class="pk-stamp">${hms(r.duration)}</span>` +
     `<span class="pk-small pk-when">${esc(when(r.finished))}</span></button></li>`).join("");
+}
+
+const liveHtml = (f) => `<li><button class="pk-row" type="button" data-live="${f.id}" title="${esc(f.path)}">${rowBody(f)}</button></li>`;
+
+function updateLive(f) {
+  const row = $("recent-list").querySelector(`[data-live="${f.id}"]`);
+  if (!row) return renderReady();
+  const focused = document.activeElement === row;
+  row.parentNode.outerHTML = liveHtml(f);
+  if (focused) $("recent-list").querySelector(`[data-live="${f.id}"]`).focus();
 }
 
 async function openRecent(id) {
   const there = files.find((f) => f.recentId === id);
   if (there) {
     sel = there.id;
+    home = false;
     return render();
   }
   try {
@@ -386,6 +409,7 @@ async function openRecent(id) {
       audio: t.audio, segments: t.segments, took: t.took, model: t.model, recentId: t.id });
     files.push(f);
     sel = f.id;
+    home = false;
     render();
     if (!f.audio) reloadAudio(f);
   } catch (e) {
@@ -393,15 +417,17 @@ async function openRecent(id) {
   }
 }
 
-/* The cache let its audio go: read it again from the original, if it is there. */
+/* The cache let its audio go: read it again from the original, if it is
+   there. Until then, or if it cannot be, the play button says why. */
 async function reloadAudio(f) {
   f.audioWhy = "Reading its audio again…";
-  if (current() === f) updateFoot(f, modeOf(f));
+  if (current() === f) setPlayIcon();
   try {
     f.audio = await invoke("reload_audio", { id: f.recentId });
     f.audioWhy = "";
   } catch (e) {
     f.audioWhy = String(e);
+    if (current() === f) toast(f.audioWhy, { err: true });
   }
   if (current() === f) {
     mainKey = "";
@@ -410,8 +436,12 @@ async function reloadAudio(f) {
 }
 
 $("recent-list").onclick = (e) => {
-  const b = e.target.closest("[data-recent]");
-  if (b) openRecent(b.dataset.recent);
+  const b = e.target.closest("[data-recent], [data-live]");
+  if (!b) return;
+  if (b.dataset.recent) return openRecent(b.dataset.recent);
+  sel = Number(b.dataset.live);
+  home = false;
+  render();
 };
 $("clear-recent").onclick = async () => {
   try {
@@ -425,7 +455,6 @@ $("clear-recent").onclick = async () => {
 };
 $("choose").onclick = () => chooseFiles();
 $("ready-model").onclick = (e) => modelMenu(e.currentTarget, !e.detail);
-$("foot-model").onclick = (e) => modelMenu(e.currentTarget, !e.detail);
 
 /* --------------------------------------------------------------- queue -- */
 
@@ -443,8 +472,11 @@ async function chooseFiles() {
   }
 }
 
+/* Files dropped or chosen join the queue, from any screen. The first of
+   them is shown if it is next, since nothing else is under way. */
 function addPaths(paths) {
   const refused = [];
+  const next = !files.some(live);
   let first = null;
   for (const p of paths) {
     if (!isMedia(p)) {
@@ -455,7 +487,10 @@ function addPaths(paths) {
     files.push(f);
     first = first || f;
   }
-  if (first && !current()) sel = first.id;
+  if (first) {
+    if (next || !current()) sel = first.id;
+    home = false;
+  }
   if (refused.length) toast(`pktito reads audio and video files. Not added: ${refused.join(", ")}`, { err: true });
   render();
   pump();
@@ -506,6 +541,11 @@ async function finished(f) {
   } catch {
     // the list shows what it had
   }
+  // finished while the start screen was shown: it is on the recent list now
+  if (home) {
+    dropFile(f);
+    if (viewName() === "ready") renderReady();
+  }
   if (prefs.save_each && f.segments.length) {
     try {
       const r = await invoke("save_text", { original: f.path, ext: "txt", text: textOf(f, "txt"), nextTo: true });
@@ -520,14 +560,16 @@ async function finished(f) {
 function update(f, segs = []) {
   const v = viewName();
   if (v === "setup") return renderSetup();
+  if (v === "ready") return updateLive(f);
   if (v !== "work") return;
   updateRow(f);
   if (f.id === sel) showMain(segs);
 }
 
-function removeFile(f) {
-  if (["reading", "loading", "transcribing"].includes(f.step)) return toast("It is being transcribed. Stop it first.", { err: true });
+/* f off the queue, and out of the player if it is there */
+function dropFile(f) {
   const i = files.indexOf(f);
+  if (i < 0) return;
   files.splice(i, 1);
   if (playId === f.id) {
     pausePlayback();
@@ -535,6 +577,23 @@ function removeFile(f) {
     playId = null;
   }
   if (sel === f.id) sel = files.length ? files[Math.min(i, files.length - 1)].id : null;
+}
+
+function removeFile(f) {
+  if (busy(f)) return toast("It is being transcribed. Stop it first.", { err: true });
+  dropFile(f);
+  mainKey = "";
+  render();
+}
+
+/* Back to the start. What is finished, stopped or failed is closed, a
+   finished transcript staying on the recent list; files waiting or being
+   transcribed go on, and head the list there. */
+function goHome() {
+  if (viewName() !== "work") return;
+  closeMenu();
+  for (const f of files.filter((x) => !live(x))) dropFile(f);
+  home = true;
   mainKey = "";
   render();
 }
@@ -558,8 +617,9 @@ function renderWork() {
   showMain();
 }
 
-function rowHtml(f) {
-  const on = f.id === sel;
+/* A queue row's file and status; the start screen draws the same for a
+   file still under way. */
+function rowBody(f) {
   let status;
   if (f.step === "waiting") status = `<span class="pk-status">Waiting</span>`;
   else if (f.step === "reading") status = `<span class="pk-status">Reading the audio</span>`;
@@ -570,9 +630,18 @@ function rowHtml(f) {
   } else if (f.step === "done") status = `<span class="pk-status pk-ok">${ICON.check}Done</span>`;
   else if (f.step === "stopped") status = `<span class="pk-status">Stopped at ${percent(f.done)}%</span>`;
   else status = `<span class="pk-status pk-err">${esc(f.message || "This file could not be transcribed.")}</span>`;
-  return `<li><button class="pk-row${on ? " is-on" : ""}" type="button" data-id="${f.id}" aria-current="${on}" ` +
-    `tabindex="${on ? 0 : -1}" title="${esc(f.path)}">${f.kind === "video" ? ICON.film : ICON.music}` +
-    `<span class="pk-name">${esc(f.name)}</span><span class="pk-stamp">${f.duration == null ? "" : hms(f.duration)}</span>${status}</button></li>`;
+  return `${f.kind === "video" ? ICON.film : ICON.music}<span class="pk-name">${esc(f.name)}</span>` +
+    `<span class="pk-stamp">${f.duration == null ? "" : hms(f.duration)}</span>${status}`;
+}
+
+/* The row, and the × that shows over it under the pointer, except while
+   it is transcribed; from the keyboard, Delete. */
+function rowHtml(f) {
+  const on = f.id === sel;
+  return `<li class="pk-qi"><button class="pk-row${on ? " is-on" : ""}" type="button" data-id="${f.id}" aria-current="${on}" ` +
+    `aria-keyshortcuts="Delete" tabindex="${on ? 0 : -1}" title="${esc(f.path)}">${rowBody(f)}</button>` +
+    (busy(f) ? "" : `<button class="pk-x" type="button" tabindex="-1" data-x="${f.id}" aria-label="Take ${esc(f.name)} off the list" ` +
+      `title="Take it off the list">${ICON.x}</button>`) + "</li>";
 }
 
 /* One row anew, in place: progress comes every chunk, and a queue redrawn
@@ -595,7 +664,8 @@ function sideFoot() {
 function renderSide() {
   if (files.length < 2) return;
   const focused = document.activeElement && document.activeElement.closest("#queue");
-  $("add").innerHTML = `${ICON.plus}Add files<span class="pk-kbd">${kbd("O")}</span>`;
+  $("add").innerHTML = `${ICON.plus}Add files`;
+  $("add").title = tip("Add files", "O");
   $("queue").innerHTML = files.map(rowHtml).join("");
   if (focused) {
     const row = $("queue").querySelector(`[data-id="${sel}"]`);
@@ -615,6 +685,8 @@ function select(id) {
 }
 
 $("queue").addEventListener("click", (e) => {
+  const x = e.target.closest("[data-x]");
+  if (x) return removeFile(files.find((f) => f.id === Number(x.dataset.x)));
   const row = e.target.closest("[data-id]");
   if (row) select(Number(row.dataset.id));
 });
@@ -633,13 +705,19 @@ $("queue").addEventListener("keydown", (e) => {
 });
 $("queue").addEventListener("pointermove", () => $("queue").classList.remove("by-keys"));
 $("add").onclick = () => chooseFiles();
+for (const b of [$("back"), $("side-back")]) b.onclick = () => goHome();
 
 /* The selected file: waiting, running, its transcript to review, or why it failed. */
 function modeOf(f) {
   if (f.step === "waiting") return "waiting";
-  if (["reading", "loading", "transcribing"].includes(f.step)) return "running";
+  if (busy(f)) return "running";
   return f.step === "error" ? "error" : "review";
 }
+
+/* Where the file is and what made its transcript, for its name's tooltip:
+   the window keeps both out of sight. */
+const fileTip = (f) => (f.model ? `${f.path}\n${f.model} · took ${clock(f.took)}` : f.path);
+const playable = (f) => !!f.audio && !f.audioWhy;
 
 let mainKey = "";
 
@@ -665,9 +743,8 @@ function buildMain(f, mode, key) {
   const top = was !== String(f.id) || (wasMode === "running" && mode === "review" && atEnd) ? 0 : tr.scrollTop;
   mainKey = key;
   pausePlayback();
-  $("head-ico").innerHTML = f.kind === "video" ? ICON.film : ICON.music;
   $("title").textContent = f.name;
-  $("title").title = f.path;
+  $("title").title = fileTip(f);
   $("find").value = "";
   query = "";
   hits = [];
@@ -690,10 +767,9 @@ function buildMain(f, mode, key) {
     wave.setAttribute("aria-valuemax", "100");
     $("wavebtn").removeAttribute("aria-label");
   }
-  $("wavebtn").disabled = !review || !f.audio;
+  $("wavebtn").disabled = !review || !playable(f);
   renderTranscript(f, mode);
   tr.scrollTop = top;
-  updateFoot(f, mode);
   drawMainWave();
   if (review) {
     loadAudio(f);
@@ -713,32 +789,8 @@ function updateHead(f, mode) {
   $("save-as").innerHTML = `Save as${ICON.down}`;
   $("save-as").disabled = !has;
   $("again").hidden = !["stopped", "error"].includes(f.step);
+  $("again").title = f.step === "stopped" ? `It stopped at ${percent(f.done)}%. Transcribe it from the start.` : "";
   $("stop").hidden = mode !== "running";
-  $("remove").hidden = mode === "running";
-  $("remove").innerHTML = ICON.x;
-  const what = mode === "waiting" ? "Take it off the list" : "Close this file";
-  $("remove").setAttribute("aria-label", what);
-  $("remove").title = what;
-}
-
-function updateFoot(f, mode) {
-  $("foot-model").innerHTML = `${esc(modelLabel(true))}${ICON.down}`;
-  let took = "", hint = "";
-  if (mode === "running") hint = "Text appears as each part finishes. You can copy it now.";
-  else if (mode === "review") {
-    took = f.step === "stopped" ? `Stopped at ${percent(f.done)}%` : f.took ? `Took ${clock(f.took)} on this computer` : "";
-    if (f.segments.length) hint = f.audio ? "Space plays and pauses · click a time to jump there" : f.audioWhy;
-  }
-  $("took").textContent = took;
-  $("hint").textContent = hint;
-  fitHint();
-}
-
-/* The hint goes when the footer has no room for all of it. */
-function fitHint() {
-  const h = $("hint");
-  h.style.visibility = "";
-  if (h.scrollWidth > h.clientWidth + 1) h.style.visibility = "hidden";
 }
 
 function updateRunning(f) {
@@ -756,9 +808,10 @@ function updateRunning(f) {
 
 /* ---------------------------------------------------------- transcript -- */
 
-function segHtml(s, i) {
-  return `<div class="pk-seg" data-i="${i}"><button class="pk-seg-t" type="button" tabindex="-1" aria-label="Play from ${stamp(s.start)}">` +
-    `${stamp(s.start)}</button><p>${query ? hitHtml(s.text) : wordHtml(s)}</p></div>`;
+/* A segment; its time plays from there once the transcript is finished */
+function segHtml(s, i, filling) {
+  return `<div class="pk-seg" data-i="${i}"><button class="pk-seg-t" type="button" tabindex="-1" aria-label="Play from ${stamp(s.start)}"` +
+    `${filling ? "" : ' title="Play from here"'}>${stamp(s.start)}</button><p>${query ? hitHtml(s.text) : wordHtml(s)}</p></div>`;
 }
 
 /* The text with each timed word in a span of its own, for the playhead. */
@@ -776,7 +829,7 @@ function wordHtml(s) {
 function renderTranscript(f, mode) {
   const tr = $("transcript");
   tr.classList.toggle("is-live", mode === "running");
-  tr.innerHTML = f.segments.map(segHtml).join("");
+  tr.innerHTML = f.segments.map((s, i) => segHtml(s, i, mode === "running")).join("");
   curSeg = curWord = null;
   if (mode === "running") markLive();
   let msg = "", err = false;
@@ -806,7 +859,7 @@ function appendSegs(f, segs) {
   const tr = $("transcript");
   const atEnd = tr.scrollHeight - tr.scrollTop - tr.clientHeight < 48;
   const base = f.segments.length - segs.length;
-  tr.insertAdjacentHTML("beforeend", segs.map((s, k) => segHtml(s, base + k)).join(""));
+  tr.insertAdjacentHTML("beforeend", segs.map((s, k) => segHtml(s, base + k, true)).join(""));
   markLive();
   if (atEnd) tr.scrollTop = tr.scrollHeight;
   updateHead(f, "running");
@@ -885,10 +938,9 @@ const resized = new ResizeObserver((entries) => {
   for (const e of entries) {
     if (e.target.id === "wave" && viewName() === "work") drawMainWave();
     else if (e.target.id === "idle-wave" && viewName() === "ready") drawWave($("idle-wave"), null, 0);
-    else if (e.target.classList.contains("pk-foot")) fitHint();
   }
 });
-for (const el of [$("wave"), $("idle-wave"), document.querySelector(".pk-foot")]) resized.observe(el);
+for (const el of [$("wave"), $("idle-wave")]) resized.observe(el);
 
 /* ------------------------------------------------------------ playback -- */
 
@@ -898,7 +950,6 @@ let playing = false;
 let curSeg = null, curWord = null;
 
 function loadAudio(f) {
-  $("play").disabled = !f.audio;
   setPlayIcon();
   if (playId === f.id && player.getAttribute("src")) return;
   playId = f.id;
@@ -906,14 +957,19 @@ function loadAudio(f) {
   else player.removeAttribute("src");
 }
 
+/* The play button for the file shown; when it cannot play, its tooltip
+   says why. */
 function setPlayIcon() {
+  const f = current(), what = playing ? "Pause" : "Play";
   $("play").innerHTML = playing ? ICON.pause : ICON.play;
-  $("play").setAttribute("aria-label", playing ? "Pause" : "Play");
+  $("play").setAttribute("aria-label", what);
+  $("play").title = (f && f.audioWhy) || `${what} (Space)`;
+  $("play").disabled = !f || !playable(f);
 }
 
 function togglePlay() {
   const f = current();
-  if (!f || modeOf(f) !== "review" || !f.audio || playId !== f.id) return;
+  if (!f || modeOf(f) !== "review" || !playable(f) || playId !== f.id) return;
   if (!player.paused) return pausePlayback();
   if (f.pos >= f.duration - 0.05) f.pos = 0;
   player.currentTime = f.pos;
@@ -933,7 +989,7 @@ function pausePlayback() {
 
 function seek(t, play) {
   const f = current();
-  if (!f || !f.audio) return;
+  if (!f || !playable(f)) return;
   f.pos = Math.max(0, Math.min(f.duration, t));
   player.currentTime = f.pos;
   showTime(f.pos, true);
@@ -970,7 +1026,10 @@ player.addEventListener("error", () => {
   const f = files.find((x) => x.id === playId);
   if (!f || !f.audio) return;
   f.audioWhy = "Its audio could not be played.";
-  if (current() === f) updateFoot(f, modeOf(f));
+  if (current() !== f) return;
+  toast(f.audioWhy, { err: true });
+  setPlayIcon();
+  $("wavebtn").disabled = true;
 });
 
 function tick() {
@@ -1072,7 +1131,7 @@ function runFind() {
   if (!f || modeOf(f) !== "review") return;
   query = $("find").value.trim();
   const tr = $("transcript"), top = tr.scrollTop;
-  tr.innerHTML = f.segments.map(segHtml).join("");
+  tr.innerHTML = f.segments.map((s, i) => segHtml(s, i, false)).join("");
   tr.scrollTop = top;
   curSeg = curWord = null;
   showTime(f.pos);
@@ -1092,8 +1151,13 @@ function stepHit(d) {
 }
 
 function findCount() {
-  $("find-n").textContent = query ? `${hits.length ? hitAt + 1 : 0}/${hits.length}` : st ? kbd("F") : "";
+  $("find-n").textContent = query ? `${hits.length ? hitAt + 1 : 0}/${hits.length}` : "";
   $("find-box").classList.toggle("has-query", !!query);
+}
+
+function clearFind() {
+  $("find").value = "";
+  runFind();
 }
 
 function openFind() {
@@ -1111,8 +1175,7 @@ $("find").addEventListener("keydown", (e) => {
   } else if (e.key === "Escape") {
     e.preventDefault();
     e.stopPropagation();
-    $("find").value = "";
-    runFind();
+    clearFind();
     $("find").blur();
   }
 });
@@ -1253,7 +1316,6 @@ $("stop").onclick = () => {
   invoke("stop", { id: f.id }).catch(() => {});
 };
 $("again").onclick = () => current() && again(current());
-$("remove").onclick = () => current() && removeFile(current());
 
 /* --------------------------------------------------------------- menus -- */
 
@@ -1284,10 +1346,13 @@ function openMenu(anchor, keys, html, place, wire) {
   if (first && keys) first.focus({ preventScroll: true });
 }
 
+/* The keyboard's place, if it was in the menu, goes back to its button. */
 function closeMenu() {
   if (!menuFor) return false;
+  const was = $("menu").contains(document.activeElement);
   $("menu").hidden = true;
   menuFor.setAttribute("aria-expanded", "false");
+  if (was) menuFor.focus({ preventScroll: true });
   menuFor = null;
   return true;
 }
@@ -1353,14 +1418,18 @@ const typing = (el) => el && (el.isContentEditable || el.tagName === "TEXTAREA" 
 
 document.addEventListener("keydown", (e) => {
   if (!st) return;
+  // Esc backs out one step: a menu, a search, then the file
   if (e.key === "Escape") {
-    if (closeMenu()) e.preventDefault();
+    e.preventDefault();
+    if (closeMenu()) return;
+    if (query && viewName() === "work") clearFind();
+    else goHome();
     return;
   }
-  /* On Windows the File menu's shortcuts never reach the menu while the page
-     has the keyboard, which is nearly always: Ctrl+O and Ctrl+S did nothing
-     in the Windows test (2026-10-21). So there the page takes them. */
-  if (isWin() && e.ctrlKey && !e.altKey && !e.metaKey) {
+  /* Only macOS has a menu bar, outside the window, and its shortcuts work
+     there. On Windows and Linux the window has no menu bar, so the page
+     takes them. */
+  if (!isMac() && e.ctrlKey && !e.altKey && !e.metaKey) {
     const k = e.key.toLowerCase();
     if (k === "o" && !e.shiftKey) chooseFiles();
     else if (k === "s") save(e.shiftKey ? "srt" : "txt");
@@ -1371,7 +1440,7 @@ document.addEventListener("keydown", (e) => {
   }
   if (e.key === " " && !menuFor && !typing(e.target) && viewName() === "work") {
     const f = current();
-    if (f && modeOf(f) === "review" && f.audio) {
+    if (f && modeOf(f) === "review" && playable(f)) {
       e.preventDefault();
       if (!e.repeat) togglePlay();
     }
@@ -1391,7 +1460,11 @@ async function start() {
   st = await invoke("status");
   prefs = st.prefs;
   dl = st.download;
-  for (const k of document.querySelectorAll("[data-kbd]")) k.textContent = kbd(k.dataset.kbd);
+  for (const b of [$("back"), $("side-back")]) {
+    b.innerHTML = ICON.back;
+    b.title = "Back (Esc)";
+  }
+  $("find-box").title = tip("Find", "F");
   try {
     recent = await invoke("recent_list");
   } catch {
