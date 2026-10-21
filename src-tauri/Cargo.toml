@@ -18,6 +18,10 @@ serde_json = "1"
 sha2 = "0.10"
 ureq = "2"
 
+# unoptimized, a debug build hashes the model's download at 28 MB/s
+[profile.dev.package.sha2]
+opt-level = 3
+
 [profile.release]
 lto = true
 codegen-units = 1

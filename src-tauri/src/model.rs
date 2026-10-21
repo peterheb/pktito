@@ -1,7 +1,7 @@
 //! The model: which one, where it lives, and its first-run download from
-//! pktito.net, checked against the published size and SHA-256 before it is
-//! used. PKTITO_MODEL_BASE points the download somewhere else (a mirror, or
-//! a local server while testing).
+//! models.pktito.net, checked against the published size and SHA-256 before
+//! it is used. PKTITO_MODEL_BASE points the download somewhere else (a
+//! mirror, or a local server while testing).
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -9,7 +9,7 @@ use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-pub const DEFAULT_BASE: &str = "https://pktito.net/models/";
+pub const DEFAULT_BASE: &str = "https://models.pktito.net/";
 
 #[derive(Clone, Copy, Serialize)]
 pub struct Entry {
@@ -19,7 +19,7 @@ pub struct Entry {
     pub sha256: &'static str,
 }
 
-/// The models pktito.net publishes: pktito-tools' conversions of NVIDIA's
+/// The models models.pktito.net serves: pktito-tools' conversions of NVIDIA's
 /// checkpoints (CC-BY-4.0), as pktito e5cc94e writes them.
 pub const CATALOG: &[Entry] = &[
     Entry {
@@ -62,10 +62,14 @@ pub fn save_settings(data: &Path, s: &Settings) -> Result<(), String> {
     fs::write(settings_path(data), serde_json::to_vec_pretty(s).unwrap()).map_err(|e| e.to_string())
 }
 
+/// A file's address names its contents: under the first twelve digits of its
+/// SHA-256, so no address ever serves two files. A CDN can keep each one
+/// forever, and a model converted again gets a new address instead of a
+/// cached copy of the old one that fails the check.
 pub fn download_url(e: &Entry) -> String {
     let base = std::env::var("PKTITO_MODEL_BASE").unwrap_or_else(|_| DEFAULT_BASE.to_string());
     let base = if base.ends_with('/') { base } else { base + "/" };
-    format!("{base}{}.pkf", e.name)
+    format!("{base}{}/{}.pkf", &e.sha256[..12], e.name)
 }
 
 /// Download e into dir, reporting (bytes so far, total) as it goes; the
@@ -77,7 +81,7 @@ pub fn download(e: &Entry, dir: &Path, mut progress: impl FnMut(u64, u64)) -> Re
     let url = download_url(e);
     let result = (|| -> Result<(), String> {
         let resp = ureq::get(&url).call().map_err(|err| match err {
-            ureq::Error::Status(code, _) => format!("pktito.net answered {code} for {url}"),
+            ureq::Error::Status(code, _) => format!("The model server answered {code} for {url}"),
             other => format!("{other}"),
         })?;
         let mut body = resp.into_reader();

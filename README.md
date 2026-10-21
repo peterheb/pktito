@@ -57,21 +57,27 @@ HE-AAC most, by a word or two in a minute.
 
 ## The model
 
-On first run the app downloads one model from pktito.net, about 624 MB for
-English (parakeet-tdt-0.6b-v2) or 648 MB for 25 European languages
-(parakeet-tdt-0.6b-v3), and checks its size and SHA-256 against the ones
-built into the app (src-tauri/src/model.rs) before using it. A `.pkf` already
-on the computer can be used instead ("Use a model file on this computer").
-`PKTITO_MODEL_BASE` points the download at another server, such as a mirror
-or a local one while testing:
+On first run the app downloads one model from models.pktito.net, about
+624 MB for English (parakeet-tdt-0.6b-v2) or 648 MB for 25 European
+languages (parakeet-tdt-0.6b-v3), and checks its size and SHA-256 against
+the ones built into the app (src-tauri/src/model.rs) before using it. A
+`.pkf` already on the computer can be used instead ("Use a model file on
+this computer").
+
+Each file lives under the first twelve digits of its SHA-256, as
+`https://models.pktito.net/8bfa6750b83c/parakeet-tdt-0.6b-v2.pkf`, so an
+address never serves two different files and a CDN can keep each one
+forever. `scripts/models-tree.sh` lays converted models out that way, for
+uploading or for a local server; `PKTITO_MODEL_BASE` points the download at
+another server, such as a mirror or that local one:
 
 ```sh
-(cd ../pktito/models && python3 -m http.server 8765) &
+scripts/models-tree.sh ../pktito/models/*.pkf /tmp/models
+(cd /tmp/models && python3 -m http.server 8765) &
 PKTITO_MODEL_BASE=http://127.0.0.1:8765/ cargo tauri dev
 ```
 
-The models are NVIDIA's (CC-BY-4.0), converted by pktito-tools; pktito.net
-serves the files named in the catalog.
+The models are NVIDIA's (CC-BY-4.0), converted by pktito-tools.
 
 ## Building
 
