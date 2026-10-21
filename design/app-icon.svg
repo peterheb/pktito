@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>pktito</title>
+  <rect width="1024" height="1024" rx="230" fill="#6cc4f5"></rect>
+  <rect x="236" y="392" width="72" height="240" fill="#101b33"></rect>
+  <rect x="356" y="292" width="72" height="440" fill="#101b33"></rect>
+  <rect x="476" y="212" width="72" height="600" fill="#101b33"></rect>
+  <rect x="596" y="332" width="72" height="360" fill="#101b33"></rect>
+  <rect x="716" y="476" width="72" height="72" fill="#c85a1e"></rect>
+</svg>

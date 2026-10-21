@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pktito</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="bundle.css">
+<link rel="stylesheet" href="app.css">
+<script src="app.js" defer></script>
+</head>
+<body>
+
+<!-- First run: the model, downloaded once -->
+<section id="setup" class="pk-center" hidden>
+  <div class="pk-setup">
+    <span class="pk-wordmark">pktito</span>
+    <p class="pk-lead">Drop a file. Read it.</p>
+    <p>pktito transcribes on this computer. It needs its model first: one download, then it works offline.</p>
+    <div id="models" class="pk-choices"></div>
+    <div id="dl" class="pk-dl" hidden>
+      <span class="pk-bar" id="dl-bar" style="--p:0%"><i></i></span>
+      <span class="pk-status pk-num" id="dl-text">Downloading</span>
+    </div>
+    <p id="setup-err" class="pk-err" role="alert" hidden></p>
+    <button class="pk-link pk-plain" id="use-file" type="button">Use a model file on this computer</button>
+    <p class="pk-small">A C11 port of NVIDIA's Parakeet-TDT models (CC-BY-4.0), downloaded from pktito.net.</p>
+  </div>
+</section>
+
+<!-- Empty state: nothing in the queue -->
+<section id="empty" class="pk-center" hidden>
+  <div class="pk-empty">
+    <span class="pk-wordmark">pktito</span>
+    <button class="pk-drop" id="drop-big" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <strong id="drop-line">Drop audio or video files</strong>
+      <span id="drop-hint">or click to choose. The audio stays on this computer.</span>
+    </button>
+    <p class="pk-small" id="engine-line"></p>
+  </div>
+</section>
+
+<!-- The work: queue and transcript -->
+<div id="work" class="pk-app" hidden>
+  <aside class="pk-app-side">
+    <button class="pk-drop pk-drop-sm" id="add-small" type="button">
+      <svg class="pk-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <strong id="add-line" style="font-size:14px">Add files</strong>
+    </button>
+    <ul class="pk-queue" id="queue" role="listbox" aria-label="Files"></ul>
+  </aside>
+  <main class="pk-app-main">
+    <div class="pk-app-head">
+      <h2 id="title"></h2>
+      <button class="pk-btn pk-btn-quiet" id="copy" type="button" disabled></button>
+      <button class="pk-btn pk-btn-quiet" id="save-txt" type="button" disabled>Save as .txt</button>
+      <button class="pk-btn pk-btn-quiet" id="save-srt" type="button" disabled>Save as .srt</button>
+    </div>
+    <p class="pk-note" id="note" role="status"></p>
+    <div class="pk-transcript" id="transcript" aria-live="polite"></div>
+  </main>
+</div>
+
+</body>
+</html>

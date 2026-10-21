@@ -1,0 +1,43 @@
+/* The app around the design system's components (bundle.css): the window
+   is the app, so .pk-app fills it, square-cornered, and each pane scrolls
+   on its own. Values come from tokens.css. */
+
+html, body { height: 100%; }
+body { overflow: hidden; font-size: 14px; }
+[hidden] { display: none !important; }
+
+.pk-center { height: 100%; display: grid; place-items: center; padding: var(--space-5); box-sizing: border-box; overflow: auto; }
+
+/* First run */
+.pk-setup { max-width: 34em; display: grid; gap: var(--space-3); }
+.pk-setup > p { margin: 0; font: 400 16px/1.5 var(--font-sans); }
+.pk-lead { font: 500 26px/1.25 var(--font-sans) !important; letter-spacing: -0.01em; text-wrap: balance; }
+.pk-choices { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.pk-dl { display: grid; gap: var(--space-1); }
+.pk-dl .pk-bar { height: 4px; background: var(--sunk); border-radius: var(--radius-dot); overflow: hidden; }
+.pk-dl .pk-status { font-size: 13px; color: var(--ink-muted); }
+.pk-err { color: var(--err); margin: 0; font-size: 14px; }
+.pk-plain { background: none; border: 0; padding: 0; font: 500 14px/1.4 var(--font-sans); cursor: pointer; justify-self: start; }
+.pk-small { margin: 0; font: 400 13px/1.45 var(--font-sans); color: var(--ink-muted); }
+
+/* Empty state */
+.pk-empty { width: min(520px, 100%); display: grid; gap: var(--space-4); justify-items: center; }
+.pk-empty .pk-drop { width: 100%; box-sizing: border-box; padding: var(--space-6) var(--space-4); }
+
+/* The work */
+.pk-app { height: 100%; min-height: 0; border-radius: 0; }
+.pk-app-side { overflow-y: auto; }
+.pk-app-main { overflow-y: auto; }
+.pk-app-head h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pk-note { margin: 0; font: 400 13px/1.45 var(--font-sans); color: var(--ink-muted); min-height: 0; }
+.pk-note:empty { display: none; }
+.pk-note.err { color: var(--err); font-size: 14px; }
+.pk-seg .pk-stamp { cursor: copy; }
+.pk-seg p { user-select: text; -webkit-user-select: text; }
+.pk-file { cursor: pointer; }
+.pk-file:focus-visible { outline-offset: 2px; }
+.pk-btn .pk-ico { width: 16px; height: 16px; }
+@media (max-width: 879px) {
+  .pk-app { grid-template-rows: auto 1fr; }
+  .pk-app-side { max-height: 40vh; }
+}
