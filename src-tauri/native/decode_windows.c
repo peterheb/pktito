@@ -1,8 +1,7 @@
 /* The audio of a media file, through Media Foundation's Source Reader:
  * whatever Windows can play (mp3, mp4, m4a, wma, wav, aac, and more with
  * Microsoft's codec extensions), its first audio stream decoded to 32-bit
- * float at the file's own rate, its channels mixed to one, and brought to
- * the rate asked for by pktito's resampler (torchaudio's Resample).
+ * float at the decoder's own rate and handed to the mix (mix.h).
  *
  * 0 on success, with *out malloc'd (the caller frees it) holding *n
  * samples; -1 if the file has no audio stream; -2 if Windows cannot read
@@ -15,29 +14,72 @@
 #include <mfreadwrite.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
-#include "resample.h"
-
-typedef struct { float *p; size_t n, cap; } fbuf;
-
-static int fbuf_room(fbuf *b, size_t more) {
-    if (b->n + more <= b->cap)
-        return 0;
-    size_t cap = b->cap ? b->cap : 1 << 20;
-    while (cap < b->n + more)
-        cap *= 2;
-    float *p = realloc(b->p, cap * sizeof *p);
-    if (!p)
-        return -1;
-    b->p = p;
-    b->cap = cap;
-    return 0;
-}
+#include "mix.h"
 
 static int fail(char *err, size_t errlen, const char *what, HRESULT hr) {
     snprintf(err, errlen, "%s (0x%08lx)", what, (unsigned long)hr);
     return -2;
+}
+
+/* The file's first audio stream, as ffmpeg (0:a:0) and AVFoundation take
+ * it: the one with the lowest stream identifier, an MP4's track ID or a
+ * Matroska track's number. Media Foundation's own first audio stream is
+ * the first in its list, and its MP4 source lists the tracks last first
+ * (a two-track MP4 gave its second track, scripts/media-check.sh). */
+static DWORD first_audio(IMFSourceReader *rd) {
+    DWORD first = (DWORD)MF_SOURCE_READER_FIRST_AUDIO_STREAM, lowest = MAXDWORD, count = 0;
+    IMFMediaSource *src = NULL;
+    IMFPresentationDescriptor *pd = NULL;
+    if (SUCCEEDED(IMFSourceReader_GetServiceForStream(rd, (DWORD)MF_SOURCE_READER_MEDIASOURCE, &GUID_NULL,
+                                                      &IID_IMFMediaSource, (void **)&src)) &&
+        SUCCEEDED(IMFMediaSource_CreatePresentationDescriptor(src, &pd)) &&
+        SUCCEEDED(IMFPresentationDescriptor_GetStreamDescriptorCount(pd, &count)))
+        for (DWORD i = 0; i < count; i++) {
+            BOOL selected;
+            IMFStreamDescriptor *sd = NULL;
+            IMFMediaTypeHandler *th = NULL;
+            GUID major;
+            DWORD id;
+            if (SUCCEEDED(IMFPresentationDescriptor_GetStreamDescriptorByIndex(pd, i, &selected, &sd)) &&
+                SUCCEEDED(IMFStreamDescriptor_GetMediaTypeHandler(sd, &th)) &&
+                SUCCEEDED(IMFMediaTypeHandler_GetMajorType(th, &major)) && IsEqualGUID(&major, &MFMediaType_Audio) &&
+                SUCCEEDED(IMFStreamDescriptor_GetStreamIdentifier(sd, &id)) && id < lowest) {
+                first = i;
+                lowest = id;
+            }
+            if (th)
+                IMFMediaTypeHandler_Release(th);
+            if (sd)
+                IMFStreamDescriptor_Release(sd);
+        }
+    if (pd)
+        IMFPresentationDescriptor_Release(pd);
+    if (src)
+        IMFMediaSource_Release(src);
+    return first;
+}
+
+/* The decoder's format, given to the mix. It can change mid-stream: an
+ * HE-AAC decoder may learn the real rate only once it decodes. */
+static int take_format(IMFSourceReader *rd, DWORD stream, pkapp_mix *mix, UINT32 *ch, char *err, size_t errlen) {
+    IMFMediaType *got = NULL;
+    UINT32 rate = 0, mask = 0;
+    *ch = 0;
+    HRESULT hr = IMFSourceReader_GetCurrentMediaType(rd, stream, &got);
+    if (SUCCEEDED(hr))
+        hr = IMFMediaType_GetUINT32(got, &MF_MT_AUDIO_SAMPLES_PER_SECOND, &rate);
+    if (SUCCEEDED(hr))
+        hr = IMFMediaType_GetUINT32(got, &MF_MT_AUDIO_NUM_CHANNELS, ch);
+    if (SUCCEEDED(hr) && FAILED(IMFMediaType_GetUINT32(got, &MF_MT_AUDIO_CHANNEL_MASK, &mask)))
+        mask = 0;
+    if (got)
+        IMFMediaType_Release(got);
+    if (FAILED(hr) || !rate || !*ch)
+        return fail(err, errlen, "the audio's format could not be read", hr);
+    if (pkapp_mix_format_wave(mix, rate, *ch, mask))
+        return fail(err, errlen, "the audio's format cannot be converted", E_FAIL);
+    return 0;
 }
 
 int pkapp_decode_os(const char *path, int rate, float **out, size_t *n, char *err, size_t errlen) {
@@ -50,16 +92,20 @@ int pkapp_decode_os(const char *path, int rate, float **out, size_t *n, char *er
     MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, wlen);
 
     HRESULT com = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-    HRESULT hr = MFStartup(MF_VERSION, MFSTARTUP_LITE);
+    HRESULT mf = MFStartup(MF_VERSION, MFSTARTUP_LITE);
+    HRESULT hr;
     IMFSourceReader *rd = NULL;
-    IMFMediaType *want = NULL, *got = NULL;
-    pk_resampler *rs = NULL;
-    fbuf res = { 0 }, mono = { 0 };
+    IMFMediaType *want = NULL;
+    pkapp_mix *mix = pkapp_mix_new((unsigned)rate);
+    UINT32 ch = 0;
     int rc = 0;
-    UINT32 srate = 0, ch = 0;
 
-    if (FAILED(hr)) {
-        rc = fail(err, errlen, "Media Foundation could not start", hr);
+    if (!mix) {
+        rc = fail(err, errlen, "out of memory", E_OUTOFMEMORY);
+        goto done;
+    }
+    if (FAILED(mf)) {
+        rc = fail(err, errlen, "Media Foundation could not start", mf);
         goto done;
     }
     hr = MFCreateSourceReaderFromURL(wpath, NULL, &rd);
@@ -67,8 +113,9 @@ int pkapp_decode_os(const char *path, int rate, float **out, size_t *n, char *er
         rc = fail(err, errlen, "Windows cannot open this file", hr);
         goto done;
     }
+    DWORD stream = first_audio(rd);
     IMFSourceReader_SetStreamSelection(rd, (DWORD)MF_SOURCE_READER_ALL_STREAMS, FALSE);
-    hr = IMFSourceReader_SetStreamSelection(rd, (DWORD)MF_SOURCE_READER_FIRST_AUDIO_STREAM, TRUE);
+    hr = IMFSourceReader_SetStreamSelection(rd, stream, TRUE);
     if (FAILED(hr)) {
         rc = -1;                                  /* no audio stream */
         goto done;
@@ -76,37 +123,27 @@ int pkapp_decode_os(const char *path, int rate, float **out, size_t *n, char *er
     MFCreateMediaType(&want);
     IMFMediaType_SetGUID(want, &MF_MT_MAJOR_TYPE, &MFMediaType_Audio);
     IMFMediaType_SetGUID(want, &MF_MT_SUBTYPE, &MFAudioFormat_Float);
-    hr = IMFSourceReader_SetCurrentMediaType(rd, (DWORD)MF_SOURCE_READER_FIRST_AUDIO_STREAM, NULL, want);
+    hr = IMFSourceReader_SetCurrentMediaType(rd, stream, NULL, want);
     if (FAILED(hr)) {
         rc = fail(err, errlen, "Windows has no decoder for this file's audio", hr);
         goto done;
     }
-    hr = IMFSourceReader_GetCurrentMediaType(rd, (DWORD)MF_SOURCE_READER_FIRST_AUDIO_STREAM, &got);
-    if (SUCCEEDED(hr))
-        hr = IMFMediaType_GetUINT32(got, &MF_MT_AUDIO_SAMPLES_PER_SECOND, &srate);
-    if (SUCCEEDED(hr))
-        hr = IMFMediaType_GetUINT32(got, &MF_MT_AUDIO_NUM_CHANNELS, &ch);
-    if (FAILED(hr) || !srate || !ch) {
-        rc = fail(err, errlen, "the audio's format could not be read", hr);
+    if ((rc = take_format(rd, stream, mix, &ch, err, errlen)))
         goto done;
-    }
-    if (srate != (UINT32)rate && !(rs = pk_resampler_new(srate, (uint32_t)rate))) {
-        rc = fail(err, errlen, "the audio's sample rate cannot be converted", E_FAIL);
-        goto done;
-    }
 
     for (;;) {
         DWORD flags = 0;
         IMFSample *sample = NULL;
-        hr = IMFSourceReader_ReadSample(rd, (DWORD)MF_SOURCE_READER_FIRST_AUDIO_STREAM, 0, NULL, &flags,
-                                        NULL, &sample);
-        if (FAILED(hr)) {
-            rc = fail(err, errlen, "the audio could not be decoded", hr);
-            goto done;
-        }
-        if (flags & MF_SOURCE_READERF_ENDOFSTREAM) {
+        hr = IMFSourceReader_ReadSample(rd, stream, 0, NULL, &flags, NULL, &sample);
+        if (FAILED(hr) || (flags & MF_SOURCE_READERF_ERROR))
+            rc = fail(err, errlen, "the audio could not be decoded", FAILED(hr) ? hr : E_FAIL);
+        else if (flags & MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED)
+            rc = take_format(rd, stream, mix, &ch, err, errlen);
+        if (rc || (flags & MF_SOURCE_READERF_ENDOFSTREAM)) {
             if (sample)
                 IMFSample_Release(sample);
+            if (rc)
+                goto done;
             break;
         }
         if (!sample)
@@ -116,26 +153,8 @@ int pkapp_decode_os(const char *path, int rate, float **out, size_t *n, char *er
         DWORD bytes = 0;
         if (SUCCEEDED(IMFSample_ConvertToContiguousBuffer(sample, &mb)) &&
             SUCCEEDED(IMFMediaBuffer_Lock(mb, &data, NULL, &bytes))) {
-            const float *f = (const float *)data;
-            size_t frames = bytes / (sizeof(float) * ch);
-            mono.n = 0;
-            if (fbuf_room(&mono, frames) == 0) {
-                for (size_t i = 0; i < frames; i++) {
-                    float s = 0;
-                    for (UINT32 c = 0; c < ch; c++)
-                        s += f[i * ch + c];
-                    mono.p[i] = s / (float)ch;
-                }
-                mono.n = frames;
-                size_t room = rs ? pk_resample_room(rs, frames) : frames;
-                if (fbuf_room(&res, room) == 0)
-                    res.n += rs ? pk_resample(rs, mono.p, frames, res.p + res.n)
-                                : (memcpy(res.p + res.n, mono.p, frames * sizeof(float)), frames);
-                else
-                    rc = fail(err, errlen, "out of memory", E_OUTOFMEMORY);
-            } else {
+            if (pkapp_mix_push(mix, (const float *)data, bytes / (sizeof(float) * ch)))
                 rc = fail(err, errlen, "out of memory", E_OUTOFMEMORY);
-            }
             IMFMediaBuffer_Unlock(mb);
         }
         if (mb)
@@ -144,24 +163,17 @@ int pkapp_decode_os(const char *path, int rate, float **out, size_t *n, char *er
         if (rc)
             goto done;
     }
-    if (rs && fbuf_room(&res, pk_resample_room(rs, 0)) == 0)
-        res.n += pk_resample_flush(rs, res.p + res.n);
-    *out = res.p;
-    *n = res.n;
-    res.p = NULL;
+    if (pkapp_mix_take(mix, out, n))
+        rc = fail(err, errlen, "out of memory", E_OUTOFMEMORY);
 
 done:
-    free(res.p);
-    free(mono.p);
-    if (rs)
-        pk_resampler_free(rs);
-    if (got)
-        IMFMediaType_Release(got);
+    pkapp_mix_free(mix);
     if (want)
         IMFMediaType_Release(want);
     if (rd)
         IMFSourceReader_Release(rd);
-    MFShutdown();
+    if (SUCCEEDED(mf))
+        MFShutdown();
     if (SUCCEEDED(com))
         CoUninitialize();
     free(wpath);

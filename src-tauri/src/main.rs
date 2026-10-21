@@ -218,10 +218,7 @@ fn headless(args: &[String]) -> Result<(), String> {
     let file = args.get(1).ok_or("--transcribe FILE [--model PKF]")?;
     let model_path = match args.iter().position(|a| a == "--model") {
         Some(i) => PathBuf::from(args.get(i + 1).ok_or("--model needs a path")?),
-        None => {
-            let dir = std::env::var("PKTITO_MODEL").map(PathBuf::from).map_err(|_| "--model PKF, or PKTITO_MODEL")?;
-            dir
-        }
+        None => std::env::var("PKTITO_MODEL").map(PathBuf::from).map_err(|_| "--model PKF, or PKTITO_MODEL")?,
     };
     let t0 = std::time::Instant::now();
     let x = decode::decode(Path::new(file)).map_err(|e| e.message())?;
@@ -294,19 +291,18 @@ fn main() {
                 .item(&PredefinedMenuItem::paste(app, None)?)
                 .item(&PredefinedMenuItem::select_all(app, None)?)
                 .build()?;
-            let mut menu = MenuBuilder::new(app);
+            let menu = MenuBuilder::new(app);
             #[cfg(target_os = "macos")]
-            {
-                let appmenu = SubmenuBuilder::new(app, "pktito")
+            let menu = menu.item(
+                &SubmenuBuilder::new(app, "pktito")
                     .item(&PredefinedMenuItem::about(app, None, None)?)
                     .separator()
                     .item(&PredefinedMenuItem::hide(app, None)?)
                     .item(&PredefinedMenuItem::hide_others(app, None)?)
                     .separator()
                     .item(&PredefinedMenuItem::quit(app, None)?)
-                    .build()?;
-                menu = menu.item(&appmenu);
-            }
+                    .build()?,
+            );
             let menu = menu.item(&file).item(&edit).build()?;
             app.set_menu(menu)?;
             app.on_menu_event(|app, event| {

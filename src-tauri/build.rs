@@ -1,9 +1,15 @@
 //! Compiles pktito (vendor/pktito, scripts/vendor-pktito.sh) the way its
-//! Makefile does: the core, ref and the dispatcher in one archive, and each
-//! SIMD backend of the target's family in an archive of its own with its own
-//! instruction set, so one binary runs on every CPU of the family and picks
-//! the fastest backend it can (pktito's backend/kernels.c). Then the
-//! platform's decoder: AVFoundation on macOS, Media Foundation on Windows.
+//! Makefile does: the core, ref and the dispatcher at the family's baseline,
+//! and each SIMD backend of the target's family with its own instruction
+//! set, so one binary runs on every CPU of the family and picks the fastest
+//! backend it can (pktito's backend/kernels.c). Then the platform's decoder
+//! (AVFoundation on macOS, Media Foundation on Windows) and the mix that
+//! every decoder hands its samples to (native/mix.h).
+//!
+//! Everything goes into one archive, and the system's libraries come after
+//! it. GNU ld reads each archive once, left to right, taking only what
+//! resolves a reference it has already seen; within one archive it keeps
+//! resolving until nothing new turns up.
 
 use std::env;
 use std::path::PathBuf;
@@ -60,19 +66,36 @@ fn main() {
     };
 
     // the backends this compiler can build, as pktito's Makefile asks
+    let mut objects = Vec::new();
     let mut built = Vec::new();
     for (name, flags) in &family {
-        let mut probe = base(&os, &root);
-        if flags.iter().all(|f| probe.is_flag_supported(f).unwrap_or(false)) {
+        let mut b = base(&os, &root);
+        if flags.iter().all(|f| b.is_flag_supported(f).unwrap_or(false)) {
             for f in flags {
-                probe.flag(f);
+                b.flag(f);
             }
-            probe.file(root.join("backend").join(name).join("kernels.c"));
-            probe.compile(&format!("pktito_{}", name.replace('-', "_")));
+            b.file(root.join("backend").join(name).join("kernels.c"));
+            objects.extend(b.compile_intermediates());
             built.push(*name);
         } else {
             println!("cargo:warning=pktito: this compiler cannot build {name}; left out");
         }
+    }
+
+    // the mix every decoder's samples go through, ffmpeg's too
+    objects.extend(base(&os, &root).file(manifest.join("native/mix.c")).compile_intermediates());
+    match os.as_str() {
+        "macos" => objects.extend(
+            cc::Build::new()
+                .file(manifest.join("native/decode_macos.m"))
+                .flag("-fobjc-arc")
+                .opt_level(2)
+                .compile_intermediates(),
+        ),
+        "windows" => {
+            objects.extend(base(&os, &root).file(manifest.join("native/decode_windows.c")).compile_intermediates())
+        }
+        _ => {}
     }
 
     let mut core = base(&os, &root);
@@ -83,31 +106,19 @@ fn main() {
     for name in &built {
         core.define(&format!("PK_HAVE_{}", name.replace('-', "_")), None);
     }
+    for o in &objects {
+        core.object(o);
+    }
     core.compile("pktito");
 
-    match os.as_str() {
-        "macos" => {
-            cc::Build::new()
-                .file(manifest.join("native/decode_macos.m"))
-                .flag("-fobjc-arc")
-                .opt_level(2)
-                .compile("pkapp_decode");
-            for fw in ["AVFoundation", "CoreMedia", "Foundation"] {
-                println!("cargo:rustc-link-lib=framework={fw}");
-            }
-        }
-        "windows" => {
-            let mut b = base(&os, &root);
-            b.file(manifest.join("native/decode_windows.c")).compile("pkapp_decode");
-            for lib in ["mfplat", "mfreadwrite", "mfuuid", "ole32"] {
-                println!("cargo:rustc-link-lib={lib}");
-            }
-        }
-        _ => {}
-    }
-    if os == "linux" {
-        println!("cargo:rustc-link-lib=pthread");
-        println!("cargo:rustc-link-lib=m");
+    // after the archive, for the same reason
+    let system: &[&str] = match os.as_str() {
+        "macos" => &["framework=AVFoundation", "framework=AudioToolbox", "framework=CoreMedia", "framework=Foundation"],
+        "windows" => &["mfplat", "mfreadwrite", "mfuuid", "ole32", "uuid"],
+        _ => &["pthread", "m"],
+    };
+    for lib in system {
+        println!("cargo:rustc-link-lib={lib}");
     }
 
     tauri_build::build();
