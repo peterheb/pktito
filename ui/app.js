@@ -324,6 +324,7 @@ $("queue").addEventListener("keydown", (e) => {
   if (e.key === "ArrowDown" || e.key === "ArrowUp") {
     const j = Math.min(files.length - 1, Math.max(0, i + (e.key === "ArrowDown" ? 1 : -1)));
     selected = files[j].id;
+    $("queue").classList.add("by-keys");
     e.preventDefault();
   } else if (e.key === "Delete" || e.key === "Backspace") {
     const f = files[i];
@@ -336,6 +337,21 @@ $("queue").addEventListener("keydown", (e) => {
   const row = $("queue").querySelector(`[data-id="${selected}"]`);
   if (row) row.focus();
 });
+$("queue").addEventListener("pointermove", () => $("queue").classList.remove("by-keys"));
+
+/* On Windows the File menu's shortcuts never reach the menu while the page
+   has the keyboard, which is nearly always: Ctrl+O and Ctrl+S did nothing
+   in the Windows test (2026-10-21). So there the page takes them. */
+if (navigator.userAgent.includes("Windows")) {
+  document.addEventListener("keydown", (e) => {
+    if (!e.ctrlKey || e.altKey || e.metaKey) return;
+    const k = e.key.toLowerCase();
+    if (k === "o" && !e.shiftKey) chooseFiles();
+    else if (k === "s") save(e.shiftKey ? "srt" : "txt");
+    else return;
+    e.preventDefault();
+  });
+}
 
 /* -------------------------------------------------------- drag and drop -- */
 

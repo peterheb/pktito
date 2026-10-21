@@ -19,7 +19,10 @@ words() { sed -E 's/^ *[0-9.]+  //' | tr '[:upper:]' '[:lower:]' | tr -cs "[:aln
 # the word error rate of the words in $2 against those in $1: the fewest
 # substitutions, insertions and deletions, over the reference's length
 wer() {
-    awk 'NR == FNR { r[++n] = $0; next } { h[++m] = $0 }
+    # n and m start at 0 so that an empty transcript's d[m] is d[0]: a
+    # variable never set is "" as an array index, and d[""], read as 0,
+    # once scored a file that gave no words at all as 0%
+    awk 'BEGIN { n = 0; m = 0 } NR == FNR { r[++n] = $0; next } { h[++m] = $0 }
          END {
              for (j = 0; j <= m; j++) d[j] = j
              for (i = 1; i <= n; i++) {

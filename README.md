@@ -21,7 +21,7 @@ ffmpeg is on the PATH. `PKTITO_DECODER=ffmpeg` uses ffmpeg for everything;
 One minute of speech in each of these, made by `scripts/media-matrix.sh`
 and transcribed by `scripts/media-check.sh`, on macOS 27.0.1 (M4 Pro),
 Windows 11 Pro 26200 (Core 3 304) and Ubuntu 26.04 (ffmpeg 8.0.1; 9.0 on
-the other two), 2026-10-20:
+the other two), 2026-10-21:
 
 | File | macOS | Windows | ffmpeg |
 |---|:-:|:-:|:-:|

@@ -36,6 +36,13 @@ impl DecodeError {
 }
 
 pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
+    // a name typed into the file dialog, or a file moved since it was added;
+    // Windows' own words for it are "(0x80070002)"
+    if !path.is_file() {
+        return Err(DecodeError::Unreadable(
+            "There is no file at this path. Add it again from where it is now.".into(),
+        ));
+    }
     let forced = env::var("PKTITO_DECODER").unwrap_or_default().to_lowercase();
     if forced == "ffmpeg" || !cfg!(any(target_os = "macos", target_os = "windows")) {
         return match ffmpeg() {

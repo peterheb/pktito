@@ -22,19 +22,42 @@ static int fail(char *err, size_t errlen, const char *what, HRESULT hr) {
     return -2;
 }
 
-/* The file's first audio stream, as ffmpeg (0:a:0) and AVFoundation take
- * it: the one with the lowest stream identifier, an MP4's track ID or a
- * Matroska track's number. Media Foundation's own first audio stream is
- * the first in its list, and its MP4 source lists the tracks last first
- * (a two-track MP4 gave its second track, scripts/media-check.sh). */
+/* MF_PD_MIME_TYPE, which MinGW's mfidl.h leaves out */
+static const GUID PD_MIME_TYPE = {0x6c990d37, 0xbb8e, 0x477a, {0x85, 0x98, 0x0d, 0x5d, 0x96, 0xfc, 0xd8, 0x8a}};
+
+/* Whether the file is read by Media Foundation's MPEG-4 source: mp4, m4a,
+ * mov and 3gp, by the MIME type it gives them. */
+static int mpeg4_source(IMFPresentationDescriptor *pd) {
+    WCHAR *mime = NULL;
+    UINT32 len = 0;
+    int yes = 0;
+    if (SUCCEEDED(IMFPresentationDescriptor_GetAllocatedString(pd, &PD_MIME_TYPE, &mime, &len))) {
+        yes = !wcscmp(mime, L"video/mp4") || !wcscmp(mime, L"audio/mp4") || !wcscmp(mime, L"video/quicktime") ||
+              !wcsncmp(mime, L"video/3gpp", 10) || !wcsncmp(mime, L"audio/3gpp", 10);
+        CoTaskMemFree(mime);
+    }
+    return yes;
+}
+
+/* The file's first audio track, as ffmpeg (0:a:0) and AVFoundation take it.
+ * Media Foundation numbers a file's streams in the order it lists them,
+ * and says nothing of track IDs. Most of its sources keep the file's order,
+ * so the first track is the audio stream with the lowest number; its
+ * MPEG-4 source lists the audio tracks before the video, last track first,
+ * so there it is the highest. Its own first audio stream is neither: of an
+ * MP4's two audio tracks, the second, a tone, on Windows 11 26200 and
+ * 26300. (The order measured on 26200 with five files of two audio
+ * tracks, in MP4, M4A and MOV, laid out four ways; Matroska keeps it.) */
 static DWORD first_audio(IMFSourceReader *rd) {
-    DWORD first = (DWORD)MF_SOURCE_READER_FIRST_AUDIO_STREAM, lowest = MAXDWORD, count = 0;
+    DWORD first = (DWORD)MF_SOURCE_READER_FIRST_AUDIO_STREAM, best = 0, count = 0;
+    int found = 0, last = 0;
     IMFMediaSource *src = NULL;
     IMFPresentationDescriptor *pd = NULL;
     if (SUCCEEDED(IMFSourceReader_GetServiceForStream(rd, (DWORD)MF_SOURCE_READER_MEDIASOURCE, &GUID_NULL,
                                                       &IID_IMFMediaSource, (void **)&src)) &&
         SUCCEEDED(IMFMediaSource_CreatePresentationDescriptor(src, &pd)) &&
-        SUCCEEDED(IMFPresentationDescriptor_GetStreamDescriptorCount(pd, &count)))
+        SUCCEEDED(IMFPresentationDescriptor_GetStreamDescriptorCount(pd, &count))) {
+        last = mpeg4_source(pd);
         for (DWORD i = 0; i < count; i++) {
             BOOL selected;
             IMFStreamDescriptor *sd = NULL;
@@ -44,15 +67,18 @@ static DWORD first_audio(IMFSourceReader *rd) {
             if (SUCCEEDED(IMFPresentationDescriptor_GetStreamDescriptorByIndex(pd, i, &selected, &sd)) &&
                 SUCCEEDED(IMFStreamDescriptor_GetMediaTypeHandler(sd, &th)) &&
                 SUCCEEDED(IMFMediaTypeHandler_GetMajorType(th, &major)) && IsEqualGUID(&major, &MFMediaType_Audio) &&
-                SUCCEEDED(IMFStreamDescriptor_GetStreamIdentifier(sd, &id)) && id < lowest) {
+                SUCCEEDED(IMFStreamDescriptor_GetStreamIdentifier(sd, &id)) &&
+                (!found || (last ? id > best : id < best))) {
                 first = i;
-                lowest = id;
+                best = id;
+                found = 1;
             }
             if (th)
                 IMFMediaTypeHandler_Release(th);
             if (sd)
                 IMFStreamDescriptor_Release(sd);
         }
+    }
     if (pd)
         IMFPresentationDescriptor_Release(pd);
     if (src)
