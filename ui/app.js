@@ -1447,8 +1447,8 @@ async function openAbout() {
 /* Back to the screen beneath, as it is now; false if About was not up */
 function closeAbout() {
   if (!about) return false;
-  closeNotices();
   about = false;
+  closeNotices();
   if (mascot) mascot.hide();
   document.body.classList.remove("is-about");
   $("about").hidden = true;
@@ -1511,6 +1511,9 @@ async function openNotices() {
   body.scrollTop = 0;
   $("notices").hidden = false;
   body.focus({ preventScroll: true });
+  // the mascot rests behind it, home, and draws nothing: it glanced at the
+  // pointer moving over the list (the Windows test, 2026-10-21)
+  if (mascot) mascot.hide();
 }
 
 /* false if the list was not open */
@@ -1518,6 +1521,7 @@ function closeNotices() {
   if ($("notices").hidden) return false;
   $("notices").hidden = true;
   $("notices-open").focus({ preventScroll: true });
+  if (about && mascot) mascot.show();
   return true;
 }
 
