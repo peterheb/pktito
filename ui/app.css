@@ -467,7 +467,8 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
 .pk-mi small.pk-sub { font: 400 13px/1.4 var(--font-sans); }
 .pk-have { color: var(--ok); }
 .pk-menu.is-wide { max-width: min(480px, calc(100vw - 24px)); }
-.pk-menu-sep { height: 6px; }
+/* between a menu's groups, the line the platforms' own menus draw (design/README.md) */
+.pk-menu-sep { height: 1px; margin: 3px 10px; background: var(--sunk); }
 /* the frame rates, a row of chips under the choice they serve */
 .pk-rates { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 10px 8px; }
 .pk-rate { border: 0; padding: 4px 7px; border-radius: 6px; background: var(--surface); color: var(--ink); font: 400 12px/1.2 var(--font-mono);

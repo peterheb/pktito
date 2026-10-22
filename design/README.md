@@ -54,7 +54,7 @@ Two families, the same files as pinfer.
 
 **The one ornament** is the `frame`: one 8px step for 80 ms of audio, the encoder's frame. The site's waveform bars sit a frame apart, and the duration blocks under a transcript are a whole number of frames wide, because TDT predicts each token with its duration. Use it on timelines only, never as decoration elsewhere. The app's waveform strip is the exception: it is a tool for finding a place in a recording, so it draws its bars as finely as the screen shows them, 2px wide and 1px apart.
 
-No eyebrow labels, no 01 / 02 / 03, no thin dividers, no gradients, no glass, no shadows at rest (`shadow-float` is for menus, dialogs and the app window shown on the site).
+No eyebrow labels, no 01 / 02 / 03, no thin dividers, no gradients, no glass, no shadows at rest (`shadow-float` is for menus, dialogs and the app window shown on the site). The one divider is a menu's, between its groups, as the platforms' own menus draw it: 1px of `sunk`, inset to the items' text.
 
 ## Imagery
 

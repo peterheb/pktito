@@ -1395,8 +1395,15 @@ function runFind() {
     const s = rows[Number(h.closest(".pk-seg").dataset.i)], k = wordAt(s, Number(h.dataset.at));
     return k >= 0 ? s.words[k].start : s.start;
   });
+  // the match the playhead last passed, so that a search typed as it plays
+  // or rests mid-recording starts where the listener is; the first when it
+  // has passed none
   hitAt = -1;
-  if (hits.length) stepHit(1);
+  if (hits.length) {
+    let k = 0;
+    hitTimes.forEach((t, j) => { if (t <= f.pos) k = j; });
+    goHit(k);
+  }
   findCount();
 }
 
