@@ -103,6 +103,10 @@ function clock(s) {
   const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60;
   return h ? `${h}:${two(m)}:${two(s % 60)}` : `${m}:${two(s % 60)}`;
 }
+/* how many seconds of audio a second's work transcribed */
+function realTime(audio, secs) {
+  return `${(audio / secs).toFixed(1)}x real-time`;
+}
 function timeLeft(s) {
   if (!(s >= 0) || !isFinite(s)) return "";
   if (s < 50) return `about ${Math.max(5, Math.round(s / 5) * 5)} s left`;
@@ -696,6 +700,7 @@ listen("job", (e) => {
   if (j.step === "transcribing") {
     f.done = j.done;
     f.eta = j.eta;
+    f.transcribed = j.transcribed;
   }
   f.segments.push(...j.segments);
   if (j.step === "error") Object.assign(f, { message: j.message, detail: j.detail });
@@ -1011,7 +1016,9 @@ function updateHead(f, mode) {
 function updateRunning(f) {
   const going = f.step === "transcribing";
   $("pct").textContent = `${percent(going ? f.done : 0)}%`;
-  $("eta").textContent = f.step === "reading" ? "Reading the audio" : f.step === "loading" ? "Loading the model" : "";
+  // under it the step, and once the first audio is done, the pace so far
+  $("pace").textContent = f.step === "reading" ? "Reading the audio" : f.step === "loading" ? "Loading the model"
+    : going && f.done > 0 && f.transcribed > 0 ? realTime(f.done * f.duration, f.transcribed) : "";
   $("pct").title = going && f.eta > 0 ? timeLeft(f.eta) : "";
   $("dur").textContent = f.duration == null ? "" : lengthOf(f);
   const wave = $("wave");
@@ -1102,7 +1109,7 @@ function statsHtml(f) {
   if (!f.took || !f.segments.length) return "";
   const secs = (x) => (x < 10 ? `${x.toFixed(2)}s` : x < 60 ? `${x.toFixed(1)}s` : clock(x));
   const line = f.transcribed > 0
-    ? `Transcribed in ${secs(f.transcribed)}, ${(f.duration / f.transcribed).toFixed(1)}x real-time`
+    ? `Transcribed in ${secs(f.transcribed)}, ${realTime(f.duration, f.transcribed)}`
     : `Took ${secs(f.took)}`;
   return `<p class="pk-stats">${esc(line)}</p>`;
 }

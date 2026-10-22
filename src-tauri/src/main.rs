@@ -318,7 +318,7 @@ struct JobEvent {
     /// A video's frame rate, 0 for audio: for times in frames.
     fps: f64,
     took: f64,
-    /// Of that, the seconds transcribing it.
+    /// Of that, the seconds transcribing it; while it goes, those so far.
     transcribed: f64,
     model: String,
     /// Its place on the recent list.
@@ -391,7 +391,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
             // the pace so far, the model's loading left out
             let spent = t1.elapsed().as_secs_f64();
             let eta = if done < 1.0 { spent / done * (1.0 - done) } else { 0.0 };
-            send(JobEvent { step: "transcribing", done, eta, duration, segments: segs.to_vec(), ..Default::default() });
+            send(JobEvent { step: "transcribing", done, eta, duration, transcribed: spent, segments: segs.to_vec(), ..Default::default() });
         },
         || state.stop.load(Ordering::Relaxed) == id,
     );
