@@ -118,14 +118,17 @@ fn file_dialog(app: &AppHandle) -> FileDialogBuilder<tauri::Wry> {
 }
 
 /// Load the model at path into the engine, unless it is the one there.
+/// PKTITO_THREADS, for finding out what a machine does on fewer threads (the
+/// CLI's -t); unset, 0: one a core, and pktito's choice among them.
+fn threads_wanted() -> i32 {
+    std::env::var("PKTITO_THREADS").ok().and_then(|t| t.trim().parse().ok()).unwrap_or(0)
+}
+
 fn ensure_engine<'a>(slot: &'a mut Option<Engine>, path: &Path) -> Result<&'a mut Engine, String> {
     if slot.as_ref().map(|e| e.path != path).unwrap_or(true) {
         *slot = None;
         let model = pktito::Model::load(path)?;
-        // PKTITO_THREADS, for finding out what a machine does on fewer threads
-        // (the CLI's -t); unset, one a core and pktito's choice among them
-        let threads = std::env::var("PKTITO_THREADS").ok().and_then(|t| t.parse().ok()).unwrap_or(0);
-        let asr = pktito::Asr::new(&model, threads)?;
+        let asr = pktito::Asr::new(&model, threads_wanted())?;
         *slot = Some(Engine { model, asr, path: path.to_path_buf() });
     }
     Ok(slot.as_mut().unwrap())
@@ -871,7 +874,7 @@ fn headless(args: &[String]) -> Result<(), String> {
     let fps = fps_of(Path::new(file));
     let t1 = Instant::now();
     let model = pktito::Model::load(&model_path)?;
-    let mut asr = pktito::Asr::new(&model, 0)?;
+    let mut asr = pktito::Asr::new(&model, threads_wanted())?;
     let (segs, _) = transcribe::run(
         &model,
         &mut asr,
