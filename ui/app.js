@@ -1137,7 +1137,8 @@ function showTime(t, follow = false) {
     if (curSeg) curSeg.classList.remove("is-current");
     if (seg) {
       seg.classList.add("is-current");
-      if (along) seg.scrollIntoView({ block: "nearest", behavior: follow === "smooth" ? "smooth" : "auto" });
+      // in the middle, the words to come in sight as well as those gone
+      if (along) seg.scrollIntoView({ block: "center", behavior: follow === "smooth" ? "smooth" : "auto" });
     }
     curSeg = seg;
   }
@@ -1300,7 +1301,10 @@ async function cuesOf(f) {
    captions and they have come, else its sentences */
 const rowsOf = (f) => (prefs.captions && f.cues && modeOf(f) === "review" ? f.cues : f.segments);
 
-/* the transcript drawn again in the view chosen, a search kept */
+/* The transcript drawn again in the view chosen, a search kept, and the
+   playhead's row in sight: the other view's place means nothing in this
+   one, and with its row out of sight playback no longer took the reader
+   along (the Windows test, 2026-10-22). */
 function rebuild() {
   const q = $("find").value;
   mainKey = "";
@@ -1309,6 +1313,7 @@ function rebuild() {
     $("find").value = q;
     runFind();
   }
+  if (curSeg) curSeg.scrollIntoView({ block: "center" });
 }
 
 $("views").onclick = async (e) => {

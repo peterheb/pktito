@@ -530,15 +530,19 @@ function drawMascot(stage, canvas) {
         }, 350);
       }
     },
-    // home, for the next time; a turn under way is not begun again
+    // home, drawn so, for the list over it and the next time: the last
+    // frame stays on the canvas, and one mid-turn showed behind the list
+    // (the Windows test, 2026-10-22); a turn under way is not begun again
     hide() {
-      shown = false;
       sized.disconnect();
       removeEventListener("pointermove", gaze);
       document.documentElement.removeEventListener("pointerleave", ungaze);
       if (S.introStart >= 0) S.introDone = true;
       Object.assign(S, { intro: 0, yawDrag: 0, pitchDrag: 0, vel: 0, gx: 0, gy: 0, tgx: 0, tgy: 0, dragging: false, hopStart: -1, talkUntil: 0 });
       down = null;
+      setBars(restHeights);
+      draw(performance.now());
+      shown = false;
     },
   };
 }

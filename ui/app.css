@@ -186,10 +186,13 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
 .pk-lane { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .pk-times { display: flex; align-items: baseline; }
 .pk-times #dur { margin-left: auto; }
-/* a match's tick, 2 px drawn in a 9 px target; the current one lighter */
-.pk-ticks { position: relative; height: 7px; }
+/* a match's tick, 2 px drawn in a target 9 px wide that reaches down to the
+   times: 7 px tall alone was hard to hit (the Windows test, 2026-10-22);
+   the current one lighter */
+.pk-ticks { position: relative; height: 9px; }
 .pk-ticks i { position: absolute; top: 0; bottom: 0; width: 9px; margin-left: -4px; cursor: pointer;
   background: linear-gradient(var(--plume), var(--plume)) center / 2px 100% no-repeat; }
+.pk-ticks i::before { content: ""; position: absolute; inset: 0 0 -9px; }
 .pk-ticks i.is-on { background-image: linear-gradient(var(--term-ink), var(--term-ink)); background-size: 3px 100%; }
 /* bars 2 px wide a pixel apart, as app.js's BAR counts them; the playhead
    a pixel wider each side, over the gaps, so that it moves nothing */
@@ -260,8 +263,11 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
 /* a portrait window, as the default one is: the mascot over the credits,
    which then have the window's width */
 @media (orientation: portrait) {
-  .pk-about { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 2fr) minmax(0, 3fr); }
+  /* the credits as tall as they are, the mascot the rest: a band was left
+     between them when they shared the height (the Windows test) */
+  .pk-about { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, max-content); }
   .pk-about-text { padding: 28px 40px 32px; }
+  .pk-about-in { margin: 0; }
   .pk-credits { grid-template-columns: 7.5em minmax(0, 1fr); row-gap: 10px; }
   .pk-credits dd + dt { margin-top: 0; }
 }
@@ -367,7 +373,9 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
 .pk-toast { position: fixed; z-index: 45; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px;
   max-width: calc(100vw - 48px); padding: 10px 12px 10px 14px; border-radius: var(--radius-ui); background: var(--term); color: var(--term-ink);
   box-shadow: var(--shadow-float); font: 500 14px/1.3 var(--font-sans); }
-.pk-toast span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* two lines at most, so that a long file's name shows whole in a narrow window */
+.pk-toast span { min-width: 0; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2; }
 .pk-toast .pk-linkbtn { color: var(--term-ink); flex: none; }
 #work.is-batch:not([hidden]) ~ .pk-toast { left: calc(50% + var(--sidebar) / 2); }
 .is-about #work.is-batch:not([hidden]) ~ .pk-toast { left: 50%; }
