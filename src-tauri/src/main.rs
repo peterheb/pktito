@@ -45,6 +45,13 @@ const MEDIA: &[&str] = &[
 ];
 const VIDEO: &[&str] = &["mp4", "m4v", "mov", "webm", "mkv", "wmv", "avi", "3gp"];
 
+/// A video's frame rate, for times in frames; 0 for audio, and for a video
+/// whose rate neither the OS nor ffmpeg can say.
+fn fps_of(path: &Path) -> f64 {
+    let video = path.extension().and_then(|e| e.to_str()).is_some_and(|e| VIDEO.contains(&e.to_ascii_lowercase().as_str()));
+    if video { decode::frame_rate(path).unwrap_or(0.0) } else { 0.0 }
+}
+
 fn data_dir(app: &AppHandle) -> Result<PathBuf, String> {
     app.path().app_data_dir().map_err(|e| e.to_string())
 }
@@ -334,8 +341,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
         Err(e) => return fail(e.why(), e.detail()),
     };
     let duration = x.len() as f64 / decode::RATE as f64;
-    let video = path.extension().and_then(|e| e.to_str()).is_some_and(|e| VIDEO.contains(&e.to_ascii_lowercase().as_str()));
-    let fps = if video { decode::frame_rate(path).unwrap_or(0.0) } else { 0.0 };
+    let fps = fps_of(path);
     let key = recent::new_id();
     let audio = audio_dir(app)
         .ok()
@@ -735,6 +741,7 @@ fn headless(args: &[String]) -> Result<(), String> {
     };
     let t0 = Instant::now();
     let x = decode::decode(Path::new(file)).map_err(|e| e.message())?;
+    let fps = fps_of(Path::new(file));
     let t1 = Instant::now();
     let model = pktito::Model::load(&model_path)?;
     let mut asr = pktito::Asr::new(&model, 0)?;
@@ -753,9 +760,10 @@ fn headless(args: &[String]) -> Result<(), String> {
         println!("{}", serde_json::to_string(&segs).unwrap());
     }
     eprintln!(
-        "{} segments, {:.1} s of audio: decoded in {:.3} s, transcribed in {:.3} s ({}, {})",
+        "{} segments, {:.1} s of audio{}: decoded in {:.3} s, transcribed in {:.3} s ({}, {})",
         segs.len(),
         x.len() as f64 / decode::RATE as f64,
+        if fps > 0.0 { format!(", video at {fps:.3} fps") } else { String::new() },
         (t1 - t0).as_secs_f64(),
         t1.elapsed().as_secs_f64(),
         model.name(),

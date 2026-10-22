@@ -275,10 +275,14 @@ fn read_samples(r: &mut impl Read, f: &WavFormat) -> Result<Vec<f32>, DecodeErro
 }
 
 /// A video's frame rate, for the window's times in frames: its first video
-/// stream's, as the OS reads it, else as ffmpeg does; None for a file with
-/// no video, or that neither can say.
+/// stream's, as the OS reads it from an MP4 or QuickTime file, else as
+/// ffmpeg does; None for a file with no video, or that neither can say.
+/// Media Foundation's reading of the other containers is not to be had: it
+/// gave every Matroska file half its rate, and a 10 fps .wmv 30, where
+/// ffmpeg was right on all of them (the Windows check, 2026-10-22).
 pub fn frame_rate(path: &Path) -> Option<f64> {
-    let os = rate_os(path);
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
+    let os = if ["mp4", "m4v", "mov", "3gp"].contains(&ext.as_str()) { rate_os(path) } else { 0.0 };
     let r = if os > 0.0 { Some(os) } else { ffmpeg().and_then(|ff| rate_ffmpeg(&ff, path)) };
     r.filter(|r| r.is_finite() && (1.0..=1000.0).contains(r))
 }
