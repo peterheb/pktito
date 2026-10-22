@@ -248,14 +248,20 @@ function modelMenu(anchor, keys) {
     items.push(`<button class="pk-mi" type="button" role="menuitemradio" aria-checked="true" data-model="">` +
       `<span>${esc(baseName(st.model_file))}</span><small title="${esc(st.model_file)}">${esc(st.model_file)}</small>${ICON.check}</button>`);
   }
+  // where the models are: about 620 MB each, and the files the CLI takes with -m
+  const show = { macos: "Show in Finder", windows: "Show in File Explorer" }[st.platform] || "Show in folder";
+  const file = st.model_file ? baseName(st.model_file) : st.model ? `${st.model}.pkf` : "";
   items.push(`<div class="pk-menu-sep" aria-hidden="true"></div>` +
-    `<button class="pk-mi" type="button" role="menuitem" data-own="1"><span>A model file on this computer…</span></button>`);
+    `<button class="pk-mi" type="button" role="menuitem" data-own="1"><span>A model file on this computer…</span></button>` +
+    `<button class="pk-mi" type="button" role="menuitem" data-reveal="1"><span>${show}</span>` +
+    (file ? `<small>${esc(file)}</small>` : "") + `</button>`);
   openMenu(anchor, keys, items.join(""), "down right", (m) => {
     m.onclick = async (e) => {
       const b = e.target.closest(".pk-mi");
       if (!b) return;
       closeMenu();
       if (b.dataset.own) return useOwnFile();
+      if (b.dataset.reveal) return invoke("reveal_model").catch(toastErr);
       const entry = st.catalog.find((x) => x.name === b.dataset.model);
       if (!entry || (!st.model_file && st.model === entry.name)) return;
       if (!entry.have) return startDownload(entry);
@@ -1883,7 +1889,34 @@ if (webview && webview.onDragDropEvent) {
 const typing = (el) => el && (el.isContentEditable || el.tagName === "TEXTAREA" ||
   (el.tagName === "INPUT" && !["checkbox", "radio", "button"].includes(el.type)));
 
+/* No page menu: WebView2's and WebKit's (back, reload, print, save the
+   page) are no part of the app. Text fields and selected text keep theirs,
+   for cut, copy and paste. On Windows a right-click in a header row opens
+   the window's menu, as on a title bar (the Windows test, 2026-10-22). */
+document.addEventListener("contextmenu", (e) => {
+  if (e.target.closest("input, textarea") || String(getSelection())) return;
+  e.preventDefault();
+  if (window.__PK_CHROME === "win" && e.target.closest("[data-tauri-drag-region]") && !e.target.closest("button, a, label"))
+    invoke("window_menu", { atCursor: true }).catch(() => {});
+});
+
 document.addEventListener("keydown", (e) => {
+  /* The browser's own keys, which WebView2 acts on unless the page does:
+     reload (F5, Ctrl+R), print, view source, find again (F3, Ctrl+G), its
+     tools, back and forward. A reload loses the transcript open, and none
+     of them is anything here. Alt+Space is the window's menu on Windows. */
+  const key = e.key.toLowerCase(), ctl = e.ctrlKey || e.metaKey;
+  if (key === "f5" || key === "f3" || key === "f12" || key === "browserback" || key === "browserforward" ||
+      (ctl && !e.altKey && !e.shiftKey && ["r", "p", "u", "g"].includes(key)) || (ctl && e.shiftKey && ["r", "i", "j", "c"].includes(key)) ||
+      (st && !isMac() && e.altKey && !ctl && !typing(e.target) && (key === "arrowleft" || key === "arrowright"))) {
+    e.preventDefault();
+    return;
+  }
+  if (window.__PK_CHROME === "win" && e.altKey && !ctl && e.code === "Space") {
+    e.preventDefault();
+    invoke("window_menu", { atCursor: false }).catch(() => {});
+    return;
+  }
   if (!st) return;
   // Esc backs out one step: a menu, About, a search, then the file
   if (e.key === "Escape") {

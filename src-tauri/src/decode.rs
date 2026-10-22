@@ -77,7 +77,7 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
         };
     }
     match decode_os(path) {
-        Ok(x) => Ok(x),
+        Ok(x) => Ok(edited(path, x)),
         Err(DecodeError::NoAudio) => Err(DecodeError::NoAudio),
         Err(DecodeError::Unreadable(why, detail)) => match (forced.as_str(), ffmpeg()) {
             ("os", _) => Err(DecodeError::Unreadable(why, detail)),
@@ -161,13 +161,58 @@ impl Drop for Mix {
 }
 
 /// ffmpeg on the PATH, if it is there.
+/// An MP4, M4A or QuickTime file, the containers with edit lists that
+/// Media Foundation reads (and the only ones whose frame rate it reads right).
+fn mp4_family(path: &Path) -> bool {
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
+    ["mp4", "m4a", "m4v", "mov", "3gp"].contains(&ext.as_str())
+}
+
+/// Media Foundation's samples of an MP4 as the file's edit list presents
+/// them (mp4.rs), its encoder's priming and padding gone; AVFoundation and
+/// ffmpeg apply the list themselves.
+fn edited(path: &Path, x: Vec<f32>) -> Vec<f32> {
+    if !cfg!(target_os = "windows") || !mp4_family(path) {
+        return x;
+    }
+    match crate::mp4::audio_edit(path) {
+        Some(e) => crate::mp4::apply(x, &e, RATE as f64),
+        None => x,
+    }
+}
+
+/// ffmpeg, from the PATH, or on Windows where WinGet, Scoop and Chocolatey
+/// put it: an app started from the Start menu has the environment Explorer
+/// started with, which a terminal's PATH may have outgrown.
 fn ffmpeg() -> Option<PathBuf> {
     let name = if cfg!(windows) { "ffmpeg.exe" } else { "ffmpeg" };
-    env::split_paths(&env::var_os("PATH")?).map(|d| d.join(name)).find(|p| p.is_file())
+    let mut dirs: Vec<PathBuf> = env::var_os("PATH").map(|p| env::split_paths(&p).collect()).unwrap_or_default();
+    if cfg!(windows) {
+        for (var, sub) in [("LOCALAPPDATA", r"Microsoft\WinGet\Links"), ("USERPROFILE", r"scoop\shims"), ("ProgramData", r"chocolatey\bin")] {
+            if let Some(base) = env::var_os(var) {
+                dirs.push(PathBuf::from(base).join(sub));
+            }
+        }
+    }
+    dirs.into_iter().map(|d| d.join(name)).find(|p| p.is_file())
+}
+
+/// ffmpeg, without the console window Windows opens for a console program
+/// that a windowed one starts
+fn ffmpeg_command(ffmpeg: &Path) -> Command {
+    #[allow(unused_mut)]
+    let mut c = Command::new(ffmpeg);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        c.creation_flags(CREATE_NO_WINDOW);
+    }
+    c
 }
 
 fn decode_ffmpeg(ffmpeg: &Path, path: &Path) -> Result<Vec<f32>, DecodeError> {
-    let mut child = Command::new(ffmpeg)
+    let mut child = ffmpeg_command(ffmpeg)
         .args(["-nostdin", "-hide_banner", "-loglevel", "error", "-i"])
         .arg(path)
         // the first audio stream as it is, every channel at its own rate, in
@@ -281,8 +326,7 @@ fn read_samples(r: &mut impl Read, f: &WavFormat) -> Result<Vec<f32>, DecodeErro
 /// gave every Matroska file half its rate, and a 10 fps .wmv 30, where
 /// ffmpeg was right on all of them (the Windows check, 2026-10-22).
 pub fn frame_rate(path: &Path) -> Option<f64> {
-    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
-    let os = if ["mp4", "m4v", "mov", "3gp"].contains(&ext.as_str()) { rate_os(path) } else { 0.0 };
+    let os = if mp4_family(path) { rate_os(path) } else { 0.0 };
     let r = if os > 0.0 { Some(os) } else { ffmpeg().and_then(|ff| rate_ffmpeg(&ff, path)) };
     r.filter(|r| r.is_finite() && (1.0..=1000.0).contains(r))
 }
@@ -290,7 +334,7 @@ pub fn frame_rate(path: &Path) -> Option<f64> {
 /// ffmpeg's reading of the rate, from the line it prints for the file's
 /// first video stream: "Stream #0:0...: Video: h264 ..., 23.98 fps, ...".
 fn rate_ffmpeg(ffmpeg: &Path, path: &Path) -> Option<f64> {
-    let out = Command::new(ffmpeg)
+    let out = ffmpeg_command(ffmpeg)
         .args(["-nostdin", "-hide_banner", "-i"])
         .arg(path)
         .stdin(Stdio::null())

@@ -10,6 +10,7 @@ mod audio;
 mod decode;
 mod download;
 mod model;
+mod mp4;
 mod pktito;
 mod recent;
 mod transcribe;
@@ -618,6 +619,104 @@ fn reveal(path: String) -> Result<(), String> {
     reveal_in_folder(Path::new(&path))
 }
 
+/// The model in use, in Finder or Explorer: its file selected, or the
+/// folder the app keeps its models in when none is there.
+#[tauri::command]
+fn reveal_model(app: AppHandle) -> Result<(), String> {
+    let data = data_dir(&app)?;
+    match usable(&data, &model::load_settings(&data)) {
+        Some(file) => reveal_in_folder(&file),
+        None => {
+            let dir = data.join("models");
+            fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+            reveal_in_folder(&dir)
+        }
+    }
+}
+
+/// The window's menu on Windows, Restore, Move, Size, Minimize, Maximize
+/// and Close, as a title bar's right-click or Alt+Space opens it: at the
+/// pointer, or under the header's left end. The window draws no title bar
+/// (main_window), so the page asks for it. The system's own menu, in the
+/// system's language, its items enabled as the window's state allows; if
+/// the window has none, the same six in English.
+#[tauri::command]
+fn window_menu(window: tauri::WebviewWindow, at_cursor: bool) {
+    #[cfg(target_os = "windows")]
+    unsafe {
+        use std::ffi::c_void;
+        #[repr(C)]
+        struct Point {
+            x: i32,
+            y: i32,
+        }
+        #[link(name = "user32")]
+        extern "system" {
+            fn GetSystemMenu(hwnd: *mut c_void, revert: i32) -> *mut c_void;
+            fn CreatePopupMenu() -> *mut c_void;
+            fn AppendMenuW(menu: *mut c_void, flags: u32, id: usize, text: *const u16) -> i32;
+            fn DestroyMenu(menu: *mut c_void) -> i32;
+            fn EnableMenuItem(menu: *mut c_void, id: u32, flags: u32) -> i32;
+            fn SetMenuDefaultItem(menu: *mut c_void, id: u32, by_position: u32) -> i32;
+            fn TrackPopupMenu(menu: *mut c_void, flags: u32, x: i32, y: i32, reserved: i32, hwnd: *mut c_void,
+                              rect: *const c_void) -> i32;
+            fn PostMessageW(hwnd: *mut c_void, msg: u32, wparam: usize, lparam: isize) -> i32;
+            fn GetCursorPos(p: *mut Point) -> i32;
+            fn ClientToScreen(hwnd: *mut c_void, p: *mut Point) -> i32;
+            fn IsZoomed(hwnd: *mut c_void) -> i32;
+            fn SetForegroundWindow(hwnd: *mut c_void) -> i32;
+        }
+        const SC_SIZE: u32 = 0xF000;
+        const SC_MOVE: u32 = 0xF010;
+        const SC_MINIMIZE: u32 = 0xF020;
+        const SC_MAXIMIZE: u32 = 0xF030;
+        const SC_CLOSE: u32 = 0xF060;
+        const SC_RESTORE: u32 = 0xF120;
+        const MF_GRAYED: u32 = 0x1;
+        const MF_SEPARATOR: u32 = 0x800;
+        const TPM_RIGHTBUTTON: u32 = 0x2;
+        const TPM_RETURNCMD: u32 = 0x100;
+        const WM_SYSCOMMAND: u32 = 0x0112;
+        let Ok(hwnd) = window.hwnd() else { return };
+        let h = hwnd.0 as *mut c_void;
+        let mut menu = GetSystemMenu(h, 0);
+        let own = menu.is_null();
+        if own {
+            menu = CreatePopupMenu();
+            if menu.is_null() {
+                return;
+            }
+            for (id, text) in [(SC_RESTORE, "Restore"), (SC_MOVE, "Move"), (SC_SIZE, "Size"), (SC_MINIMIZE, "Minimize"),
+                               (SC_MAXIMIZE, "Maximize"), (0, ""), (SC_CLOSE, "Close\tAlt+F4")] {
+                let w: Vec<u16> = text.encode_utf16().chain([0]).collect();
+                AppendMenuW(menu, if id == 0 { MF_SEPARATOR } else { 0 }, id as usize, w.as_ptr());
+            }
+        }
+        let big = IsZoomed(h) != 0;
+        for (id, on) in [(SC_RESTORE, big), (SC_MOVE, !big), (SC_SIZE, !big), (SC_MINIMIZE, true), (SC_MAXIMIZE, !big), (SC_CLOSE, true)] {
+            EnableMenuItem(menu, id, if on { 0 } else { MF_GRAYED });
+        }
+        SetMenuDefaultItem(menu, SC_CLOSE, 0);
+        let mut p = Point { x: 0, y: 0 };
+        if at_cursor {
+            GetCursorPos(&mut p);
+        } else {
+            p.y = (60.0 * window.scale_factor().unwrap_or(1.0)) as i32;     // the header's height
+            ClientToScreen(h, &mut p);
+        }
+        SetForegroundWindow(h);
+        let cmd = TrackPopupMenu(menu, TPM_RIGHTBUTTON | TPM_RETURNCMD, p.x, p.y, 0, h, std::ptr::null());
+        if cmd != 0 {
+            PostMessageW(h, WM_SYSCOMMAND, cmd as usize, 0);
+        }
+        if own {
+            DestroyMenu(menu);
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    let _ = (window, at_cursor);
+}
+
 /// One of About's links, in the browser. An https address and nothing else,
 /// so that the page can open no file or program by it.
 #[tauri::command]
@@ -760,7 +859,7 @@ fn headless(args: &[String]) -> Result<(), String> {
         println!("{}", serde_json::to_string(&segs).unwrap());
     }
     eprintln!(
-        "{} segments, {:.1} s of audio{}: decoded in {:.3} s, transcribed in {:.3} s ({}, {})",
+        "{} segments, {:.3} s of audio{}: decoded in {:.3} s, transcribed in {:.3} s ({}, {})",
         segs.len(),
         x.len() as f64 / decode::RATE as f64,
         if fps > 0.0 { format!(", video at {fps:.3} fps") } else { String::new() },
@@ -1035,7 +1134,9 @@ fn main() {
             reveal,
             open_link,
             captions,
-            forget_recent
+            forget_recent,
+            reveal_model,
+            window_menu
         ])
         .run(tauri::generate_context!())
         .expect("pktito could not start");
