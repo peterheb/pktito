@@ -7,6 +7,7 @@ components from design/bundle.css, and the app's fonts from ui/fonts.
     python3 site/build.py                 # site/public, for wrangler
     python3 site/build.py --artifact DIR  # a preview: relative links, index.html without its head
 """
+import base64
 import html
 import json
 import pathlib
@@ -194,27 +195,73 @@ def seg(i, start, text):
 
 
 segs = "\n".join(seg(i, s, x) for i, (s, x) in enumerate(JOYCE))
-# The waveform as the app draws that file 120 bars wide: the loudest of
-# audio.rs's 1200 slices under each bar, each slice its RMS in dB over the
-# 48 dB below the loudest, as 3 to 60 px.
-WAVE = [7, 58, 50, 48, 44, 50, 54, 45, 46, 54, 54, 40, 46, 50, 49, 45, 52, 46, 48, 10, 7, 50, 47, 46, 40, 36, 14, 3, 49, 54,
-        49, 47, 52, 49, 47, 49, 50, 43, 50, 4, 3, 51, 60, 48, 56, 54, 3, 51, 55, 37, 56, 57, 52, 47, 52, 54, 47, 3, 49, 50,
-        48, 44, 51, 48, 49, 48, 50, 45, 42, 45, 42, 41, 49, 45, 44, 5, 3, 50, 58, 51, 47, 43, 48, 48, 51, 43, 45, 47, 47, 50,
-        41, 51, 49, 47, 41, 37, 14, 6, 52, 50, 49, 52, 49, 37, 45, 3, 5, 54, 53, 50, 48, 43, 49, 45, 45, 45, 49, 42, 44, 3]
+# The waveform as the app draws it (ui/app.js, drawWave): its outline of
+# the file, audio.rs's 2400 slices, each its RMS in dB over the 48 dB below
+# the loudest as 0 to 255 (from the app's recent list, 2026-10-22); a bar
+# the mean of the slices under it, over the outline's range from its 10th
+# percentile to its 99.5th; 3 to 60 px, the playhead 64.
+OUTLINE = base64.b64decode(
+    "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"
+)
+DURATION = 64.8250625
+
+
+def outline_range():
+    s = sorted(OUTLINE)
+    lo, hi = s[int(len(s) * 0.1)], s[min(len(s) - 1, int(len(s) * 0.995))]
+    return lo, max(hi, lo + 16)
 
 
 def wave(n, cls):
-    """The waveform n bars wide, as the app would draw it in a narrower
-    window: the tallest of the 120 bars under each."""
-    hs = [max(WAVE[i * len(WAVE) // n:(i + 1) * len(WAVE) // n]) for i in range(n)]
-    head = int(AT / 64.825 * n)
+    """n bars 2 px wide: as many as the app puts in a strip 3n - 1 to
+    4n - 2 px wide, the page spreading them to its strip's width."""
+    lo, hi = outline_range()
+    hs = []
+    for i in range(n):
+        a = i * len(OUTLINE) // n
+        b = max(a + 1, (i + 1) * len(OUTLINE) // n)
+        v = min(1.0, max(0.0, (sum(OUTLINE[a:b]) / (b - a) - lo) / (hi - lo)))
+        hs.append(3 + int(v * 57 + 0.5))
+    head = int(AT / DURATION * n)
     bars = "".join(f'<i class="{"on" if i < head else "head" if i == head else ""}" style="height:{64 if i == head else h}px"></i>'
                    for i, h in enumerate(hs))
     return f'<span class="as-wave {cls}">{bars}</span>'
 
 
-# one for each width the window's strip takes on the page (site.css)
-waves = wave(120, "as-w120") + wave(60, "as-w60") + wave(24, "as-w24")
+# one for each strip width the page gives it (site.css, .as-wN)
+BARS = (289, 217, 163, 122, 92, 69)
+waves = "".join(wave(n, f"as-w{n}") for n in BARS)
 FILE = "librispeech-1089-134686.wav"
 PLAY = '<svg class="pk-ico" viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3" fill="currentColor"/></svg>'
 
@@ -235,15 +282,17 @@ home = f"""<main>
   <div class="wrap">
     <div class="app-shot" data-ui>
       <div class="as-head">
-        <span class="as-back">{ico("back")}</span><h2>{FILE}</h2><span class="pk-stamp">00:01:04</span><span class="as-grow"></span>
-        <span class="as-find">{ico("search")}Find</span>
-        <span class="pk-btn pk-btn-primary">{ico("copy")}Copy text</span>
-        <span class="pk-btn pk-btn-quiet">Save as{ico("down")}</span>
+        <span class="as-back">{ico("back")}</span><h2>{FILE}</h2><span class="as-grow"></span>
+        <span class="as-find">{ico("search")}<span>Find</span></span>
+        <span class="pk-btn pk-btn-quiet as-ico">{ico("copy")}</span>
+        <span class="pk-btn pk-btn-primary">Save as{ico("down")}</span>
       </div>
       <div class="as-strip">
-        <span class="as-play">{PLAY}</span><span class="as-time">{stamp(AT)}</span>
-        {waves}<span class="as-time as-dim">00:01:04</span>
+        <span class="as-play">{PLAY}</span>
+        <span class="as-lane">{waves}<span class="as-ticks"></span>
+          <span class="as-times"><span class="as-time">{stamp(AT)}</span><span class="as-time as-dim">00:01:04</span></span></span>
       </div>
+      <div class="as-views"><span class="is-on">Sentences</span><span>Captions</span></div>
       <div class="as-transcript">
 {segs}
       </div>
