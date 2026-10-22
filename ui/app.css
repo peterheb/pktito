@@ -71,6 +71,52 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
 :where(.pk-btn, .pk-linkbtn, button.pk-wm, .pk-row, .pk-x, .pk-mi, .pk-seg-t, .pk-play, .pk-choice, .pk-find-step, .pk-view, .pk-timebtn, .pk-rate):active:not([disabled]) {
   background-image: linear-gradient(var(--tint-press), var(--tint-press)); }
 
+/* ----------------------------------------------------------- title bar -- */
+/* Where the window has no title bar of its own (macOS: app.js, data-chrome)
+   each screen's header row is the title bar. The traffic lights are at its
+   left end, 18 to 78 px across and centred 30 px down, on the rows' centre
+   (src-tauri/src/main.rs, LIGHTS), and what would sit under them moves to
+   --lights, the lights' end and a gap; its empty space drags the window
+   (index.html, data-tauri-drag-region). Full screen shows no lights. */
+html[data-chrome=mac] { --lights: 92px; }
+html[data-chrome=mac]:not([data-fullscreen]) .pk-work:not(.is-batch) .pk-head { padding-left: var(--lights); }
+/* the queue's arrow, drawn 7 px inside its button, at --lights */
+html[data-chrome=mac]:not([data-fullscreen]) .pk-side-top { padding-left: calc(var(--lights) - 19px); }
+html[data-chrome=mac]:not([data-fullscreen]) .pk-about > .pk-back { left: calc(var(--lights) - 7px); }
+/* A one-column screen's top row is beside the lights where the column
+   starts past them, at 744 px wide (640 px centred, 40 px padding), and
+   below them where it would not. */
+@media (min-width: 744px) { html[data-chrome=mac]:not([data-fullscreen]) .has-recent .pk-ready { padding-top: 14px; } }
+@media (max-width: 743px) { html[data-chrome=mac]:not([data-fullscreen]) .pk-center { padding-top: 40px; } }
+/* About's top: its stage draws the mascot to the window's edge */
+.pk-dragbar { position: absolute; top: 0; left: 0; right: 0; height: 52px; z-index: 1; }
+html:not([data-chrome]) .pk-dragbar { display: none; }
+/* Windows: the caption buttons at the top right, over everything, as
+   Windows 11 draws them: 46 by 32, Segoe Fluent Icons' glyphs at 10 px, its
+   subtle fills on hover and press, and close red. What would sit under them
+   moves left of --caption, their 138 px and a gap: the header row, or the
+   queue's top when it is above the transcript, under 880 px; and a
+   one-column screen below them where its column would reach them, under
+   860 px wide. */
+html[data-chrome=win] { --caption: 150px; }
+.pk-caption { position: fixed; top: 0; right: 0; z-index: 100; display: flex; }
+.pk-cap { width: 46px; height: 32px; border: 0; padding: 0; background: transparent; color: var(--ink); cursor: default;
+  font: 400 10px/1 "Segoe Fluent Icons", "Segoe MDL2 Assets", sans-serif; display: grid; place-items: center; }
+.pk-cap:hover { background: rgba(0, 0, 0, .0373); }
+.pk-cap:active { background: rgba(0, 0, 0, .0241); color: color-mix(in srgb, var(--ink) 60%, transparent); }
+/* (two classes, over the dark theme's hover below) */
+.pk-cap.pk-cap-close:hover { background: #c42b1c; color: #fff; }
+.pk-cap.pk-cap-close:active { background: rgba(196, 43, 28, .9); color: rgba(255, 255, 255, .7); }
+html[data-inactive] .pk-cap:not(:hover) { color: color-mix(in srgb, var(--ink) 40%, transparent); }
+@media (prefers-color-scheme: dark) {
+  .pk-cap:hover { background: rgba(255, 255, 255, .0605); }
+  .pk-cap:active { background: rgba(255, 255, 255, .0419); }
+}
+html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--caption); }
+@media (min-width: 880px) { html[data-chrome=win] .pk-work.is-batch .pk-head { padding-right: var(--caption); } }
+@media (max-width: 879px) { html[data-chrome=win] .pk-work.is-batch .pk-side-top { padding-right: calc(var(--caption) - 12px); } }
+@media (max-width: 859px) { html[data-chrome=win] .pk-center { padding-top: 40px; } }
+
 /* ------------------------------------------- setup and ready: one column -- */
 .pk-center { height: 100%; overflow: auto; display: grid; place-items: center; }
 .pk-screen { width: min(640px, 100%); min-height: min(100%, 520px); display: flex; flex-direction: column; gap: 20px;

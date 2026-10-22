@@ -11,14 +11,14 @@
 <body>
 
 <!-- Setup: choose a model and download it; app.js fills it -->
-<section id="setup" class="pk-center" hidden>
+<section id="setup" class="pk-center" data-tauri-drag-region hidden>
   <div class="pk-screen" id="setup-body"></div>
 </section>
 
 <!-- Ready: drop files, choose them, or open a recent transcript -->
-<section id="ready" class="pk-center" hidden>
-  <div class="pk-screen pk-ready">
-    <div class="pk-spread">
+<section id="ready" class="pk-center" data-tauri-drag-region hidden>
+  <div class="pk-screen pk-ready" data-tauri-drag-region>
+    <div class="pk-spread" data-tauri-drag-region="deep">
       <button class="pk-wm" type="button" data-about aria-label="About pktito" title="About pktito">pktito</button>
       <button class="pk-btn pk-btn-ghost" id="ready-model" type="button" aria-haspopup="menu" aria-expanded="false"></button>
     </div>
@@ -45,7 +45,7 @@
 <!-- The work: one file, or the queue beside the one selected -->
 <div id="work" class="pk-work" hidden>
   <aside class="pk-side" id="side" hidden>
-    <div class="pk-side-top">
+    <div class="pk-side-top" data-tauri-drag-region="deep">
       <button class="pk-btn pk-btn-ghost pk-btn-ico pk-back" id="side-back" type="button" aria-label="Back"></button>
       <button class="pk-btn pk-add" id="add" type="button"></button>
     </div>
@@ -56,7 +56,7 @@
     </div>
   </aside>
   <section class="pk-main">
-    <header class="pk-head">
+    <header class="pk-head" data-tauri-drag-region="deep">
       <button class="pk-btn pk-btn-ghost pk-btn-ico pk-back" id="back" type="button" aria-label="Back"></button>
       <h1 class="pk-ui" id="title"></h1>
       <span class="pk-grow"></span>
@@ -97,6 +97,7 @@
 <!-- About: the credits beside the mascot, over the screen that opened it;
      app.js adds the version, and mascot.js the mascot -->
 <section id="about" class="pk-about" aria-label="About pktito" hidden>
+  <div class="pk-dragbar" data-tauri-drag-region></div>
   <button class="pk-btn pk-btn-ghost pk-btn-ico pk-back" id="about-back" type="button" aria-label="Back"></button>
   <div class="pk-about-stage" id="about-stage">
     <canvas id="mascot" tabindex="0" role="img"
@@ -144,6 +145,12 @@
   </div>
 </div>
 <div class="pk-menu" id="menu" role="menu" hidden></div>
+<!-- On Windows the window's caption buttons, which the page draws (app.js) -->
+<div class="pk-caption" id="caption" hidden>
+  <button class="pk-cap" id="cap-min" type="button" tabindex="-1" aria-label="Minimize" title="Minimize">&#xE921;</button>
+  <button class="pk-cap" id="cap-max" type="button" tabindex="-1" aria-label="Maximize" title="Maximize">&#xE922;</button>
+  <button class="pk-cap pk-cap-close" id="cap-close" type="button" tabindex="-1" aria-label="Close" title="Close">&#xE8BB;</button>
+</div>
 <div class="pk-toast" id="toast" role="status" hidden></div>
 <audio id="audio" preload="auto"></audio>
 

@@ -11,6 +11,39 @@ const invoke = T.core.invoke;
 const listen = T.event.listen;
 
 const $ = (id) => document.getElementById(id);
+
+/* The window's own title bar, where it has none (src-tauri/src/main.rs,
+   main_window): each screen's header row is the title bar. On macOS the
+   traffic lights are at its left end, which the rows make room for (app.css,
+   html[data-chrome]) but in full screen, which shows none. On Windows the
+   page draws the caption buttons at its right: maximize's glyph is restore's
+   while the window is maximized, and all three are dimmed while another
+   window is active, as Windows 11's are. */
+if (window.__PK_CHROME) {
+  const html = document.documentElement, win = T.window.getCurrentWindow();
+  html.dataset.chrome = window.__PK_CHROME;
+  const state = async () => {
+    try {
+      if (window.__PK_CHROME === "mac") html.toggleAttribute("data-fullscreen", await win.isFullscreen());
+      else {
+        const big = await win.isMaximized();
+        $("cap-max").innerHTML = big ? "&#xE923;" : "&#xE922;";
+        $("cap-max").title = big ? "Restore down" : "Maximize";
+        $("cap-max").setAttribute("aria-label", $("cap-max").title);
+      }
+    } catch {}
+  };
+  if (window.__PK_CHROME === "win") {
+    $("caption").hidden = false;
+    $("cap-min").onclick = () => win.minimize();
+    $("cap-max").onclick = () => win.toggleMaximize();
+    $("cap-close").onclick = () => win.close();
+    window.addEventListener("blur", () => html.toggleAttribute("data-inactive", true));
+    window.addEventListener("focus", () => html.toggleAttribute("data-inactive", false));
+  }
+  window.addEventListener("resize", state);
+  state();
+}
 const svg = (body, cls = "pk-ico") => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
 const ICON = {
   music: svg('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'),
@@ -1409,11 +1442,13 @@ async function cuesOf(f) {
   const english = !!m && m.languages.length === 1 && m.languages[0] === "en";
   const raw = await invoke("captions", { words: w.map((x) => ({ text: x.text, start: x.start, end: x.end })), english,
     duration: f.duration || 0 });
-  // each cue a row of the transcript: its text with its line break, its words, its times
+  // each cue a row of the transcript: its text with its line break, its
+  // words, its times; one a pause cut in mid-sentence ends in an ellipsis
+  // (pktito's PK_CUE_PAUSE, which its line has room for)
   f.cues = raw.map((c) => {
     const ws = w.slice(c.first, c.first + c.n);
     return { start: c.start / 1000, end: c.end / 1000, startMs: c.start, endMs: c.end, chars: c.chars, flags: c.flags, words: ws,
-      text: ws.map((x, k) => (k ? (c.first + k === c.line2 ? "\n" : " ") : "") + x.text).join("") };
+      text: ws.map((x, k) => (k ? (c.first + k === c.line2 ? "\n" : " ") : "") + x.text).join("") + (c.flags & 8 ? "\u2026" : "") };
   });
   return f.cues;
 }

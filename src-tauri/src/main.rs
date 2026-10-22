@@ -796,6 +796,35 @@ fn download_alone(args: &[String]) -> Result<PathBuf, String> {
     rx.try_recv().map_err(|_| job.state().why)
 }
 
+/// Where the traffic lights go: AppKit puts their left edge at x and their
+/// centre 2 px above y (14 px buttons 23 apart, measured on macOS 26), so
+/// they are centred on the header rows, 60 px tall, and end at x = 78
+/// (ui/app.css, html[data-chrome=mac]).
+#[cfg(target_os = "macos")]
+const LIGHTS: (f64, f64) = (18.0, 32.0);
+
+/// The window, as tauri.conf.json has it (which leaves it to this), on
+/// macOS and Windows without a title bar of its own: the page runs up to
+/// the window's top, and the header row of each screen is the title bar,
+/// its empty space dragging the window. On macOS the traffic lights are in
+/// its left end; on Windows the page draws minimize, maximize and close at
+/// its right, as Windows 11 draws them (ui/app.css, .pk-caption). The page
+/// is told which before its first script runs, as html[data-chrome].
+/// Linux keeps the title bar its desktop draws.
+fn main_window(app: &tauri::App) -> tauri::Result<tauri::WebviewWindow> {
+    let config = app.config().app.windows.iter().find(|w| w.label == "main").cloned().unwrap_or_default();
+    let builder = tauri::WebviewWindowBuilder::from_config(app.handle(), &config)?;
+    #[cfg(target_os = "macos")]
+    let builder = builder
+        .title_bar_style(tauri::TitleBarStyle::Overlay)
+        .hidden_title(true)
+        .traffic_light_position(tauri::LogicalPosition::new(LIGHTS.0, LIGHTS.1))
+        .initialization_script("window.__PK_CHROME = 'mac';");
+    #[cfg(target_os = "windows")]
+    let builder = builder.decorations(false).shadow(true).initialization_script("window.__PK_CHROME = 'win';");
+    builder.build()
+}
+
 /// The size the window was given at launch, which a resize to it need not save.
 static PLACED: Mutex<Option<(f64, f64)>> = Mutex::new(None);
 
@@ -976,12 +1005,11 @@ fn main() {
             }
             #[cfg(target_os = "macos")]
             menu_bar(app)?;
-            if let Some(w) = app.get_webview_window("main") {
-                #[cfg(target_os = "windows")]
-                big_icon(&w);
-                let saved = data_dir(app.handle()).map(|d| model::load_settings(&d).window).unwrap_or(None);
-                place_window(&w, saved);
-            }
+            let w = main_window(app)?;
+            #[cfg(target_os = "windows")]
+            big_icon(&w);
+            let saved = data_dir(app.handle()).map(|d| model::load_settings(&d).window).unwrap_or(None);
+            place_window(&w, saved);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
