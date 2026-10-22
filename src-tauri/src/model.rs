@@ -77,8 +77,6 @@ pub struct Prefs {
     pub next_to_original: bool,
     /// Each segment's time before its text, in .txt and .md.
     pub times: bool,
-    /// Save each file's .txt beside it as soon as it is done.
-    pub save_each: bool,
     /// Show a finished transcript as its subtitle track's cues, not its sentences.
     pub captions: bool,
     /// Times in frames, not seconds and hundredths.
@@ -91,7 +89,7 @@ pub struct Prefs {
 
 impl Default for Prefs {
     fn default() -> Prefs {
-        Prefs { next_to_original: true, times: false, save_each: false, captions: false, frames: false, fps: 24.0, video_rate: true }
+        Prefs { next_to_original: true, times: false, captions: false, frames: false, fps: 24.0, video_rate: true }
     }
 }
 

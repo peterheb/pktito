@@ -81,14 +81,12 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
 /* at 92 px the back arrow sat 15 px from the lights, which are 9 px apart,
    and looked pressed against them */
 html[data-chrome=mac] { --lights: 100px; }
-html[data-chrome=mac]:not([data-fullscreen]) .pk-work:not(.is-batch) .pk-head { padding-left: var(--lights); }
-/* the queue's arrow, drawn 7 px inside its button, at --lights */
-html[data-chrome=mac]:not([data-fullscreen]) .pk-side-top { padding-left: calc(var(--lights) - 19px); }
+html[data-chrome=mac]:not([data-fullscreen]) .pk-head { padding-left: var(--lights); }
 html[data-chrome=mac]:not([data-fullscreen]) .pk-about > .pk-back { left: calc(var(--lights) - 7px); }
 /* A one-column screen's top row is beside the lights where the column
    starts past them, at 744 px wide (640 px centred, 40 px padding), and
    below them where it would not. */
-@media (min-width: 744px) { html[data-chrome=mac]:not([data-fullscreen]) .has-recent .pk-ready { padding-top: 14px; } }
+@media (min-width: 744px) { html[data-chrome=mac]:not([data-fullscreen]) :is(.has-recent .pk-ready, .pk-batch) { padding-top: 14px; } }
 @media (max-width: 743px) { html[data-chrome=mac]:not([data-fullscreen]) .pk-center { padding-top: 40px; } }
 /* About's top, where its stage draws the mascot to the window's edge; and a
    one-column screen's band across the window's top, the header rows'
@@ -106,8 +104,7 @@ html:not([data-chrome]) .pk-dragbar { display: none; }
 /* Windows: the caption buttons at the top right, over everything, as
    Windows 11 draws them: 46 by 32, Segoe Fluent Icons' glyphs at 10 px, its
    subtle fills on hover and press, and close red. What would sit under them
-   moves left of --caption, their 138 px and a gap: the header row, or the
-   queue's top when it is above the transcript, under 880 px; and a
+   moves left of --caption, their 138 px and a gap: the header row; and a
    one-column screen below them where its column would reach them, under
    860 px wide. */
 html[data-chrome=win] { --caption: 150px; }
@@ -127,9 +124,7 @@ html[data-inactive] .pk-cap:not(:hover) { color: color-mix(in srgb, var(--ink) 4
   .pk-cap:hover { background: rgba(255, 255, 255, .0605); }
   .pk-cap:active { background: rgba(255, 255, 255, .0419); }
 }
-html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--caption); }
-@media (min-width: 880px) { html[data-chrome=win] .pk-work.is-batch .pk-head { padding-right: var(--caption); } }
-@media (max-width: 879px) { html[data-chrome=win] .pk-work.is-batch .pk-side-top { padding-right: calc(var(--caption) - 12px); } }
+html[data-chrome=win] .pk-head { padding-right: var(--caption); }
 @media (max-width: 859px) { html[data-chrome=win] .pk-center { padding-top: 40px; } }
 
 /* ------------------------------------------- setup and ready: one column -- */
@@ -194,19 +189,12 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
   margin: -4px calc(-4px - min(var(--sb, 0px), 16px)) -4px -4px; }
 .pk-recent .pk-row { grid-template-columns: 16px minmax(0, 1fr) auto 72px; }
 .pk-when { text-align: right; }
-/* a recent row's ×, as the queue's, over its date */
+/* a recent row's ×, as a batch row's, over its date */
 .pk-recent .pk-qi:hover .pk-row .pk-stamp { visibility: visible; }
 .pk-recent .pk-qi:hover .pk-when { visibility: hidden; }
 
 /* ------------------------------------------------------------------ work -- */
 .pk-work { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr); }
-.pk-work.is-batch { grid-template-columns: var(--sidebar) minmax(0, 1fr); }
-.pk-side { background: var(--surface); padding: 14px 12px 12px; display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; }
-.pk-side-top { display: flex; gap: 8px; }
-.pk-add { flex: 1; min-width: 0; justify-content: flex-start; }
-.pk-queue { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; flex: 1 1 auto; min-height: 0; padding: 4px; margin: -4px; }
-.pk-side-foot { display: flex; align-items: center; gap: 8px; padding: 0 4px; }
-.pk-side-foot .pk-btn { margin-left: auto; }
 .pk-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 /* The work screen's vertical rhythm is one step, --space-3 (16 px): under the
    header's buttons, between the strip and the views, from the views to the
@@ -227,32 +215,38 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
 @media (prefers-reduced-motion: reduce) { .pk-spin { animation-duration: 2.4s; } }
 /* the arrow drawn on the strip's left edge, its button's padding outside it */
 .pk-head .pk-back { margin-left: -8px; }
-/* beside the queue, the queue has the way back */
-.is-batch .pk-head .pk-back { display: none; }
 .pk-grow { flex: 1; }
 .pk-strip-wrap { padding: 0 24px; }
 .pk-transcript { flex: 1; min-height: 0; overflow-y: auto; padding: var(--space-2) 12px 24px; display: flex; flex-direction: column; }
 .pk-msg { margin: 16px 24px 0; max-width: 712px; font: 400 15px/1.5 var(--font-sans); color: var(--ink-muted); overflow-wrap: anywhere; }
 .pk-msg.pk-err { color: var(--err); }
-@media (max-width: 879px) {
-  .pk-work.is-batch { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
-  .pk-side { max-height: 38vh; }
-}
 
-/* queue rows, and the recent list's */
+/* ----------------------------------------------------------------- batch -- */
+/* Two or more files at once, in the start screen's column: the way back,
+   the batch's name, Stop and Save all along its top row; how far it has
+   got over the files' rows, which scroll as the recent list's do; more to
+   add under them */
+.pk-batch { height: 100%; min-height: 0; gap: 22px; padding-top: 20px; padding-bottom: 20px; }
+.pk-batch-name, .pk-batch-act { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pk-batch-act { gap: 8px; }
+.pk-batch-name h1 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the arrow on the column's edge, its padding outside it, as the wordmark's */
+.pk-batch .pk-back { margin-left: -8px; }
+.pk-batch-files { display: flex; flex-direction: column; gap: 4px; min-height: 0; }
+.pk-batch-files .pk-small { padding: 0 12px; }
+/* room inside the scroll for a row's focus ring */
+.pk-batch-files ul { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; padding: 4px; margin: -4px; }
+.pk-batch-add { align-self: flex-start; }
+
+/* the batch's rows, and the recent list's */
 .pk-row { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 6px; align-items: center; width: 100%;
   border: 0; background: none; text-align: left; color: var(--ink); padding: 10px 12px; border-radius: var(--radius-ui); cursor: pointer; }
-.pk-row.is-on { background: var(--ground); }
 .pk-row .pk-name { font: 500 14px/1.3 var(--font-sans); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pk-row .pk-status { grid-column: 2 / -1; display: flex; gap: 6px; align-items: center; font: 400 13px/1.4 var(--font-sans); color: var(--ink-muted); min-width: 0; }
 .pk-row .pk-status.pk-ok { color: var(--ok); }
 .pk-row .pk-status.pk-err { color: var(--err); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .pk-row .pk-bar { grid-column: 2 / -1; }
-.pk-row.is-on .pk-bar { background: var(--surface); }
-/* moving by arrow keys, the row under a resting pointer keeps no hover tone,
-   or two rows look selected (the Windows test, 2026-10-21) */
-.pk-queue.by-keys .pk-row:hover:not(.is-on) { background-image: none; }
-/* a queue row's ×, over its duration, under the pointer */
+/* a row's ×, over its duration, under the pointer */
 .pk-qi { position: relative; }
 .pk-x { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; display: grid; place-items: center; border: 0; padding: 0;
   border-radius: 6px; background: none; color: var(--ink-muted); cursor: pointer; opacity: 0; }
@@ -321,7 +315,7 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
    scroll, its place and its work */
 .pk-about { position: fixed; inset: 0; z-index: 30; display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
   background: var(--ground); }
-.is-about #setup, .is-about #ready, .is-about #work { visibility: hidden; }
+.is-about #setup, .is-about #ready, .is-about #batch, .is-about #work { visibility: hidden; }
 .pk-about-stage { position: relative; min-height: 0; background: var(--surface); }
 .pk-about-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; outline: none; }
 .pk-about-stage canvas:active { cursor: grabbing; }
@@ -330,7 +324,7 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
 .pk-about.no-stage { grid-template-columns: minmax(0, 1fr); }
 .pk-about.no-stage .pk-about-stage { display: none; }
 .pk-about.no-stage .pk-about-text { padding-top: 64px; }
-/* the arrow at the window's top left, where the queue's is */
+/* the arrow at the window's top left, where a file's is */
 .pk-about > .pk-back { position: absolute; top: 14px; left: 12px; z-index: 1; }
 .pk-about-text { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding: 32px 40px; }
 /* in the middle while it fits, else scrolled from its top */
@@ -476,12 +470,10 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
 .pk-find:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
 /* wider with a search in it, for the count and the arrows beside the words */
 .pk-find.has-query { flex-basis: 280px; min-width: 190px; }
-/* folded to its icon where the header has no room for it, and opened by a
-   click or the shortcut: under 860px with one file, 1060px beside the queue */
-@media (max-width: 859px) { .pk-work:not(.is-batch) .pk-find:not(:focus-within):not(.has-query) { flex: none; width: 32px; min-width: 32px; padding: 0 8px; }
-  .pk-work:not(.is-batch) .pk-find:not(:focus-within):not(.has-query) :is(input, .pk-kbd) { width: 0; opacity: 0; } }
-@media (max-width: 1059px) { .is-batch .pk-find:not(:focus-within):not(.has-query) { flex: none; width: 32px; min-width: 32px; padding: 0 8px; }
-  .is-batch .pk-find:not(:focus-within):not(.has-query) :is(input, .pk-kbd) { width: 0; opacity: 0; } }
+/* folded to its icon where the header has no room for it, under 860px, and
+   opened by a click or the shortcut */
+@media (max-width: 859px) { .pk-find:not(:focus-within):not(.has-query) { flex: none; width: 32px; min-width: 32px; padding: 0 8px; }
+  .pk-find:not(:focus-within):not(.has-query) :is(input, .pk-kbd) { width: 0; opacity: 0; } }
 
 /* ------------------------------------------------------------------ menus -- */
 .pk-menu { position: fixed; z-index: 40; background: var(--ground); border-radius: var(--radius-ui); box-shadow: var(--shadow-float), 0 0 0 1px var(--sunk);
@@ -516,8 +508,5 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
 .pk-toast span { min-width: 0; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical;
   -webkit-line-clamp: 2; }
 .pk-toast .pk-linkbtn { color: var(--term-ink); flex: none; }
-#work.is-batch:not([hidden]) ~ .pk-toast { left: calc(50% + var(--sidebar) / 2); }
-.is-about #work.is-batch:not([hidden]) ~ .pk-toast { left: 50%; }
-@media (max-width: 879px) { #work.is-batch:not([hidden]) ~ .pk-toast { left: 50%; } }
 
 @media (prefers-reduced-motion: reduce) { .pk-btn, .pk-bar > i { transition: none; } }
