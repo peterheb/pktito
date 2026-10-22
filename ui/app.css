@@ -140,7 +140,10 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
 .pk-side-foot .pk-btn { margin-left: auto; }
 .pk-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .pk-head { display: flex; align-items: center; gap: 10px; padding: 14px 24px; min-height: 60px; }
-.pk-head h1 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the file's name gives way first, down to nothing, before Find: shrunk in
+   proportion, a long name left Find a letter of its search (the Windows
+   test, 2026-10-22) */
+.pk-head h1 { flex: 0 1000 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* the arrow drawn on the strip's left edge, its button's padding outside it */
 .pk-head .pk-back { margin-left: -8px; }
 /* beside the queue, the queue has the way back */
@@ -370,8 +373,10 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
 .pk-check small { display: block; font: 400 13px/1.4 var(--font-mono); color: var(--ink-muted); }
 
 /* ------------------------------------------------------------------ toast -- */
+/* as wide as its words, up to the window's width: centred from left 50%
+   without a width of its own, it had half the window to fit in */
 .pk-toast { position: fixed; z-index: 45; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px;
-  max-width: calc(100vw - 48px); padding: 10px 12px 10px 14px; border-radius: var(--radius-ui); background: var(--term); color: var(--term-ink);
+  width: max-content; max-width: calc(100vw - 48px); padding: 10px 12px 10px 14px; border-radius: var(--radius-ui); background: var(--term); color: var(--term-ink);
   box-shadow: var(--shadow-float); font: 500 14px/1.3 var(--font-sans); }
 /* two lines at most, so that a long file's name shows whole in a narrow window */
 .pk-toast span { min-width: 0; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical;
