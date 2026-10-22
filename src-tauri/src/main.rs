@@ -122,7 +122,10 @@ fn ensure_engine<'a>(slot: &'a mut Option<Engine>, path: &Path) -> Result<&'a mu
     if slot.as_ref().map(|e| e.path != path).unwrap_or(true) {
         *slot = None;
         let model = pktito::Model::load(path)?;
-        let asr = pktito::Asr::new(&model, 0)?;
+        // PKTITO_THREADS, for finding out what a machine does on fewer threads
+        // (the CLI's -t); unset, one a core and pktito's choice among them
+        let threads = std::env::var("PKTITO_THREADS").ok().and_then(|t| t.parse().ok()).unwrap_or(0);
+        let asr = pktito::Asr::new(&model, threads)?;
         *slot = Some(Engine { model, asr, path: path.to_path_buf() });
     }
     Ok(slot.as_mut().unwrap())
@@ -312,6 +315,11 @@ struct JobEvent {
     /// A video's frame rate, 0 for audio: for times in frames.
     fps: f64,
     took: f64,
+    /// Of that, the seconds reading the audio and transcribing it, and the
+    /// threads it ran on.
+    read: f64,
+    transcribed: f64,
+    threads: i32,
     model: String,
     /// Its place on the recent list.
     recent: Option<String>,
@@ -342,6 +350,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
         Err(e) => return fail(e.why(), e.detail()),
     };
     let duration = x.len() as f64 / decode::RATE as f64;
+    let read = t0.elapsed().as_secs_f64();
     let fps = fps_of(path);
     let key = recent::new_id();
     let audio = audio_dir(app)
@@ -387,6 +396,8 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
         },
         || state.stop.load(Ordering::Relaxed) == id,
     );
+    let transcribed = t1.elapsed().as_secs_f64();
+    let threads = asr.threads();
     let name = model.name();
     drop(slot);
     let _ = state.stop.compare_exchange(id, 0, Ordering::Relaxed, Ordering::Relaxed);
@@ -400,6 +411,9 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
                 duration,
                 finished: recent::now(),
                 took,
+                read,
+                transcribed,
+                threads,
                 model: name.clone(),
                 fps,
             };
@@ -410,7 +424,18 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
                 }
                 audio::cap(&dir, &recent::list(&data).into_iter().map(|i| i.id).collect::<Vec<_>>());
             }
-            send(JobEvent { step: "done", done: 1.0, duration, took, model: name, recent: kept.ok().map(|_| key), ..Default::default() });
+            send(JobEvent {
+                step: "done",
+                done: 1.0,
+                duration,
+                took,
+                read,
+                transcribed,
+                threads,
+                model: name,
+                recent: kept.ok().map(|_| key),
+                ..Default::default()
+            });
         }
         Ok((_, false)) => send(JobEvent { step: "stopped", duration, ..Default::default() }),
         Err(why) => fail("Can't transcribe", why),
@@ -862,14 +887,15 @@ fn headless(args: &[String]) -> Result<(), String> {
         println!("{}", serde_json::to_string(&segs).unwrap());
     }
     eprintln!(
-        "{} segments, {:.3} s of audio{}: decoded in {:.3} s, transcribed in {:.3} s ({}, {})",
+        "{} segments, {:.3} s of audio{}: decoded in {:.3} s, transcribed in {:.3} s ({}, {}, {} threads)",
         segs.len(),
         x.len() as f64 / decode::RATE as f64,
         if fps > 0.0 { format!(", video at {fps:.3} fps") } else { String::new() },
         (t1 - t0).as_secs_f64(),
         t1.elapsed().as_secs_f64(),
         model.name(),
-        pktito::backend()
+        pktito::backend(),
+        asr.threads()
     );
     Ok(())
 }

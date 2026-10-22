@@ -482,7 +482,8 @@ async function openRecent(id) {
   try {
     const t = await invoke("open_recent", { id });
     const f = Object.assign(newFile(t.path), { name: t.name, step: "done", done: 1, duration: t.duration, peaks: t.peaks,
-      audio: t.audio, segments: t.segments, took: t.took, model: t.model, recentId: t.id, fps: t.fps || 0 });
+      audio: t.audio, segments: t.segments, took: t.took, read: t.read || 0, transcribed: t.transcribed || 0,
+      threads: t.threads || 0, model: t.model, recentId: t.id, fps: t.fps || 0 });
     files.push(f);
     sel = f.id;
     home = false;
@@ -561,7 +562,7 @@ $("ready-model").onclick = (e) => modelMenu(e.currentTarget, !e.detail);
 
 function newFile(path) {
   return { id: nextId++, path, name: baseName(path), kind: kindOf(path), step: "waiting", done: 0, eta: -1, duration: null,
-    peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], cues: null, fps: 0, took: 0, model: "", recentId: null, message: "",
+    peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], cues: null, fps: 0, took: 0, read: 0, transcribed: 0, threads: 0, model: "", recentId: null, message: "",
     detail: "" };
 }
 
@@ -655,7 +656,8 @@ listen("job", (e) => {
   f.segments.push(...j.segments);
   if (j.step === "error") Object.assign(f, { message: j.message, detail: j.detail });
   if (j.step === "done") {
-    Object.assign(f, { done: 1, took: j.took, model: j.model, recentId: j.recent });
+    Object.assign(f, { done: 1, took: j.took, read: j.read, transcribed: j.transcribed, threads: j.threads, model: j.model,
+      recentId: j.recent });
     finished(f);
   }
   update(f, j.segments);
@@ -726,7 +728,7 @@ function goHome() {
 
 function again(f) {
   Object.assign(f, { step: "waiting", done: 0, eta: -1, peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], cues: null,
-    took: 0, recentId: null, message: "", detail: "" });
+    took: 0, read: 0, transcribed: 0, threads: 0, recentId: null, message: "", detail: "" });
   mainKey = "";
   render();
   pump();
@@ -1009,7 +1011,7 @@ function bodyHtml(s, i) {
 function renderTranscript(f, mode) {
   const tr = $("transcript");
   tr.classList.toggle("is-live", mode === "running");
-  tr.innerHTML = rowsOf(f).map((s, i) => segHtml(s, i, mode === "running")).join("");
+  tr.innerHTML = rowsOf(f).map((s, i) => segHtml(s, i, mode === "running")).join("") + (mode === "review" ? statsHtml(f) : "");
   curSeg = curWord = null;
   if (mode === "running") markLive();
   let msg = "", err = false;
@@ -1022,6 +1024,22 @@ function renderTranscript(f, mode) {
   $("msg").title = err ? f.detail : "";
   $("msg").hidden = !msg;
   $("msg").classList.toggle("pk-err", err);
+}
+
+/* What a transcript cost, after its last row and quiet: the transcription's
+   time and pace, reading the audio's, the model, and the backend and threads
+   it ran on. A transcript from before these were kept says what it took. */
+function statsHtml(f) {
+  if (!f.took || !f.segments.length) return "";
+  const secs = (x) => (x < 10 ? `${x.toFixed(2)} s` : x < 60 ? `${x.toFixed(1)} s` : clock(x));
+  const parts = f.transcribed > 0
+    ? [`Transcribed in ${secs(f.transcribed)}, ${(f.duration / f.transcribed).toFixed(1)}× real time`, `audio read in ${secs(f.read)}`]
+    : [`Took ${secs(f.took)}`];
+  const model = st.catalog.find((m) => m.name === f.model);
+  parts.push(model ? `${model.label} model` : f.model);
+  const backend = st.backend.split(" (")[0];
+  parts.push(f.threads > 0 ? `${backend} on ${f.threads} thread${f.threads === 1 ? "" : "s"}` : backend);
+  return `<p class="pk-stats">${esc(parts.join(" · "))}</p>`;
 }
 
 /* While transcribing, the newest segment is current and its last word is
@@ -1391,7 +1409,7 @@ function runFind() {
   if (!f || modeOf(f) !== "review") return;
   query = $("find").value.trim();
   const tr = $("transcript"), top = tr.scrollTop, rows = rowsOf(f);
-  tr.innerHTML = rows.map((s, i) => segHtml(s, i, false)).join("");
+  tr.innerHTML = rows.map((s, i) => segHtml(s, i, false)).join("") + statsHtml(f);
   tr.scrollTop = top;
   curSeg = curWord = null;
   showTime(f.pos);

@@ -87,6 +87,7 @@ extern "C" {
     fn pk_asr_new(m: *const RawModel, threads: c_int) -> *mut RawAsr;
     fn pk_asr_free(a: *mut RawAsr);
     fn pk_asr_run(a: *mut RawAsr, x: *const f32, n: usize, toks: *mut *const Tok) -> c_long;
+    fn pk_asr_threads(a: *const RawAsr) -> c_int;
     fn pk_text(m: *const RawModel, t: *const Tok, n: usize, out: *mut c_char, cap: usize) -> usize;
     fn pk_words(m: *const RawModel, t: *const Tok, n: usize, out: *mut Word) -> usize;
     fn pk_backend() -> *const c_char;
@@ -263,6 +264,12 @@ impl Asr {
             return Ok(Vec::new());
         }
         Ok(unsafe { std::slice::from_raw_parts(toks, n as usize) }.to_vec())
+    }
+
+    /// The threads its passes run on: one a core, or on a chip of two kinds
+    /// the fast kind alone once a recording has timed it faster.
+    pub fn threads(&self) -> i32 {
+        unsafe { pk_asr_threads(self.raw) }
     }
 }
 

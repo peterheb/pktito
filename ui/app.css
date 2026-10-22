@@ -399,6 +399,9 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
 .pk-seg { display: grid; grid-template-columns: 112px minmax(0, 1fr); column-gap: 12px; align-items: baseline; padding: 8px 12px;
   border-radius: var(--radius-ui); max-width: 760px; }
 .pk-seg.is-current { background: var(--surface); }
+/* what the transcript cost, after its last row: quiet, under the text column */
+.pk-stats { margin: var(--space-3) 0 0; padding: 0 12px 0 136px; max-width: 760px; font: 400 12px/1.5 var(--font-sans);
+  font-variant-numeric: tabular-nums; color: var(--ink-muted); }
 /* a row's times: a segment's start; a cue's start and its end under it,
    with a mark if it reads faster than 20 characters a second */
 .pk-seg-times { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
@@ -430,6 +433,7 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
 .pk-hit.is-on { --hl: var(--plume); color: var(--on-plume); }
 @media (max-width: 560px) {
   .pk-seg { grid-template-columns: 1fr; row-gap: 2px; }
+  .pk-stats { padding-left: 12px; }
   /* a cue's start and end side by side above its lines */
   .pk-seg-times { flex-direction: row; align-items: baseline; gap: 10px; }
 }
