@@ -54,7 +54,6 @@ const ICON = {
     '<line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'),
   copy: svg('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'),
   check: svg('<polyline points="20 6 9 17 4 12"/>'),
-  checkSmall: svg('<polyline points="20 6 9 17 4 12"/>', "pk-ico pk-ico-12"),
   down: svg('<polyline points="6 9 12 15 18 9"/>'),
   up: svg('<polyline points="18 15 12 9 6 15"/>'),
   download: svg('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>'),
@@ -239,13 +238,13 @@ async function useOwnFile() {
 }
 
 /* Each model as what it is for and whether it is here: "25 European
-   languages", and Downloaded with a green check or its download's size.
-   Its file's name is its tooltip: the menu was a wall of model names
-   (Peter, 2026-10-22). */
+   languages", and Downloaded, in green, or its download's size. Its file's
+   name is its tooltip. Downloaded has no check of its own: the menu's check
+   is the model in use. */
 function modelMenu(anchor, keys) {
   const items = st.catalog.map((m) => {
     const on = !st.model_file && st.model === m.name;
-    const state = m.have ? `<span class="pk-have">${ICON.checkSmall}Downloaded</span>` : `${mb(m.bytes)} MB download`;
+    const state = m.have ? `<span class="pk-have">Downloaded</span>` : `${mb(m.bytes)} MB download`;
     return `<button class="pk-mi" type="button" role="menuitemradio" aria-checked="${on}" data-model="${m.name}" title="${esc(m.name)}">` +
       `<span>${esc(m.label)}</span><small class="pk-sub">${esc(m.about)} · ${state}</small>${on ? ICON.check : ""}</button>`;
   });

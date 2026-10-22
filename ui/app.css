@@ -465,7 +465,7 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
 .pk-mi .pk-kbd, .pk-mi > .pk-ico { grid-row: 1; grid-column: 2; }
 /* a line of words, not a file name: the model menu's */
 .pk-mi small.pk-sub { font: 400 13px/1.4 var(--font-sans); }
-.pk-have { display: inline-flex; align-items: center; gap: 3px; color: var(--ok); }
+.pk-have { color: var(--ok); }
 .pk-menu.is-wide { max-width: min(480px, calc(100vw - 24px)); }
 .pk-menu-sep { height: 6px; }
 /* the frame rates, a row of chips under the choice they serve */
