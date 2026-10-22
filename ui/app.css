@@ -414,9 +414,11 @@ html[data-chrome=win] .pk-head { padding-right: var(--caption); }
 .pk-stats { margin: var(--space-3) 0 0; padding: 0 12px 0 136px; max-width: 760px; font: 400 12px/1.5 var(--font-sans);
   font-variant-numeric: tabular-nums; color: var(--ink-muted); }
 /* a row's times: a segment's start; a cue's start and its end under it,
-   with a mark if it reads faster than 20 characters a second */
+   with a mark if it reads faster than 20 characters a second. The two the
+   same size, so that their digits stand in columns: at 12 px the end sat
+   narrower than the start (Peter's screenshot, 2026-10-22). */
 .pk-seg-times { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
-.pk-seg-end { display: inline-flex; align-items: center; gap: 4px; font: 400 12px/1.4 var(--font-mono); font-variant-numeric: tabular-nums;
+.pk-seg-end { display: inline-flex; align-items: center; gap: 4px; font: 400 13px/1.5 var(--font-mono); font-variant-numeric: tabular-nums;
   color: var(--ink-muted); }
 .pk-fast { display: inline-flex; color: var(--ink-muted); }
 /* a cue's lines as the subtitle shows them */
