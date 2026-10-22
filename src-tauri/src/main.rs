@@ -753,6 +753,64 @@ fn download_alone(args: &[String]) -> Result<PathBuf, String> {
     rx.try_recv().map_err(|_| job.state().why)
 }
 
+/// The size the window was given at launch, which a resize to it need not save.
+static PLACED: Mutex<Option<(f64, f64)>> = Mutex::new(None);
+
+/// The window, sized before it is shown: as the user last left it, else a
+/// portrait page in a sheet of paper's proportion, 1 by the square root of
+/// 2, at the narrowest width the window takes: 720 by 1018. It reads a
+/// transcript down and shows more of the recent list. Either way it stays
+/// within the monitor's work area, title bar and all, so a laptop's 768 rows
+/// hold it, if not in proportion. tauri.conf.json makes it hidden until then.
+fn place_window(w: &tauri::WebviewWindow, saved: Option<[f64; 2]>) {
+    let [mut width, mut height] = saved.unwrap_or([720.0, 1018.0]);
+    let monitor = w.current_monitor().ok().flatten().or_else(|| w.primary_monitor().ok().flatten());
+    if let (Some(m), Ok(outer), Ok(inner)) = (monitor, w.outer_size(), w.inner_size()) {
+        let scale = m.scale_factor();
+        let area = m.work_area().size.to_logical::<f64>(scale);
+        // the title bar and borders lie outside the size set
+        let frame = ((outer.width.saturating_sub(inner.width)) as f64 / scale, (outer.height.saturating_sub(inner.height)) as f64 / scale);
+        width = width.min(area.width - frame.0);
+        height = height.min(area.height - frame.1);
+    }
+    // not below the window's minimum, which tauri.conf.json sets
+    let (width, height) = (width.max(720.0).round(), height.max(480.0).round());
+    *PLACED.lock().unwrap() = Some((width, height));
+    let _ = w.set_size(tauri::LogicalSize::new(width, height));
+    let _ = w.center();
+    let _ = w.show();
+}
+
+/// The window's size as the user leaves it, saved for the next launch half a
+/// second after the last resize: not while it is maximized, minimized or
+/// full screen, nor the size it was given.
+fn remember_size(window: &tauri::Window) {
+    static LAST: AtomicU32 = AtomicU32::new(0);
+    let off = |r: tauri::Result<bool>| r.unwrap_or(true);
+    if off(window.is_maximized()) || off(window.is_minimized()) || off(window.is_fullscreen()) {
+        return;
+    }
+    let (Ok(size), Ok(scale)) = (window.inner_size(), window.scale_factor()) else { return };
+    let size = size.to_logical::<f64>(scale);
+    let size = (size.width.round(), size.height.round());
+    if *PLACED.lock().unwrap() == Some(size) {
+        return;
+    }
+    let n = LAST.fetch_add(1, Ordering::Relaxed) + 1;
+    let app = window.app_handle().clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(500));
+        if LAST.load(Ordering::Relaxed) != n {
+            return;
+        }
+        if let Ok(data) = data_dir(&app) {
+            let mut s = model::load_settings(&data);
+            s.window = Some([size.0, size.1]);
+            let _ = model::save_settings(&data, &s);
+        }
+    });
+}
+
 /// The window's big icon, which the taskbar and Alt+Tab show, from the exe's
 /// own (tauri-build writes it as resource 32512). tao sets the small one
 /// alone, and without a big one the taskbar shows what its cache holds for
@@ -861,6 +919,11 @@ fn main() {
     }
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::Resized(_) = event {
+                remember_size(window);
+            }
+        })
         .manage(AppState::default())
         .setup(|app| {
             // the audio no transcript on the recent list needs, from runs
@@ -870,9 +933,11 @@ fn main() {
             }
             #[cfg(target_os = "macos")]
             menu_bar(app)?;
-            #[cfg(target_os = "windows")]
             if let Some(w) = app.get_webview_window("main") {
+                #[cfg(target_os = "windows")]
                 big_icon(&w);
+                let saved = data_dir(app.handle()).map(|d| model::load_settings(&d).window).unwrap_or(None);
+                place_window(&w, saved);
             }
             Ok(())
         })

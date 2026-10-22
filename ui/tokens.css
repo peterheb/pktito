@@ -25,6 +25,10 @@
   --wave-played: var(--plume);
   --ok: #17673f;
   --err: #b42318;
+  --tint: rgba(16, 27, 51, 0.07);
+  --tint-press: rgba(16, 27, 51, 0.13);
+  --tint-term: rgba(228, 235, 246, 0.10);
+  --tint-term-press: rgba(228, 235, 246, 0.18);
   --focus: #101b33;
   --link: var(--ink);
   --shadow-float: 0 12px 32px rgba(16, 27, 51, 0.18);
@@ -62,6 +66,8 @@
     --term-line: #1f2b44;
     --ok: #6fd39b;
     --err: #ff8f80;
+    --tint: rgba(229, 235, 244, 0.09);
+    --tint-press: rgba(229, 235, 244, 0.16);
     --focus: #6cc4f5;
     --shadow-float: 0 12px 32px rgba(0, 0, 0, 0.5);
   }

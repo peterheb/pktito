@@ -33,6 +33,7 @@ One ground, one ink, one accent, one mark. Every color is a token with a light a
 - `term` is the dark field of the stage's transcript panel and the waveform strip in both themes; `term-ink`, `term-dim`, `wave` and `wave-played` sit on it.
 - `ok` and `err` mark a finished or failed file and always sit beside a word.
 - Keyboard focus is `focus`, 2px solid: ink in light, plume in dark.
+- Hover and press are one rule for every control, the wordmark included: `tint`, then `tint-press`, laid over whatever the control sits on or is filled with (ground, surface, sunk, plume), so it darkens in light and lightens in dark; on `term`, the strip and the toast, `tint-term` and `tint-term-press`. Links in running text thicken their underline instead.
 
 ## Type
 

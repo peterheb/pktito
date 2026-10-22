@@ -59,13 +59,15 @@ pub fn entry(name: &str) -> Option<&'static Entry> {
 }
 
 /// What the app remembers between runs: the catalog model in use, or a
-/// model file of the user's own, used instead when set; and how it saves.
+/// model file of the user's own, used instead when set; how it saves; and
+/// the window's size as the user last left it, in logical pixels.
 #[derive(Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
     pub model: Option<String>,
     pub model_file: Option<PathBuf>,
     pub prefs: Prefs,
+    pub window: Option<[f64; 2]>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

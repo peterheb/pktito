@@ -60,12 +60,13 @@
     <header class="pk-head">
       <button class="pk-btn pk-btn-ghost pk-btn-ico pk-back" id="back" type="button" aria-label="Back"></button>
       <h1 class="pk-ui" id="title"></h1>
-      <span class="pk-stamp" id="title-dur"></span>
       <span class="pk-grow"></span>
       <label class="pk-find" id="find-box">
         <svg class="pk-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input id="find" type="search" placeholder="Find" aria-label="Find in transcript" autocomplete="off" spellcheck="false">
         <span class="pk-kbd" id="find-n" aria-live="polite"></span>
+        <button class="pk-find-step" id="find-prev" type="button" aria-label="Previous match"></button>
+        <button class="pk-find-step" id="find-next" type="button" aria-label="Next match"></button>
       </label>
       <button class="pk-btn" id="copy" type="button"></button>
       <button class="pk-btn" id="save-as" type="button" aria-haspopup="menu" aria-expanded="false"></button>
@@ -75,10 +76,13 @@
     <div class="pk-strip-wrap" id="strip-wrap">
       <div class="pk-strip" id="strip">
         <button class="pk-play" id="play" type="button"></button>
-        <span class="pk-tstamp pk-time" id="time"></span>
         <div class="pk-prog" id="prog"><span class="pk-pct" id="pct"></span><span class="pk-small" id="eta"></span></div>
-        <button class="pk-wavebtn" id="wavebtn" type="button"><span class="pk-wave" id="wave"></span></button>
-        <span class="pk-tstamp pk-tdim" id="dur"></span>
+        <!-- the waveform the strip's width, a tick under it for each match of a search, and the times below -->
+        <div class="pk-lane">
+          <button class="pk-wavebtn" id="wavebtn" type="button"><span class="pk-wave" id="wave"></span></button>
+          <div class="pk-ticks" id="ticks" aria-hidden="true"></div>
+          <div class="pk-times"><span class="pk-tstamp" id="time"></span><span class="pk-tstamp pk-tdim" id="dur"></span></div>
+        </div>
       </div>
     </div>
     <p class="pk-msg" id="msg" role="status"></p>

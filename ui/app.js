@@ -368,6 +368,7 @@ function renderReady() {
   $("choose").title = tip("Choose files", "O");
   drawWave($("idle-wave"), null, 0);
   $("recent").hidden = !recent.length && !files.length;
+  $("ready").classList.toggle("has-recent", !$("recent").hidden);
   $("clear-recent").hidden = !recent.length;
   $("recent-list").innerHTML = files.map(liveHtml).join("") + recent.map((r) =>
     `<li><button class="pk-row" type="button" data-recent="${esc(r.id)}" title="${esc(r.path)}">${ICON.file}` +
@@ -461,10 +462,12 @@ async function chooseFiles() {
   }
 }
 
-/* Files dropped or chosen join the queue, from any screen, if they are
-   audio or video and there: a name typed into the Open dialog can name
-   nothing. The first of them is shown if it is next, since nothing else
-   is under way. */
+/* Files dropped or chosen, from any screen, if they are audio or video
+   and there: a name typed into the Open dialog can name nothing. With
+   nothing under way they take the window, what was open closing (a
+   finished transcript is on the recent list) and the first of them shown;
+   several queue up beside it while they are transcribed. Under way, they
+   join the queue. */
 async function addPaths(paths) {
   const media = paths.filter(isMedia);
   let here = media;
@@ -474,6 +477,7 @@ async function addPaths(paths) {
     // the transcription says so, of one that is not there
   }
   const next = !files.some(live);
+  if (next && here.length) for (const f of files.slice()) dropFile(f);
   let first = null;
   for (const p of here) {
     const f = newFile(p);
@@ -507,7 +511,20 @@ async function pump() {
     update(f);
   }
   running = false;
+  if (!files.some((x) => x.step === "waiting")) settle();
   pump();
+}
+
+/* A queue whose last file is done folds away: its transcripts are on the
+   recent list and the one shown stays, with any that failed or was
+   stopped, until closed. */
+function settle() {
+  if (home || files.some(live)) return;
+  const keep = current();
+  const done = files.filter((f) => f !== keep && f.step === "done");
+  if (!done.length) return;
+  for (const f of done) dropFile(f);
+  if (viewName() === "work") render();
 }
 
 listen("job", (e) => {
@@ -744,6 +761,7 @@ function buildMain(f, mode, key) {
   $("find").value = "";
   query = "";
   hits = [];
+  hitTimes = [];
   findCount();
   $("stop").disabled = false;
   updateHead(f, mode);
@@ -776,13 +794,13 @@ function buildMain(f, mode, key) {
 }
 
 function updateHead(f, mode) {
-  $("title-dur").textContent = f.duration == null ? "" : hms(f.duration);
   const review = mode === "review", has = f.segments.length > 0;
   $("find-box").hidden = !review || !has;
   $("copy").hidden = !(review || mode === "running");
   $("copy").innerHTML = `${ICON.copy}${review ? "Copy text" : "Copy so far"}`;
-  $("copy").classList.toggle("pk-btn-primary", review);
   $("copy").disabled = !has;
+  // saving is what a finished transcript is for
+  $("save-as").classList.add("pk-btn-primary");
   $("save-as").hidden = !review;
   $("save-as").innerHTML = `Save as${ICON.down}`;
   $("save-as").disabled = !has;
@@ -799,7 +817,6 @@ function updateRunning(f) {
   $("eta").textContent = f.step === "reading" ? "Reading the audio" : f.step === "loading" ? "Loading the model" : "";
   $("pct").title = going && f.eta > 0 ? timeLeft(f.eta) : "";
   $("dur").textContent = f.duration == null ? "" : hms(f.duration);
-  $("title-dur").textContent = $("dur").textContent;
   const wave = $("wave");
   if (wave._peaks !== f.peaks) drawMainWave();
   else setHead(wave, Math.floor((going ? f.done : 0) * wave._n));
@@ -882,20 +899,38 @@ const BAR = 3;
 /* the bars across el: the last needs no gap after it */
 const barsIn = (el) => Math.max(1, Math.floor((el.clientWidth + 1) / BAR));
 
+/* The outline's own range: its 10th percentile the strip's floor and its
+   99.5th its top. The outline is each slice's loudness over the 48 dB
+   below the loudest (src-tauri/src/audio.rs), and narration as even as
+   most is within a few dB of its top throughout: drawn on all 48 dB its
+   bars were a solid block, its pauses lost (Peter's file, 2026-10-21).
+   Kept on the array, which its file keeps. */
+function rangeOf(peaks) {
+  if (!peaks._range) {
+    const s = Float64Array.from(peaks).sort();
+    const lo = s[Math.floor(s.length * 0.1)], hi = s[Math.min(s.length - 1, Math.floor(s.length * 0.995))];
+    peaks._range = [lo, Math.max(hi, lo + 16)];
+  }
+  return peaks._range;
+}
+
 /* Bars across el from the outline (0-255 a slice), the playhead at bar k;
-   no outline draws the empty strip. */
+   no outline draws the empty strip. A bar is the mean of the slices under
+   it: their loudest hid every pause shorter than a bar. */
 function drawWave(el, peaks, k) {
   const n = barsIn(el);
   const top = el.clientHeight || 64;
+  const [lo, hi] = peaks && peaks.length ? rangeOf(peaks) : [0, 255];
   const h = [];
   for (let i = 0; i < n; i++) {
     let v = 0;
     if (peaks && peaks.length) {
       const a = Math.floor((i * peaks.length) / n), b = Math.max(a + 1, Math.floor(((i + 1) * peaks.length) / n));
-      for (let j = a; j < b; j++) v = Math.max(v, peaks[j]);
+      for (let j = a; j < b; j++) v += peaks[j];
+      v = Math.min(1, Math.max(0, (v / (b - a) - lo) / (hi - lo)));
     }
     // the playhead alone reaches the top
-    h.push(3 + Math.round((v / 255) * (top - 7)));
+    h.push(3 + Math.round(v * (top - 7)));
   }
   Object.assign(el, { _peaks: peaks, _n: n, _h: h, _k: -1 });
   el.classList.toggle("is-idle", !peaks);
@@ -1117,18 +1152,32 @@ $("wavebtn").addEventListener("keydown", (e) => {
 
 /* ---------------------------------------------------------------- find -- */
 
-let query = "", hits = [], hitAt = -1;
+let query = "", hits = [], hitTimes = [], hitAt = -1;
 
+/* text with each match marked, and where in text it starts */
 function hitHtml(text) {
   let low = text.toLowerCase(), q = query.toLowerCase();
   // a lowercase that changes the length would put the marks in the wrong places
   if (low.length !== text.length) [low, q] = [text, query];
   let out = "", from = 0, i;
   while ((i = low.indexOf(q, from)) >= 0) {
-    out += `${esc(text.slice(from, i))}<mark class="pk-hit">${esc(text.slice(i, i + q.length))}</mark>`;
+    out += `${esc(text.slice(from, i))}<mark class="pk-hit" data-at="${i}">${esc(text.slice(i, i + q.length))}</mark>`;
     from = i + q.length;
   }
   return out + esc(text.slice(from));
+}
+
+/* The word of s at a character of its text, found as wordHtml finds them:
+   its index, or -1 before the first */
+function wordAt(s, offset) {
+  let at = 0, found = -1;
+  (s.words || []).forEach((w, k) => {
+    const j = s.text.indexOf(w.text, at);
+    if (j < 0) return;
+    if (j <= offset) found = k;
+    at = j + w.text.length;
+  });
+  return found;
 }
 
 function runFind() {
@@ -1141,23 +1190,36 @@ function runFind() {
   curSeg = curWord = null;
   showTime(f.pos);
   hits = [...tr.querySelectorAll(".pk-hit")];
+  // each match at its word's time, for its tick under the waveform
+  hitTimes = hits.map((h) => {
+    const s = f.segments[Number(h.closest(".pk-seg").dataset.i)], k = wordAt(s, Number(h.dataset.at));
+    return k >= 0 ? s.words[k].start : s.start;
+  });
   hitAt = -1;
   if (hits.length) stepHit(1);
   findCount();
 }
 
 function stepHit(d) {
-  if (!hits.length) return;
+  if (hits.length) goHit((hitAt + d + hits.length) % hits.length);
+}
+
+function goHit(k) {
   if (hitAt >= 0) hits[hitAt].classList.remove("is-on");
-  hitAt = (hitAt + d + hits.length) % hits.length;
+  hitAt = k;
   hits[hitAt].classList.add("is-on");
   hits[hitAt].scrollIntoView({ block: "center" });
   findCount();
 }
 
+/* the count, previous and next, and the ticks */
 function findCount() {
   $("find-n").textContent = query ? `${hits.length ? hitAt + 1 : 0}/${hits.length}` : "";
   $("find-box").classList.toggle("has-query", !!query);
+  $("find-prev").disabled = $("find-next").disabled = hits.length < 2;
+  const f = current(), dur = f && f.duration;
+  $("ticks").innerHTML = dur ? hitTimes.map((t, k) =>
+    `<i data-k="${k}"${k === hitAt ? ' class="is-on"' : ""} style="left:${((t / dur) * 100).toFixed(3)}%"></i>`).join("") : "";
 }
 
 function clearFind() {
@@ -1173,6 +1235,15 @@ function openFind() {
 }
 
 $("find").addEventListener("input", runFind);
+$("find-prev").onclick = (e) => { e.preventDefault(); stepHit(-1); };
+$("find-next").onclick = (e) => { e.preventDefault(); stepHit(1); };
+/* a tick: its match, and the playhead there */
+$("ticks").addEventListener("click", (e) => {
+  const k = e.target.closest("[data-k]");
+  if (!k) return;
+  goHit(Number(k.dataset.k));
+  seek(hitTimes[hitAt], false);
+});
 $("find").addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
     e.preventDefault();
@@ -1620,6 +1691,10 @@ async function start() {
   $("notices-close").innerHTML = ICON.x;
   $("notices-close").title = "Close (Esc)";
   $("find-box").title = tip("Find", "F");
+  $("find-prev").innerHTML = ICON.up;
+  $("find-prev").title = "Previous (Shift+Enter)";
+  $("find-next").innerHTML = ICON.down;
+  $("find-next").title = "Next (Enter)";
   try {
     recent = await invoke("recent_list");
   } catch {
