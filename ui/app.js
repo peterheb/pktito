@@ -1892,14 +1892,13 @@ const typing = (el) => el && (el.isContentEditable || el.tagName === "TEXTAREA" 
 /* No page menu: WebView2's and WebKit's (back, reload, print, save the
    page) are no part of the app. Text fields and selected text keep theirs,
    for cut, copy and paste, which on Windows is all it holds (main.rs,
-   tame_webview). On Windows a right-click in the header's band opens the
-   window's menu, as on a title bar; a screen's empty space below, which
-   drags the window too, gets none (the Windows test, 2026-10-22). */
+   tame_webview). On Windows a right-click where the window drags, its
+   header rows and bands, opens the window's menu, as on a title bar (the
+   Windows test, 2026-10-22). */
 document.addEventListener("contextmenu", (e) => {
   if (e.target.closest("input, textarea") || String(getSelection())) return;
   e.preventDefault();
-  if (window.__PK_CHROME === "win" && e.clientY < 60 && e.target.closest("[data-tauri-drag-region]") &&
-      !e.target.closest("button, a, label"))
+  if (window.__PK_CHROME === "win" && e.target.closest("[data-tauri-drag-region]") && !e.target.closest("button, a, label"))
     invoke("window_menu", { atCursor: true }).catch(() => {});
 });
 

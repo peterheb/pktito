@@ -11,13 +11,15 @@
 <body>
 
 <!-- Setup: choose a model and download it; app.js fills it -->
-<section id="setup" class="pk-center" data-tauri-drag-region hidden>
+<section id="setup" class="pk-center" hidden>
+  <div class="pk-dragbar pk-band" data-tauri-drag-region></div>
   <div class="pk-screen" id="setup-body"></div>
 </section>
 
 <!-- Ready: drop files, choose them, or open a recent transcript -->
-<section id="ready" class="pk-center" data-tauri-drag-region hidden>
-  <div class="pk-screen pk-ready" data-tauri-drag-region>
+<section id="ready" class="pk-center" hidden>
+  <div class="pk-dragbar pk-band" data-tauri-drag-region></div>
+  <div class="pk-screen pk-ready">
     <div class="pk-spread" data-tauri-drag-region="deep">
       <button class="pk-wm" type="button" data-about aria-label="About pktito" title="About pktito">pktito</button>
       <button class="pk-btn pk-btn-ghost" id="ready-model" type="button" aria-haspopup="menu" aria-expanded="false"></button>
