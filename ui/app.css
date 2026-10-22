@@ -217,7 +217,10 @@ html[data-chrome=win] .pk-head { padding-right: var(--caption); }
 .pk-head .pk-back { margin-left: -8px; }
 .pk-grow { flex: 1; }
 .pk-strip-wrap { padding: 0 24px; }
-.pk-transcript { flex: 1; min-height: 0; overflow-y: auto; padding: var(--space-2) 12px 24px; display: flex; flex-direction: column; }
+/* the 8 px over the first row a margin, outside the scroll: inside it, a
+   transcript scrolled down ran up against the views (Peter's screenshot,
+   2026-10-22) */
+.pk-transcript { flex: 1; min-height: 0; overflow-y: auto; margin-top: var(--space-2); padding: 0 12px 24px; display: flex; flex-direction: column; }
 .pk-msg { margin: 16px 24px 0; max-width: 712px; font: 400 15px/1.5 var(--font-sans); color: var(--ink-muted); overflow-wrap: anywhere; }
 .pk-msg.pk-err { color: var(--err); }
 
