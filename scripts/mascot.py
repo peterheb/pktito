@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
 ui/mascot-model.js, the voxel model of the mascot on the About view: a budgie
-("little parakeet") in headphones, with a desk microphone, a speech bubble
-whose waveform ui/mascot.js animates, and a transcript card.
+("little parakeet") with a speech bubble, whose waveform ui/mascot.js
+animates, and a transcript card. No headphones and no microphone: those are
+the stock pictures design/README.md rules out.
 
     python3 scripts/mascot.py              # needs numpy
-    python3 scripts/mascot.py --no-headphones
 
 The model is built from signed-distance shapes sampled on a 1-unit grid, painted
 with a hand-picked palette (ramps with ordered dithering, as a voxel artist
@@ -231,7 +231,7 @@ def sd_body(xl, yl, zl):
     return smin(body, chest, 6.0)
 
 
-def build_bird(ch, headphones=True):
+def build_bird(ch):
     # ---- torso + head (smooth union) ----
     def torso_inside(X, Y, Z):
         xl, yl, zl = to_local(X, Y, Z)
@@ -257,8 +257,9 @@ def build_bird(ch, headphones=True):
                  ([0, 0.3, 1], [9, 8.6, 5.6]), ([0, 1], [3.8, 2.4]), 4, 4)
     near = Blade((-24, 62, 8), (-31, 12, -31), (-1, 0.2, 0.1),
                  ([0, 0.2, 0.45, 0.75, 1], [8, 14, 15.5, 11, 4.5]), ([0, 0.4, 1], [5, 6.5, 3.2]), 6, 6)
-    # raised to the headphone, 40 long: at 30 it read as a stub beside the
-    # folded wing's 64 once the bird was turned (renders, 2026-10-21)
+    # raised beside the head, toward the bubble, 40 long: at 30 it read as a
+    # stub beside the folded wing's 64 once the bird was turned (renders,
+    # 2026-10-21)
     far = Blade((23, 54, 2), (46, 86, -6), (1, 0, 0.3),
                 ([0, 0.3, 0.6, 1], [9, 14, 13, 5]), ([0, 0.5, 1], [5, 6, 3]), 6, 5)
 
@@ -440,10 +441,6 @@ def build_bird(ch, headphones=True):
 
     ch.recolor(BIRD_LO, BIRD_HI, paint_face)
 
-    # ---- headphones ----
-    if headphones:
-        build_headphones(ch)
-
 
 class Blade:
     """A flat, tapered, leaf-like solid running from S to T (used for wings and tail)."""
@@ -477,158 +474,7 @@ class Blade:
         return f < 1.0, along / self.L, cw, cn
 
 
-# ------------------------------------------------------------------ headphones
-RAMP_BAND = PAL.ramp("#2E63B8", "#3D7BD6", "#5B93E6")
-C_CUP_RIM = PAL.c("#C9D1DE")
-C_CUP = PAL.c("#F2F5FA")
-C_CUP_IN = PAL.c("#E3E9F5")
-C_CUP_RING = PAL.c("#3D8BFF")
-C_PAD = PAL.c("#2F3441")
-C_GLYPH = PAL.c("#2F7BE0")
-
-FEATHER = [
-    ".....XX",
-    "....XXX",
-    "...XXXX",
-    "..XXXX.",
-    ".XXXX..",
-    ".XXX...",
-    "XXX....",
-    "X......",
-]
-
-
-def build_headphones(ch):
-    A, B, ZOFF = 31.5, 25.6, -4.5  # band ellipse radii (x,y) and z offset in head space
-    CUPX, CUPY, CUPZ = 32.0, -3.0, -6.0
-
-    def band(qx, qy, qz):
-        phi = np.clip(np.arctan2(qy / B, qx / A), 0, math.pi)
-        px, py = A * np.cos(phi), B * np.sin(phi)
-        rxy = np.hypot(qx - px, qy - py)
-        return (rxy / 2.1) ** 2 + ((qz - ZOFF) / 3.6) ** 2, rxy
-
-    def band_inside(X, Y, Z):
-        qx, qy, qz = hq(X, Y, Z)
-        f, _ = band(qx, qy, qz)
-        return f < 1
-
-    def band_color(X, Y, Z):
-        qx, qy, qz = hq(X, Y, Z)
-        return pick(RAMP_BAND, 0.25 + qy / 34.0, X, Y, Z, seed=20, dither=0.6)
-
-    ch.add(BIRD_LO, BIRD_HI, band_inside, band_color)
-
-    def cup_geom(qx, qy, qz, s):
-        ax = s * qx - CUPX
-        rr = np.hypot(qy - CUPY, qz - CUPZ)
-        return ax, rr
-
-    def cup_inside(X, Y, Z):
-        qx, qy, qz = hq(X, Y, Z)
-        m = np.zeros(qx.shape, bool)
-        for s in (-1, 1):
-            ax, rr = cup_geom(qx, qy, qz, s)
-            # rounded cylinder body (outer cup) + pad toward the head
-            dx = np.maximum(np.abs(ax - 0.4) - 3.0, 0)
-            dr = np.maximum(rr - 8.8, 0)
-            body = np.hypot(dx, dr) < 1.5
-            pad = (ax > -5.6) & (ax < -2.4) & (rr < 9.0)
-            m |= body | pad
-        return m
-
-    def cup_color(X, Y, Z):
-        qx, qy, qz = hq(X, Y, Z)
-        out = np.full(qx.shape, C_CUP, np.uint8)
-        for s in (-1, 1):
-            ax, rr = cup_geom(qx, qy, qz, s)
-            sel = (ax > -6) & (rr < 11)
-            c = np.full(qx.shape, C_CUP, np.uint8)
-            c = np.where(rr > 8.3, C_CUP_RIM, c)
-            c = np.where((rr > 5.9) & (rr < 7.4) & (ax > 1.4), C_CUP_RING, c)
-            c = np.where((rr < 5.4) & (ax > 1.4), C_CUP_IN, c)
-            # feather glyph on the outer face
-            row = np.floor(-(qy - CUPY) + 4.0).astype(int)
-            col = np.floor((qz - CUPZ) * -s + 3.5).astype(int)
-            g = np.zeros(qx.shape, bool)
-            for r_, line in enumerate(FEATHER):
-                for c_, chx in enumerate(line):
-                    if chx == "X":
-                        g |= (row == r_) & (col == c_)
-            c = np.where(g & (ax > 1.4) & (rr < 5.4), C_GLYPH, c)
-            c = np.where(ax < -2.2, C_PAD, c)
-            out = np.where(sel & (ax * 1.0 > -6), c, out)
-        return out.astype(np.uint8)
-
-    ch.add(BIRD_LO, BIRD_HI, cup_inside, cup_color)
-
-
 # ------------------------------------------------------------------- the props
-MX, MZ = 34.0, 20.0  # microphone centre
-RAMP_MIC = PAL.ramp("#3E4458", "#4C5367", "#5A627A")
-C_MIC_DARK = PAL.c("#2B303D")
-C_MESH_L = PAL.c("#9AA1B7")
-C_MESH_D = PAL.c("#767D93")
-C_MIC_RING = PAL.c("#3A9BFF")
-C_MIC_CORE = PAL.c("#242A38")
-RAMP_BASE = PAL.ramp("#3A4052", "#4F566A", "#656C7F")
-RAMP_YOKE = PAL.ramp("#2F3646", "#373F51", "#454D61")
-
-
-def build_mic(ch):
-    lo, hi = (MX - 20, 0, MZ - 20), (MX + 20, 56, MZ + 20)
-    CY = 39.5  # capsule centre
-
-    def base_in(X, Y, Z):
-        rr = np.hypot(X - MX, Z - MZ)
-        dy = np.maximum(np.abs(Y - 1.7) - 1.7 + 1.3, 0)
-        dr = np.maximum(rr - 11 + 1.3, 0)
-        return np.hypot(dy, dr) < 1.3
-
-    ch.add(lo, hi, base_in, lambda X, Y, Z: pick(RAMP_BASE, (Y - 0.5) / 3.0 * 0.5 + 0.5 * (np.hypot(X - MX, Z - MZ) < 8), X, Y, Z, seed=30, dither=0.5))
-
-    ch.add(lo, hi, lambda X, Y, Z: (np.hypot(X - MX, Z - MZ) < 2.4) & (Y > 3) & (Y < 28),
-           lambda X, Y, Z: pick(RAMP_YOKE, 0.5 + (X - MX) / 6.0, X, Y, Z, seed=31, dither=0.4))
-
-    R_U = 13.4
-
-    def yoke_in(X, Y, Z):
-        dx, dy = X - MX, Y - CY
-        ang = np.arctan2(dy, dx)  # lower half: angle in (-pi, 0)
-        rr = np.hypot(dx, dy)
-        arc = (dy < 0) & (np.abs(rr - R_U) < 1.9) & (np.abs(Z - MZ) < 1.4)
-        arm = (dy >= 0) & (dy < 0.5 + 0) & (np.abs(np.abs(dx) - R_U) < 1.9) & (np.abs(Z - MZ) < 1.4)
-        knob = (np.hypot(np.abs(dx) - 12.6, np.hypot(dy, Z - MZ)) < 3.0)
-        return arc | arm | knob
-
-    ch.add(lo, hi, yoke_in, lambda X, Y, Z: pick(RAMP_YOKE, 0.4 + 0.5 * (Z - MZ) / 3.0, X, Y, Z, seed=32, dither=0.4))
-
-    L, R, RZ = 3.0, 10.5, 9.6
-
-    def cap_d(X, Y, Z):
-        rho = np.sqrt(((X - MX) / R) ** 2 + ((Z - MZ) / RZ) ** 2) * 10.0
-        dy = np.maximum(np.abs(Y - CY) - L, 0)
-        return np.hypot(rho, dy) - 10.0
-
-    def cap_color(X, Y, Z):
-        d = cap_d(X, Y, Z)
-        top = Y > CY + 1.5
-        dots = ((np.floor(X) + np.floor(Y) + np.floor(Z)) % 2) == 0
-        mesh = np.where(dots, C_MESH_D, C_MESH_L)
-        body = pick(RAMP_MIC, 0.5 + (X - MX) / 28.0, X, Y, Z, seed=33, dither=0.5)
-        band = (np.abs(Y - (CY + 1.5)) < 0.6)
-        c = np.where(top, mesh, body)
-        c = np.where(band, C_MIC_DARK, c)
-        # blue ring on the front face
-        rho = np.hypot(X - MX, Y - (CY - 6.5))
-        front = (Z > MZ + 4.0) & (d > -2.6)
-        c = np.where(front & (rho > 3.0) & (rho < 4.7), C_MIC_RING, c)
-        c = np.where(front & (rho <= 3.0), C_MIC_CORE, c)
-        return c.astype(np.uint8)
-
-    ch.add(lo, hi, lambda X, Y, Z: cap_d(X, Y, Z) < 0, cap_color)
-
-
 C_CARD_B = PAL.c("#D3DDEF")
 RAMP_CARD = PAL.ramp("#EBF0F9", "#F2F6FC", "#F8FAFE", "#FCFDFF")
 C_LINE_B = PAL.c("#4590EF")
@@ -732,10 +578,9 @@ def export_chunk(ch, pad=(0, 0, 0), force_lo=None, force_hi=None):
     }, int((sub > 0).sum())
 
 
-def generate(headphones=True):
+def generate():
     bird, props, bubble = Chunk(), Chunk(), Chunk()
-    build_bird(bird, headphones=headphones)
-    build_mic(props)
+    build_bird(bird)
     build_card(props)
     build_bubble(bubble)
 
@@ -767,7 +612,7 @@ def generate(headphones=True):
         "bars": bars,
         "pivot": pivot,
         "rxz": round(rxz, 3),
-        "ground": {"bird": [-4.0, -2.0, 62.0, 40.0], "mic": [MX, MZ, 17.0, 14.0]},
+        "ground": [-4.0, -2.0, 62.0, 40.0],
     }
     return data, voxels
 
@@ -776,9 +621,8 @@ def main():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=os.path.join(root, "ui", "mascot-model.js"))
-    ap.add_argument("--no-headphones", action="store_true")
     args = ap.parse_args()
-    data, voxels = generate(headphones=not args.no_headphones)
+    data, voxels = generate()
     js = ("/* The mascot's voxels, from scripts/mascot.py: each chunk's cells as runs of\n"
           "   palette indices, for ui/mascot.js. */\n"
           "const MASCOT = " + json.dumps(data, separators=(",", ":")) + ";\n")

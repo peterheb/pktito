@@ -106,12 +106,17 @@ finished transcript closes, staying on the recent list; a file still being
 transcribed goes on, at the top of that list, and leads back to itself.
 Files dropped on the window join the queue from any screen.
 
-About, with the credits and the licenses, opens from the wordmark at the top
-of the start and setup screens, or from the app menu on macOS. Its mascot, a
-budgie of voxels that turns when dragged and chirps when clicked, is WebGL
-2: `scripts/mascot.py` (numpy) builds the model into `ui/mascot-model.js`,
-and `ui/mascot.js` draws it. The two load the first time About opens, and
-are 33 KB of the app's assets, compressed. Without WebGL 2 About shows the
+About opens from the wordmark at the top of the start and setup screens, or
+from the app menu on macOS. It credits the models and Silero VAD, and its
+Everything else lists each other part the app is built from, the typefaces,
+the icons and the Rust crates of the system it runs on, each with its
+copyright and license, and then the licenses' texts. `scripts/notices.py`
+writes that list, `ui/notices.js`, from what Cargo says each system's build
+links; run it when Cargo.lock changes. The mascot, a budgie of voxels that
+turns when dragged and chirps when clicked, is WebGL 2: `scripts/mascot.py`
+(numpy) builds its model into `ui/mascot-model.js`, and `ui/mascot.js` draws
+it. Each loads the first time it is shown, the mascot 29 KB of the app's
+assets and the list 20 KB, compressed. Without WebGL 2, About shows the
 credits alone.
 
 The window shows no shortcuts; tooltips name them. Only macOS has a menu
@@ -177,4 +182,5 @@ Worker serves the installers (site/README.md).
 ## License
 
 MIT (LICENSE). pktito is MIT; the fonts are under the SIL Open Font License
-1.1; the models are NVIDIA's, under CC-BY-4.0.
+1.1; the models are NVIDIA's, under CC-BY-4.0. About lists every other part
+the app is built from, with its license (scripts/notices.py).

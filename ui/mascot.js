@@ -149,8 +149,7 @@ function drawMascot(stage, canvas) {
   const vu = (n) => gl.getUniformLocation(voxProg, n);
   const U = { mvp: vu("uMVP"), mv: vu("uMV"), off: vu("uOffset"), jit: vu("uJit"), l1: vu("uL1"), l2: vu("uL2") };
 
-  /* the shadows on the ground, one soft blob under the bird and one under
-     the microphone, on a single quad */
+  /* the shadow on the ground, a soft blob under the bird, on one quad */
   const gndProg = program(`#version 300 es
     precision highp float;
     layout(location=0) in vec2 aXZ;
@@ -160,18 +159,13 @@ function drawMascot(stage, canvas) {
   `#version 300 es
     precision highp float;
     in vec2 vXZ;
-    uniform vec4 uBlob[2];
-    uniform vec2 uStr;
+    uniform vec4 uBlob;
+    uniform float uStr;
     uniform vec4 uShadow;
     out vec4 outColor;
     void main() {
-      float keep = 1.0;
-      for (int i = 0; i < 2; i++) {
-        vec2 d = (vXZ - uBlob[i].xy) / uBlob[i].zw;
-        float a = smoothstep(1.0, 0.15, length(d)) * (i == 0 ? uStr.x : uStr.y);
-        keep *= 1.0 - a;
-      }
-      float a = (1.0 - keep) * uShadow.a;
+      vec2 d = (vXZ - uBlob.xy) / uBlob.zw;
+      float a = smoothstep(1.0, 0.15, length(d)) * uStr * uShadow.a;
       outColor = vec4(uShadow.rgb * a, a);
     }`);
   const gu = (n) => gl.getUniformLocation(gndProg, n);
@@ -325,15 +319,15 @@ function drawMascot(stage, canvas) {
       else hop = 7 * Math.sin(Math.PI * t) * (1 - 0.25 * t);
     }
 
-    // the shadows first, without depth, then the voxels
+    // the shadow first, without depth, then the voxels
     gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.useProgram(gndProg);
     gl.uniformMatrix4fv(G.mvp, false, MVP);
-    const gb = MASCOT.ground.bird, gm = MASCOT.ground.mic;
-    gl.uniform4fv(G.blob, new Float32Array([...gb, ...gm]));
-    gl.uniform2f(G.str, 1.0 * (1 - hop / 16), 0.95);
+    gl.uniform4fv(G.blob, new Float32Array(MASCOT.ground));
+    // lighter while the bird is in the air
+    gl.uniform1f(G.str, 1 - hop / 16);
     gl.uniform4fv(G.shadow, new Float32Array(shadowCol()));
     gl.bindVertexArray(gndVao);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

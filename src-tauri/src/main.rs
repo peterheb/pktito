@@ -753,6 +753,40 @@ fn download_alone(args: &[String]) -> Result<PathBuf, String> {
     rx.try_recv().map_err(|_| job.state().why)
 }
 
+/// The window's big icon, which the taskbar and Alt+Tab show, from the exe's
+/// own (tauri-build writes it as resource 32512). tao sets the small one
+/// alone, and without a big one the taskbar shows what its cache holds for
+/// the exe's path: a generic window, for an exe written over at one path
+/// (the Windows test, 2026-10-21).
+#[cfg(target_os = "windows")]
+fn big_icon(window: &tauri::WebviewWindow) {
+    use std::ffi::c_void;
+    #[link(name = "user32")]
+    extern "system" {
+        fn LoadImageW(inst: *mut c_void, name: *const u16, kind: u32, cx: i32, cy: i32, load: u32) -> *mut c_void;
+        fn GetSystemMetrics(index: i32) -> i32;
+        fn SendMessageW(hwnd: *mut c_void, msg: u32, wparam: usize, lparam: isize) -> isize;
+    }
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetModuleHandleW(name: *const u16) -> *mut c_void;
+    }
+    const IMAGE_ICON: u32 = 1;
+    const LR_SHARED: u32 = 0x8000;
+    const SM_CXICON: i32 = 11;
+    const SM_CYICON: i32 = 12;
+    const WM_SETICON: u32 = 0x0080;
+    const ICON_BIG: usize = 1;
+    let Ok(hwnd) = window.hwnd() else { return };
+    unsafe {
+        let size = (GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON));
+        let icon = LoadImageW(GetModuleHandleW(std::ptr::null()), 32512 as *const u16, IMAGE_ICON, size.0, size.1, LR_SHARED);
+        if !icon.is_null() {
+            SendMessageW(hwnd.0 as *mut c_void, WM_SETICON, ICON_BIG, icon as isize);
+        }
+    }
+}
+
 /// The menu bar, on macOS alone, where it is outside the window and its Edit
 /// menu is what gives a text field ⌘C and ⌘V. A Windows or Linux window has
 /// none: there it only repeated the window's own controls and shortcuts,
@@ -836,6 +870,10 @@ fn main() {
             }
             #[cfg(target_os = "macos")]
             menu_bar(app)?;
+            #[cfg(target_os = "windows")]
+            if let Some(w) = app.get_webview_window("main") {
+                big_icon(&w);
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

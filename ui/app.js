@@ -875,13 +875,17 @@ $("transcript").addEventListener("click", (e) => {
 
 /* ------------------------------------------------------------ waveform -- */
 
-/* A bar and the gap after it: one frame, as on every drawn timeline */
-const BAR = 8;
+/* A bar and the gap after it, 2 px and 1: fine enough to find a word by.
+   At the frame's 8 px, a bar of an 800 px strip held 3 s of a 5-minute
+   file; at 3 it holds 1.1 s. */
+const BAR = 3;
+/* the bars across el: the last needs no gap after it */
+const barsIn = (el) => Math.max(1, Math.floor((el.clientWidth + 1) / BAR));
 
 /* Bars across el from the outline (0-255 a slice), the playhead at bar k;
    no outline draws the empty strip. */
 function drawWave(el, peaks, k) {
-  const n = Math.max(1, Math.floor((el.clientWidth + 2) / BAR));
+  const n = barsIn(el);
   const top = el.clientHeight || 64;
   const h = [];
   for (let i = 0; i < n; i++) {
@@ -919,14 +923,14 @@ function drawMainWave() {
   if (!f || viewName() !== "work") return;
   const mode = modeOf(f), wave = $("wave");
   if (mode === "error") return;
-  const n = Math.max(1, Math.floor((wave.clientWidth + 2) / BAR));
+  const n = barsIn(wave);
   const at = mode === "review" ? (f.duration ? f.pos / f.duration : 0) : f.step === "transcribing" ? f.done : 0;
   drawWave(wave, mode === "waiting" ? null : f.peaks, Math.floor(at * n));
 }
 
 /* The drop's strip: a made-up phrase, louder in the middle */
 function drawDecor(el) {
-  const n = Math.max(1, Math.floor((el.clientWidth + 2) / BAR));
+  const n = barsIn(el);
   let seed = 11;
   const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
   el.innerHTML = Array.from({ length: n }, (_, i) =>
@@ -1400,18 +1404,24 @@ let aboutFrom = null;   // what had the keyboard when About opened, which gets i
 let mascot;             // undefined until About first opens; null without WebGL 2
 let mascotFiles = null;
 
-/* The mascot's model and viewer load the first time About opens, so that
-   the window loads what it shows: 26 KB and 7 KB of the app's assets,
-   compressed. */
-function loadMascot() {
-  const load = (src) => new Promise((ok, no) => {
+/* One of the window's scripts, the first time something needs it, so that
+   the window loads what it shows */
+const scripts = {};
+function loadScript(src) {
+  scripts[src] = scripts[src] || new Promise((ok, no) => {
     const s = document.createElement("script");
     s.src = src;
     s.onload = ok;
     s.onerror = no;
     document.head.appendChild(s);
   });
-  mascotFiles = mascotFiles || load("mascot-model.js").then(() => load("mascot.js"))
+  return scripts[src];
+}
+
+/* The mascot's model and viewer, the first time About opens: 22 KB and
+   7 KB of the app's assets, compressed. */
+function loadMascot() {
+  mascotFiles = mascotFiles || loadScript("mascot-model.js").then(() => loadScript("mascot.js"))
     .then(() => { mascot = drawMascot($("about-stage"), $("mascot")); })
     .catch(() => { mascot = null; });
   return mascotFiles;
@@ -1437,6 +1447,7 @@ async function openAbout() {
 /* Back to the screen beneath, as it is now; false if About was not up */
 function closeAbout() {
   if (!about) return false;
+  closeNotices();
   about = false;
   if (mascot) mascot.hide();
   document.body.classList.remove("is-about");
@@ -1459,6 +1470,67 @@ $("about").addEventListener("click", (e) => {
 });
 $("about").addEventListener("auxclick", (e) => {
   if (e.target.closest("a[href]")) e.preventDefault();
+});
+
+/* Everything else: what pktito is built from beside its own code and the
+   models About names, each with its copyright and license, and the
+   licenses' texts. notices.js (scripts/notices.py) has every system's;
+   this one's are listed. It loads the first time the list opens: 20 KB
+   compressed. */
+function noticesHtml() {
+  const bit = NOTICES.systems[st.platform] || 0;
+  const here = (x) => !bit || !x[4] || (x[4] & bit) !== 0;
+  const extras = NOTICES.extras.filter(here), crates = NOTICES.crates.filter(here);
+  const keys = [...new Set([...extras, ...crates].flatMap((x) => x[5]))];
+  // a crate's name is code, and set as code
+  const row = (name, lic, notice, code = false) => `<li><span class="pk-nn${code ? " pk-code" : ""}">${esc(name)}</span>` +
+    `<span class="pk-nl">${esc(lic)}</span><span class="pk-nc">${esc(notice)}</span></li>`;
+  const list = (xs) => `<ul class="pk-nlist">${xs.join("")}</ul>`;
+  const system = { macos: "macOS", windows: "Windows", linux: "Linux" }[st.platform] || st.platform;
+  return `<p class="pk-small">pktito is built from the work below, each part under the license beside it; their texts follow.</p>
+    <h3>Typefaces and icons</h3>
+    ${list(extras.filter((e) => e[0] === "type").map((e) => row(e[1], e[3], e[2])))}
+    <h3>Code</h3>
+    <p class="pk-small">${crates.length} Rust crates, as the app for ${esc(system)} is built from them.</p>
+    ${list(extras.filter((e) => e[0] === "code").map((e) => row(e[1], e[3], e[2]))
+      .concat(crates.map((c) => row(`${c[0]} ${c[1]}`, c[2], c[3], true))))}
+    <h3>License texts</h3>
+    ${keys.map((k) => `<h4>${esc(NOTICES.texts[k].title)}</h4><pre>${esc(NOTICES.texts[k].text)}</pre>`).join("")}`;
+}
+
+async function openNotices() {
+  if (!about || !$("notices").hidden) return;
+  try {
+    await loadScript("notices.js");
+  } catch (e) {
+    return toast("Couldn't load the list", { err: true, detail: String(e) });
+  }
+  if (!about) return;
+  const body = $("notices-body");
+  if (!body.childElementCount) body.innerHTML = noticesHtml();
+  body.scrollTop = 0;
+  $("notices").hidden = false;
+  body.focus({ preventScroll: true });
+}
+
+/* false if the list was not open */
+function closeNotices() {
+  if ($("notices").hidden) return false;
+  $("notices").hidden = true;
+  $("notices-open").focus({ preventScroll: true });
+  return true;
+}
+
+$("notices-open").onclick = () => openNotices();
+$("notices-close").onclick = () => closeNotices();
+$("notices").addEventListener("click", (e) => {
+  if (e.target === $("notices")) closeNotices();
+});
+/* the keyboard stays in the list: its two places, the close button and the text */
+$("notices").addEventListener("keydown", (e) => {
+  if (e.key !== "Tab") return;
+  e.preventDefault();
+  (document.activeElement === $("notices-close") ? $("notices-body") : $("notices-close")).focus();
 });
 
 /* ------------------------------------------------------- drag and drop -- */
@@ -1497,7 +1569,7 @@ document.addEventListener("keydown", (e) => {
   // Esc backs out one step: a menu, About, a search, then the file
   if (e.key === "Escape") {
     e.preventDefault();
-    if (closeMenu() || closeAbout()) return;
+    if (closeMenu() || closeNotices() || closeAbout()) return;
     if (query && viewName() === "work") clearFind();
     else goHome();
     return;
@@ -1541,6 +1613,8 @@ async function start() {
     b.innerHTML = ICON.back;
     b.title = "Back (Esc)";
   }
+  $("notices-close").innerHTML = ICON.x;
+  $("notices-close").title = "Close (Esc)";
   $("find-box").title = tip("Find", "F");
   try {
     recent = await invoke("recent_list");

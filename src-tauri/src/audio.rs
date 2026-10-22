@@ -10,8 +10,9 @@ use std::io::{self, BufWriter, Write};
 use std::path::{Path, PathBuf};
 
 /// Slices in a waveform's outline: more than any window draws bars, so the
-/// window takes the loudest of the slices under each bar.
-pub const PEAKS: usize = 1200;
+/// window takes the loudest of the slices under each bar. At 3 px a bar
+/// (ui/app.js), 2400 fill a strip 7200 px wide.
+pub const PEAKS: usize = 2400;
 
 /// Most the cache keeps of the recent list's audio, its oldest let go
 /// first: 16 kHz 16-bit audio is 115 MB an hour.

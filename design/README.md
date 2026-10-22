@@ -51,15 +51,15 @@ Two families, the same files as pinfer.
 
 **App.** One window, two panes: the file queue on `surface` at `sidebar` width, the transcript on `ground`. Minimum width `window-min`; below 880px the queue becomes a strip above the transcript. Use the native title bar and window controls on both platforms; do not draw fake traffic lights or caption buttons. Controls use `radius-ui` so they sit with the OS's own. No toolbar icons without labels.
 
-**The one ornament** is the `frame`: one 8px step for 80 ms of audio, the encoder's frame. Waveform bars sit a frame apart, and the duration blocks under a transcript are a whole number of frames wide, because TDT predicts each token with its duration. Use it on timelines only, never as decoration elsewhere.
+**The one ornament** is the `frame`: one 8px step for 80 ms of audio, the encoder's frame. The site's waveform bars sit a frame apart, and the duration blocks under a transcript are a whole number of frames wide, because TDT predicts each token with its duration. Use it on timelines only, never as decoration elsewhere. The app's waveform strip is the exception: it is a tool for finding a place in a recording, so it draws its bars as finely as the screen shows them, 2px wide and 1px apart.
 
 No eyebrow labels, no 01 / 02 / 03, no thin dividers, no gradients, no glass, no shadows at rest (`shadow-float` is for menus, dialogs and the app window shown on the site).
 
 ## Imagery
 
-pktito's pictures are its own interface, built in HTML at true size and marked `data-ui`: the transcript panel, a waveform strip, the app window, a command and its output. Show real transcripts of audio you have the right to publish, and say what the audio is. Never put the app inside a laptop mock-up, never shrink it until unreadable. No stock microphones, sound-wave clip art, headphones or AI brains.
+pktito's pictures are its own interface, built in HTML at true size and marked `data-ui`: the transcript panel, a waveform strip, the app window, a command and its output. Show real transcripts of audio you have the right to publish, and say what the audio is. Never put the app inside a laptop mock-up, never shrink it until unreadable. No stock microphones, headphones or AI brains.
 
-The one exception is the mascot, on the app's About and nowhere else: a voxel budgie in headphones at a microphone, with a speech bubble, made by `scripts/mascot.py`. It is an easter egg for whoever opens About, not a picture of the product, and it sits on `surface` like any other area.
+The one exception is the mascot on the app's About, its one kitschy corner: a voxel budgie beside a speech bubble, whose waveform moves when it talks, and a transcript card, made by `scripts/mascot.py`. It is an easter egg for whoever opens About, not a picture of the product. Neither the mascot nor its animation goes anywhere else, in the app or on the site.
 
 ## Motion
 
