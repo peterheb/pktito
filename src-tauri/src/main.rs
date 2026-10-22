@@ -1016,6 +1016,46 @@ fn big_icon(window: &tauri::WebviewWindow) {
     }
 }
 
+/// WebView2 as an app's window, not a browser's: its context menu cut to
+/// what an app's text has, Cut, Copy, Paste and Select all where they
+/// apply (it offered Print, Copy link to highlight, Emoji, passwords and
+/// More tools: the Windows recheck, 2026-10-22), and none where none is
+/// left; and its accelerator keys off, F5 and Ctrl+R's reload above all,
+/// which lost the transcript open. The page stops the menu everywhere but
+/// text fields and selected text (app.js), so these are the ones left.
+#[cfg(target_os = "windows")]
+fn tame_webview(window: &tauri::WebviewWindow) {
+    let _ = window.with_webview(|pw| unsafe {
+        use webview2_com::Microsoft::Web::WebView2::Win32::{ICoreWebView2Settings3, ICoreWebView2_11};
+        use windows_core::{Interface, PWSTR};
+        let Ok(core) = pw.controller().CoreWebView2() else { return };
+        if let Ok(settings) = core.Settings().and_then(|s| s.cast::<ICoreWebView2Settings3>()) {
+            let _ = settings.SetAreBrowserAcceleratorKeysEnabled(false);
+        }
+        let Ok(core) = core.cast::<ICoreWebView2_11>() else { return };
+        let handler = webview2_com::ContextMenuRequestedEventHandler::create(Box::new(|_, args| {
+            let Some(args) = args else { return Ok(()) };
+            let items = args.MenuItems()?;
+            let mut n = 0u32;
+            items.Count(&mut n)?;
+            for i in (0..n).rev() {
+                let mut name = PWSTR::null();
+                items.GetValueAtIndex(i)?.Name(&mut name)?;
+                if !["cut", "copy", "paste", "selectAll"].contains(&webview2_com::take_pwstr(name).as_str()) {
+                    items.RemoveValueAtIndex(i)?;
+                }
+            }
+            items.Count(&mut n)?;
+            if n == 0 {
+                args.SetHandled(true)?;
+            }
+            Ok(())
+        }));
+        let mut token = 0i64;
+        let _ = core.add_ContextMenuRequested(&handler, &mut token);
+    });
+}
+
 /// The menu bar, on macOS alone, where it is outside the window and its Edit
 /// menu is what gives a text field ⌘C and ⌘V. A Windows or Linux window has
 /// none: there it only repeated the window's own controls and shortcuts,
@@ -1106,7 +1146,10 @@ fn main() {
             menu_bar(app)?;
             let w = main_window(app)?;
             #[cfg(target_os = "windows")]
-            big_icon(&w);
+            {
+                big_icon(&w);
+                tame_webview(&w);
+            }
             let saved = data_dir(app.handle()).map(|d| model::load_settings(&d).window).unwrap_or(None);
             place_window(&w, saved);
             Ok(())

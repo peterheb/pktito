@@ -26,3 +26,10 @@ opt-level = 3
 lto = true
 codegen-units = 1
 strip = true
+
+# WebView2's own context menu and accelerator keys, which Tauri does not
+# reach (main.rs, tame_webview): wry's versions of the two, so nothing more
+# is built
+[target.'cfg(windows)'.dependencies]
+webview2-com = "0.39"
+windows-core = "0.62"

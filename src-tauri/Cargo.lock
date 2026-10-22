@@ -2239,6 +2239,8 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "ureq",
+ "webview2-com",
+ "windows-core",
 ]
 
 [[package]]
