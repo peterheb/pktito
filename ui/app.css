@@ -280,12 +280,14 @@ html[data-chrome=win] .pk-head { padding-right: var(--caption); }
 .pk-timebtn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 /* a match's tick, 2 px drawn in a target 9 px wide that reaches down to the
    times: 7 px tall alone was hard to hit (the Windows test, 2026-10-22);
-   the current one lighter */
+   the current one lighter, wider, and taller by the lane's gaps above and
+   below, so that its shape tells it too: its colour is 1.6:1 against the
+   others' (the tokens' contrast, 2026-10-22) */
 .pk-ticks { position: relative; height: 9px; }
 .pk-ticks i { position: absolute; top: 0; bottom: 0; width: 9px; margin-left: -4px; cursor: pointer;
   background: linear-gradient(var(--plume), var(--plume)) center / 2px 100% no-repeat; }
 .pk-ticks i::before { content: ""; position: absolute; inset: 0 0 -9px; }
-.pk-ticks i.is-on { background-image: linear-gradient(var(--term-ink), var(--term-ink)); background-size: 3px 100%; }
+.pk-ticks i.is-on { top: -3px; bottom: -3px; background-image: linear-gradient(var(--term-ink), var(--term-ink)); background-size: 3px 100%; }
 /* bars 2 px wide a pixel apart, as app.js's BAR counts them; the playhead
    a pixel wider each side, over the gaps, so that it moves nothing */
 .pk-wave { flex: 1; min-width: 0; display: flex; align-items: center; gap: 1px; height: 64px; overflow: hidden; }
@@ -451,10 +453,14 @@ html[data-chrome=win] .pk-head { padding-right: var(--caption); }
 /* A match: a highlighter's band reaching a little past the letters (a
    shadow, which moves no text), the current one in the full colour and the
    others paler, opaque so that a match's pieces meet without a seam. No
-   ring: it crossed the letters (Peter, 2026-10-22). */
+   ring: it crossed the letters (Peter, 2026-10-22). The current one has a
+   bar of ink under its band instead, its own width, in the space between
+   the lines: plume against the paler band is 1.4:1 on the light theme,
+   under the 3:1 a state's cue needs (WCAG 1.4.11; the tokens' contrast,
+   2026-10-22). */
 .pk-hit { --hl: color-mix(in srgb, var(--plume) 45%, var(--ground)); background: var(--hl); color: inherit; border-radius: 3px;
   box-shadow: 0 0 0 2px var(--hl); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
-.pk-hit.is-on { --hl: var(--plume); color: var(--on-plume); }
+.pk-hit.is-on { --hl: var(--plume); color: var(--on-plume); box-shadow: 0 0 0 2px var(--hl), 0 4px 0 0 var(--ink); }
 @media (max-width: 560px) {
   .pk-seg { grid-template-columns: 1fr; row-gap: 2px; }
   .pk-stats { padding-left: 12px; }
