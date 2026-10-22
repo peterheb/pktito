@@ -208,7 +208,12 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
 .pk-side-foot { display: flex; align-items: center; gap: 8px; padding: 0 4px; }
 .pk-side-foot .pk-btn { margin-left: auto; }
 .pk-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-.pk-head { display: flex; align-items: center; gap: 10px; padding: 14px 24px; min-height: 60px; }
+/* The work screen's vertical rhythm is one step, --space-3 (16 px): under the
+   header's buttons, between the strip and the views, from the views to the
+   first row's text, and between rows (each row's 8 px padding, twice). The
+   header's top stays 14 px, so that its buttons stay level with the traffic
+   lights' centre, 30 px down (the title bar, above). */
+.pk-head { display: flex; align-items: center; gap: 10px; padding: 14px 24px var(--space-3); min-height: 62px; }
 /* the file's name gives way first, down to nothing, before Find: shrunk in
    proportion, a long name left Find a letter of its search (the Windows
    test, 2026-10-22) */
@@ -226,7 +231,7 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
 .is-batch .pk-head .pk-back { display: none; }
 .pk-grow { flex: 1; }
 .pk-strip-wrap { padding: 0 24px; }
-.pk-transcript { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 12px 24px; display: flex; flex-direction: column; gap: 2px; }
+.pk-transcript { flex: 1; min-height: 0; overflow-y: auto; padding: var(--space-2) 12px 24px; display: flex; flex-direction: column; }
 .pk-msg { margin: 16px 24px 0; max-width: 712px; font: 400 15px/1.5 var(--font-sans); color: var(--ink-muted); overflow-wrap: anywhere; }
 .pk-msg.pk-err { color: var(--err); }
 @media (max-width: 879px) {
@@ -383,7 +388,7 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
 
 /* -------------------------------------------- sentences or captions -- */
 /* two buttons in a sunk track, the one chosen raised to the ground */
-.pk-views { display: flex; gap: 2px; align-self: flex-start; margin: 14px 24px 0; padding: 2px; border-radius: var(--radius-ui);
+.pk-views { display: flex; gap: 2px; align-self: flex-start; margin: var(--space-3) 24px 0; padding: 2px; border-radius: var(--radius-ui);
   background: var(--sunk); }
 .pk-view { border: 0; padding: 5px 10px; border-radius: 6px; background: none; color: var(--ink-muted); font: 500 13px/1.2 var(--font-sans);
   cursor: pointer; }
@@ -431,7 +436,7 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
 /* a narrow window, down to the 480 it allows: the edges closer in */
 @media (max-width: 599px) {
   .pk-screen { padding-left: 20px; padding-right: 20px; }
-  .pk-head { padding: 12px 16px; }
+  .pk-head { padding: 14px 16px var(--space-3); }
   .pk-strip-wrap { padding: 0 16px; }
   .pk-views { margin-left: 16px; margin-right: 16px; }
   .pk-msg { margin-left: 16px; margin-right: 16px; }
