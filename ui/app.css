@@ -185,6 +185,10 @@ html[data-chrome=win] .pk-head { padding-right: var(--caption); }
 .has-recent .pk-ready { height: 100%; }
 .has-recent .pk-recent { margin-top: 8px; flex: 1 1 auto; }
 .pk-recent .pk-spread { padding: 0 12px 4px; }
+/* the list's one action, a ghost button as Stop is, small for the header,
+   its padding outside it so that its word ends over the dates, in their
+   grey: underlined, it read as a link beside a heading (Peter, 2026-10-22) */
+#clear-recent { height: 28px; margin: -6px -8px -6px 0; padding: 0 8px; font-size: 13px; color: var(--ink-muted); }
 /* room inside the scroll for a row's focus ring, 2px out and 2px wide; and
    where a scrollbar takes room from the list (--sb, app.js), the list reaches
    that much further right, so that its rows end with the column, under
