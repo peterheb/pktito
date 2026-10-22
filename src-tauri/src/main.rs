@@ -607,7 +607,7 @@ struct TimedWord {
 /// The cues of a transcript's subtitle track, from the engine's pk_captions,
 /// so that the app's .srt and .vtt are the CLI's: times in milliseconds.
 #[tauri::command]
-fn captions(words: Vec<TimedWord>, english: bool, duration: f64) -> Result<Vec<pktito::Cue>, String> {
+fn captions(words: Vec<TimedWord>, english: i32, duration: f64) -> Result<Vec<pktito::Cue>, String> {
     let ms = |s: f64| (s * 1000.0).round() as i64;
     let w: Vec<(String, i64, i64)> = words.into_iter().map(|w| (w.text, ms(w.start), ms(w.end))).collect();
     pktito::captions(&w, english, ms(duration))

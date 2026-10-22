@@ -54,6 +54,7 @@ const ICON = {
     '<line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'),
   copy: svg('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'),
   check: svg('<polyline points="20 6 9 17 4 12"/>'),
+  checkSmall: svg('<polyline points="20 6 9 17 4 12"/>', "pk-ico pk-ico-12"),
   down: svg('<polyline points="6 9 12 15 18 9"/>'),
   up: svg('<polyline points="18 15 12 9 6 15"/>'),
   download: svg('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>'),
@@ -237,12 +238,16 @@ async function useOwnFile() {
   }
 }
 
+/* Each model as what it is for and whether it is here: "25 European
+   languages", and Downloaded with a green check or its download's size.
+   Its file's name is its tooltip: the menu was a wall of model names
+   (Peter, 2026-10-22). */
 function modelMenu(anchor, keys) {
   const items = st.catalog.map((m) => {
     const on = !st.model_file && st.model === m.name;
-    const sub = m.have ? `${m.name} · on this computer` : `${m.name} · ${mb(m.bytes)} MB download`;
-    return `<button class="pk-mi" type="button" role="menuitemradio" aria-checked="${on}" data-model="${m.name}">` +
-      `<span>${esc(m.label)}</span><small>${esc(sub)}</small>${on ? ICON.check : ""}</button>`;
+    const state = m.have ? `<span class="pk-have">${ICON.checkSmall}Downloaded</span>` : `${mb(m.bytes)} MB download`;
+    return `<button class="pk-mi" type="button" role="menuitemradio" aria-checked="${on}" data-model="${m.name}" title="${esc(m.name)}">` +
+      `<span>${esc(m.label)}</span><small class="pk-sub">${esc(m.about)} · ${state}</small>${on ? ICON.check : ""}</button>`;
   });
   if (st.model_file) {
     items.push(`<button class="pk-mi" type="button" role="menuitemradio" aria-checked="true" data-model="">` +
@@ -252,9 +257,8 @@ function modelMenu(anchor, keys) {
   const show = { macos: "Show in Finder", windows: "Show in File Explorer" }[st.platform] || "Show in folder";
   const file = st.model_file ? baseName(st.model_file) : st.model ? `${st.model}.pkf` : "";
   items.push(`<div class="pk-menu-sep" aria-hidden="true"></div>` +
-    `<button class="pk-mi" type="button" role="menuitem" data-own="1"><span>A model file on this computer…</span></button>` +
-    `<button class="pk-mi" type="button" role="menuitem" data-reveal="1"><span>${show}</span>` +
-    (file ? `<small>${esc(file)}</small>` : "") + `</button>`);
+    `<button class="pk-mi" type="button" role="menuitem" data-own="1"><span>Open a model file…</span></button>` +
+    `<button class="pk-mi" type="button" role="menuitem" data-reveal="1"${file ? ` title="${esc(file)}"` : ""}><span>${show}</span></button>`);
   openMenu(anchor, keys, items.join(""), "down right", (m) => {
     m.onclick = async (e) => {
       const b = e.target.closest(".pk-mi");
@@ -910,9 +914,11 @@ function updateHead(f, mode) {
   $("copy").hidden = !(review || mode === "running");
   // its icon, which everyone reads, and its words for tooltip and reader
   $("copy").innerHTML = ICON.copy;
-  $("copy").title = review ? "Copy text" : "Copy so far";
+  $("copy").title = !review ? "Copy so far" : prefs.captions ? "Copy captions (SRT)" : "Copy text";
   $("copy").setAttribute("aria-label", $("copy").title);
   $("copy").disabled = !has;
+  // at work: from the file's start until its last words, before its first too
+  $("spin").hidden = mode !== "running";
   // saving is what a finished transcript is for
   $("save-as").classList.add("pk-btn-primary");
   $("save-as").hidden = !review;
@@ -1445,7 +1451,9 @@ async function cuesOf(f) {
   if (f.cues) return f.cues;
   const w = f.segments.flatMap((s) => s.words || []);
   const m = st.catalog.find((x) => x.name === f.model);
-  const english = !!m && m.languages.length === 1 && m.languages[0] === "en";
+  // the English model's words are English; the multilingual model's say
+  // which they are (the engine's pk_language)
+  const english = !!m && m.languages.length === 1 && m.languages[0] === "en" ? 1 : -1;
   const raw = await invoke("captions", { words: w.map((x) => ({ text: x.text, start: x.start, end: x.end })), english,
     duration: f.duration || 0 });
   // each cue a row of the transcript: its text with its line break, its
@@ -1534,12 +1542,16 @@ async function textOf(f, ext) {
     segs.map(seg).join(",\n") + "\n  ],\n  \"captions\": [\n" + cues.map(cue).join(",\n") + "\n  ]\n}\n";
 }
 
+/* What the view shows: a finished transcript's captions as an .srt's text,
+   numbered cues and their times, the form subtitle tools take; or its
+   sentences. */
 async function copyText() {
   const f = current();
   if (!f || !f.segments.length) return;
+  const cues = !!prefs.captions && modeOf(f) === "review";
   try {
-    await navigator.clipboard.writeText(plain(f));
-    toast("Copied");
+    await navigator.clipboard.writeText(cues ? await textOf(f, "srt") : plain(f));
+    toast(cues ? "Copied captions" : "Copied");
   } catch (e) {
     toast("Couldn't copy", { err: true, detail: String(e) });
   }

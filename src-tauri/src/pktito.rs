@@ -103,9 +103,11 @@ extern "C" {
 }
 
 /// The cues of a subtitle track for words and their times in milliseconds,
-/// as the CLI's --srt has them (core/captions.c): English's rules when
-/// english, else punctuation and pauses alone.
-pub fn captions(words: &[(String, i64, i64)], english: bool, media_end: i64) -> Result<Vec<Cue>, String> {
+/// as the CLI's --srt has them (core/captions.c): English's rules for
+/// english 1, punctuation and pauses alone for 0, and for -1 English's if
+/// the words are English by their commonest (core/language.c), as the
+/// multilingual model's may be.
+pub fn captions(words: &[(String, i64, i64)], english: i32, media_end: i64) -> Result<Vec<Cue>, String> {
     // a NUL inside a word would end it early: none comes from pk_text
     let texts: Vec<CString> = words.iter().map(|w| CString::new(w.0.replace('\0', "")).unwrap()).collect();
     let raw: Vec<CapWord> = words

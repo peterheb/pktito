@@ -206,6 +206,13 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
    proportion, a long name left Find a letter of its search (the Windows
    test, 2026-10-22) */
 .pk-head h1 { flex: 0 1000 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* beside the name while the file is at work, from the moment it starts:
+   the strip says nothing until the audio is read */
+.pk-spin { flex: none; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--sunk); border-top-color: var(--ink-muted);
+  animation: pk-spin .9s linear infinite; }
+.pk-spin[hidden] { display: none; }
+@keyframes pk-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .pk-spin { animation-duration: 2.4s; } }
 /* the arrow drawn on the strip's left edge, its button's padding outside it */
 .pk-head .pk-back { margin-left: -8px; }
 /* beside the queue, the queue has the way back */
@@ -448,7 +455,10 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
 .pk-mi { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; align-items: center; text-align: left; width: 100%;
   border: 0; background: none; color: var(--ink); border-radius: 6px; padding: 8px 10px; cursor: pointer; font: 500 14px/1.35 var(--font-sans); }
 .pk-mi small { grid-column: 1; font: 400 13px/1.4 var(--font-mono); color: var(--ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pk-mi .pk-kbd, .pk-mi .pk-ico { grid-row: 1; grid-column: 2; }
+.pk-mi .pk-kbd, .pk-mi > .pk-ico { grid-row: 1; grid-column: 2; }
+/* a line of words, not a file name: the model menu's */
+.pk-mi small.pk-sub { font: 400 13px/1.4 var(--font-sans); }
+.pk-have { display: inline-flex; align-items: center; gap: 3px; color: var(--ok); }
 .pk-menu.is-wide { max-width: min(480px, calc(100vw - 24px)); }
 .pk-menu-sep { height: 6px; }
 /* the frame rates, a row of chips under the choice they serve */
