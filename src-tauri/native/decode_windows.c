@@ -205,3 +205,34 @@ done:
     free(wpath);
     return rc;
 }
+
+/* The frame rate of the file's first video stream, as Media Foundation
+ * reads it (MF_MT_FRAME_RATE, its numerator and denominator packed in 64
+ * bits); 0 for a file with none, or one it cannot read. For the window's
+ * times in frames (ui/app.js). */
+double pkapp_video_rate_os(const char *path) {
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, path, -1, NULL, 0);
+    wchar_t *wpath = wlen > 0 ? malloc((size_t)wlen * sizeof *wpath) : NULL;
+    if (!wpath)
+        return 0;
+    MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, wlen);
+    HRESULT com = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+    HRESULT mf = MFStartup(MF_VERSION, MFSTARTUP_LITE);
+    IMFSourceReader *rd = NULL;
+    IMFMediaType *type = NULL;
+    UINT64 ratio = 0;
+    if (SUCCEEDED(mf) && SUCCEEDED(MFCreateSourceReaderFromURL(wpath, NULL, &rd)) &&
+        SUCCEEDED(IMFSourceReader_GetNativeMediaType(rd, (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM, 0, &type)))
+        IMFMediaType_GetUINT64(type, &MF_MT_FRAME_RATE, &ratio);
+    if (type)
+        IMFMediaType_Release(type);
+    if (rd)
+        IMFSourceReader_Release(rd);
+    if (SUCCEEDED(mf))
+        MFShutdown();
+    if (SUCCEEDED(com))
+        CoUninitialize();
+    free(wpath);
+    UINT32 num = (UINT32)(ratio >> 32), den = (UINT32)ratio;
+    return den ? (double)num / den : 0;
+}

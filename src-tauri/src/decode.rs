@@ -274,6 +274,48 @@ fn read_samples(r: &mut impl Read, f: &WavFormat) -> Result<Vec<f32>, DecodeErro
     mix.take()
 }
 
+/// A video's frame rate, for the window's times in frames: its first video
+/// stream's, as the OS reads it, else as ffmpeg does; None for a file with
+/// no video, or that neither can say.
+pub fn frame_rate(path: &Path) -> Option<f64> {
+    let os = rate_os(path);
+    let r = if os > 0.0 { Some(os) } else { ffmpeg().and_then(|ff| rate_ffmpeg(&ff, path)) };
+    r.filter(|r| r.is_finite() && (1.0..=1000.0).contains(r))
+}
+
+/// ffmpeg's reading of the rate, from the line it prints for the file's
+/// first video stream: "Stream #0:0...: Video: h264 ..., 23.98 fps, ...".
+fn rate_ffmpeg(ffmpeg: &Path, path: &Path) -> Option<f64> {
+    let out = Command::new(ffmpeg)
+        .args(["-nostdin", "-hide_banner", "-i"])
+        .arg(path)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .output()
+        .ok()?;
+    let said = String::from_utf8_lossy(&out.stderr);
+    let line = said.lines().find(|l| l.contains("Stream #") && l.contains(": Video:"))?;
+    let at = line.find(" fps")?;
+    line[..at].rsplit([' ', ',']).next()?.parse().ok()
+}
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+fn rate_os(path: &Path) -> f64 {
+    use std::ffi::{c_char, CString};
+    extern "C" {
+        fn pkapp_video_rate_os(path: *const c_char) -> f64;
+    }
+    match CString::new(path.to_string_lossy().as_bytes()) {
+        Ok(c) => unsafe { pkapp_video_rate_os(c.as_ptr()) },
+        Err(_) => 0.0,
+    }
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+fn rate_os(_path: &Path) -> f64 {
+    0.0
+}
+
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 fn decode_os(path: &Path) -> Result<Vec<f32>, DecodeError> {
     use std::ffi::{c_char, CStr, CString};

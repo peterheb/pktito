@@ -174,3 +174,23 @@ int pkapp_decode_os(const char *path, int rate, float **out, size_t *n, char *er
         return rc;
     }
 }
+
+/* The frame rate of the file's first video track, as AVFoundation names
+ * it; 0 for a file with none, or one it cannot read. For the window's times
+ * in frames (ui/app.js). */
+double pkapp_video_rate_os(const char *path) {
+    @autoreleasepool {
+        NSURL *url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:path]];
+        AVURLAsset *asset = [AVURLAsset URLAssetWithURL:url options:nil];
+        __block AVAssetTrack *video = nil;
+        dispatch_semaphore_t loaded = dispatch_semaphore_create(0);
+        [asset loadTracksWithMediaType:AVMediaTypeVideo
+                     completionHandler:^(NSArray<AVAssetTrack *> *t, NSError *e) {
+                         if (!e)
+                             video = t.firstObject;
+                         dispatch_semaphore_signal(loaded);
+                     }];
+        dispatch_semaphore_wait(loaded, DISPATCH_TIME_FOREVER);
+        return video ? video.nominalFrameRate : 0;
+    }
+}

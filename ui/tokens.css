@@ -48,7 +48,7 @@
   --column-narrow: 560px;
   --frame: 8px;
   --sidebar: 280px;
-  --window-min: 720px;
+  --window-min: 480px;
   --page-max: 1440px;
   --font-sans: Archivo, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "Commit Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;

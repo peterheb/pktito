@@ -14,7 +14,7 @@
         "title": "pktito",
         "width": 720,
         "height": 1018,
-        "minWidth": 720,
+        "minWidth": 480,
         "minHeight": 480,
         "visible": false,
         "decorations": true,

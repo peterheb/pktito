@@ -81,11 +81,17 @@ pub struct Prefs {
     pub save_each: bool,
     /// Show a finished transcript as its subtitle track's cues, not its sentences.
     pub captions: bool,
+    /// Times in frames, not seconds and hundredths.
+    pub frames: bool,
+    /// The frame rate an audio file's times are counted in.
+    pub fps: f64,
+    /// A video's frames counted at its own rate; false counts them at fps too.
+    pub video_rate: bool,
 }
 
 impl Default for Prefs {
     fn default() -> Prefs {
-        Prefs { next_to_original: true, times: false, save_each: false, captions: false }
+        Prefs { next_to_original: true, times: false, save_each: false, captions: false, frames: false, fps: 24.0, video_rate: true }
     }
 }
 

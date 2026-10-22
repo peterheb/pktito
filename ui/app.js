@@ -82,6 +82,39 @@ function when(t) {
   if (d.getFullYear() !== now.getFullYear()) o.year = "numeric";
   return d.toLocaleDateString(undefined, o);
 }
+/* A frame rate counted exactly: NTSC's 23.976, 29.97 and 59.94 are 24, 30
+   and 60 frames in 1.001 seconds, whatever their rounding says. */
+function exactRate(r) {
+  for (const n of [24, 30, 48, 60, 120]) if (Math.abs(r - (n * 1000) / 1001) < 0.01) return (n * 1000) / 1001;
+  return Math.abs(r - Math.round(r)) < 0.01 ? Math.round(r) : r;
+}
+/* t as SMPTE timecode at a rate: hh:mm:ss:ff, counting the frames of its
+   nominal rate (24 for 23.976, 30 for 29.97), the frame t falls in. At
+   29.97 and 59.94 it is drop-frame, hh:mm:ss;ff: the first 2 (or 4) frame
+   numbers of every minute but each tenth are skipped, so that the clock
+   keeps to real time. */
+function timecode(t, rate) {
+  const r = exactRate(rate), nominal = Math.round(r);
+  const drop = Math.abs(r - 30000 / 1001) < 1e-9 || Math.abs(r - 60000 / 1001) < 1e-9;
+  let frames = Math.floor(Math.max(0, t) * r + 1e-6);
+  if (drop) {
+    const d = nominal === 60 ? 4 : 2, minute = nominal * 60 - d, tens = minute * 10 + d;
+    const rem = frames % tens;
+    frames += 9 * d * Math.floor(frames / tens) + (rem >= d ? d * Math.floor((rem - d) / minute) : 0);
+  }
+  const s = Math.floor(frames / nominal);
+  return `${two(Math.floor(s / 3600))}:${two(Math.floor(s / 60) % 60)}:${two(s % 60)}${drop ? ";" : ":"}${two(frames % nominal)}`;
+}
+const rateLabel = (r) => String(Math.round(exactRate(r) * 1000) / 1000);
+/* the rate a file's times are counted in: a video's own, unless the one
+   chosen is to count a video's too */
+const ownRate = (f) => !!f && f.fps > 0 && prefs.video_rate !== false;
+const rateOf = (f) => (ownRate(f) ? f.fps : prefs.fps > 0 ? prefs.fps : 24);
+/* a time as the strip and the transcript show it: seconds and hundredths, or frames */
+const tc = (t, f = current()) => (prefs.frames ? timecode(t, rateOf(f)) : stamp(t));
+/* a file's length as the strip shows it */
+const lengthOf = (f) => (prefs.frames ? timecode(f.duration, rateOf(f)) : hms(f.duration));
+
 const baseName = (p) => p.split(/[\\/]/).pop();
 const stemOf = (p) => baseName(p).replace(/\.[^.]+$/, "");
 const extOf = (p) => (baseName(p).match(/\.([^.]+)$/) || ["", ""])[1].toLowerCase();
@@ -371,10 +404,13 @@ function renderReady() {
   $("recent").hidden = !recent.length && !files.length;
   $("ready").classList.toggle("has-recent", !$("recent").hidden);
   $("clear-recent").hidden = !recent.length;
+  // each with the × that takes it off the list, over its date under the
+  // pointer; from the keyboard, Delete
   $("recent-list").innerHTML = files.map(liveHtml).join("") + recent.map((r) =>
-    `<li><button class="pk-row" type="button" data-recent="${esc(r.id)}" title="${esc(r.path)}">${ICON.file}` +
-    `<span class="pk-name">${esc(r.name)}</span><span class="pk-stamp">${hms(r.duration)}</span>` +
-    `<span class="pk-small pk-when">${esc(when(r.finished))}</span></button></li>`).join("");
+    `<li class="pk-qi"><button class="pk-row" type="button" data-recent="${esc(r.id)}" title="${esc(r.path)}" aria-keyshortcuts="Delete">` +
+    `${ICON.file}<span class="pk-name">${esc(r.name)}</span><span class="pk-stamp">${hms(r.duration)}</span>` +
+    `<span class="pk-small pk-when">${esc(when(r.finished))}</span></button><button class="pk-x" type="button" tabindex="-1" ` +
+    `data-forget="${esc(r.id)}" aria-label="Remove ${esc(r.name)} from Recent" title="Remove from Recent; the file stays">${ICON.x}</button></li>`).join("");
 }
 
 const liveHtml = (f) => `<li><button class="pk-row" type="button" data-live="${f.id}" title="${esc(f.path)}">${rowBody(f)}</button></li>`;
@@ -397,7 +433,7 @@ async function openRecent(id) {
   try {
     const t = await invoke("open_recent", { id });
     const f = Object.assign(newFile(t.path), { name: t.name, step: "done", done: 1, duration: t.duration, peaks: t.peaks,
-      audio: t.audio, segments: t.segments, took: t.took, model: t.model, recentId: t.id });
+      audio: t.audio, segments: t.segments, took: t.took, model: t.model, recentId: t.id, fps: t.fps || 0 });
     files.push(f);
     sel = f.id;
     home = false;
@@ -426,7 +462,32 @@ async function reloadAudio(f) {
   }
 }
 
+/* A transcript off the recent list, and its audio from the cache; the
+   file it came from stays where it is. */
+async function forget(id) {
+  try {
+    await invoke("forget_recent", { id });
+    const i = recent.findIndex((r) => r.id === id);
+    recent = recent.filter((r) => r.id !== id);
+    renderReady();
+    // the keyboard on the row that took its place
+    const rows = $("recent-list").querySelectorAll("[data-recent]");
+    if (rows.length) rows[Math.min(Math.max(0, i), rows.length - 1)].focus({ preventScroll: true });
+  } catch (e) {
+    toastErr(e);
+  }
+}
+
+$("recent-list").addEventListener("keydown", (e) => {
+  const b = e.target.closest("[data-recent]");
+  if (!b || (e.key !== "Delete" && e.key !== "Backspace")) return;
+  e.preventDefault();
+  forget(b.dataset.recent);
+});
+
 $("recent-list").onclick = (e) => {
+  const x = e.target.closest("[data-forget]");
+  if (x) return forget(x.dataset.forget);
   const b = e.target.closest("[data-recent], [data-live]");
   if (!b) return;
   if (b.dataset.recent) return openRecent(b.dataset.recent);
@@ -451,7 +512,8 @@ $("ready-model").onclick = (e) => modelMenu(e.currentTarget, !e.detail);
 
 function newFile(path) {
   return { id: nextId++, path, name: baseName(path), kind: kindOf(path), step: "waiting", done: 0, eta: -1, duration: null,
-    peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], cues: null, took: 0, model: "", recentId: null, message: "", detail: "" };
+    peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], cues: null, fps: 0, took: 0, model: "", recentId: null, message: "",
+    detail: "" };
 }
 
 async function chooseFiles() {
@@ -536,6 +598,7 @@ listen("job", (e) => {
   if (j.duration) f.duration = j.duration;
   if (j.peaks.length) f.peaks = j.peaks;
   if (j.audio) f.audio = j.audio;
+  if (j.fps) f.fps = j.fps;
   if (j.step === "transcribing") {
     f.done = j.done;
     f.eta = j.eta;
@@ -770,7 +833,7 @@ function buildMain(f, mode, key) {
   $("strip-wrap").hidden = mode === "error";
   $("play").hidden = $("time").hidden = !review;
   $("prog").hidden = review;
-  $("dur").textContent = f.duration == null ? "" : hms(f.duration);
+  $("dur").textContent = f.duration == null ? "" : lengthOf(f);
   const wave = $("wave");
   if (review) {
     wave.removeAttribute("role");
@@ -806,7 +869,10 @@ function updateHead(f, mode) {
   const review = mode === "review", has = f.segments.length > 0;
   $("find-box").hidden = !review || !has;
   $("copy").hidden = !(review || mode === "running");
-  $("copy").innerHTML = `${ICON.copy}${review ? "Copy text" : "Copy so far"}`;
+  // its icon, which everyone reads, and its words for tooltip and reader
+  $("copy").innerHTML = ICON.copy;
+  $("copy").title = review ? "Copy text" : "Copy so far";
+  $("copy").setAttribute("aria-label", $("copy").title);
   $("copy").disabled = !has;
   // saving is what a finished transcript is for
   $("save-as").classList.add("pk-btn-primary");
@@ -825,7 +891,7 @@ function updateRunning(f) {
   $("pct").textContent = `${percent(going ? f.done : 0)}%`;
   $("eta").textContent = f.step === "reading" ? "Reading the audio" : f.step === "loading" ? "Loading the model" : "";
   $("pct").title = going && f.eta > 0 ? timeLeft(f.eta) : "";
-  $("dur").textContent = f.duration == null ? "" : hms(f.duration);
+  $("dur").textContent = f.duration == null ? "" : lengthOf(f);
   const wave = $("wave");
   if (wave._peaks !== f.peaks) drawMainWave();
   else setHead(wave, Math.floor((going ? f.done : 0) * wave._n));
@@ -841,9 +907,10 @@ function segHtml(s, i, filling) {
   const cue = s.endMs !== undefined;
   const fast = cue && s.flags & 1 ?
     `<span class="pk-fast" title="${(s.chars / (s.end - s.start)).toFixed(1)} characters a second, over the 20 a reader keeps up with">${ICON.zap}</span>` : "";
+  const start = tc(s.start);
   return `<div class="pk-seg${cue ? " pk-cue" : ""}" data-i="${i}"><div class="pk-seg-times"><button class="pk-seg-t" type="button" tabindex="-1" ` +
-    `aria-label="Play from ${stamp(s.start)}"${filling ? "" : ' title="Play from here"'}>${stamp(s.start)}</button>` +
-    (cue ? `<span class="pk-seg-end">${stamp(s.end)}${fast}</span>` : "") + `</div><p>${query ? hitHtml(s.text) : wordHtml(s)}</p></div>`;
+    `aria-label="Play from ${start}"${filling ? "" : ' title="Play from here"'}>${start}</button>` +
+    (cue ? `<span class="pk-seg-end">${tc(s.end)}${fast}</span>` : "") + `</div><p>${query ? hitHtml(s.text) : wordHtml(s)}</p></div>`;
 }
 
 /* The text with each timed word in a span of its own, for the playhead. */
@@ -1119,7 +1186,7 @@ function at(list, t) {
 function showTime(t, follow = false) {
   const f = current();
   if (!f) return;
-  $("time").textContent = stamp(t);
+  $("time").textContent = tc(t, f);
   const wave = $("wave");
   if (wave._n && f.duration) setHead(wave, Math.floor((t / f.duration) * wave._n));
   let seg = null, word = null;
@@ -1149,6 +1216,60 @@ function showTime(t, follow = false) {
   }
 }
 
+/* The strip's time is where its format is chosen: seconds and hundredths,
+   or frames. A video's frames are counted at its own rate, an audio file's
+   at the rate picked here, which a video can be told to keep to as well:
+   an editor's timeline has one rate, whatever its clips were shot at. */
+const RATES = [23.976, 24, 25, 29.97, 30, 50, 59.94, 60];
+function timeMenu(anchor, keys) {
+  const f = current();
+  if (!f) return;
+  const now = f.pos || 0, rate = rateOf(f), own = ownRate(f);
+  const choice = (frames, label, sub) => `<button class="pk-mi" type="button" role="menuitemradio" aria-checked="${!!prefs.frames === frames}" ` +
+    `data-frames="${frames ? 1 : 0}"><span>${label}</span><small>${sub}</small>${!!prefs.frames === frames ? ICON.check : ""}</button>`;
+  const chip = (value, label, on) => `<button class="pk-rate${on ? " is-on" : ""}" type="button" data-rate="${value}" aria-pressed="${on}">${label}</button>`;
+  const html = choice(false, "Seconds", stamp(now)) +
+    choice(true, "Frames", `${timecode(now, rate)} at ${rateLabel(rate)} fps${own ? ", the video's" : ""}`) +
+    `<div class="pk-rates" role="group" aria-label="Frames a second">` +
+    (f.fps > 0 ? chip("video", `Video · ${rateLabel(f.fps)}`, own) : "") +
+    RATES.map((r) => chip(r, r, !own && Math.abs(r - rate) < 0.001)).join("") + "</div>";
+  openMenu(anchor, keys, html, "down wide", (m) => {
+    m.onclick = async (e) => {
+      const b = e.target.closest("[data-frames]"), r = e.target.closest("[data-rate]");
+      if (!b && !r) return;
+      if (r && r.dataset.rate === "video") prefs.video_rate = true;
+      else if (r) {
+        prefs.fps = Number(r.dataset.rate);
+        // picked over a video's own rate, it is the rate for every video
+        if (f.fps > 0) prefs.video_rate = false;
+      }
+      // a rate picked is a rate to count in
+      await setPref("frames", r ? true : b.dataset.frames === "1");
+      closeMenu();
+      retime();
+    };
+  });
+}
+
+/* the times drawn again in the format chosen, playback, the reader's place
+   and the match they were on as they were */
+function retime() {
+  const f = current();
+  if (!f || modeOf(f) !== "review") return;
+  $("dur").textContent = f.duration == null ? "" : lengthOf(f);
+  const tr = $("transcript"), top = tr.scrollTop, on = hitAt;
+  if (query) {
+    runFind();
+    if (on >= 0 && on < hits.length) goHit(on);
+    tr.scrollTop = top;
+  } else {
+    renderTranscript(f, "review");
+    tr.scrollTop = top;
+    showTime(f.pos);
+  }
+}
+
+$("time").onclick = (e) => timeMenu(e.currentTarget, !e.detail);
 $("play").onclick = () => togglePlay();
 $("wavebtn").addEventListener("click", (e) => {
   const f = current();
@@ -1485,14 +1606,16 @@ $("again").onclick = () => current() && again(current());
 let menuFor = null;
 
 /* One menu at a time, by its button: below it, or above for "up"; its
-   right edge on the button's for "right", or across the queue for "side".
-   Opened from the keyboard, its first item takes the focus. */
+   right edge on the button's for "right", or across the queue for "side";
+   "wide" for a row of choices that should not wrap. Opened from the
+   keyboard, its first item takes the focus. */
 function openMenu(anchor, keys, html, place, wire) {
   if (menuFor === anchor) return closeMenu();
   closeMenu();
   const m = $("menu");
   m.innerHTML = html;
   m.style.width = "";
+  m.classList.toggle("is-wide", place.includes("wide"));
   m.hidden = false;
   menuFor = anchor;
   anchor.setAttribute("aria-expanded", "true");
@@ -1645,12 +1768,10 @@ function noticesHtml() {
     `<span class="pk-nl">${esc(lic)}</span><span class="pk-nc">${esc(notice)}</span></li>`;
   const list = (xs) => `<ul class="pk-nlist">${xs.join("")}</ul>`;
   const system = { macos: "macOS", windows: "Windows", linux: "Linux" }[st.platform] || st.platform;
-  return `<p class="pk-small">pktito is built on these open-source projects, each under the license beside it, the licenses' texts
-    after them. The list is this system's: the builds for macOS, Windows and Linux use a few projects each of their own.</p>
+  return `<p class="pk-small">This build of pktito includes the following open-source software and libraries:</p>
     <h3>Typefaces and icons</h3>
     ${list(extras.filter((e) => e[0] === "type").map((e) => row(e[1], e[3], e[2])))}
-    <h3>Code</h3>
-    <p class="pk-small">${crates.length} Rust crates, as the app for ${esc(system)} is built from them.</p>
+    <h3>Libraries (${esc(system)})</h3>
     ${list(extras.filter((e) => e[0] === "code").map((e) => row(e[1], e[3], e[2]))
       .concat(crates.map((c) => row(`${c[0]} ${c[1]}`, c[2], c[3], true))))}
     <h3>License texts</h3>
@@ -1776,6 +1897,7 @@ async function start() {
     b.innerHTML = ICON.back;
     b.title = "Back (Esc)";
   }
+  $("time").title = "Seconds or frames";
   $("notices-close").innerHTML = ICON.x;
   $("notices-close").title = "Close (Esc)";
   $("find-box").title = tip("Find", "F");

@@ -66,9 +66,9 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
    on or is filled with (design/README.md) */
 /* (:where, so that a rule that turns it off for a state, as for a transcript
    still filling in, needs no more than its own selector) */
-:where(.pk-btn, .pk-linkbtn, button.pk-wm, .pk-row, .pk-x, .pk-mi, .pk-seg-t, .pk-play, .pk-choice, .pk-find, .pk-find-step, .pk-view):hover:not([disabled]) {
+:where(.pk-btn, .pk-linkbtn, button.pk-wm, .pk-row, .pk-x, .pk-mi, .pk-seg-t, .pk-play, .pk-choice, .pk-find, .pk-find-step, .pk-view, .pk-timebtn, .pk-rate):hover:not([disabled]) {
   background-image: linear-gradient(var(--tint), var(--tint)); }
-:where(.pk-btn, .pk-linkbtn, button.pk-wm, .pk-row, .pk-x, .pk-mi, .pk-seg-t, .pk-play, .pk-choice, .pk-find-step, .pk-view):active:not([disabled]) {
+:where(.pk-btn, .pk-linkbtn, button.pk-wm, .pk-row, .pk-x, .pk-mi, .pk-seg-t, .pk-play, .pk-choice, .pk-find-step, .pk-view, .pk-timebtn, .pk-rate):active:not([disabled]) {
   background-image: linear-gradient(var(--tint-press), var(--tint-press)); }
 
 /* ------------------------------------------- setup and ready: one column -- */
@@ -128,6 +128,9 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
 .pk-recent ul { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; padding: 4px; margin: -4px; }
 .pk-recent .pk-row { grid-template-columns: 16px minmax(0, 1fr) auto 72px; }
 .pk-when { text-align: right; }
+/* a recent row's ×, as the queue's, over its date */
+.pk-recent .pk-qi:hover .pk-row .pk-stamp { visibility: visible; }
+.pk-recent .pk-qi:hover .pk-when { visibility: hidden; }
 
 /* ------------------------------------------------------------------ work -- */
 .pk-work { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr); }
@@ -189,6 +192,9 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
 .pk-lane { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .pk-times { display: flex; align-items: baseline; }
 .pk-times #dur { margin-left: auto; }
+/* the time, the button for its format, its padding outside it */
+.pk-timebtn { border: 0; padding: 2px 4px; margin: -2px -4px; border-radius: 4px; background-color: transparent; cursor: pointer; }
+.pk-timebtn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 /* a match's tick, 2 px drawn in a target 9 px wide that reaches down to the
    times: 7 px tall alone was hard to hit (the Windows test, 2026-10-22);
    the current one lighter */
@@ -241,9 +247,10 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
 .pk-about-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; outline: none; }
 .pk-about-stage canvas:active { cursor: grabbing; }
 .pk-about-stage canvas:focus-visible { outline: 2px solid var(--focus); outline-offset: -6px; border-radius: var(--radius-ui); }
-/* without WebGL 2, the credits alone */
+/* without WebGL 2, the credits alone, under the arrow */
 .pk-about.no-stage { grid-template-columns: minmax(0, 1fr); }
 .pk-about.no-stage .pk-about-stage { display: none; }
+.pk-about.no-stage .pk-about-text { padding-top: 64px; }
 /* the arrow at the window's top left, where the queue's is */
 .pk-about > .pk-back { position: absolute; top: 14px; left: 12px; z-index: 1; }
 .pk-about-text { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding: 32px 40px; }
@@ -263,9 +270,9 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
   .pk-credits { grid-template-columns: minmax(0, 1fr); row-gap: 2px; }
   .pk-credits dd + dt { margin-top: 10px; }
 }
-/* a portrait window, as the default one is: the mascot over the credits,
-   which then have the window's width */
-@media (orientation: portrait) {
+/* a portrait window, as the default one is, or a narrow one: the mascot
+   over the credits, which then have the window's width */
+@media (orientation: portrait), (max-width: 599px) {
   /* the credits as tall as they are, the mascot the rest: a band was left
      between them when they shared the height (the Windows test) */
   .pk-about { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, max-content); }
@@ -335,7 +342,20 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
 .pk-hit { background: var(--plume); color: var(--on-plume); border-radius: 2px; }
 /* the ring inside the match: outside, it covered the spaces beside it (the Windows test) */
 .pk-hit.is-on { box-shadow: inset 0 0 0 2px var(--ink); }
-@media (max-width: 560px) { .pk-seg { grid-template-columns: 1fr; row-gap: 2px; } }
+@media (max-width: 560px) {
+  .pk-seg { grid-template-columns: 1fr; row-gap: 2px; }
+  /* a cue's start and end side by side above its lines */
+  .pk-seg-times { flex-direction: row; align-items: baseline; gap: 10px; }
+}
+/* a narrow window, down to the 480 it allows: the edges closer in */
+@media (max-width: 599px) {
+  .pk-screen { padding-left: 20px; padding-right: 20px; }
+  .pk-head { padding: 12px 16px; }
+  .pk-strip-wrap { padding: 0 16px; }
+  .pk-views { margin-left: 16px; margin-right: 16px; }
+  .pk-msg { margin-left: 16px; margin-right: 16px; }
+  .pk-about-text { padding: 24px 20px 28px; }
+}
 
 /* ------------------------------------------------------------ the finder -- */
 .pk-find { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border-radius: var(--radius-ui); background: var(--sunk);
@@ -353,6 +373,8 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
 .pk-find-step[disabled] { opacity: .45; cursor: default; }
 .pk-find-step:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .pk-find:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* wider with a search in it, for the count and the arrows beside the words */
+.pk-find.has-query { flex-basis: 280px; min-width: 190px; }
 /* folded to its icon where the header has no room for it, and opened by a
    click or the shortcut: under 860px with one file, 1060px beside the queue */
 @media (max-width: 859px) { .pk-work:not(.is-batch) .pk-find:not(:focus-within):not(.has-query) { flex: none; width: 32px; min-width: 32px; padding: 0 8px; }
@@ -367,7 +389,14 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
   border: 0; background: none; color: var(--ink); border-radius: 6px; padding: 8px 10px; cursor: pointer; font: 500 14px/1.35 var(--font-sans); }
 .pk-mi small { grid-column: 1; font: 400 13px/1.4 var(--font-mono); color: var(--ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pk-mi .pk-kbd, .pk-mi .pk-ico { grid-row: 1; grid-column: 2; }
+.pk-menu.is-wide { max-width: min(480px, calc(100vw - 24px)); }
 .pk-menu-sep { height: 6px; }
+/* the frame rates, a row of chips under the choice they serve */
+.pk-rates { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 10px 8px; }
+.pk-rate { border: 0; padding: 4px 7px; border-radius: 6px; background: var(--surface); color: var(--ink); font: 400 12px/1.2 var(--font-mono);
+  font-variant-numeric: tabular-nums; cursor: pointer; }
+.pk-rate.is-on { background: var(--ink); color: var(--ground); }
+.pk-rate:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .pk-check { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; font: 400 14px/1.35 var(--font-sans); cursor: pointer; }
 .pk-check input { margin: 1px 0 0; width: 16px; height: 16px; accent-color: var(--ink); flex: none; }
 .pk-check small { display: block; font: 400 13px/1.4 var(--font-mono); color: var(--ink-muted); }

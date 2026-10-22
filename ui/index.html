@@ -67,7 +67,7 @@
         <button class="pk-find-step" id="find-prev" type="button" aria-label="Previous match"></button>
         <button class="pk-find-step" id="find-next" type="button" aria-label="Next match"></button>
       </label>
-      <button class="pk-btn" id="copy" type="button"></button>
+      <button class="pk-btn pk-btn-ico" id="copy" type="button"></button>
       <button class="pk-btn" id="save-as" type="button" aria-haspopup="menu" aria-expanded="false"></button>
       <button class="pk-btn" id="again" type="button">Start again</button>
       <button class="pk-btn pk-btn-ghost" id="stop" type="button">Stop</button>
@@ -80,7 +80,7 @@
         <div class="pk-lane">
           <button class="pk-wavebtn" id="wavebtn" type="button"><span class="pk-wave" id="wave"></span></button>
           <div class="pk-ticks" id="ticks" aria-hidden="true"></div>
-          <div class="pk-times"><span class="pk-tstamp" id="time"></span><span class="pk-tstamp pk-tdim" id="dur"></span></div>
+          <div class="pk-times"><button class="pk-tstamp pk-timebtn" id="time" type="button" aria-haspopup="menu" aria-expanded="false"></button><span class="pk-tstamp pk-tdim" id="dur"></span></div>
         </div>
       </div>
     </div>
@@ -108,7 +108,7 @@
       <p class="pk-text">Little parakeet <i>(pika-tito)</i>.<br>Speech to text on this computer.</p>
       <p class="pk-small"><span id="about-version"></span><br>
         Copyright (c) 2026 the pktito authors, under the <a href="https://github.com/peterheb/pktito-app/blob/main/LICENSE">MIT license</a><br>
-        Source on GitHub: <a href="https://github.com/peterheb/pktito-app">the app</a> and <a href="https://github.com/peterheb/pktito">the library</a></p>
+        GitHub: <a href="https://github.com/peterheb/pktito-app">app</a> and <a href="https://github.com/peterheb/pktito">library/CLI</a></p>
       <dl class="pk-credits">
         <dt>Parakeet-TDT</dt>
         <dd>NVIDIA's <a href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2">parakeet-tdt-0.6b-v2</a> and

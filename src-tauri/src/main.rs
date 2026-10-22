@@ -301,6 +301,8 @@ struct JobEvent {
     peaks: Vec<u8>,
     /// The audio as pktito heard it, to play.
     audio: Option<String>,
+    /// A video's frame rate, 0 for audio: for times in frames.
+    fps: f64,
     took: f64,
     model: String,
     /// Its place on the recent list.
@@ -332,6 +334,8 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
         Err(e) => return fail(e.why(), e.detail()),
     };
     let duration = x.len() as f64 / decode::RATE as f64;
+    let video = path.extension().and_then(|e| e.to_str()).is_some_and(|e| VIDEO.contains(&e.to_ascii_lowercase().as_str()));
+    let fps = if video { decode::frame_rate(path).unwrap_or(0.0) } else { 0.0 };
     let key = recent::new_id();
     let audio = audio_dir(app)
         .ok()
@@ -353,6 +357,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
         duration,
         peaks: peaks.clone(),
         audio,
+        fps,
         ..Default::default()
     });
     let Engine { model, asr, .. } = match ensure_engine(&mut slot, &model_path) {
@@ -389,6 +394,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
                 finished: recent::now(),
                 took,
                 model: name.clone(),
+                fps,
             };
             let kept = recent::add(&data, &recent::Transcript { item, peaks, segments });
             if let (Ok(gone), Ok(dir)) = (&kept, audio_dir(app)) {
@@ -569,6 +575,18 @@ async fn pick_folder(app: AppHandle) -> Result<Option<String>, String> {
         return Ok(None);
     };
     Ok(Some(dir.into_path().map_err(|e| e.to_string())?.to_string_lossy().into_owned()))
+}
+
+/// One transcript off the recent list, with its audio in the cache; the
+/// file it was made from is not touched.
+#[tauri::command]
+fn forget_recent(app: AppHandle, id: String) -> Result<(), String> {
+    let data = data_dir(&app)?;
+    recent::remove(&data, &id)?;
+    if let Ok(dir) = audio_dir(&app) {
+        let _ = fs::remove_file(audio::wav_in(&dir, &id));
+    }
+    Ok(())
 }
 
 /// A word of a transcript, as the window holds it: seconds.
@@ -775,10 +793,10 @@ static PLACED: Mutex<Option<(f64, f64)>> = Mutex::new(None);
 
 /// The window, sized before it is shown: as the user last left it, else a
 /// portrait page in a sheet of paper's proportion, 1 by the square root of
-/// 2, at the narrowest width the window takes: 720 by 1018. It reads a
-/// transcript down and shows more of the recent list. Either way it stays
-/// within the monitor's work area, title bar and all, so a laptop's 768 rows
-/// hold it, if not in proportion. tauri.conf.json makes it hidden until then.
+/// 2, 720 by 1018. It reads a transcript down and shows more of the recent
+/// list. Either way it stays within the monitor's work area, title bar and
+/// all, so a laptop's 768 rows hold it, if not in proportion.
+/// tauri.conf.json makes it hidden until then.
 fn place_window(w: &tauri::WebviewWindow, saved: Option<[f64; 2]>) {
     let [mut width, mut height] = saved.unwrap_or([720.0, 1018.0]);
     let monitor = w.current_monitor().ok().flatten().or_else(|| w.primary_monitor().ok().flatten());
@@ -791,7 +809,7 @@ fn place_window(w: &tauri::WebviewWindow, saved: Option<[f64; 2]>) {
         height = height.min(area.height - frame.1);
     }
     // not below the window's minimum, which tauri.conf.json sets
-    let (width, height) = (width.max(720.0).round(), height.max(480.0).round());
+    let (width, height) = (width.max(480.0).round(), height.max(480.0).round());
     *PLACED.lock().unwrap() = Some((width, height));
     let _ = w.set_size(tauri::LogicalSize::new(width, height));
     let _ = w.center();
@@ -980,7 +998,8 @@ fn main() {
             pick_folder,
             reveal,
             open_link,
-            captions
+            captions,
+            forget_recent
         ])
         .run(tauri::generate_context!())
         .expect("pktito could not start");

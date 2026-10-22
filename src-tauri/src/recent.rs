@@ -23,6 +23,9 @@ pub struct Item {
     /// Seconds it took, reading the audio included.
     pub took: f64,
     pub model: String,
+    /// A video's frame rate, 0 for audio (and for transcripts from before).
+    #[serde(default)]
+    pub fps: f64,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -93,6 +96,17 @@ pub fn load(data: &Path, id: &str) -> Result<Transcript, String> {
     }
     let b = fs::read(dir(data).join(format!("{id}.json"))).map_err(|_| "Transcript gone")?;
     serde_json::from_slice(&b).map_err(|e| format!("Can't read this transcript: {e}"))
+}
+
+/// One transcript off the list, and its file.
+pub fn remove(data: &Path, id: &str) -> Result<(), String> {
+    if !valid(id) {
+        return Err("no such transcript".into());
+    }
+    let mut items = list(data);
+    items.retain(|i| i.id != id);
+    let _ = fs::remove_file(dir(data).join(format!("{id}.json")));
+    write_list(data, &items)
 }
 
 pub fn clear(data: &Path) {

@@ -40,7 +40,7 @@ One ground, one ink, one accent, one mark. Every color is a token with a light a
 Two families, the same files as pinfer.
 
 - **Archivo** (400, 500, 700) for everything that is not code or a timestamp. Site: `display` for the hero, `figure` for the one number a section is about, `lead` for section headings, `body` for running text, `small` for nav and legal. App: `ui` (14px/500) for controls and file names, `transcript` (17px at 1.6) for the text people read, `figure` at 64px for a file's length on its detail view, `small` for status lines.
-- **Commit Mono** (400, 700) only for what is literally code or time: commands, file names, flags, and every timestamp (`stamp`, always `hh:mm:ss` or `hh:mm:ss.cc`).
+- **Commit Mono** (400, 700) only for what is literally code or time: commands, file names, flags, and every timestamp (`stamp`, always `hh:mm:ss` or `hh:mm:ss.cc`; or, with frames chosen from the strip's time, SMPTE's `hh:mm:ss:ff`, `hh:mm:ss;ff` at the drop-frame 29.97 and 59.94).
 - Tabular figures (`tabular-nums`) wherever numbers line up: durations, percentages, timestamps.
 - Headings use `text-wrap: balance`. Running text stays near `measure`.
 - The fonts ship as files (`fonts/`), on the site and inside the app bundle. Never load a face from a CDN: the app must work offline, and so should the site's pages.
@@ -50,7 +50,7 @@ Two families, the same files as pinfer.
 
 **Site.** One 12-column grid, outer margins `margin-page` (40px, 20px on a phone), sections `space-8` apart. Corners are square (`radius-0`); `radius-ui` appears only inside a `data-ui` fragment, which is a real piece of the app shown at true size.
 
-**App.** One window, two panes: the file queue on `surface` at `sidebar` width, the transcript on `ground`. Minimum width `window-min`; below 880px the queue becomes a strip above the transcript. Use the native title bar and window controls on both platforms; do not draw fake traffic lights or caption buttons. Controls use `radius-ui` so they sit with the OS's own. No toolbar icons without labels.
+**App.** One window, two panes: the file queue on `surface` at `sidebar` width, the transcript on `ground`. Minimum width `window-min` (480px); below 880px the queue becomes a strip above the transcript. Use the native title bar and window controls on both platforms; do not draw fake traffic lights or caption buttons. Controls use `radius-ui` so they sit with the OS's own. No toolbar icons without labels, but for copying, whose icon everyone reads: its words are its tooltip.
 
 **The one ornament** is the `frame`: one 8px step for 80 ms of audio, the encoder's frame. The site's waveform bars sit a frame apart, and the duration blocks under a transcript are a whole number of frames wide, because TDT predicts each token with its duration. Use it on timelines only, never as decoration elsewhere. The app's waveform strip is the exception: it is a tool for finding a place in a recording, so it draws its bars as finely as the screen shows them, 2px wide and 1px apart.
 
