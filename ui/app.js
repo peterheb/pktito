@@ -2101,6 +2101,16 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+/* The mouse's back button goes back as the header's arrow does, closing
+   first a question, a menu or About. WebKit and WebView2 both give it as
+   button 3; the page has no history of its own for it to go back in. */
+document.addEventListener("mouseup", (e) => {
+  if (e.button !== 3 || !st) return;
+  e.preventDefault();
+  if (closeAsk() || closeMenu() || closeNotices() || closeAbout()) return;
+  back();
+});
+
 listen("menu", (e) => {
   const id = e.payload;
   // a command from the menu bar while the window asks: Cancel, and on to it
