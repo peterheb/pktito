@@ -422,13 +422,15 @@ html[data-chrome=win] .pk-head { padding-right: var(--caption); }
 /* a cue's lines as the subtitle shows them */
 .pk-cue p { white-space: pre-line; }
 .pk-seg-t { border: 0; background: none; padding: 2px 4px; margin: -2px -4px; border-radius: 6px; text-align: left; cursor: pointer;
-  font: 400 13px/1.5 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink-muted); display: inline-flex; align-items: center;
-  gap: 6px; justify-self: start; }
+  font: 400 13px/1.5 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink-muted); display: inline-flex; align-items: baseline;
+  gap: 3px; justify-self: start; }
 .pk-seg-t:hover { color: var(--ink); }
 .is-live .pk-seg-t { cursor: default; }
 .is-live .pk-seg-t:hover { color: var(--ink-muted); background-image: none; }
-.pk-seg.is-current .pk-seg-t { color: var(--ink); }
-.pk-seg.is-current .pk-seg-t::before { content: ""; width: 7px; height: 7px; background: var(--beak); flex: none; }
+/* the row playing: its time as every other's, and the beak's square after
+   it on the line, as after the wordmark; in ink, and before it, the time
+   looked larger and moved over (Peter's screenshot, 2026-10-22) */
+.pk-seg.is-current .pk-seg-t::after { content: ""; width: 7px; height: 7px; background: var(--beak); flex: none; }
 .pk-seg p { font: 400 17px/1.6 var(--font-sans); color: var(--ink); min-width: 0; overflow-wrap: break-word;
   -webkit-user-select: text; user-select: text; cursor: text; }
 /* the word playing: underlined in the text's own decoration, which a
