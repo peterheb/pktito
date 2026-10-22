@@ -183,8 +183,13 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
 .has-recent .pk-ready { height: 100%; }
 .has-recent .pk-recent { margin-top: 8px; flex: 1 1 auto; }
 .pk-recent .pk-spread { padding: 0 12px 4px; }
-/* room inside the scroll for a row's focus ring, 2px out and 2px wide */
-.pk-recent ul { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; padding: 4px; margin: -4px; }
+/* room inside the scroll for a row's focus ring, 2px out and 2px wide; and
+   where a scrollbar takes room from the list (--sb, app.js), the list reaches
+   that much further right, so that its rows end with the column, under
+   Clear, and the scrollbar hangs beside them - at most the 16px a narrow
+   window's 20px edge leaves past the ring's 4 */
+.pk-recent ul { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; padding: 4px;
+  margin: -4px calc(-4px - min(var(--sb, 0px), 16px)) -4px -4px; }
 .pk-recent .pk-row { grid-template-columns: 16px minmax(0, 1fr) auto 72px; }
 .pk-when { text-align: right; }
 /* a recent row's ×, as the queue's, over its date */

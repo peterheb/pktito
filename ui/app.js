@@ -457,6 +457,13 @@ function renderReady() {
 
 const liveHtml = (f) => `<li><button class="pk-row" type="button" data-live="${f.id}" title="${esc(f.path)}">${rowBody(f)}</button></li>`;
 
+/* the width the recent list's scrollbar takes from it, for app.css to give
+   back: Windows' does; macOS's float over the list and take none */
+new ResizeObserver(() => {
+  const ul = $("recent-list");
+  ul.style.setProperty("--sb", `${ul.offsetWidth - ul.clientWidth}px`);
+}).observe($("recent-list"));
+
 function updateLive(f) {
   const row = $("recent-list").querySelector(`[data-live="${f.id}"]`);
   if (!row) return renderReady();
