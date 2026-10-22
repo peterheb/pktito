@@ -955,19 +955,49 @@ function segHtml(s, i, filling) {
   const start = tc(s.start);
   return `<div class="pk-seg${cue ? " pk-cue" : ""}" data-i="${i}"><div class="pk-seg-times"><button class="pk-seg-t" type="button" tabindex="-1" ` +
     `aria-label="Play from ${start}"${filling ? "" : ' title="Play from here"'}>${start}</button>` +
-    (cue ? `<span class="pk-seg-end">${tc(s.end)}${fast}</span>` : "") + `</div><p>${query ? hitHtml(s.text) : wordHtml(s)}</p></div>`;
+    (cue ? `<span class="pk-seg-end">${tc(s.end)}${fast}</span>` : "") + `</div><p>${bodyHtml(s, i)}</p></div>`;
 }
 
-/* The text with each timed word in a span of its own, for the playhead. */
-function wordHtml(s) {
-  let out = "", at = 0;
+/* Row i's text: each timed word in a span of its own, for the playhead,
+   and with a search its matches marked, in the words' spans and between
+   them. A search's marks once took the spans' place, and no word lit while
+   one was open (Peter, 2026-10-22). A match across words is a mark in each
+   piece: the first carries its place in the text (data-at), every piece its
+   number (data-hit), so that the current one lights whole. */
+function bodyHtml(s, i) {
+  const text = s.text, words = [], found = [];
+  let at = 0;
   (s.words || []).forEach((w, k) => {
-    const j = s.text.indexOf(w.text, at);
+    const j = text.indexOf(w.text, at);
     if (j < 0) return;
-    out += `${esc(s.text.slice(at, j))}<span data-w="${k}">${esc(w.text)}</span>`;
+    words.push([j, j + w.text.length, k]);
     at = j + w.text.length;
   });
-  return out + esc(s.text.slice(at));
+  if (query) {
+    // a cue's line break reads as the space it stands for
+    const flat = text.replace(/\n/g, " ");
+    let low = flat.toLowerCase(), q = query.toLowerCase();
+    // a lowercase that changes the length would put the marks in the wrong places
+    if (low.length !== text.length) [low, q] = [flat, query];
+    for (let from = 0, j; (j = low.indexOf(q, from)) >= 0; from = j + q.length) found.push([j, j + q.length]);
+  }
+  // the text cut wherever a word or a match starts or ends
+  const cuts = [...new Set([0, text.length, ...words.flatMap((w) => [w[0], w[1]]), ...found.flat()])].sort((a, b) => a - b);
+  let out = "", wi = 0, hi = 0, open = -1;
+  for (let c = 0; c + 1 < cuts.length; c++) {
+    const a = cuts[c], b = cuts[c + 1];
+    while (wi < words.length && words[wi][1] <= a) wi++;
+    while (hi < found.length && found[hi][1] <= a) hi++;
+    const word = wi < words.length && words[wi][0] <= a ? words[wi][2] : -1;
+    if (word !== open) {
+      out += (open >= 0 ? "</span>" : "") + (word >= 0 ? `<span data-w="${word}">` : "");
+      open = word;
+    }
+    const piece = esc(text.slice(a, b));
+    out += hi < found.length && found[hi][0] <= a
+      ? `<mark class="pk-hit" data-hit="${i}.${hi}"${found[hi][0] === a ? ` data-at="${a}"` : ""}>${piece}</mark>` : piece;
+  }
+  return out + (open >= 0 ? "</span>" : "");
 }
 
 function renderTranscript(f, mode) {
@@ -1337,21 +1367,7 @@ $("wavebtn").addEventListener("keydown", (e) => {
 let query = "", hits = [], hitTimes = [], hitAt = -1;
 
 /* text with each match marked, and where in text it starts */
-function hitHtml(text) {
-  // a cue's line break reads as the space it stands for
-  const flat = text.replace(/\n/g, " ");
-  let low = flat.toLowerCase(), q = query.toLowerCase();
-  // a lowercase that changes the length would put the marks in the wrong places
-  if (low.length !== text.length) [low, q] = [flat, query];
-  let out = "", from = 0, i;
-  while ((i = low.indexOf(q, from)) >= 0) {
-    out += `${esc(text.slice(from, i))}<mark class="pk-hit" data-at="${i}">${esc(text.slice(i, i + q.length))}</mark>`;
-    from = i + q.length;
-  }
-  return out + esc(text.slice(from));
-}
-
-/* The word of s at a character of its text, found as wordHtml finds them:
+/* The word of s at a character of its text, found as bodyHtml finds them:
    its index, or -1 before the first */
 function wordAt(s, offset) {
   let at = 0, found = -1;
@@ -1373,7 +1389,8 @@ function runFind() {
   tr.scrollTop = top;
   curSeg = curWord = null;
   showTime(f.pos);
-  hits = [...tr.querySelectorAll(".pk-hit")];
+  // each match once, by its first piece
+  hits = [...tr.querySelectorAll(".pk-hit[data-at]")];
   // each match at its word's time, for its tick under the waveform
   hitTimes = hits.map((h) => {
     const s = rows[Number(h.closest(".pk-seg").dataset.i)], k = wordAt(s, Number(h.dataset.at));
@@ -1388,10 +1405,13 @@ function stepHit(d) {
   if (hits.length) goHit((hitAt + d + hits.length) % hits.length);
 }
 
+/* every piece of match k */
+const hitPieces = (k) => $("transcript").querySelectorAll(`[data-hit="${hits[k].dataset.hit}"]`);
+
 function goHit(k) {
-  if (hitAt >= 0) hits[hitAt].classList.remove("is-on");
+  if (hitAt >= 0) for (const el of hitPieces(hitAt)) el.classList.remove("is-on");
   hitAt = k;
-  hits[hitAt].classList.add("is-on");
+  for (const el of hitPieces(hitAt)) el.classList.add("is-on");
   hits[hitAt].scrollIntoView({ block: "center" });
   findCount();
 }
@@ -1476,12 +1496,23 @@ const rowsOf = (f) => (prefs.captions && f.cues && modeOf(f) === "review" ? f.cu
    one, and with its row out of sight playback no longer took the reader
    along (the Windows test, 2026-10-22). */
 function rebuild() {
-  const q = $("find").value;
-  mainKey = "";
-  showMain();
-  if (q) {
-    $("find").value = q;
+  const f = current();
+  if (!f) return;
+  if (modeOf(f) !== "review") {
+    mainKey = "";
+    return showMain();
+  }
+  // the transcript alone: through showMain it paused playback and dropped
+  // the search (Peter, 2026-10-22)
+  for (const b of $("views").children) b.setAttribute("aria-checked", String((b.dataset.view === "captions") === !!prefs.captions));
+  updateHead(f, "review");
+  const on = hitAt;
+  if (query) {
     runFind();
+    if (on >= 0 && on < hits.length) goHit(on);
+  } else {
+    renderTranscript(f, "review");
+    showTime(f.pos);
   }
   if (curSeg) curSeg.scrollIntoView({ block: "center" });
 }

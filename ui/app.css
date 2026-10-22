@@ -405,10 +405,17 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
 .pk-seg.is-current .pk-seg-t::before { content: ""; width: 7px; height: 7px; background: var(--beak); flex: none; }
 .pk-seg p { font: 400 17px/1.6 var(--font-sans); color: var(--ink); min-width: 0; overflow-wrap: break-word;
   -webkit-user-select: text; user-select: text; cursor: text; }
-.pk-now { box-shadow: inset 0 -2px 0 var(--beak); }
-.pk-hit { background: var(--plume); color: var(--on-plume); border-radius: 2px; }
-/* the ring inside the match: outside, it covered the spaces beside it (the Windows test) */
-.pk-hit.is-on { box-shadow: inset 0 0 0 2px var(--ink); }
+/* the word playing: underlined in the text's own decoration, which a
+   match's mark does not cover as it covered a shadow */
+.pk-now { text-decoration: underline var(--beak); text-decoration-thickness: 2px; text-underline-offset: 4px;
+  text-decoration-skip-ink: none; }
+/* A match: a highlighter's band reaching a little past the letters (a
+   shadow, which moves no text), the current one in the full colour and the
+   others paler, opaque so that a match's pieces meet without a seam. No
+   ring: it crossed the letters (Peter, 2026-10-22). */
+.pk-hit { --hl: color-mix(in srgb, var(--plume) 45%, var(--ground)); background: var(--hl); color: inherit; border-radius: 3px;
+  box-shadow: 0 0 0 2px var(--hl); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.pk-hit.is-on { --hl: var(--plume); color: var(--on-plume); }
 @media (max-width: 560px) {
   .pk-seg { grid-template-columns: 1fr; row-gap: 2px; }
   /* a cue's start and end side by side above its lines */
