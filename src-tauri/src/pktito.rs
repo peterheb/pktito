@@ -98,7 +98,9 @@ extern "C" {
         probs: *const f32, n: usize, rate: c_int, n_samples: i64, p: *const SegParams, out: *mut Span,
         cap: usize,
     ) -> usize;
-    fn pk_chunks(speech: *const Span, n_speech: usize, total: i64, max_len: i64, out: *mut Span) -> usize;
+    fn pk_chunks(
+        x: *const f32, speech: *const Span, n_speech: usize, total: i64, max_len: i64, out: *mut Span,
+    ) -> usize;
     fn pk_captions(w: *const CapWord, n: usize, english: c_int, media_end: i64, out: *mut Cue) -> c_long;
 }
 
@@ -186,13 +188,15 @@ impl Model {
     }
 
     /// Where a recording of n samples is cut, as `pktito` cuts it: whole if it
-    /// fits in max_chunk seconds, else at the middle of its silences (Silero's
-    /// VAD), every chunk max_chunk seconds at most.
+    /// fits in max_chunk seconds and has speech, else at the middle of its
+    /// silences (Silero's VAD), every chunk max_chunk seconds at most; what
+    /// lies between the speech is chunks too, but where it is silent or
+    /// shorter than 3 s (pk_chunks).
     pub fn chunks(&self, x: &[f32], max_chunk: f64) -> Result<Vec<Span>, String> {
         let rate = self.rate();
         let max_len = (max_chunk * rate as f64) as i64;
-        if x.len() as i64 <= max_len {
-            return Ok(vec![Span { start: 0, end: x.len() as i64 }]);
+        if x.is_empty() {
+            return Ok(Vec::new());
         }
         let frames = x.len().div_ceil(VAD_SAMPLES);
         let mut pad = vec![0f32; frames * VAD_SAMPLES];
@@ -214,8 +218,8 @@ impl Model {
         let cap = 2 * frames + 1;
         let mut seg = vec![Span::default(); cap];
         let ns = unsafe { pk_segments(probs.as_ptr(), frames, rate as c_int, x.len() as i64, &sp, seg.as_mut_ptr(), cap) };
-        let mut out = vec![Span::default(); ns + 1];
-        let nc = unsafe { pk_chunks(seg.as_ptr(), ns, x.len() as i64, max_len, out.as_mut_ptr()) };
+        let mut out = vec![Span::default(); 2 * ns + 2 + x.len() / max_len as usize];
+        let nc = unsafe { pk_chunks(x.as_ptr(), seg.as_ptr(), ns, x.len() as i64, max_len, out.as_mut_ptr()) };
         out.truncate(nc);
         Ok(out)
     }

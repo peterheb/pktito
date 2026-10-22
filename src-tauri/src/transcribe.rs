@@ -1,7 +1,7 @@
 //! A recording's samples to timed segments: pktito's chunks (whole up to 30
-//! s, else cut at the silences), each transcribed, and split into sentences
-//! timed by pktito's word timestamps, which each segment keeps, word by
-//! word, for the window to follow playback with.
+//! s, else cut at the silences, the silence left out), each transcribed,
+//! and split into sentences timed by pktito's word timestamps, which each
+//! segment keeps, word by word, for the window to follow playback with.
 
 use crate::pktito::{Asr, Model, Tok};
 use serde::{Deserialize, Serialize};
