@@ -155,7 +155,12 @@ html[data-chrome=win] .pk-head { padding-right: var(--caption); }
 .pk-dl .pk-spread { align-items: flex-end; }
 .pk-dl .pk-stamp { padding-bottom: 4px; white-space: normal; }
 .pk-bar { height: 6px; background: var(--sunk); border-radius: var(--radius-dot); overflow: hidden; }
-.pk-bar > i { display: block; height: 100%; background: var(--plume); transition: width .3s ease; }
+/* the fill in the waveform's blue on the light theme, 3.5:1 against the
+   track, where plume was 1.5:1, under the 3:1 a state's cue needs (WCAG
+   1.4.11); plume on the dark theme, 8.1:1 (the tokens' contrast,
+   2026-10-22) */
+.pk-bar > i { display: block; height: 100%; background: var(--wave); transition: width .3s ease; }
+@media (prefers-color-scheme: dark) { .pk-bar > i { background: var(--plume); } }
 .pk-bar.is-paused > i { background: var(--ink-muted); }
 .pk-mini { height: 4px; }
 .pk-stopped { display: flex; flex-direction: column; gap: 10px; }
@@ -403,7 +408,11 @@ html[data-chrome=win] .pk-head { padding-right: var(--caption); }
   background: var(--sunk); }
 .pk-view { border: 0; padding: 5px 10px; border-radius: 6px; background: none; color: var(--ink-muted); font: 500 13px/1.2 var(--font-sans);
   cursor: pointer; }
-.pk-view[aria-checked="true"] { background: var(--ground); color: var(--ink); }
+/* the one chosen raised to the ground, with an edge in ink-muted: the tone
+   step alone is 1.2:1 against the track, the edge 5.6:1 (6.5:1 dark), over
+   the 3:1 a state's cue needs (WCAG 1.4.11; the tokens' contrast,
+   2026-10-22) */
+.pk-view[aria-checked="true"] { background: var(--ground); color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink-muted); }
 .pk-view:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 
 /* ------------------------------------------------------------- transcript -- */

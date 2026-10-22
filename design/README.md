@@ -28,10 +28,11 @@ One ground, one ink, one accent, one mark. Every color is a token with a light a
 
 - `ground` is the page and the app window; `surface` and `sunk` are one and two tone steps off it. The app's model cards and the sentence being played sit on `surface`; code blocks, the resting drop zone and empty progress tracks on `sunk`. Separate areas by that step, never by a rule or a shadow.
 - `ink` (night navy, never black) sets all running and transcript text. `ink-muted` is for timestamps, durations, file sizes and legal text only.
-- `plume` is the accent: the primary button, the site's stage, progress fill and the played part of a waveform. Text on it is `on-plume`, never white. It is never text on the ground.
+- `plume` is the accent: the primary button, the site's stage, progress fill and the played part of a waveform. On the app's light theme a progress bar fills with `wave`: plume is 1.5:1 against the light track, and a state's cue needs 3:1 (WCAG 1.4.11). Text on it is `on-plume`, never white. It is never text on the ground.
 - `beak` is a mark, not a color for areas: the square in the wordmark, the playhead, the token being decoded. Blue and orange stay distinct for color-blind readers because they also differ in lightness.
 - `term` is the dark field of the stage's transcript panel and the waveform strip in both themes; `term-ink`, `term-dim`, `wave` and `wave-played` sit on it.
 - `ok` and `err` mark a finished or failed file and always sit beside a word.
+- A two-way switch (Sentences | Captions) raises the chosen one to `ground` with a 1px `ink-muted` edge inside it: the tone step alone is 1.2:1 against the track.
 - The one button that destroys something, Clear in the question before the recent list is emptied, sets its word in `err` on `sunk`. Cancel beside it is the default, in `plume`, so that Enter and Esc both leave things as they were.
 - Keyboard focus is `focus`, 2px solid: ink in light, plume in dark.
 - Hover and press are one rule for every control, the wordmark included: `tint`, then `tint-press`, laid over whatever the control sits on or is filled with (ground, surface, sunk, plume), so it darkens in light and lightens in dark; on `term`, the strip and the toast, `tint-term` and `tint-term-press`. Links in running text thicken their underline instead.
