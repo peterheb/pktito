@@ -635,7 +635,9 @@ async function chooseFiles() {
    nothing under way they take the window, what was open closing (a
    finished transcript is on the recent list): one is shown, and several
    are a batch, its screen shown. Any that come while files are under way
-   join them as a batch. */
+   join them as a batch, and so do any added on a batch's screen or one of
+   its files, done or not: added there, one alone replaced the batch, Save
+   all and all (the Windows test, 2026-10-22). */
 async function addPaths(paths) {
   // files dropped or picked while the window asks: Cancel, and on to them
   closeAsk();
@@ -647,7 +649,8 @@ async function addPaths(paths) {
     // the transcription says so, of one that is not there
   }
   if (here.length) {
-    if (!files.some(live)) closeFiles();
+    const v = viewName(), into = batch && (v === "batch" || (v === "work" && !current().lone));
+    if (!into && !files.some(live)) closeFiles();
     for (const f of files.filter((x) => x.lone)) dropFile(f);
     for (const p of here) files.push(newFile(p));
     batch = files.length > 1;
@@ -770,7 +773,11 @@ function back() {
     closeMenu();
     sel = null;
     mainKey = "";
-    return render();
+    render();
+    // the keyboard back on the file's row
+    const row = $("queue").querySelector(`[data-id="${f.id}"]`);
+    if (row) row.focus();
+    return;
   }
   if (f && f.lone) dropFile(f);
   goHome();
