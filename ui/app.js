@@ -482,8 +482,8 @@ async function openRecent(id) {
   try {
     const t = await invoke("open_recent", { id });
     const f = Object.assign(newFile(t.path), { name: t.name, step: "done", done: 1, duration: t.duration, peaks: t.peaks,
-      audio: t.audio, segments: t.segments, took: t.took, read: t.read || 0, transcribed: t.transcribed || 0,
-      threads: t.threads || 0, model: t.model, recentId: t.id, fps: t.fps || 0 });
+      audio: t.audio, segments: t.segments, took: t.took, transcribed: t.transcribed || 0, model: t.model, recentId: t.id,
+      fps: t.fps || 0 });
     files.push(f);
     sel = f.id;
     home = false;
@@ -545,12 +545,45 @@ $("recent-list").onclick = (e) => {
   home = false;
   render();
 };
+/* Clearing the list asks first, in the window: the system's dialog makes
+   its first button the default, so Enter or Space there cleared the list
+   (the Windows test, 2026-10-22). Here Cancel is the default, Esc and a
+   click outside are Cancel too, and Clear wants its own click, or Tab and
+   Enter. */
+let answer = null;
+
+function askClear() {
+  $("ask").hidden = false;
+  $("ask-no").focus({ preventScroll: true });
+  return new Promise((r) => (answer = r));
+}
+
+/* false if it was not open */
+function closeAsk(yes = false) {
+  if ($("ask").hidden) return false;
+  $("ask").hidden = true;
+  $("clear-recent").focus({ preventScroll: true });
+  answer(yes);
+  return true;
+}
+
+$("ask-yes").onclick = () => closeAsk(true);
+$("ask-no").onclick = () => closeAsk(false);
+$("ask").addEventListener("click", (e) => {
+  if (e.target === $("ask")) closeAsk(false);
+});
+/* the keyboard stays on its two buttons */
+$("ask").addEventListener("keydown", (e) => {
+  if (e.key !== "Tab") return;
+  e.preventDefault();
+  (document.activeElement === $("ask-no") ? $("ask-yes") : $("ask-no")).focus();
+});
 $("clear-recent").onclick = async () => {
+  if (!(await askClear())) return;
   try {
-    if (await invoke("clear_recent")) {
-      recent = [];
-      render();
-    }
+    await invoke("clear_recent");
+    recent = [];
+    render();
   } catch (e) {
     toastErr(e);
   }
@@ -562,7 +595,7 @@ $("ready-model").onclick = (e) => modelMenu(e.currentTarget, !e.detail);
 
 function newFile(path) {
   return { id: nextId++, path, name: baseName(path), kind: kindOf(path), step: "waiting", done: 0, eta: -1, duration: null,
-    peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], cues: null, fps: 0, took: 0, read: 0, transcribed: 0, threads: 0, model: "", recentId: null, message: "",
+    peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], cues: null, fps: 0, took: 0, transcribed: 0, model: "", recentId: null, message: "",
     detail: "" };
 }
 
@@ -582,6 +615,8 @@ async function chooseFiles() {
    several queue up beside it while they are transcribed. Under way, they
    join the queue. */
 async function addPaths(paths) {
+  // files dropped or picked while the window asks: Cancel, and on to them
+  closeAsk();
   const media = paths.filter(isMedia);
   let here = media;
   try {
@@ -656,8 +691,7 @@ listen("job", (e) => {
   f.segments.push(...j.segments);
   if (j.step === "error") Object.assign(f, { message: j.message, detail: j.detail });
   if (j.step === "done") {
-    Object.assign(f, { done: 1, took: j.took, read: j.read, transcribed: j.transcribed, threads: j.threads, model: j.model,
-      recentId: j.recent });
+    Object.assign(f, { done: 1, took: j.took, transcribed: j.transcribed, model: j.model, recentId: j.recent });
     finished(f);
   }
   update(f, j.segments);
@@ -728,7 +762,7 @@ function goHome() {
 
 function again(f) {
   Object.assign(f, { step: "waiting", done: 0, eta: -1, peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], cues: null,
-    took: 0, read: 0, transcribed: 0, threads: 0, recentId: null, message: "", detail: "" });
+    took: 0, transcribed: 0, recentId: null, message: "", detail: "" });
   mainKey = "";
   render();
   pump();
@@ -1027,19 +1061,15 @@ function renderTranscript(f, mode) {
 }
 
 /* What a transcript cost, after its last row and quiet: the transcription's
-   time and pace, reading the audio's, the model, and the backend and threads
-   it ran on. A transcript from before these were kept says what it took. */
+   time and its pace. A transcript from before that was kept says what it
+   took in all. */
 function statsHtml(f) {
   if (!f.took || !f.segments.length) return "";
-  const secs = (x) => (x < 10 ? `${x.toFixed(2)} s` : x < 60 ? `${x.toFixed(1)} s` : clock(x));
-  const parts = f.transcribed > 0
-    ? [`Transcribed in ${secs(f.transcribed)}, ${(f.duration / f.transcribed).toFixed(1)}× real time`, `audio read in ${secs(f.read)}`]
-    : [`Took ${secs(f.took)}`];
-  const model = st.catalog.find((m) => m.name === f.model);
-  parts.push(model ? `${model.label} model` : f.model);
-  const backend = st.backend.split(" (")[0];
-  parts.push(f.threads > 0 ? `${backend} on ${f.threads} thread${f.threads === 1 ? "" : "s"}` : backend);
-  return `<p class="pk-stats">${esc(parts.join(" · "))}</p>`;
+  const secs = (x) => (x < 10 ? `${x.toFixed(2)}s` : x < 60 ? `${x.toFixed(1)}s` : clock(x));
+  const line = f.transcribed > 0
+    ? `Transcribed in ${secs(f.transcribed)}, ${(f.duration / f.transcribed).toFixed(1)}x real-time`
+    : `Took ${secs(f.took)}`;
+  return `<p class="pk-stats">${esc(line)}</p>`;
 }
 
 /* While transcribing, the newest segment is current and its last word is
@@ -1688,8 +1718,8 @@ function saveMenu(anchor, keys) {
 
 function saveAllMenu(anchor, keys) {
   const n = files.filter((f) => f.step === "done" && f.segments.length).length;
-  const html = `<button class="pk-mi" type="button" role="menuitem" data-all="txt"><span>Text, next to each original</span><small>${n} × .txt</small></button>` +
-    `<button class="pk-mi" type="button" role="menuitem" data-all="srt"><span>Subtitles, next to each original</span><small>${n} × .srt</small></button>` +
+  const html = `<button class="pk-mi" type="button" role="menuitem" data-all="txt"><span>Text, next to each original</span><small>${n} x .txt</small></button>` +
+    `<button class="pk-mi" type="button" role="menuitem" data-all="srt"><span>Subtitles, next to each original</span><small>${n} x .srt</small></button>` +
     `<button class="pk-mi" type="button" role="menuitem" data-all="folder"><span>All of them into one folder…</span><small>.txt .srt .vtt .md .json</small></button>` +
     `<div class="pk-menu-sep" aria-hidden="true"></div>` +
     checkHtml("save_each", "Save each one as it finishes", ".txt, next to the original");
@@ -1994,10 +2024,10 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (!st) return;
-  // Esc backs out one step: a menu, About, a search, then the file
+  // Esc backs out one step: a question, a menu, About, a search, then the file
   if (e.key === "Escape") {
     e.preventDefault();
-    if (closeMenu() || closeNotices() || closeAbout()) return;
+    if (closeAsk() || closeMenu() || closeNotices() || closeAbout()) return;
     if (query && viewName() === "work") clearFind();
     else goHome();
     return;
@@ -2025,6 +2055,8 @@ document.addEventListener("keydown", (e) => {
 
 listen("menu", (e) => {
   const id = e.payload;
+  // a command from the menu bar while the window asks: Cancel, and on to it
+  closeAsk();
   if (id === "add") chooseFiles();
   else if (id === "about") openAbout();
   else if (id === "find") openFind();
@@ -2044,6 +2076,9 @@ async function start() {
   $("time").title = "Seconds or frames";
   $("notices-close").innerHTML = ICON.x;
   $("notices-close").title = "Close (Esc)";
+  // the question's buttons where the system's own dialogs put Cancel: first
+  // on macOS, last on Windows
+  if (isMac()) $("ask-btns").prepend($("ask-no"));
   $("find-box").title = tip("Find", "F");
   $("find-prev").innerHTML = ICON.up;
   $("find-prev").title = "Previous (Shift+Enter)";

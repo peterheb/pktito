@@ -362,8 +362,9 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
 }
 
 /* Everything else: a panel over About, which floats as a menu does, its
-   list scrolling inside it */
-.pk-notices { position: fixed; inset: 0; z-index: 35; display: grid; place-items: center; padding: 24px; background: rgba(16, 27, 51, .32); }
+   list scrolling inside it. The question before the recent list is
+   cleared dims the window as it does. */
+.pk-notices, .pk-ask { position: fixed; inset: 0; z-index: 35; display: grid; place-items: center; padding: 24px; background: rgba(16, 27, 51, .32); }
 .pk-notices-box { width: min(760px, 100%); height: min(760px, 100%); display: flex; flex-direction: column; overflow: hidden;
   border-radius: var(--radius-ui); background: var(--ground); box-shadow: var(--shadow-float); }
 .pk-notices-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 10px 10px 24px;
@@ -384,7 +385,17 @@ html[data-chrome=win] .pk-work:not(.is-batch) .pk-head { padding-right: var(--ca
   .pk-nlist li { grid-template-columns: minmax(0, 1fr) auto; }
   .pk-nlist .pk-nc { grid-column: 1 / -1; }
 }
-@media (prefers-color-scheme: dark) { .pk-notices { background: rgba(0, 0, 0, .55); } }
+@media (prefers-color-scheme: dark) { .pk-notices, .pk-ask { background: rgba(0, 0, 0, .55); } }
+
+/* The question: Cancel, the default, in plume; Clear's word in err, the
+   one button that destroys something (design/README.md) */
+.pk-ask-box { width: min(400px, 100%); padding: var(--space-4); border-radius: var(--radius-ui); background: var(--ground);
+  box-shadow: var(--shadow-float); }
+.pk-ask-box:focus { outline: none; }
+.pk-ask-box p { margin-top: var(--space-2); }
+.pk-ask-btns { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-4); }
+.pk-ask-btns .pk-btn { min-width: 80px; }
+.pk-btn-del { color: var(--err); }
 
 /* -------------------------------------------- sentences or captions -- */
 /* two buttons in a sunk track, the one chosen raised to the ground */

@@ -22,14 +22,9 @@ pub struct Item {
     pub finished: u64,
     /// Seconds it took, reading the audio included.
     pub took: f64,
-    /// Of that, reading the audio and transcribing it, and the threads it
-    /// ran on (0 for transcripts from before these were kept).
-    #[serde(default)]
-    pub read: f64,
+    /// Of that, transcribing it (0 for transcripts from before it was kept).
     #[serde(default)]
     pub transcribed: f64,
-    #[serde(default)]
-    pub threads: i32,
     pub model: String,
     /// A video's frame rate, 0 for audio (and for transcripts from before).
     #[serde(default)]

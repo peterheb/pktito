@@ -140,6 +140,19 @@
   </div>
 </section>
 
+<!-- Before the recent list is cleared: Cancel the default, its buttons in
+     the platform's order (app.js, askClear) -->
+<div class="pk-ask" id="ask" hidden>
+  <div class="pk-ask-box" role="alertdialog" aria-modal="true" aria-labelledby="ask-title" aria-describedby="ask-text" tabindex="-1">
+    <h2 class="pk-ui" id="ask-title">Clear the recent list?</h2>
+    <p id="ask-text">All recent transcripts will be permanently deleted. Your original audio and video files, and any transcripts you saved, are not affected.</p>
+    <div class="pk-ask-btns" id="ask-btns">
+      <button class="pk-btn pk-btn-del" id="ask-yes" type="button">Clear</button>
+      <button class="pk-btn pk-btn-primary" id="ask-no" type="button">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="pk-drop" id="drop" hidden>
   <div class="pk-drop-in">
     <div class="pk-strip" aria-hidden="true"><span class="pk-wave" id="drop-wave"></span></div>

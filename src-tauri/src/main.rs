@@ -22,7 +22,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager, State};
-use tauri_plugin_dialog::{DialogExt, FileDialogBuilder, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_dialog::{DialogExt, FileDialogBuilder};
 
 /// The model and a transcriber over it, loaded once and kept.
 struct Engine {
@@ -318,11 +318,8 @@ struct JobEvent {
     /// A video's frame rate, 0 for audio: for times in frames.
     fps: f64,
     took: f64,
-    /// Of that, the seconds reading the audio and transcribing it, and the
-    /// threads it ran on.
-    read: f64,
+    /// Of that, the seconds transcribing it.
     transcribed: f64,
-    threads: i32,
     model: String,
     /// Its place on the recent list.
     recent: Option<String>,
@@ -353,7 +350,6 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
         Err(e) => return fail(e.why(), e.detail()),
     };
     let duration = x.len() as f64 / decode::RATE as f64;
-    let read = t0.elapsed().as_secs_f64();
     let fps = fps_of(path);
     let key = recent::new_id();
     let audio = audio_dir(app)
@@ -400,7 +396,6 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
         || state.stop.load(Ordering::Relaxed) == id,
     );
     let transcribed = t1.elapsed().as_secs_f64();
-    let threads = asr.threads();
     let name = model.name();
     drop(slot);
     let _ = state.stop.compare_exchange(id, 0, Ordering::Relaxed, Ordering::Relaxed);
@@ -414,9 +409,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
                 duration,
                 finished: recent::now(),
                 took,
-                read,
                 transcribed,
-                threads,
                 model: name.clone(),
                 fps,
             };
@@ -432,9 +425,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
                 done: 1.0,
                 duration,
                 took,
-                read,
                 transcribed,
-                threads,
                 model: name,
                 recent: kept.ok().map(|_| key),
                 ..Default::default()
@@ -492,34 +483,17 @@ async fn reload_audio(app: AppHandle, id: String) -> Result<String, String> {
     .map_err(|e| e.to_string())?
 }
 
-/// Empty the recent list, once the user says so.
+/// Empty the recent list, once the user says so: the window asks (app.js,
+/// askClear), since the system's dialog can't make Cancel its default.
 #[tauri::command]
-async fn clear_recent(app: AppHandle) -> Result<bool, String> {
-    let ask = app
-        .dialog()
-        .message(
-            "All recent transcripts will be permanently deleted. Your original audio and video files, \
-             and any transcripts you saved, are not affected.",
-        )
-        .title("Clear the recent list?")
-        .kind(MessageDialogKind::Warning)
-        .buttons(MessageDialogButtons::OkCancelCustom("Clear".into(), "Cancel".into()));
-    // owned by the window on Windows, as the file dialogs are (file_dialog)
-    #[cfg(target_os = "windows")]
-    let ask = match app.get_webview_window("main") {
-        Some(w) => ask.parent(&w),
-        None => ask,
-    };
-    let yes = ask.blocking_show();
-    if yes {
-        let data = data_dir(&app)?;
-        let dir = audio_dir(&app)?;
-        for i in recent::list(&data) {
-            let _ = fs::remove_file(audio::wav_in(&dir, &i.id));
-        }
-        recent::clear(&data);
+fn clear_recent(app: AppHandle) -> Result<(), String> {
+    let data = data_dir(&app)?;
+    let dir = audio_dir(&app)?;
+    for i in recent::list(&data) {
+        let _ = fs::remove_file(audio::wav_in(&dir, &i.id));
     }
-    Ok(yes)
+    recent::clear(&data);
+    Ok(())
 }
 
 /// Where stem.ext can go in dir without writing over anything: stem.ext,

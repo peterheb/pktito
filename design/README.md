@@ -32,6 +32,7 @@ One ground, one ink, one accent, one mark. Every color is a token with a light a
 - `beak` is a mark, not a color for areas: the square in the wordmark, the playhead, the token being decoded. Blue and orange stay distinct for color-blind readers because they also differ in lightness.
 - `term` is the dark field of the stage's transcript panel and the waveform strip in both themes; `term-ink`, `term-dim`, `wave` and `wave-played` sit on it.
 - `ok` and `err` mark a finished or failed file and always sit beside a word.
+- The one button that destroys something, Clear in the question before the recent list is emptied, sets its word in `err` on `sunk`. Cancel beside it is the default, in `plume`, so that Enter and Esc both leave things as they were.
 - Keyboard focus is `focus`, 2px solid: ink in light, plume in dark.
 - Hover and press are one rule for every control, the wordmark included: `tint`, then `tint-press`, laid over whatever the control sits on or is filled with (ground, surface, sunk, plume), so it darkens in light and lightens in dark; on `term`, the strip and the toast, `tint-term` and `tint-term-press`. Links in running text thicken their underline instead.
 
