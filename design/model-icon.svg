@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 64 64">
+  <title>pktito model (.pkf)</title>
+  <!-- The icon of a model file: a sheet of paper in the window's
+       proportion, its corner folded, with the app icon's four bars cut into
+       steps, as int8 weights are, and the beak at their end, one step.
+       Every bar sits about the middle of the app icon's. This is the icon
+       from 128 px up; model-icon-64.svg, -32, -24 and -16 draw it for the
+       sizes below, keeping their edges on whole pixels
+       (scripts/model-icon.sh). -->
+  <path d="M12.5 4.5H39.8L51.5 16.2V59.5H12.5Z" fill="#ffffff" stroke="#9aa7bf"/>
+  <path d="M40 4.5V16H51.5Z" fill="#dbe1ea" stroke="#9aa7bf" stroke-linejoin="round"/>
+  <g fill="#101b33">
+    <rect x="18" y="28" width="4" height="3.5"/><rect x="18" y="32" width="4" height="3.5"/><rect x="18" y="36" width="4" height="3.5"/>
+    <rect x="24" y="24" width="4" height="3.5"/><rect x="24" y="28" width="4" height="3.5"/><rect x="24" y="32" width="4" height="3.5"/><rect x="24" y="36" width="4" height="3.5"/><rect x="24" y="40" width="4" height="3.5"/>
+    <rect x="30" y="20" width="4" height="3.5"/><rect x="30" y="24" width="4" height="3.5"/><rect x="30" y="28" width="4" height="3.5"/><rect x="30" y="32" width="4" height="3.5"/><rect x="30" y="36" width="4" height="3.5"/><rect x="30" y="40" width="4" height="3.5"/><rect x="30" y="44" width="4" height="3.5"/>
+    <rect x="36" y="26" width="4" height="3.5"/><rect x="36" y="30" width="4" height="3.5"/><rect x="36" y="34" width="4" height="3.5"/><rect x="36" y="38" width="4" height="3.5"/>
+  </g>
+  <rect x="42" y="32" width="4" height="3.5" fill="#c85a1e"/>
+</svg>

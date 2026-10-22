@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <title>pktito model (.pkf), 24 px</title>
+  <!-- model-icon.svg where steps would blur: the page 14 by 20, three
+       whole bars 2 px wide and the beak square, as model-icon-16.svg. -->
+  <path d="M5.5 2.5H15.3L18.5 5.7V21.5H5.5Z" fill="#ffffff" stroke="#9aa7bf"/>
+  <path d="M15 2.5V6H18.5Z" fill="#dbe1ea" stroke="#9aa7bf" stroke-linejoin="round"/>
+  <g fill="#101b33">
+    <rect x="7" y="10" width="2" height="4"/>
+    <rect x="10" y="8" width="2" height="8"/>
+    <rect x="13" y="6" width="2" height="12"/>
+  </g>
+  <rect x="16" y="11" width="2" height="2" fill="#c85a1e"/>
+</svg>

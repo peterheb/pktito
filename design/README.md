@@ -85,6 +85,8 @@ There is no pictorial mark. The name is the logo: the **Wordmark** sets "pktito"
 
 The app icon (`Logos/app-icon.svg`) is a `plume` rounded square with four `ink` waveform bars ending in the `beak` square. Its 230/1024 corner suits macOS; generate the Windows .ico and the rest of the Tauri icon set from the same SVG. Never recolor it, add a gradient, or set it on `plume`.
 
+The model icon (`model-icon.svg`) marks pktito's model files, .pkf, in Explorer and Finder: a white sheet in the window's proportion, 1 by √2, its corner folded, with the app icon's four bars cut into steps, as int8 weights are, and the beak at their end, one step. Below 128 px each size has its own drawing on whole pixels (`model-icon-64.svg` for 48 and 64, then `-32`, `-24` and `-16`, the last two with three whole bars and the beak); `scripts/model-icon.py` makes the .ico and .icns from them.
+
 ## Components
 
 - **Button**: square on the site, `radius-ui` in the app; primary in `plume`.

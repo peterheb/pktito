@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <title>pktito model (.pkf), 48 and 64 px</title>
+  <!-- model-icon.svg on a 64 grid, for 48 and 64 px: its edge 2 px, the
+       steps 4 by 3 px with 1 px between. -->
+  <path d="M13 5H39.6L51 16.4V59H13Z" fill="#ffffff" stroke="#9aa7bf" stroke-width="2"/>
+  <path d="M40 5V16H51Z" fill="#dbe1ea" stroke="#9aa7bf" stroke-width="2" stroke-linejoin="round"/>
+  <g fill="#101b33">
+    <rect x="18" y="28" width="4" height="3"/><rect x="18" y="32" width="4" height="3"/><rect x="18" y="36" width="4" height="3"/>
+    <rect x="24" y="24" width="4" height="3"/><rect x="24" y="28" width="4" height="3"/><rect x="24" y="32" width="4" height="3"/><rect x="24" y="36" width="4" height="3"/><rect x="24" y="40" width="4" height="3"/>
+    <rect x="30" y="20" width="4" height="3"/><rect x="30" y="24" width="4" height="3"/><rect x="30" y="28" width="4" height="3"/><rect x="30" y="32" width="4" height="3"/><rect x="30" y="36" width="4" height="3"/><rect x="30" y="40" width="4" height="3"/><rect x="30" y="44" width="4" height="3"/>
+    <rect x="36" y="26" width="4" height="3"/><rect x="36" y="30" width="4" height="3"/><rect x="36" y="34" width="4" height="3"/><rect x="36" y="38" width="4" height="3"/>
+  </g>
+  <rect x="42" y="32" width="4" height="3" fill="#c85a1e"/>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <title>pktito model (.pkf), 16 px</title>
+  <!-- model-icon.svg where a block would be a pixel: the page 10 by 14, the
+       bars whole, 1 px wide and 1 px apart, as the app icon's are at this
+       size. -->
+  <path d="M3.5 1.5H10L12.5 4V14.5H3.5Z" fill="#ffffff" stroke="#9aa7bf"/>
+  <path d="M10 1.5V4H12.5Z" fill="#dbe1ea" stroke="#9aa7bf" stroke-linejoin="round"/>
+  <g fill="#101b33">
+    <rect x="5" y="7" width="1" height="3"/>
+    <rect x="7" y="6" width="1" height="5"/>
+    <rect x="9" y="5" width="1" height="7"/>
+  </g>
+  <rect x="11" y="8" width="1" height="1" fill="#c85a1e"/>
+</svg>
