@@ -78,7 +78,9 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
    (src-tauri/src/main.rs, LIGHTS), and what would sit under them moves to
    --lights, the lights' end and a gap; its empty space drags the window
    (index.html, data-tauri-drag-region). Full screen shows no lights. */
-html[data-chrome=mac] { --lights: 92px; }
+/* at 92 px the back arrow sat 15 px from the lights, which are 9 px apart,
+   and looked pressed against them */
+html[data-chrome=mac] { --lights: 100px; }
 html[data-chrome=mac]:not([data-fullscreen]) .pk-work:not(.is-batch) .pk-head { padding-left: var(--lights); }
 /* the queue's arrow, drawn 7 px inside its button, at --lights */
 html[data-chrome=mac]:not([data-fullscreen]) .pk-side-top { padding-left: calc(var(--lights) - 19px); }
