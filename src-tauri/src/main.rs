@@ -933,29 +933,44 @@ fn main_window(app: &tauri::App) -> tauri::Result<tauri::WebviewWindow> {
 /// The size the window was given at launch, which a resize to it need not save.
 static PLACED: Mutex<Option<(f64, f64)>> = Mutex::new(None);
 
-/// The window, sized before it is shown: as the user last left it, else a
-/// portrait page in a sheet of paper's proportion, 1 by the square root of
-/// 2, 720 by 1018. It reads a transcript down and shows more of the recent
-/// list. Either way it stays within the monitor's work area, title bar and
-/// all, so a laptop's 768 rows hold it, if not in proportion.
-/// tauri.conf.json makes it hidden until then.
+/// The window, sized by fit_size before it is shown, in the middle of the
+/// monitor's work area. tauri.conf.json makes it hidden until then.
 fn place_window(w: &tauri::WebviewWindow, saved: Option<[f64; 2]>) {
-    let [mut width, mut height] = saved.unwrap_or([720.0, 1018.0]);
     let monitor = w.current_monitor().ok().flatten().or_else(|| w.primary_monitor().ok().flatten());
-    if let (Some(m), Ok(outer), Ok(inner)) = (monitor, w.outer_size(), w.inner_size()) {
-        let scale = m.scale_factor();
-        let area = m.work_area().size.to_logical::<f64>(scale);
-        // the title bar and borders lie outside the size set
-        let frame = ((outer.width.saturating_sub(inner.width)) as f64 / scale, (outer.height.saturating_sub(inner.height)) as f64 / scale);
-        width = width.min(area.width - frame.0);
-        height = height.min(area.height - frame.1);
-    }
-    // not below the window's minimum, which tauri.conf.json sets
-    let (width, height) = (width.max(480.0).round(), height.max(480.0).round());
+    let room = match (monitor, w.outer_size(), w.inner_size()) {
+        (Some(m), Ok(outer), Ok(inner)) => {
+            let scale = m.scale_factor();
+            let area = m.work_area().size.to_logical::<f64>(scale);
+            // the title bar and borders lie outside the size set
+            let frame = ((outer.width.saturating_sub(inner.width)) as f64 / scale, (outer.height.saturating_sub(inner.height)) as f64 / scale);
+            Some((area.width - frame.0, area.height - frame.1))
+        }
+        _ => None,
+    };
+    let (width, height) = fit_size(saved, room);
     *PLACED.lock().unwrap() = Some((width, height));
     let _ = w.set_size(tauri::LogicalSize::new(width, height));
     let _ = w.center();
     let _ = w.show();
+}
+
+/// The window's size: as the user last left it, else a portrait page in a
+/// sheet of paper's proportion, 1 by the square root of 2, 720 by 1018. It
+/// reads a transcript down and shows more of the recent list. Either way it
+/// stays within room, the work area less the window's frame: the page made
+/// smaller in proportion, 509 by 720 under a 1366 by 768 screen's taskbar,
+/// and a size the user left cut to fit. Neither goes below the window's
+/// minimum, 480 by 480 (tauri.conf.json).
+fn fit_size(saved: Option<[f64; 2]>, room: Option<(f64, f64)>) -> (f64, f64) {
+    let [mut width, mut height] = saved.unwrap_or([720.0, 1018.0]);
+    if let Some((w, h)) = room {
+        if saved.is_none() {
+            let k = (w / width).min(h / height).min(1.0);
+            (width, height) = (width * k, height * k);
+        }
+        (width, height) = (width.min(w), height.min(h));
+    }
+    (width.max(480.0).round(), height.max(480.0).round())
 }
 
 /// The window's size as the user leaves it, saved for the next launch half a
@@ -1189,4 +1204,29 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("pktito could not start");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn page_smaller_in_proportion() {
+        assert_eq!(fit_size(None, Some((2560.0, 1400.0))), (720.0, 1018.0));
+        // 1366 by 768 under Windows 11's 48 px taskbar
+        assert_eq!(fit_size(None, Some((1366.0, 720.0))), (509.0, 720.0));
+        // a screen narrower than the page
+        assert_eq!(fit_size(None, Some((600.0, 1000.0))), (600.0, 848.0));
+        // 1920 by 1080 at 150%: in proportion it would be 475 wide
+        assert_eq!(fit_size(None, Some((1280.0, 672.0))), (480.0, 672.0));
+        // shorter than the window's minimum, which wins
+        assert_eq!(fit_size(None, Some((910.0, 464.0))), (480.0, 480.0));
+        assert_eq!(fit_size(None, None), (720.0, 1018.0));
+    }
+
+    #[test]
+    fn saved_size_cut_to_fit() {
+        assert_eq!(fit_size(Some([900.0, 1300.0]), Some((1366.0, 720.0))), (900.0, 720.0));
+        assert_eq!(fit_size(Some([640.0, 600.0]), Some((1366.0, 720.0))), (640.0, 600.0));
+    }
 }
