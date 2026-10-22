@@ -1,5 +1,5 @@
 //! pktito's C API (vendor/pktito/core/pktito.h), and safe wrappers for the
-//! parts the app uses: a model, a transcriber, the VAD's chunking.
+//! parts the app uses: a model, a transcriber, the VAD's chunking, captions.
 
 use std::ffi::{c_char, c_int, c_long, CStr, CString};
 use std::path::Path;
@@ -55,6 +55,27 @@ pub struct Span {
     pub end: i64,
 }
 
+#[repr(C)]
+struct CapWord {
+    text: *const c_char,
+    start: i64,
+    end: i64,
+}
+
+/// A cue of a subtitle track (pk_cue): words [first, first + n) from start
+/// to end in milliseconds, the second line from word line2 on (0: one line).
+#[repr(C)]
+#[derive(Clone, Copy, Default, serde::Serialize)]
+pub struct Cue {
+    pub first: i32,
+    pub n: i32,
+    pub line2: i32,
+    pub chars: i32,
+    pub flags: i32,
+    pub start: i64,
+    pub end: i64,
+}
+
 const VAD_SAMPLES: usize = 512;
 
 extern "C" {
@@ -78,6 +99,27 @@ extern "C" {
         cap: usize,
     ) -> usize;
     fn pk_chunks(speech: *const Span, n_speech: usize, total: i64, max_len: i64, out: *mut Span) -> usize;
+    fn pk_captions(w: *const CapWord, n: usize, english: c_int, media_end: i64, out: *mut Cue) -> c_long;
+}
+
+/// The cues of a subtitle track for words and their times in milliseconds,
+/// as the CLI's --srt has them (core/captions.c): English's rules when
+/// english, else punctuation and pauses alone.
+pub fn captions(words: &[(String, i64, i64)], english: bool, media_end: i64) -> Result<Vec<Cue>, String> {
+    // a NUL inside a word would end it early: none comes from pk_text
+    let texts: Vec<CString> = words.iter().map(|w| CString::new(w.0.replace('\0', "")).unwrap()).collect();
+    let raw: Vec<CapWord> = words
+        .iter()
+        .zip(&texts)
+        .map(|(w, t)| CapWord { text: t.as_ptr(), start: w.1, end: w.2 })
+        .collect();
+    let mut out = vec![Cue::default(); words.len().max(1)];
+    let n = unsafe { pk_captions(raw.as_ptr(), raw.len(), english as c_int, media_end, out.as_mut_ptr()) };
+    if n < 0 {
+        return Err("Not enough memory".into());
+    }
+    out.truncate(n as usize);
+    Ok(out)
 }
 
 /// The name of the backend the CPU picked, e.g. "neon-dp (ARMv8.2 NEON: SDOT int8, fp32)".

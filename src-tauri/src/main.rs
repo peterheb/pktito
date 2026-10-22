@@ -571,6 +571,23 @@ async fn pick_folder(app: AppHandle) -> Result<Option<String>, String> {
     Ok(Some(dir.into_path().map_err(|e| e.to_string())?.to_string_lossy().into_owned()))
 }
 
+/// A word of a transcript, as the window holds it: seconds.
+#[derive(Deserialize)]
+struct TimedWord {
+    text: String,
+    start: f64,
+    end: f64,
+}
+
+/// The cues of a transcript's subtitle track, from the engine's pk_captions,
+/// so that the app's .srt and .vtt are the CLI's: times in milliseconds.
+#[tauri::command]
+fn captions(words: Vec<TimedWord>, english: bool, duration: f64) -> Result<Vec<pktito::Cue>, String> {
+    let ms = |s: f64| (s * 1000.0).round() as i64;
+    let w: Vec<(String, i64, i64)> = words.into_iter().map(|w| (w.text, ms(w.start), ms(w.end))).collect();
+    pktito::captions(&w, english, ms(duration))
+}
+
 /// Show a file in the file manager, selected.
 #[tauri::command]
 fn reveal(path: String) -> Result<(), String> {
@@ -962,7 +979,8 @@ fn main() {
             save_many,
             pick_folder,
             reveal,
-            open_link
+            open_link,
+            captions
         ])
         .run(tauri::generate_context!())
         .expect("pktito could not start");

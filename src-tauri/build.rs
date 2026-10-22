@@ -16,7 +16,7 @@ use std::path::PathBuf;
 
 const CORE: &[&str] = &[
     "model.c", "os.c", "pool.c", "mel.c", "encoder.c", "decoder.c", "tokens.c", "asr.c", "vad.c",
-    "segment.c", "wav.c", "resample.c",
+    "segment.c", "wav.c", "resample.c", "captions.c",
 ];
 
 fn base(os: &str, root: &PathBuf) -> cc::Build {

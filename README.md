@@ -124,10 +124,16 @@ bar. On Windows and Linux the page takes the shortcuts itself: Ctrl+O adds
 files, Ctrl+S and Ctrl+Shift+S save as text and as subtitles, Ctrl+F finds.
 Space plays and pauses.
 
-Saving writes `.txt`, `.srt`, `.vtt`, `.md`, or `.json` with every word's
-start and end, beside the original or where the dialog says. It never writes
-over a file: a second save is "name 2.txt" ("name (2).txt" on Windows, as
-Explorer numbers copies).
+A finished transcript reads as its sentences, as the model wrote them, or as
+Captions: its subtitle track, cut into cues of one or two lines of 42
+characters by pktito's own pk_captions (vendor/pktito/core/captions.c), as
+the CLI's --srt is, each cue shown with when it starts and ends and a mark
+where it reads faster than 20 characters a second. Playback, find and its
+ticks work in either. Saving writes `.txt`, `.srt`, `.vtt`, `.md`, or
+`.json` beside the original or where the dialog says: the subtitles are the
+captions' cues, the text and Markdown the sentences, and the JSON both, with
+every word's start and end. It never writes over a file: a second save is
+"name 2.txt" ("name (2).txt" on Windows, as Explorer numbers copies).
 
 ## Building
 

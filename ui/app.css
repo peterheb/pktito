@@ -38,6 +38,7 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
   stroke-linecap: round; stroke-linejoin: round; }
 .pk-ico-fill { fill: currentColor; stroke: none; }
 .pk-ico-20 { width: 20px; height: 20px; }
+.pk-ico-12 { width: 12px; height: 12px; }
 
 /* --------------------------------------------------------------- buttons -- */
 .pk-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px; flex: none;
@@ -65,9 +66,9 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
    on or is filled with (design/README.md) */
 /* (:where, so that a rule that turns it off for a state, as for a transcript
    still filling in, needs no more than its own selector) */
-:where(.pk-btn, .pk-linkbtn, button.pk-wm, .pk-row, .pk-x, .pk-mi, .pk-seg-t, .pk-play, .pk-choice, .pk-find, .pk-find-step):hover:not([disabled]) {
+:where(.pk-btn, .pk-linkbtn, button.pk-wm, .pk-row, .pk-x, .pk-mi, .pk-seg-t, .pk-play, .pk-choice, .pk-find, .pk-find-step, .pk-view):hover:not([disabled]) {
   background-image: linear-gradient(var(--tint), var(--tint)); }
-:where(.pk-btn, .pk-linkbtn, button.pk-wm, .pk-row, .pk-x, .pk-mi, .pk-seg-t, .pk-play, .pk-choice, .pk-find-step):active:not([disabled]) {
+:where(.pk-btn, .pk-linkbtn, button.pk-wm, .pk-row, .pk-x, .pk-mi, .pk-seg-t, .pk-play, .pk-choice, .pk-find-step, .pk-view):active:not([disabled]) {
   background-image: linear-gradient(var(--tint-press), var(--tint-press)); }
 
 /* ------------------------------------------- setup and ready: one column -- */
@@ -111,6 +112,10 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
 
 /* ready */
 .pk-ready { height: min(100%, 600px); min-height: 0; gap: 22px; padding-top: 20px; padding-bottom: 20px; }
+/* the model's button with its chevron on the strip's right edge, as the
+   wordmark is on its left: its padding outside it (Peter's screenshot,
+   2026-10-22) */
+#ready-model { margin-right: -12px; }
 .pk-ready-text { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
 .pk-ready-act { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: -6px; }
 .pk-recent { margin-top: auto; display: flex; flex-direction: column; gap: 4px; min-height: 0; }
@@ -252,6 +257,14 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
   .pk-credits { grid-template-columns: minmax(0, 1fr); row-gap: 2px; }
   .pk-credits dd + dt { margin-top: 10px; }
 }
+/* a portrait window, as the default one is: the mascot over the credits,
+   which then have the window's width */
+@media (orientation: portrait) {
+  .pk-about { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 2fr) minmax(0, 3fr); }
+  .pk-about-text { padding: 28px 40px 32px; }
+  .pk-credits { grid-template-columns: 7.5em minmax(0, 1fr); row-gap: 10px; }
+  .pk-credits dd + dt { margin-top: 0; }
+}
 
 /* Everything else: a panel over About, which floats as a menu does, its
    list scrolling inside it */
@@ -278,10 +291,27 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
 }
 @media (prefers-color-scheme: dark) { .pk-notices { background: rgba(0, 0, 0, .55); } }
 
+/* -------------------------------------------- sentences or captions -- */
+/* two buttons in a sunk track, the one chosen raised to the ground */
+.pk-views { display: flex; gap: 2px; align-self: flex-start; margin: 14px 24px 0; padding: 2px; border-radius: var(--radius-ui);
+  background: var(--sunk); }
+.pk-view { border: 0; padding: 5px 10px; border-radius: 6px; background: none; color: var(--ink-muted); font: 500 13px/1.2 var(--font-sans);
+  cursor: pointer; }
+.pk-view[aria-checked="true"] { background: var(--ground); color: var(--ink); }
+.pk-view:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
 /* ------------------------------------------------------------- transcript -- */
 .pk-seg { display: grid; grid-template-columns: 112px minmax(0, 1fr); column-gap: 12px; align-items: baseline; padding: 8px 12px;
   border-radius: var(--radius-ui); max-width: 760px; }
 .pk-seg.is-current { background: var(--surface); }
+/* a row's times: a segment's start; a cue's start and its end under it,
+   with a mark if it reads faster than 20 characters a second */
+.pk-seg-times { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.pk-seg-end { display: inline-flex; align-items: center; gap: 4px; font: 400 12px/1.4 var(--font-mono); font-variant-numeric: tabular-nums;
+  color: var(--ink-muted); }
+.pk-fast { display: inline-flex; color: var(--ink-muted); }
+/* a cue's lines as the subtitle shows them */
+.pk-cue p { white-space: pre-line; }
 .pk-seg-t { border: 0; background: none; padding: 2px 4px; margin: -2px -4px; border-radius: 6px; text-align: left; cursor: pointer;
   font: 400 13px/1.5 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink-muted); display: inline-flex; align-items: center;
   gap: 6px; justify-self: start; }

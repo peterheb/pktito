@@ -30,6 +30,7 @@ const ICON = {
   back: svg('<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>'),
   play: svg('<polygon points="6 3 20 12 6 21 6 3"/>', "pk-ico pk-ico-20 pk-ico-fill"),
   pause: svg('<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>', "pk-ico pk-ico-20 pk-ico-fill"),
+  zap: svg('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', "pk-ico pk-ico-12"),
 };
 
 let st = null;          // the Rust side's status: the model, the catalog, the platform
@@ -450,7 +451,7 @@ $("ready-model").onclick = (e) => modelMenu(e.currentTarget, !e.detail);
 
 function newFile(path) {
   return { id: nextId++, path, name: baseName(path), kind: kindOf(path), step: "waiting", done: 0, eta: -1, duration: null,
-    peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], took: 0, model: "", recentId: null, message: "", detail: "" };
+    peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], cues: null, took: 0, model: "", recentId: null, message: "", detail: "" };
 }
 
 async function chooseFiles() {
@@ -561,7 +562,7 @@ async function finished(f) {
   }
   if (prefs.save_each && f.segments.length) {
     try {
-      const r = await invoke("save_text", { original: f.path, ext: "txt", text: textOf(f, "txt"), nextTo: true });
+      const r = await invoke("save_text", { original: f.path, ext: "txt", text: await textOf(f, "txt"), nextTo: true });
       if (r) toast(`Saved ${baseName(r.path)}`, { reveal: r.path });
     } catch (e) {
       toastErr(e);
@@ -612,8 +613,8 @@ function goHome() {
 }
 
 function again(f) {
-  Object.assign(f, { step: "waiting", done: 0, eta: -1, peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], took: 0,
-    recentId: null, message: "", detail: "" });
+  Object.assign(f, { step: "waiting", done: 0, eta: -1, peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], cues: null,
+    took: 0, recentId: null, message: "", detail: "" });
   mainKey = "";
   render();
   pump();
@@ -782,6 +783,14 @@ function buildMain(f, mode, key) {
     $("wavebtn").removeAttribute("aria-label");
   }
   $("wavebtn").disabled = !review || !playable(f);
+  $("views").hidden = !review || !f.segments.length;
+  for (const b of $("views").children) b.setAttribute("aria-checked", String((b.dataset.view === "captions") === !!prefs.captions));
+  // its cues, the first time it is shown as captions
+  if (review && prefs.captions && !f.cues && f.segments.length) {
+    cuesOf(f).then(() => {
+      if (current() === f && prefs.captions) rebuild();
+    }, (e) => toastErr(e));
+  }
   // a transcript whose audio is gone: its waveform dims with the play button
   wave.classList.toggle("is-off", review && !playable(f));
   renderTranscript(f, mode);
@@ -825,10 +834,16 @@ function updateRunning(f) {
 
 /* ---------------------------------------------------------- transcript -- */
 
-/* A segment; its time plays from there once the transcript is finished */
+/* A segment, or a cue; its time plays from there once the transcript is
+   finished. A cue shows its end too, its lines as they will read, and a
+   mark if it asks more than 20 characters a second of its reader. */
 function segHtml(s, i, filling) {
-  return `<div class="pk-seg" data-i="${i}"><button class="pk-seg-t" type="button" tabindex="-1" aria-label="Play from ${stamp(s.start)}"` +
-    `${filling ? "" : ' title="Play from here"'}>${stamp(s.start)}</button><p>${query ? hitHtml(s.text) : wordHtml(s)}</p></div>`;
+  const cue = s.endMs !== undefined;
+  const fast = cue && s.flags & 1 ?
+    `<span class="pk-fast" title="${(s.chars / (s.end - s.start)).toFixed(1)} characters a second, over the 20 a reader keeps up with">${ICON.zap}</span>` : "";
+  return `<div class="pk-seg${cue ? " pk-cue" : ""}" data-i="${i}"><div class="pk-seg-times"><button class="pk-seg-t" type="button" tabindex="-1" ` +
+    `aria-label="Play from ${stamp(s.start)}"${filling ? "" : ' title="Play from here"'}>${stamp(s.start)}</button>` +
+    (cue ? `<span class="pk-seg-end">${stamp(s.end)}${fast}</span>` : "") + `</div><p>${query ? hitHtml(s.text) : wordHtml(s)}</p></div>`;
 }
 
 /* The text with each timed word in a span of its own, for the playhead. */
@@ -846,7 +861,7 @@ function wordHtml(s) {
 function renderTranscript(f, mode) {
   const tr = $("transcript");
   tr.classList.toggle("is-live", mode === "running");
-  tr.innerHTML = f.segments.map((s, i) => segHtml(s, i, mode === "running")).join("");
+  tr.innerHTML = rowsOf(f).map((s, i) => segHtml(s, i, mode === "running")).join("");
   curSeg = curWord = null;
   if (mode === "running") markLive();
   let msg = "", err = false;
@@ -887,7 +902,7 @@ $("transcript").addEventListener("click", (e) => {
   const t = e.target.closest(".pk-seg-t");
   const f = current();
   if (!t || !f || modeOf(f) !== "review") return;
-  seek(f.segments[Number(t.parentNode.dataset.i)].start, true);
+  seek(rowsOf(f)[Number(t.closest(".pk-seg").dataset.i)].start, true);
 });
 
 /* ------------------------------------------------------------ waveform -- */
@@ -1109,10 +1124,10 @@ function showTime(t, follow = false) {
   if (wave._n && f.duration) setHead(wave, Math.floor((t / f.duration) * wave._n));
   let seg = null, word = null;
   if (t > 0 || playing) {
-    const i = at(f.segments, t);
+    const rows = rowsOf(f), i = at(rows, t);
     seg = i >= 0 ? $("transcript").children[i] : null;
     if (seg) {
-      const k = at(f.segments[i].words || [], t);
+      const k = at(rows[i].words || [], t);
       word = k >= 0 ? seg.querySelector(`[data-w="${k}"]`) : null;
     }
   }
@@ -1156,9 +1171,11 @@ let query = "", hits = [], hitTimes = [], hitAt = -1;
 
 /* text with each match marked, and where in text it starts */
 function hitHtml(text) {
-  let low = text.toLowerCase(), q = query.toLowerCase();
+  // a cue's line break reads as the space it stands for
+  const flat = text.replace(/\n/g, " ");
+  let low = flat.toLowerCase(), q = query.toLowerCase();
   // a lowercase that changes the length would put the marks in the wrong places
-  if (low.length !== text.length) [low, q] = [text, query];
+  if (low.length !== text.length) [low, q] = [flat, query];
   let out = "", from = 0, i;
   while ((i = low.indexOf(q, from)) >= 0) {
     out += `${esc(text.slice(from, i))}<mark class="pk-hit" data-at="${i}">${esc(text.slice(i, i + q.length))}</mark>`;
@@ -1184,15 +1201,15 @@ function runFind() {
   const f = current();
   if (!f || modeOf(f) !== "review") return;
   query = $("find").value.trim();
-  const tr = $("transcript"), top = tr.scrollTop;
-  tr.innerHTML = f.segments.map((s, i) => segHtml(s, i, false)).join("");
+  const tr = $("transcript"), top = tr.scrollTop, rows = rowsOf(f);
+  tr.innerHTML = rows.map((s, i) => segHtml(s, i, false)).join("");
   tr.scrollTop = top;
   curSeg = curWord = null;
   showTime(f.pos);
   hits = [...tr.querySelectorAll(".pk-hit")];
   // each match at its word's time, for its tick under the waveform
   hitTimes = hits.map((h) => {
-    const s = f.segments[Number(h.closest(".pk-seg").dataset.i)], k = wordAt(s, Number(h.dataset.at));
+    const s = rows[Number(h.closest(".pk-seg").dataset.i)], k = wordAt(s, Number(h.dataset.at));
     return k >= 0 ? s.words[k].start : s.start;
   });
   hitAt = -1;
@@ -1256,6 +1273,58 @@ $("find").addEventListener("keydown", (e) => {
   }
 });
 
+/* ------------------------------------------------------------ captions -- */
+
+/* A finished transcript as its subtitle track: the engine's pk_captions
+   (the captions command) cuts its words into cues of one or two lines of
+   42 characters, as the CLI's --srt does; English's rules for a model of
+   English alone. Asked for once a transcript, the first time something
+   needs them: the view, or a .srt, .vtt or .json. */
+async function cuesOf(f) {
+  if (f.cues) return f.cues;
+  const w = f.segments.flatMap((s) => s.words || []);
+  const m = st.catalog.find((x) => x.name === f.model);
+  const english = !!m && m.languages.length === 1 && m.languages[0] === "en";
+  const raw = await invoke("captions", { words: w.map((x) => ({ text: x.text, start: x.start, end: x.end })), english,
+    duration: f.duration || 0 });
+  // each cue a row of the transcript: its text with its line break, its words, its times
+  f.cues = raw.map((c) => {
+    const ws = w.slice(c.first, c.first + c.n);
+    return { start: c.start / 1000, end: c.end / 1000, startMs: c.start, endMs: c.end, chars: c.chars, flags: c.flags, words: ws,
+      text: ws.map((x, k) => (k ? (c.first + k === c.line2 ? "\n" : " ") : "") + x.text).join("") };
+  });
+  return f.cues;
+}
+
+/* what the transcript shows: its cues, once a finished one is shown as
+   captions and they have come, else its sentences */
+const rowsOf = (f) => (prefs.captions && f.cues && modeOf(f) === "review" ? f.cues : f.segments);
+
+/* the transcript drawn again in the view chosen, a search kept */
+function rebuild() {
+  const q = $("find").value;
+  mainKey = "";
+  showMain();
+  if (q) {
+    $("find").value = q;
+    runFind();
+  }
+}
+
+$("views").onclick = async (e) => {
+  const b = e.target.closest("[data-view]"), f = current();
+  if (!b || !f) return;
+  const on = b.dataset.view === "captions";
+  if (on === !!prefs.captions) return;
+  setPref("captions", on);
+  try {
+    if (on) await cuesOf(f);
+  } catch (err) {
+    toastErr(err);
+  }
+  if (current() === f) rebuild();
+};
+
 /* -------------------------------------------------------- copy and save -- */
 
 const plain = (f) => f.segments.map((s) => s.text).join("\n") + "\n";
@@ -1271,11 +1340,21 @@ const FORMATS = [
   { ext: "json", label: () => "JSON with word timings" },
 ];
 
-function textOf(f, ext) {
+/* hh:mm:ss,mmm of a time in milliseconds, as SRT and WebVTT write one */
+const msStamp = (ms, sep) => `${hms(Math.floor(ms / 1000))}${sep}${String(ms % 1000).padStart(3, "0")}`;
+/* WebVTT reads & < > as markup, so the words' are written as text */
+const vttText = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/* A file's text in a format: the subtitles its cues, a line break where a
+   cue's second line begins; the JSON both its segments and its cues. */
+async function textOf(f, ext) {
   const segs = f.segments;
   if (ext === "txt") return segs.map((s) => (prefs.times ? `${stamp(s.start)}  ` : "") + s.text).join("\n") + "\n";
-  if (ext === "srt") return segs.map((s, i) => `${i + 1}\n${msTime(s.start, ",")} --> ${msTime(s.end, ",")}\n${s.text}\n`).join("\n");
-  if (ext === "vtt") return "WEBVTT\n\n" + segs.map((s) => `${msTime(s.start, ".")} --> ${msTime(s.end, ".")}\n${s.text}\n`).join("\n");
+  const cues = ext === "srt" || ext === "vtt" || ext === "json" ? await cuesOf(f) : [];
+  if (ext === "srt") return cues.map((c, i) => `${i + 1}\n${msStamp(c.startMs, ",")} --> ${msStamp(c.endMs, ",")}\n${c.text}\n\n`).join("");
+  if (ext === "vtt") {
+    return "WEBVTT\n\n" + cues.map((c, i) => `${i + 1}\n${msStamp(c.startMs, ".")} --> ${msStamp(c.endMs, ".")}\n${vttText(c.text)}\n\n`).join("");
+  }
   if (ext === "md") {
     return `# ${mdEsc(f.name)}\n\n` + segs.map((s) => (prefs.times ? `\`${stamp(s.start)}\` ` : "") + mdEsc(s.text)).join("\n\n") + "\n";
   }
@@ -1283,8 +1362,9 @@ function textOf(f, ext) {
   const j = JSON.stringify;
   const seg = (s) => `    {"start": ${r3(s.start)}, "end": ${r3(s.end)}, "text": ${j(s.text)}, "words": [\n` +
     (s.words || []).map((w) => `      {"start": ${r3(w.start)}, "end": ${r3(w.end)}, "text": ${j(w.text)}}`).join(",\n") + "\n    ]}";
+  const cue = (c) => `    {"start": ${r3(c.start)}, "end": ${r3(c.end)}, "lines": ${j(c.text.split("\n"))}}`;
   return `{\n  "file": ${j(f.name)},\n  "duration": ${r3(f.duration || 0)},\n  "model": ${j(f.model || null)},\n  "segments": [\n` +
-    segs.map(seg).join(",\n") + "\n  ]\n}\n";
+    segs.map(seg).join(",\n") + "\n  ],\n  \"captions\": [\n" + cues.map(cue).join(",\n") + "\n  ]\n}\n";
 }
 
 async function copyText() {
@@ -1303,7 +1383,7 @@ async function save(ext) {
   if (shown() !== "work" || !f || modeOf(f) !== "review" || !f.segments.length) return;
   closeMenu();
   try {
-    const r = await invoke("save_text", { original: f.path, ext, text: textOf(f, ext), nextTo: prefs.next_to_original });
+    const r = await invoke("save_text", { original: f.path, ext, text: await textOf(f, ext), nextTo: prefs.next_to_original });
     if (r) toast(`Saved ${baseName(r.path)}`, { reveal: r.path });
   } catch (e) {
     toastErr(e);
@@ -1318,11 +1398,13 @@ async function saveAll(kind) {
     if (kind === "folder") {
       const dir = await invoke("pick_folder");
       if (!dir) return;
+      const all = ready.flatMap((f) => FORMATS.map((x) => [f, x.ext]));
       const out = await invoke("save_many", { dir,
-        files: ready.flatMap((f) => FORMATS.map((x) => ({ original: f.path, ext: x.ext, text: textOf(f, x.ext) }))) });
+        files: await Promise.all(all.map(async ([f, ext]) => ({ original: f.path, ext, text: await textOf(f, ext) }))) });
       toast(`Saved ${plural(out.length, "file")}`, { reveal: out[0] });
     } else {
-      const out = await invoke("save_many", { dir: null, files: ready.map((f) => ({ original: f.path, ext: kind, text: textOf(f, kind) })) });
+      const out = await invoke("save_many", { dir: null,
+        files: await Promise.all(ready.map(async (f) => ({ original: f.path, ext: kind, text: await textOf(f, kind) }))) });
       toast(`Saved ${plural(out.length, "file")}`, { reveal: out[0] });
     }
   } catch (e) {
@@ -1543,9 +1625,9 @@ $("about").addEventListener("auxclick", (e) => {
   if (e.target.closest("a[href]")) e.preventDefault();
 });
 
-/* Everything else: what pktito is built from beside its own code and the
-   models About names, each with its copyright and license, and the
-   licenses' texts. notices.js (scripts/notices.py) has every system's;
+/* Open source licenses, under About's Everything else: what pktito is
+   built from beside its own code and the models About names, each with its
+   copyright and license, and the licenses' texts. notices.js (scripts/notices.py) has every system's;
    this one's are listed. It loads the first time the list opens: 20 KB
    compressed. */
 function noticesHtml() {
@@ -1558,7 +1640,8 @@ function noticesHtml() {
     `<span class="pk-nl">${esc(lic)}</span><span class="pk-nc">${esc(notice)}</span></li>`;
   const list = (xs) => `<ul class="pk-nlist">${xs.join("")}</ul>`;
   const system = { macos: "macOS", windows: "Windows", linux: "Linux" }[st.platform] || st.platform;
-  return `<p class="pk-small">pktito is built from the work below, each part under the license beside it; their texts follow.</p>
+  return `<p class="pk-small">pktito is built on these open-source projects, each under the license beside it, the licenses' texts
+    after them. The list is this system's: the builds for macOS, Windows and Linux use a few projects each of their own.</p>
     <h3>Typefaces and icons</h3>
     ${list(extras.filter((e) => e[0] === "type").map((e) => row(e[1], e[3], e[2])))}
     <h3>Code</h3>

@@ -28,7 +28,6 @@
     </div>
     <div class="pk-ready-text">
       <h1 class="pk-lead">Drop audio or video here</h1>
-      <p class="pk-small">Stays on this computer</p>
     </div>
     <div class="pk-ready-act">
       <button class="pk-btn pk-btn-primary pk-btn-lg" id="choose" type="button"></button>
@@ -85,6 +84,11 @@
         </div>
       </div>
     </div>
+    <!-- a finished transcript as its sentences or as its subtitle track's cues -->
+    <div class="pk-views" id="views" role="radiogroup" aria-label="Show the transcript as" hidden>
+      <button class="pk-view" type="button" role="radio" data-view="sentences">Sentences</button>
+      <button class="pk-view" type="button" role="radio" data-view="captions">Captions</button>
+    </div>
     <p class="pk-msg" id="msg" role="status"></p>
     <div class="pk-transcript" id="transcript"></div>
   </section>
@@ -101,7 +105,7 @@
   <div class="pk-about-text">
     <div class="pk-about-in">
       <h1 class="pk-wm pk-wm-lg">pktito</h1>
-      <p class="pk-text">Little parakeet. Speech to text on this computer, with a C11 port of NVIDIA's Parakeet-TDT models.</p>
+      <p class="pk-text">Little parakeet (<i>pika-tito</i>).<br>Speech to text on this computer.</p>
       <p class="pk-small"><span id="about-version"></span><br>
         Copyright (c) 2026 the pktito authors, under the <a href="https://github.com/peterheb/pktito-app/blob/main/LICENSE">MIT license</a><br>
         Source on GitHub: <a href="https://github.com/peterheb/pktito-app">the app</a> and <a href="https://github.com/peterheb/pktito">the library</a></p>
@@ -109,26 +113,25 @@
         <dt>Parakeet-TDT</dt>
         <dd>NVIDIA's <a href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2">parakeet-tdt-0.6b-v2</a> and
           <a href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3">-v3</a>, under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>,
-          with their weights rounded to int8 and rearranged by pktito-tools. Provided as is, without warranties.
-          pktito is not affiliated with or endorsed by NVIDIA.</dd>
+          partially quantized to int8. Provided as is, without warranties. pktito is not affiliated with or endorsed by NVIDIA.</dd>
         <dt>Silero VAD</dt>
-        <dd>Voice activity detection, bundled in each model file. <a href="https://github.com/snakers4/silero-vad/blob/master/LICENSE">MIT</a>,
+        <dd>Voice activity detection, <a href="https://github.com/snakers4/silero-vad/blob/master/LICENSE">MIT</a><br>
           Copyright (c) 2020-present Silero Team</dd>
         <dt>Everything else</dt>
-        <dd>Tauri and the Rust crates beneath it, the typefaces and the icons:
-          <button class="pk-linkbtn pk-linkbtn-sm" id="notices-open" type="button" aria-haspopup="dialog">their credits and licenses</button></dd>
+        <dd>Tauri, Rust crates, typefaces, icons, etc.<br>
+          <button class="pk-linkbtn pk-linkbtn-sm" id="notices-open" type="button" aria-haspopup="dialog">Open source licenses</button></dd>
       </dl>
     </div>
   </div>
-  <!-- Everything else: what pktito is built from, over About; app.js fills
-       it from notices.js, which scripts/notices.py makes -->
+  <!-- Open source licenses: what pktito is built from, over About; app.js
+       fills it from notices.js, which scripts/notices.py makes -->
   <div class="pk-notices" id="notices" hidden>
     <div class="pk-notices-box" role="dialog" aria-modal="true" aria-labelledby="notices-title">
       <div class="pk-notices-head">
-        <h2 class="pk-ui" id="notices-title">Everything else</h2>
+        <h2 class="pk-ui" id="notices-title">Open source licenses</h2>
         <button class="pk-btn pk-btn-ghost pk-btn-ico" id="notices-close" type="button" aria-label="Close"></button>
       </div>
-      <div class="pk-notices-body" id="notices-body" tabindex="0" aria-label="Credits and licenses"></div>
+      <div class="pk-notices-body" id="notices-body" tabindex="0" aria-label="The projects and their licenses"></div>
     </div>
   </div>
 </section>
