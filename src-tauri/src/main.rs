@@ -469,7 +469,10 @@ async fn reload_audio(app: AppHandle, id: String) -> Result<String, String> {
 async fn clear_recent(app: AppHandle) -> Result<bool, String> {
     let ask = app
         .dialog()
-        .message("Files you saved are kept.")
+        .message(
+            "All recent transcripts will be permanently deleted. Your original audio and video files, \
+             and any transcripts you saved, are not affected.",
+        )
         .title("Clear the recent list?")
         .kind(MessageDialogKind::Warning)
         .buttons(MessageDialogButtons::OkCancelCustom("Clear".into(), "Cancel".into()));
