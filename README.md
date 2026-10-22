@@ -147,6 +147,17 @@ cargo tauri dev             # run it
 cargo tauri build           # the installer: .dmg, .msi/.exe, .deb/.AppImage
 ```
 
+Windows on Arm builds on x64 Windows, cross-compiled: rustup's
+`stable-x86_64-pc-windows-gnullvm` toolchain with the
+`aarch64-pc-windows-gnullvm` target, and [llvm-mingw](https://github.com/mstorsjo/llvm-mingw)'s
+`bin` on `PATH` (its clang compiles and links; `src-tauri/.cargo/config.toml`
+names it and links everything statically). The exe needs only Windows' own
+DLLs and the Arm64 `WebView2Loader.dll` beside it.
+
+```sh
+cargo +stable-x86_64-pc-windows-gnullvm build --release --target aarch64-pc-windows-gnullvm
+```
+
 pktito's sources are copied into `vendor/pktito` by
 `scripts/vendor-pktito.sh` (`vendor/pktito/VENDORED` says which commit); the
 build compiles every SIMD backend of the target's family, and the CPU picks

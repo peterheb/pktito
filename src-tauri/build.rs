@@ -120,6 +120,13 @@ fn main() {
     for lib in system {
         println!("cargo:rustc-link-lib={lib}");
     }
+    // the engine's pool runs on pthreads, which Rust's std brings along on
+    // the GNU targets and not on the LLVM ones (the Arm64 build's
+    // aarch64-pc-windows-gnullvm): winpthreads, linked in, since a plain -l
+    // took libwinpthread-1.dll, which Windows does not have
+    if os == "windows" && env::var("CARGO_CFG_TARGET_ABI").as_deref() == Ok("llvm") {
+        println!("cargo:rustc-link-lib=static=pthread");
+    }
 
     tauri_build::build();
 }
