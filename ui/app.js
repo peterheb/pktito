@@ -42,6 +42,7 @@ let sel = null;         // the id of the file shown
 let nextId = 1;
 let running = false;    // a transcription is under way
 let home = false;       // the start screen is shown, files still under way or not
+let about = false;      // About is shown, over the screen that opened it
 
 /* ---------------------------------------------------------- formatting -- */
 
@@ -88,6 +89,9 @@ const mb = (b) => Math.round(b / 1e6);
 const percent = (x) => Math.floor(Math.min(1, Math.max(0, x)) * 100);
 const plural = (n, one) => `${n} ${one}${n === 1 ? "" : "s"}`;
 
+/* the wordmark on each screen, which is the way to About there */
+const WORDMARK = '<button class="pk-wm" type="button" data-about aria-label="About pktito" title="About pktito">pktito</button>';
+
 const isMac = () => st.platform === "macos";
 const isWin = () => st.platform === "windows";
 const kbd = (k, shift = false) => (isMac() ? `${shift ? "⇧" : ""}⌘${k}` : `Ctrl+${shift ? "Shift+" : ""}${k}`);
@@ -105,6 +109,9 @@ function viewName() {
   if (!st.ready || dl) return "setup";
   return files.length && !home ? "work" : "ready";
 }
+
+/* The view in sight: About covers the one beneath, which goes on as ever. */
+const shown = () => (about ? "about" : viewName());
 
 function render() {
   const v = viewName();
@@ -240,7 +247,7 @@ function chooseHtml() {
     `<label class="pk-choice"><input type="radio" name="model" value="${m.name}"${m.name === choice ? " checked" : ""}>` +
     `<span class="pk-name">${esc(m.label)}</span><span class="pk-stamp">${m.have ? "on this computer" : `${mb(m.bytes)} MB`}</span>` +
     `<span class="pk-desc">${esc(m.name)} · ${esc(m.about)}</span></label>`).join("");
-  return `<span class="pk-wm">pktito</span>
+  return `${WORDMARK}
     <div class="pk-intro"><h1 class="pk-lead">Choose a speech model</h1></div>
     <fieldset class="pk-choices"><legend>Speech model</legend>${cards}</fieldset>
     <div class="pk-foot-col">
@@ -276,7 +283,7 @@ async function go() {
 
 function downloadHtml() {
   const m = st.catalog.find((x) => x.name === dl.name) || { label: dl.name };
-  return `<span class="pk-wm">pktito</span>
+  return `${WORDMARK}
     <div class="pk-intro"><h1 class="pk-lead">Downloading the ${esc(m.label)} model</h1>
       <p class="pk-text">${esc(dl.name)} from <span id="dl-host"></span></p></div>
     <div class="pk-dl">
@@ -294,7 +301,7 @@ function downloadHtml() {
    folded away */
 function failedHtml() {
   const stopped = dl.got ? `Stopped at ${mb(dl.got)} of ${mb(dl.total)} MB` : "Nothing downloaded yet";
-  return `<span class="pk-wm">pktito</span>
+  return `${WORDMARK}
     <div class="pk-intro"><h1 class="pk-lead">${esc(dl.why)}</h1></div>
     <div class="pk-stopped">
       <div class="pk-bar is-paused" id="dl-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Model download, stopped"><i></i></div>
@@ -476,6 +483,7 @@ async function addPaths(paths) {
   if (first) {
     if (next || !current()) sel = first.id;
     home = false;
+    closeAbout();
   }
   const gone = media.filter((p) => !here.includes(p)).map(baseName), other = paths.filter((p) => !isMedia(p)).map(baseName);
   const say = [gone.length && `Not found: ${gone.join(", ")}`, other.length && `Not audio or video: ${other.join(", ")}`];
@@ -1155,7 +1163,7 @@ function clearFind() {
 
 function openFind() {
   const f = current();
-  if (viewName() !== "work" || !f || $("find-box").hidden) return;
+  if (shown() !== "work" || !f || $("find-box").hidden) return;
   $("find").focus();
   $("find").select();
 }
@@ -1217,7 +1225,7 @@ async function copyText() {
 
 async function save(ext) {
   const f = current();
-  if (viewName() !== "work" || !f || modeOf(f) !== "review" || !f.segments.length) return;
+  if (shown() !== "work" || !f || modeOf(f) !== "review" || !f.segments.length) return;
   closeMenu();
   try {
     const r = await invoke("save_text", { original: f.path, ext, text: textOf(f, ext), nextTo: prefs.next_to_original });
@@ -1386,6 +1394,73 @@ function toast(text, { reveal = null, err = false, detail = "" } = {}) {
   toastTimer = setTimeout(() => { t.hidden = true; }, reveal || err ? 6000 : 3500);
 }
 
+/* --------------------------------------------------------------- about -- */
+
+let aboutFrom = null;   // what had the keyboard when About opened, which gets it back
+let mascot;             // undefined until About first opens; null without WebGL 2
+let mascotFiles = null;
+
+/* The mascot's model and viewer load the first time About opens, so that
+   the window loads what it shows: 26 KB and 7 KB of the app's assets,
+   compressed. */
+function loadMascot() {
+  const load = (src) => new Promise((ok, no) => {
+    const s = document.createElement("script");
+    s.src = src;
+    s.onload = ok;
+    s.onerror = no;
+    document.head.appendChild(s);
+  });
+  mascotFiles = mascotFiles || load("mascot-model.js").then(() => load("mascot.js"))
+    .then(() => { mascot = drawMascot($("about-stage"), $("mascot")); })
+    .catch(() => { mascot = null; });
+  return mascotFiles;
+}
+
+async function openAbout() {
+  if (!st || about) return;
+  closeMenu();
+  pausePlayback();
+  aboutFrom = document.activeElement;
+  about = true;
+  // the engine's code for this processor by its name; all of "neon-dp (ARMv8.2: SDOT)" in the tooltip
+  $("about-version").textContent = `Version ${st.version} · ${st.backend.split(" (")[0]}`;
+  $("about-version").title = st.backend;
+  document.body.classList.add("is-about");
+  $("about").hidden = false;
+  $("about-back").focus({ preventScroll: true });
+  await loadMascot();
+  $("about").classList.toggle("no-stage", !mascot);
+  if (about && mascot) mascot.show();
+}
+
+/* Back to the screen beneath, as it is now; false if About was not up */
+function closeAbout() {
+  if (!about) return false;
+  about = false;
+  if (mascot) mascot.hide();
+  document.body.classList.remove("is-about");
+  $("about").hidden = true;
+  if (aboutFrom && aboutFrom.offsetParent) aboutFrom.focus({ preventScroll: true });
+  aboutFrom = null;
+  return true;
+}
+
+document.addEventListener("click", (e) => {
+  if (e.target.closest("[data-about]")) openAbout();
+});
+$("about-back").onclick = () => closeAbout();
+/* its links in the browser, not in the window */
+$("about").addEventListener("click", (e) => {
+  const a = e.target.closest("a[href]");
+  if (!a) return;
+  e.preventDefault();
+  invoke("open_link", { url: a.href }).catch((err) => toastErr(err));
+});
+$("about").addEventListener("auxclick", (e) => {
+  if (e.target.closest("a[href]")) e.preventDefault();
+});
+
 /* ------------------------------------------------------- drag and drop -- */
 
 function showDrop(paths) {
@@ -1419,10 +1494,10 @@ const typing = (el) => el && (el.isContentEditable || el.tagName === "TEXTAREA" 
 
 document.addEventListener("keydown", (e) => {
   if (!st) return;
-  // Esc backs out one step: a menu, a search, then the file
+  // Esc backs out one step: a menu, About, a search, then the file
   if (e.key === "Escape") {
     e.preventDefault();
-    if (closeMenu()) return;
+    if (closeMenu() || closeAbout()) return;
     if (query && viewName() === "work") clearFind();
     else goHome();
     return;
@@ -1439,7 +1514,7 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     return;
   }
-  if (e.key === " " && !menuFor && !typing(e.target) && viewName() === "work") {
+  if (e.key === " " && !menuFor && !typing(e.target) && shown() === "work") {
     const f = current();
     if (f && modeOf(f) === "review" && playable(f)) {
       e.preventDefault();
@@ -1451,6 +1526,7 @@ document.addEventListener("keydown", (e) => {
 listen("menu", (e) => {
   const id = e.payload;
   if (id === "add") chooseFiles();
+  else if (id === "about") openAbout();
   else if (id === "find") openFind();
   else if (id.startsWith("save-")) save(id.slice(5));
 });
@@ -1461,7 +1537,7 @@ async function start() {
   st = await invoke("status");
   prefs = st.prefs;
   dl = st.download;
-  for (const b of [$("back"), $("side-back")]) {
+  for (const b of [$("back"), $("side-back"), $("about-back")]) {
     b.innerHTML = ICON.back;
     b.title = "Back (Esc)";
   }

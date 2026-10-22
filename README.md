@@ -106,6 +106,14 @@ finished transcript closes, staying on the recent list; a file still being
 transcribed goes on, at the top of that list, and leads back to itself.
 Files dropped on the window join the queue from any screen.
 
+About, with the credits and the licenses, opens from the wordmark at the top
+of the start and setup screens, or from the app menu on macOS. Its mascot, a
+budgie of voxels that turns when dragged and chirps when clicked, is WebGL
+2: `scripts/mascot.py` (numpy) builds the model into `ui/mascot-model.js`,
+and `ui/mascot.js` draws it. The two load the first time About opens, and
+are 33 KB of the app's assets, compressed. Without WebGL 2 About shows the
+credits alone.
+
 The window shows no shortcuts; tooltips name them. Only macOS has a menu
 bar. On Windows and Linux the page takes the shortcuts itself: Ctrl+O adds
 files, Ctrl+S and Ctrl+Shift+S save as text and as subtitles, Ctrl+F finds.

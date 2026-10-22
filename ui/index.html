@@ -19,7 +19,7 @@
 <section id="ready" class="pk-center" hidden>
   <div class="pk-screen pk-ready">
     <div class="pk-spread">
-      <span class="pk-wm">pktito</span>
+      <button class="pk-wm" type="button" data-about aria-label="About pktito" title="About pktito">pktito</button>
       <button class="pk-btn pk-btn-ghost" id="ready-model" type="button" aria-haspopup="menu" aria-expanded="false"></button>
     </div>
     <div class="pk-strip pk-strip-idle" aria-hidden="true">
@@ -85,6 +85,41 @@
     <div class="pk-transcript" id="transcript"></div>
   </section>
 </div>
+
+<!-- About: the credits beside the mascot, over the screen that opened it;
+     app.js adds the version, and mascot.js the mascot -->
+<section id="about" class="pk-about" aria-label="About pktito" hidden>
+  <button class="pk-btn pk-btn-ghost pk-btn-ico pk-back" id="about-back" type="button" aria-label="Back"></button>
+  <div class="pk-about-stage" id="about-stage">
+    <canvas id="mascot" tabindex="0" role="img"
+      aria-label="pktito's mascot, a budgie in headphones at a microphone. Drag it or use the arrow keys to turn it; click it or press Enter and it chirps."></canvas>
+  </div>
+  <div class="pk-about-text">
+    <div class="pk-about-in">
+      <h1 class="pk-wm pk-wm-lg">pktito</h1>
+      <p class="pk-text">Little parakeet. Speech to text on this computer, with a C11 port of NVIDIA's Parakeet-TDT models.</p>
+      <p class="pk-small"><span id="about-version"></span><br>
+        Copyright (c) 2026 the pktito authors, under the <a href="https://github.com/peterheb/pktito-app/blob/main/LICENSE">MIT license</a></p>
+      <dl class="pk-credits">
+        <dt>Source</dt>
+        <dd>On GitHub: <a href="https://github.com/peterheb/pktito-app">the app</a> and <a href="https://github.com/peterheb/pktito">the library</a></dd>
+        <dt>The models</dt>
+        <dd>NVIDIA's <a href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2">parakeet-tdt-0.6b-v2</a> and
+          <a href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3">-v3</a>, under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>,
+          with their weights rounded to int8 and rearranged by pktito-tools. They come as they are, without warranties.
+          pktito is not affiliated with or endorsed by NVIDIA.</dd>
+        <dt>Silero VAD</dt>
+        <dd>Finds the speech, from inside each model file. <a href="https://github.com/snakers4/silero-vad/blob/master/LICENSE">MIT</a>,
+          Copyright (c) 2020-present Silero Team</dd>
+        <dt>Typefaces</dt>
+        <dd><a href="https://github.com/Omnibus-Type/Archivo">Archivo</a> and <a href="https://commitmono.com">Commit Mono</a>,
+          SIL Open Font License 1.1</dd>
+        <dt>Icons</dt>
+        <dd>After <a href="https://feathericons.com">Feather</a>, MIT</dd>
+      </dl>
+    </div>
+  </div>
+</section>
 
 <div class="pk-drop" id="drop" hidden>
   <div class="pk-drop-in">

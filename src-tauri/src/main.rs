@@ -77,6 +77,8 @@ struct Status {
     /// A download under way, paused or failed.
     download: Option<download::State>,
     prefs: model::Prefs,
+    /// The app's, from Cargo.toml, for About.
+    version: &'static str,
     backend: String,
     platform: &'static str,
     media: &'static [&'static str],
@@ -139,6 +141,7 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, String> 
             .collect(),
         download,
         prefs: s.prefs,
+        version: env!("CARGO_PKG_VERSION"),
         backend: pktito::backend(),
         platform: std::env::consts::OS,
         media: MEDIA,
@@ -574,6 +577,46 @@ fn reveal(path: String) -> Result<(), String> {
     reveal_in_folder(Path::new(&path))
 }
 
+/// One of About's links, in the browser. An https address and nothing else,
+/// so that the page can open no file or program by it.
+#[tauri::command]
+fn open_link(url: String) -> Result<(), String> {
+    if !url.starts_with("https://") || url.chars().any(|c| c.is_whitespace() || c.is_control()) {
+        return Err(format!("Not a web address: {url}"));
+    }
+    open_in_browser(&url)
+}
+
+#[cfg(target_os = "macos")]
+fn open_in_browser(url: &str) -> Result<(), String> {
+    std::process::Command::new("open").arg(url).spawn().map(|_| ()).map_err(|e| format!("Couldn't open it: {e}"))
+}
+
+/// The shell's own call, as reveal_in_folder's is, which hands the address
+/// to the default browser. It returns above 32 when it worked, else an error
+/// code (the Win32 documentation of ShellExecuteW).
+#[cfg(target_os = "windows")]
+fn open_in_browser(url: &str) -> Result<(), String> {
+    use std::ffi::c_void;
+    #[link(name = "shell32")]
+    extern "system" {
+        fn ShellExecuteW(hwnd: *mut c_void, op: *const u16, file: *const u16, params: *const u16, dir: *const u16, show: i32) -> isize;
+    }
+    const SW_SHOWNORMAL: i32 = 1;
+    let wide = |s: &str| s.encode_utf16().chain(Some(0)).collect::<Vec<u16>>();
+    let (op, file) = (wide("open"), wide(url));
+    let r = unsafe { ShellExecuteW(std::ptr::null_mut(), op.as_ptr(), file.as_ptr(), std::ptr::null(), std::ptr::null(), SW_SHOWNORMAL) };
+    if r <= 32 {
+        return Err(format!("Couldn't open it: Windows said {r}"));
+    }
+    Ok(())
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+fn open_in_browser(url: &str) -> Result<(), String> {
+    std::process::Command::new("xdg-open").arg(url).spawn().map(|_| ()).map_err(|e| format!("Couldn't open it: {e}"))
+}
+
 #[cfg(target_os = "macos")]
 fn reveal_in_folder(path: &Path) -> Result<(), String> {
     std::process::Command::new("open").arg("-R").arg(path).spawn().map(|_| ()).map_err(|e| e.to_string())
@@ -747,8 +790,9 @@ fn menu_bar(app: &tauri::App) -> tauri::Result<()> {
         .separator()
         .item(&item("find", "Find…", Some("CmdOrCtrl+F"))?)
         .build()?;
+    // the window's own About, which has the credits, not the system's panel
     let pktito = SubmenuBuilder::new(app, "pktito")
-        .item(&PredefinedMenuItem::about(app, None, None)?)
+        .item(&item("about", "About pktito", None)?)
         .separator()
         .item(&PredefinedMenuItem::hide(app, None)?)
         .item(&PredefinedMenuItem::hide_others(app, None)?)
@@ -814,7 +858,8 @@ fn main() {
             save_text,
             save_many,
             pick_folder,
-            reveal
+            reveal,
+            open_link
         ])
         .run(tauri::generate_context!())
         .expect("pktito could not start");

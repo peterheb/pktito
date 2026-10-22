@@ -59,6 +59,8 @@ No eyebrow labels, no 01 / 02 / 03, no thin dividers, no gradients, no glass, no
 
 pktito's pictures are its own interface, built in HTML at true size and marked `data-ui`: the transcript panel, a waveform strip, the app window, a command and its output. Show real transcripts of audio you have the right to publish, and say what the audio is. Never put the app inside a laptop mock-up, never shrink it until unreadable. No stock microphones, sound-wave clip art, headphones or AI brains.
 
+The one exception is the mascot, on the app's About and nowhere else: a voxel budgie in headphones at a microphone, with a speech bubble, made by `scripts/mascot.py`. It is an easter egg for whoever opens About, not a picture of the product, and it sits on `surface` like any other area.
+
 ## Motion
 
 - The signature move: the stage's transcript fills in a token at a time while the playhead (`beak`) moves along the waveform, and each token's duration block lights from `wave` to `wave-played`. That is the one loud moment on the site.
