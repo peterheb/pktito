@@ -66,7 +66,7 @@ fn run(args: &[String]) -> Result<i32, String> {
             return Ok(0);
         }
         Some("models") => return models(),
-        Some("download") => return fetch(args.get(1).ok_or("download MODEL: which model?")?),
+        Some("download") => return fetch(args.get(1).ok_or("download needs a model name (pktito-cli models shows the list)")?),
         _ => {}
     }
     let bench = args[0] == "bench";
@@ -81,7 +81,7 @@ fn run(args: &[String]) -> Result<i32, String> {
             "--txt" | "--md" | "--srt" | "--vtt" | "--json" => o.ext = a[2..].into(),
             "--times" => o.times = true,
             "-o" | "--output" => o.output = Some(PathBuf::from(value(a)?)),
-            "-t" | "--threads" => o.threads = value(a)?.parse().map_err(|_| format!("{a}: a number of threads"))?,
+            "-t" | "--threads" => o.threads = value(a)?.parse().map_err(|_| format!("{a} needs a number"))?,
             "-q" | "--quiet" => o.quiet = true,
             "-" => return Err("reads files, not standard input".into()),
             f if f.starts_with('-') => return Err(format!("no option {f}\n{USAGE}")),
@@ -92,7 +92,7 @@ fn run(args: &[String]) -> Result<i32, String> {
         return Err(format!("no format {}: txt, md, srt, vtt or json", o.ext));
     }
     if o.files.is_empty() {
-        return Err(format!("which files?\n{USAGE}"));
+        return Err(format!("no files given\n{USAGE}"));
     }
     if bench {
         return bench_all(&o);
@@ -325,7 +325,7 @@ fn entry(m: &str) -> Result<&'static model::Entry, String> {
     model::CATALOG
         .iter()
         .find(|e| e.name == m || e.label.eq_ignore_ascii_case(m) || e.name.rsplit('-').next() == Some(m))
-        .ok_or_else(|| format!("no model {m}: pktito-cli models lists them"))
+        .ok_or_else(|| format!("no model {m} (pktito-cli models shows the list)"))
 }
 
 /// The catalog, each model's size and whether it is here, and the one in use
@@ -366,7 +366,7 @@ fn fetch(m: &str) -> Result<i32, String> {
         move |s| match s.step {
             "failed" => {
                 status("");
-                eprintln!("{}: {}{}", s.why, s.detail.replace('\n', "; "), if s.retry { " (trying again)" } else { "" })
+                eprintln!("{}{}", s.problem.as_ref().map(|p| p.line()).unwrap_or_default(), if s.retry { " (trying again)" } else { "" })
             }
             _ if show => status(&format!("{} {}: {} of {} MB", s.step, s.name, s.got / 1_000_000, s.total / 1_000_000)),
             _ => {}
@@ -381,7 +381,7 @@ fn fetch(m: &str) -> Result<i32, String> {
     if show {
         status("");
     }
-    let path = rx.try_recv().map_err(|_| job.state().why)?;
+    let path = rx.try_recv().map_err(|_| job.state().problem.map(|p| p.line()).unwrap_or_default())?;
     let mut s = model::load_settings(&data);
     if s.model.is_none() && s.model_file.is_none() {
         s.model = Some(e.name.to_string());

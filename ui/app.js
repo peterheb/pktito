@@ -13,6 +13,34 @@ const listen = T.event.listen;
 
 const $ = (id) => document.getElementById(id);
 
+/* The window's words: ui/locales/en.json, which main.rs hands over as
+   PK_STRINGS before this script runs (src-tauri/src/strings.rs). t fills a
+   key's {name}s from args; a key of plural forms picks one by args.n. The
+   page's own words go in by their data-t attributes (localize). */
+const WORDS = window.PK_STRINGS || {};
+const LANG = document.documentElement.lang || "en";
+const pluralOf = new Intl.PluralRules(LANG);
+function t(key, args = {}) {
+  let w = WORDS[key];
+  if (w && typeof w === "object") w = w[pluralOf.select(args.n)] ?? w.other;
+  if (typeof w !== "string") return key;
+  return w.replace(/\{(\w+)\}/g, (m, k) => (k in args ? args[k] : m));
+}
+/* a number as the language writes it, with that many digits after the point */
+const num = (x, digits = 0) => x.toLocaleString(LANG, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+/* What went wrong on the Rust side, a Problem (strings.rs): its key and
+   values, worded here, and its particulars as whatever reported it said
+   them */
+const words = (p) => (p && p.key ? t(p.key, p.args) : t("problem.unexpected"));
+function localize(root = document) {
+  for (const el of root.querySelectorAll("[data-t]")) el.textContent = t(el.dataset.t);
+  for (const el of root.querySelectorAll("[data-t-html]")) el.innerHTML = t(el.dataset.tHtml);
+  for (const a of ["aria-label", "title", "placeholder"]) {
+    for (const el of root.querySelectorAll(`[data-t-${a}]`)) el.setAttribute(a, t(el.getAttribute(`data-t-${a}`)));
+  }
+}
+localize();
+
 /* The window's own title bar, where it has none (src-tauri/src/main.rs,
    main_window): each screen's header row is the title bar. On macOS the
    traffic lights are at its left end, which the rows make room for (app.css,
@@ -29,7 +57,7 @@ if (window.__PK_CHROME) {
       else {
         const big = await win.isMaximized();
         $("cap-max").innerHTML = big ? "&#xE923;" : "&#xE922;";
-        $("cap-max").title = big ? "Restore down" : "Maximize";
+        $("cap-max").title = t(big ? "window.restore_down" : "window.maximize");
         $("cap-max").setAttribute("aria-label", $("cap-max").title);
       }
     } catch {}
@@ -107,20 +135,20 @@ function clock(s) {
 }
 /* how many seconds of audio a second's work transcribed */
 function realTime(audio, secs) {
-  return `${(audio / secs).toFixed(1)}x real-time`;
+  return t("time.real_time", { x: num(audio / secs, 1) });
 }
 function timeLeft(s) {
   if (!(s >= 0) || !isFinite(s)) return "";
-  if (s < 50) return `about ${Math.max(5, Math.round(s / 5) * 5)} s left`;
-  return `about ${Math.round(s / 60)} min left`;
+  if (s < 50) return t("time.left_seconds", { s: Math.max(5, Math.round(s / 5) * 5) });
+  return t("time.left_minutes", { m: Math.round(s / 60) });
 }
 /* "Today", "Yesterday", else the date as the system writes it */
-function when(t) {
-  const d = new Date(t * 1000), now = new Date();
+function when(secs) {
+  const d = new Date(secs * 1000), now = new Date();
   const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
   const ago = Math.round((day(now) - day(d)) / 864e5);
-  if (ago === 0) return "Today";
-  if (ago === 1) return "Yesterday";
+  if (ago === 0) return t("date.today");
+  if (ago === 1) return t("date.yesterday");
   const o = { month: "short", day: "numeric" };
   if (d.getFullYear() !== now.getFullYear()) o.year = "numeric";
   return d.toLocaleDateString(undefined, o);
@@ -164,18 +192,19 @@ const extOf = (p) => (baseName(p).match(/\.([^.]+)$/) || ["", ""])[1].toLowerCas
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const mb = (b) => Math.round(b / 1e6);
 const percent = (x) => Math.floor(Math.min(1, Math.max(0, x)) * 100);
-const plural = (n, one) => `${n} ${one}${n === 1 ? "" : "s"}`;
+const fileCount = (n) => t("count.files", { n });
 
 /* the wordmark on each screen, which is the way to About there */
-const WORDMARK = '<button class="pk-wm" type="button" data-about aria-label="About pktito" title="About pktito">pktito</button>';
+const WORDMARK = () => `<button class="pk-wm" type="button" data-about aria-label="${esc(t("about.open"))}" title="${esc(t("about.open"))}">pktito</button>`;
 
 const isMac = () => st.platform === "macos";
 const isWin = () => st.platform === "windows";
-const kbd = (k, shift = false) => (isMac() ? `${shift ? "⇧" : ""}⌘${k}` : `Ctrl+${shift ? "Shift+" : ""}${k}`);
+const kbd = (k, shift = false) => (isMac() ? `${shift ? "⇧" : ""}⌘${k}` : `${t("key.ctrl")}+${shift ? `${t("key.shift")}+` : ""}${k}`);
 /* A control's tooltip with its shortcut: the window itself shows none,
    so that its words are the transcript's. */
-const tip = (label, k, shift = false) => `${label} (${kbd(k, shift)})`;
-const revealLabel = () => (isMac() ? "Show in Finder" : isWin() ? "Show in File Explorer" : "Show in folder");
+const tip = (label, k, shift = false) => keyTip(label, kbd(k, shift));
+const keyTip = (label, key) => t("tip.with_key", { label, key });
+const revealLabel = () => t(isMac() ? "reveal.finder" : isWin() ? "reveal.explorer" : "reveal.folder");
 const kindOf = (p) => (st.video.includes(extOf(p)) ? "video" : "audio");
 const isMedia = (p) => st.media.includes(extOf(p));
 
@@ -221,14 +250,17 @@ const inUse = () => st.catalog.find((m) => m.name === st.model);
 function modelLabel(long) {
   if (st.model_file) return baseName(st.model_file);
   const m = inUse();
-  if (!m) return "Choose a model";
-  return long ? `${m.label} · ${m.name}` : `${m.label} model`;
+  if (!m) return t("models.choose");
+  return long ? `${labelOf(m)} · ${m.name}` : t("models.named", { label: labelOf(m) });
 }
+
+/* a catalog model's name and what it transcribes, in the window's words */
+const labelOf = (m) => t(`catalog.${m.key}`);
+const aboutOf = (m) => t(`catalog.${m.key}.about`);
 
 /* A download starts with what it already has; its first event follows at once. */
 async function startDownload(m) {
-  dl = { name: m.name, step: "downloading", got: m.partial, total: m.bytes, speed: 0, host: "", why: "", text: "", detail: "",
-    retry: false, trying: false };
+  dl = { name: m.name, step: "downloading", got: m.partial, total: m.bytes, speed: 0, host: "", problem: null, retry: false, trying: false };
   render();
   try {
     await invoke("download_model", { name: m.name });
@@ -261,7 +293,7 @@ const langName = (c) => (langNames && langNames.of(c)) || c;
 const ownLang = () => (navigator.language || "en").slice(0, 2).toLowerCase();
 /* After a model of several's count, the system's language where it is one
    of them: whether theirs is there is what most who look want to know */
-const amongThem = (m) => (m.languages.length > 1 && m.languages.includes(ownLang()) ? `, ${langName(ownLang())} among them` : "");
+const amongThem = (m) => (m.languages.length > 1 && m.languages.includes(ownLang()) ? t("models.among", { lang: langName(ownLang()) }) : "");
 const langsOf = (m) => m.languages.map((c) => ({ c, n: langName(c) })).sort((a, b) => a.n.localeCompare(b.n));
 
 /* Each model as what it is for and whether it is here: "25 European
@@ -271,20 +303,20 @@ const langsOf = (m) => m.languages.map((c) => ({ c, n: langName(c) })).sort((a, 
 function modelMenu(anchor, keys) {
   const items = st.catalog.map((m) => {
     const on = !st.model_file && st.model === m.name;
-    const state = m.have ? `<span class="pk-have">Downloaded</span>` : `${mb(m.bytes)} MB download`;
+    const state = m.have ? `<span class="pk-have">${esc(t("models.downloaded"))}</span>` : esc(t("models.download_size", { mb: mb(m.bytes) }));
     const title = m.languages.length > 1 ? `${m.name}: ${langsOf(m).map((x) => x.n).join(", ")}` : m.name;
     return `<button class="pk-mi" type="button" role="menuitemradio" aria-checked="${on}" data-model="${m.name}" title="${esc(title)}">` +
-      `<span>${esc(m.label)}</span><small class="pk-sub">${esc(m.about + amongThem(m))} · ${state}</small>${on ? ICON.check : ""}</button>`;
+      `<span>${esc(labelOf(m))}</span><small class="pk-sub">${esc(aboutOf(m) + amongThem(m))} · ${state}</small>${on ? ICON.check : ""}</button>`;
   });
   if (st.model_file) {
     items.push(`<button class="pk-mi" type="button" role="menuitemradio" aria-checked="true" data-model="">` +
       `<span>${esc(baseName(st.model_file))}</span><small title="${esc(st.model_file)}">${esc(st.model_file)}</small>${ICON.check}</button>`);
   }
   // where the models are: about 620 MB each, and the files the CLI takes with -m
-  const show = { macos: "Show in Finder", windows: "Show in File Explorer" }[st.platform] || "Show in folder";
+  const show = esc(revealLabel());
   const file = st.model_file ? baseName(st.model_file) : st.model ? `${st.model}.pkf` : "";
   items.push(`<div class="pk-menu-sep" aria-hidden="true"></div>` +
-    `<button class="pk-mi" type="button" role="menuitem" data-own="1"><span>Open a model file…</span></button>` +
+    `<button class="pk-mi" type="button" role="menuitem" data-own="1"><span>${esc(t("models.open_file"))}</span></button>` +
     `<button class="pk-mi" type="button" role="menuitem" data-reveal="1"${file ? ` title="${esc(file)}"` : ""}><span>${show}</span></button>`);
   openMenu(anchor, keys, items.join(""), "down right", (m) => {
     m.onclick = async (e) => {
@@ -299,7 +331,7 @@ function modelMenu(anchor, keys) {
       try {
         await invoke("choose_model", { name: entry.name });
         await refresh();
-        toast(`Using the ${entry.label} model`);
+        toast(t("models.using", { label: labelOf(entry) }));
       } catch (err) {
         toastErr(err);
       }
@@ -318,7 +350,7 @@ function setupMode() {
 
 function renderSetup() {
   const mode = setupMode();
-  const key = mode === "failed" ? `failed ${dl.why} ${dl.retry}` : mode;
+  const key = mode === "failed" ? `failed ${dl.problem && dl.problem.key} ${dl.retry}` : mode;
   if (key === setupKey) return mode === "choose" ? updateChoose() : updateDownload();
   setupKey = key;
   const body = $("setup-body");
@@ -362,24 +394,24 @@ function chooseHtml() {
   if (!st.catalog.some((m) => m.name === choice)) choice = (inUse() || fits || st.catalog[0]).name;
   const cards = st.catalog.map((m) => {
     const many = m.languages.length > 1;
-    const about = !many ? esc(m.about)
-      : `<button class="pk-linkbtn pk-linkbtn-sm" type="button" data-langs aria-expanded="false">${esc(m.about)}</button>${esc(amongThem(m))}`;
+    const about = !many ? esc(aboutOf(m))
+      : `<button class="pk-linkbtn pk-linkbtn-sm" type="button" data-langs aria-expanded="false">${esc(aboutOf(m))}</button>${esc(amongThem(m))}`;
     const list = !many ? "" : `<div class="pk-langs-box" hidden>` +
       `<div class="pk-langs" style="grid-template-rows: repeat(${Math.ceil(m.languages.length / 3)}, auto)">` +
       langsOf(m).map((x) => (x.c === ownLang() ? `<b>${esc(x.n)}</b>` : `<span>${esc(x.n)}</span>`)).join("") + "</div>" +
-      (m.accuracy ? `<p class="pk-langs-note">Accuracy varies by language. <a href="${esc(m.accuracy)}">Details${ICON.external}</a></p>` : "") +
+      (m.accuracy ? `<p class="pk-langs-note">${esc(t("setup.accuracy"))} <a href="${esc(m.accuracy)}">${esc(t("setup.details"))}${ICON.external}</a></p>` : "") +
       "</div>";
     return `<label class="pk-choice"><input type="radio" name="model" value="${m.name}"${m.name === choice ? " checked" : ""}>` +
-      `<span class="pk-name">${esc(m.label)}</span><span class="pk-stamp">${m.have ? "on this computer" : `${mb(m.bytes)} MB`}</span>` +
+      `<span class="pk-name">${esc(labelOf(m))}</span><span class="pk-stamp">${esc(m.have ? t("setup.on_computer") : t("setup.size", { mb: mb(m.bytes) }))}</span>` +
       `<span class="pk-desc">${esc(m.name)} · ${about}</span>${list}</label>`;
   }).join("");
-  return `${WORDMARK}
-    <div class="pk-intro"><h1 class="pk-lead">Choose a speech model</h1></div>
-    <fieldset class="pk-choices"><legend>Speech model</legend>${cards}</fieldset>
+  return `${WORDMARK()}
+    <div class="pk-intro"><h1 class="pk-lead">${esc(t("setup.title"))}</h1></div>
+    <fieldset class="pk-choices"><legend>${esc(t("setup.legend"))}</legend>${cards}</fieldset>
     <div class="pk-foot-col">
       <button class="pk-btn pk-btn-primary pk-btn-lg pk-wide" id="go" type="button"></button>
       <div class="pk-spread">
-        <button class="pk-linkbtn" id="have-file" type="button">I already have a model file…</button>
+        <button class="pk-linkbtn" id="have-file" type="button">${esc(t("setup.have_file"))}</button>
         <span class="pk-small" id="go-note"></span>
       </div>
     </div>`;
@@ -388,12 +420,12 @@ function chooseHtml() {
 function updateChoose() {
   const m = st.catalog.find((x) => x.name === choice);
   for (const r of document.querySelectorAll('input[name="model"]')) r.closest(".pk-choice").classList.toggle("is-on", r.value === choice);
-  const go = m.have ? `Use the ${m.label} model`
-    : m.partial ? `Download the ${m.label} model · ${mb(m.bytes - m.partial)} MB to go`
-    : `Download the ${m.label} model · ${mb(m.bytes)} MB`;
+  const go = m.have ? t("setup.use", { label: labelOf(m) })
+    : m.partial ? t("setup.download_rest", { label: labelOf(m), mb: mb(m.bytes - m.partial) })
+    : t("setup.download", { label: labelOf(m), mb: mb(m.bytes) });
   $("go").innerHTML = `${m.have ? ICON.check : ICON.download}${esc(go)}`;
   const w = waiting();
-  $("go-note").textContent = w ? `${plural(w, "file")} waiting` : "";
+  $("go-note").textContent = w ? t("setup.waiting", { n: w }) : "";
 }
 
 async function go() {
@@ -408,17 +440,17 @@ async function go() {
 }
 
 function downloadHtml() {
-  const m = st.catalog.find((x) => x.name === dl.name) || { label: dl.name };
-  return `${WORDMARK}
-    <div class="pk-intro"><h1 class="pk-lead">Downloading the ${esc(m.label)} model</h1>
-      <p class="pk-text">${esc(dl.name)} from <span id="dl-host"></span></p></div>
+  const m = st.catalog.find((x) => x.name === dl.name);
+  return `${WORDMARK()}
+    <div class="pk-intro"><h1 class="pk-lead">${esc(t("download.title", { label: m ? labelOf(m) : dl.name }))}</h1>
+      <p class="pk-text">${t("download.from_html", { file: esc(dl.name), host: '<span id="dl-host"></span>' })}</p></div>
     <div class="pk-dl">
       <div class="pk-spread"><span class="pk-figure" id="dl-pct"></span><span class="pk-stamp" id="dl-nums"></span></div>
-      <div class="pk-bar" id="dl-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Model download"><i></i></div>
+      <div class="pk-bar" id="dl-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="${esc(t("download.bar"))}"><i></i></div>
     </div>
     <div class="pk-foot-row">
       <button class="pk-btn" id="dl-pause" type="button"></button>
-      <button class="pk-btn pk-btn-ghost" id="dl-cancel" type="button">Cancel</button>
+      <button class="pk-btn pk-btn-ghost" id="dl-cancel" type="button">${esc(t("download.cancel"))}</button>
       <span class="pk-small" id="dl-next"></span>
     </div>`;
 }
@@ -426,19 +458,20 @@ function downloadHtml() {
 /* What stopped it in a few words, what it has kept, and the particulars
    folded away */
 function failedHtml() {
-  const stopped = dl.got ? `Stopped at ${mb(dl.got)} of ${mb(dl.total)} MB` : "Nothing downloaded yet";
-  return `${WORDMARK}
-    <div class="pk-intro"><h1 class="pk-lead">${esc(dl.why)}</h1></div>
+  const stopped = dl.got ? t("download.stopped_at", { got: mb(dl.got), total: mb(dl.total) }) : t("download.nothing_yet");
+  const detail = (dl.problem && dl.problem.detail) || "";
+  return `${WORDMARK()}
+    <div class="pk-intro"><h1 class="pk-lead">${esc(words(dl.problem))}</h1></div>
     <div class="pk-stopped">
-      <div class="pk-bar is-paused" id="dl-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Model download, stopped"><i></i></div>
-      <div class="pk-spread"><span class="pk-small pk-err">${ICON.alert}${stopped}</span>
+      <div class="pk-bar is-paused" id="dl-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="${esc(t("download.bar_stopped"))}"><i></i></div>
+      <div class="pk-spread"><span class="pk-small pk-err">${ICON.alert}${esc(stopped)}</span>
         ${dl.retry ? `<span class="pk-small" id="dl-auto"></span>` : ""}</div>
     </div>
-    <details class="pk-details"><summary class="pk-ui">${ICON.down}Details</summary><p class="pk-stamp">${esc(dl.detail)}</p></details>
+    ${detail ? `<details class="pk-details"><summary class="pk-ui">${ICON.down}${esc(t("download.details"))}</summary><p class="pk-stamp">${esc(detail)}</p></details>` : ""}
     <div class="pk-foot-row">
-      <button class="pk-btn pk-btn-primary pk-btn-lg" id="dl-retry" type="button">Try again</button>
-      <button class="pk-btn pk-btn-lg" id="dl-file" type="button">Use a model file…</button>
-      <button class="pk-btn pk-btn-ghost pk-btn-lg" id="dl-cancel" type="button">Cancel</button>
+      <button class="pk-btn pk-btn-primary pk-btn-lg" id="dl-retry" type="button">${esc(t("download.try_again"))}</button>
+      <button class="pk-btn pk-btn-lg" id="dl-file" type="button">${esc(t("download.use_file"))}</button>
+      <button class="pk-btn pk-btn-ghost pk-btn-lg" id="dl-cancel" type="button">${esc(t("download.cancel"))}</button>
     </div>`;
 }
 
@@ -451,23 +484,24 @@ function updateDownload() {
   bar.classList.toggle("is-paused", mode !== "downloading");
   if (mode === "failed") {
     $("dl-retry").disabled = dl.trying;
-    $("dl-retry").textContent = dl.trying ? "Trying…" : "Try again";
-    if ($("dl-auto")) $("dl-auto").textContent = dl.trying ? "" : "Retries by itself";
+    $("dl-retry").textContent = t(dl.trying ? "download.trying" : "download.try_again");
+    if ($("dl-auto")) $("dl-auto").textContent = dl.trying ? "" : t("download.retrying");
     return;
   }
   $("dl-host").textContent = dl.host || "models.pktito.net";
   $("dl-pct").textContent = `${percent(dl.step === "checking" ? 1 : p)}%`;
-  let nums = `${mb(dl.got)} of ${mb(dl.total)} MB`;
-  if (dl.step === "checking") nums = "Checking";
-  else if (dl.step === "paused") nums += " · paused";
-  else if (dl.speed > 0) nums += ` · ${(dl.speed / 1e6).toFixed(1)} MB/s · ${timeLeft((dl.total - dl.got) / dl.speed)}`;
+  const sizes = { got: mb(dl.got), total: mb(dl.total) };
+  let nums = t("download.progress", sizes);
+  if (dl.step === "checking") nums = t("download.checking");
+  else if (dl.step === "paused") nums = t("download.progress_paused", sizes);
+  else if (dl.speed > 0) nums = t("download.progress_speed", { ...sizes, speed: num(dl.speed / 1e6, 1), left: timeLeft((dl.total - dl.got) / dl.speed) });
   $("dl-nums").textContent = nums;
   const pause = $("dl-pause");
-  pause.textContent = dl.step === "paused" ? "Resume" : "Pause";
+  pause.textContent = t(dl.step === "paused" ? "download.resume" : "download.pause");
   pause.classList.toggle("pk-btn-primary", dl.step === "paused");
   pause.disabled = dl.step === "checking";
   const w = waiting();
-  $("dl-next").textContent = w ? `${plural(w, "file")} waiting` : "";
+  $("dl-next").textContent = w ? t("setup.waiting", { n: w }) : "";
 }
 
 listen("download", async (e) => {
@@ -477,7 +511,7 @@ listen("download", async (e) => {
     setupKey = "";
     await refresh();
     const m = st.catalog.find((x) => x.name === s.name);
-    if (s.step === "done") toast(`${m ? m.label : s.name} model ready`);
+    if (s.step === "done") toast(t("models.ready", { label: m ? labelOf(m) : s.name }));
     return;
   }
   dl = s;
@@ -491,8 +525,8 @@ listen("download", async (e) => {
    screen shows a file, or a batch as one row. */
 function renderReady() {
   $("ready-model").innerHTML = `${esc(modelLabel(false))}${ICON.down}`;
-  $("choose").innerHTML = `${ICON.plus}Choose files…`;
-  $("choose").title = tip("Choose files", "O");
+  $("choose").innerHTML = `${ICON.plus}${esc(t("ready.choose"))}`;
+  $("choose").title = tip(t("ready.choose_tip"), "O");
   drawWave($("idle-wave"), null, 0);
   $("recent").hidden = !recent.length && !files.length;
   $("ready").classList.toggle("has-recent", !$("recent").hidden);
@@ -503,7 +537,7 @@ function renderReady() {
     `<li class="pk-qi"><button class="pk-row" type="button" data-recent="${esc(r.id)}" title="${esc(r.path)}" aria-keyshortcuts="Delete">` +
     `${ICON.file}<span class="pk-name">${esc(r.name)}</span><span class="pk-stamp">${hms(r.duration)}</span>` +
     `<span class="pk-small pk-when">${esc(when(r.finished))}</span></button><button class="pk-x" type="button" tabindex="-1" ` +
-    `data-forget="${esc(r.id)}" aria-label="Remove ${esc(r.name)} from Recent" title="Remove from Recent; the file stays">${ICON.x}</button></li>`).join("");
+    `data-forget="${esc(r.id)}" aria-label="${esc(t("recent.remove", { name: r.name }))}" title="${esc(t("recent.remove_tip"))}">${ICON.x}</button></li>`).join("");
 }
 
 const liveHtml = (f) => `<li><button class="pk-row" type="button" data-live="${f.id}" title="${esc(f.path)}">${rowBody(f)}</button></li>`;
@@ -516,10 +550,11 @@ function batchRowHtml() {
   const length = files.every((x) => x.duration != null) ? hms(files.reduce((t, x) => t + x.duration, 0)) : "";
   const status = files.some(live)
     ? `<span class="pk-bar pk-mini"><i style="width:${((over + (f ? f.done : 0)) / n * 100).toFixed(1)}%"></i></span>` +
-      `<span class="pk-status pk-num">Transcribing ${Math.min(n, over + 1)} of ${n}</span>`
-    : done === n ? `<span class="pk-status pk-ok">${ICON.check}Done</span>` : `<span class="pk-status pk-num">${done} of ${n} done</span>`;
+      `<span class="pk-status pk-num">${esc(t("batch.transcribing", { i: Math.min(n, over + 1), n }))}</span>`
+    : done === n ? `<span class="pk-status pk-ok">${ICON.check}${esc(t("status.done"))}</span>`
+    : `<span class="pk-status pk-num">${esc(t("batch.done_of", { done, n }))}</span>`;
   return `<li><button class="pk-row" type="button" data-batch title="${esc(files.map((x) => x.name).join("\n"))}">${ICON.folder}` +
-    `<span class="pk-name">${plural(n, "file")}</span><span class="pk-stamp">${length}</span>${status}</button></li>`;
+    `<span class="pk-name">${esc(fileCount(n))}</span><span class="pk-stamp">${length}</span>${status}</button></li>`;
 }
 
 /* the width the recent list's scrollbar takes from it, for app.css to give
@@ -564,13 +599,13 @@ async function openRecent(id) {
    there. Until then, or if it cannot be, the play button says why, and
    the transcript reads as ever. */
 async function reloadAudio(f) {
-  f.audioWhy = "Reading the audio…";
+  f.audioWhy = t("play.reading");
   if (current() === f) setPlayIcon();
   try {
     f.audio = await invoke("reload_audio", { id: f.recentId });
     f.audioWhy = "";
   } catch (e) {
-    f.audioWhy = String(e);
+    f.audioWhy = words(e);
   }
   if (current() === f) {
     mainKey = "";
@@ -661,8 +696,8 @@ $("ready-model").onclick = (e) => modelMenu(e.currentTarget, !e.detail);
 
 function newFile(path) {
   return { id: nextId++, path, name: baseName(path), kind: kindOf(path), step: "waiting", done: 0, eta: -1, duration: null,
-    peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], cues: null, fps: 0, took: 0, transcribed: 0, model: "", recentId: null, message: "",
-    detail: "" };
+    peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], cues: null, fps: 0, took: 0, transcribed: 0, model: "", recentId: null,
+    problem: null };
 }
 
 async function chooseFiles() {
@@ -704,7 +739,7 @@ async function addPaths(paths) {
     closeAbout();
   }
   const gone = media.filter((p) => !here.includes(p)).map(baseName), other = paths.filter((p) => !isMedia(p)).map(baseName);
-  const say = [gone.length && `Not found: ${gone.join(", ")}`, other.length && `Not audio or video: ${other.join(", ")}`];
+  const say = [gone.length && t("files.not_found", { names: gone.join(", ") }), other.length && t("files.not_media", { names: other.join(", ") })];
   if (gone.length || other.length) toast(say.filter(Boolean).join(" · "), { err: true });
   render();
   pump();
@@ -721,7 +756,7 @@ async function pump() {
     await invoke("transcribe", { id: f.id, path: f.path });
   } catch (e) {
     f.step = "error";
-    f.message = String(e);
+    f.problem = e && e.key ? e : { key: "problem.unexpected", args: {}, detail: String(e) };
     update(f);
   }
   running = false;
@@ -743,7 +778,7 @@ listen("job", (e) => {
     f.transcribed = j.transcribed;
   }
   f.segments.push(...j.segments);
-  if (j.step === "error") Object.assign(f, { message: j.message, detail: j.detail });
+  if (j.step === "error") f.problem = j.problem;
   if (j.step === "done") {
     Object.assign(f, { done: 1, took: j.took, transcribed: j.transcribed, model: j.model, recentId: j.recent });
     finished(f);
@@ -792,7 +827,7 @@ function dropFile(f) {
 /* f off the batch, from its row; the keyboard, if it was on the list, on
    the row that took its place. The batch's last file closes it. */
 function removeFile(f) {
-  if (busy(f)) return toast("Stop it first", { err: true });
+  if (busy(f)) return toast(t("batch.stop_first"), { err: true });
   const i = files.indexOf(f), keys = !!document.activeElement.closest("#queue");
   dropFile(f);
   if (!files.length) closeFiles();
@@ -846,7 +881,7 @@ function goHome() {
 
 function again(f) {
   Object.assign(f, { step: "waiting", done: 0, eta: -1, peaks: null, audio: null, audioWhy: "", pos: 0, segments: [], cues: null,
-    took: 0, transcribed: 0, recentId: null, message: "", detail: "" });
+    took: 0, transcribed: 0, recentId: null, problem: null });
   mainKey = "";
   render();
   pump();
@@ -863,18 +898,22 @@ function renderWork() {
    start screen draws the same for a lone file still under way. */
 function rowBody(f) {
   let status;
-  if (f.step === "waiting") status = `<span class="pk-status">Waiting</span>`;
-  else if (f.step === "reading") status = `<span class="pk-status">Reading the audio</span>`;
-  else if (f.step === "loading") status = `<span class="pk-status">Loading the model</span>`;
+  if (f.step === "waiting") status = `<span class="pk-status">${esc(t("status.waiting"))}</span>`;
+  else if (f.step === "reading") status = `<span class="pk-status">${esc(t("status.reading"))}</span>`;
+  else if (f.step === "loading") status = `<span class="pk-status">${esc(t("status.loading"))}</span>`;
   else if (f.step === "transcribing") {
     status = `<span class="pk-bar pk-mini"><i style="width:${(f.done * 100).toFixed(1)}%"></i></span>` +
-      `<span class="pk-status pk-num">Transcribing ${percent(f.done)}%${f.eta > 0 ? ` · ${timeLeft(f.eta)}` : ""}</span>`;
-  } else if (f.step === "done") status = `<span class="pk-status pk-ok">${ICON.check}Done</span>`;
-  else if (f.step === "stopped") status = `<span class="pk-status">Stopped at ${percent(f.done)}%</span>`;
-  else status = `<span class="pk-status pk-err"${f.detail ? ` title="${esc(f.detail)}"` : ""}>${esc(f.message || "Couldn't transcribe")}</span>`;
+      `<span class="pk-status pk-num">${esc(t("status.transcribing", { pct: percent(f.done) }))}${f.eta > 0 ? ` · ${esc(timeLeft(f.eta))}` : ""}</span>`;
+  } else if (f.step === "done") status = `<span class="pk-status pk-ok">${ICON.check}${esc(t("status.done"))}</span>`;
+  else if (f.step === "stopped") status = `<span class="pk-status">${esc(t("status.stopped_at", { pct: percent(f.done) }))}</span>`;
+  else status = `<span class="pk-status pk-err"${detailOf(f) ? ` title="${esc(detailOf(f))}"` : ""}>${esc(failure(f))}</span>`;
   return `${f.kind === "video" ? ICON.film : ICON.music}<span class="pk-name">${esc(f.name)}</span>` +
     `<span class="pk-stamp">${f.duration == null ? "" : hms(f.duration)}</span>${status}`;
 }
+
+/* why f failed, in words, and the particulars of it */
+const failure = (f) => (f.problem ? words(f.problem) : t("transcribe.failed"));
+const detailOf = (f) => (f.problem && f.problem.detail) || "";
 
 /* --------------------------------------------------------------- batch -- */
 
@@ -884,12 +923,12 @@ function rowBody(f) {
 function rowHtml(f) {
   return `<li${busy(f) ? "" : ' class="pk-qi"'}><button class="pk-row" type="button" data-id="${f.id}" aria-keyshortcuts="Delete" title="${esc(f.path)}">` +
     `${rowBody(f)}</button>` + (busy(f) ? "" : `<button class="pk-x" type="button" tabindex="-1" data-x="${f.id}" ` +
-      `aria-label="Take ${esc(f.name)} off the list" title="Take it off the list">${ICON.x}</button>`) + "</li>";
+      `aria-label="${esc(t("batch.remove", { name: f.name }))}" title="${esc(t("batch.remove_tip"))}">${ICON.x}</button>`) + "</li>";
 }
 
 function renderBatch() {
   const at = document.activeElement.closest("#queue [data-id]");
-  $("batch-title").textContent = plural(files.length, "file");
+  $("batch-title").textContent = fileCount(files.length);
   $("queue").innerHTML = files.map(rowHtml).join("");
   const row = at && $("queue").querySelector(`[data-id="${at.dataset.id}"]`);
   if (row) row.focus({ preventScroll: true });
@@ -911,8 +950,8 @@ function updateRow(f) {
    finishes; Stop and the spinner while any of it is to come. */
 function batchHead() {
   const going = files.some(live), p = going && batchSave;
-  const saving = p ? ` · saving the rest as they finish: ${p.kind === "folder" ? `all five formats into ${baseName(p.dir)}` : `.${p.kind} next to each original`}` : "";
-  $("tally").textContent = `${files.filter((f) => f.step === "done").length} of ${files.length} done${saving}`;
+  const saving = !p ? "" : ` · ${p.kind === "folder" ? t("batch.saving_folder", { folder: baseName(p.dir) }) : t("batch.saving_beside", { ext: p.kind })}`;
+  $("tally").textContent = t("batch.done_of", { done: files.filter((f) => f.step === "done").length, n: files.length }) + saving;
   $("batch-spin").hidden = $("batch-stop").hidden = !going;
   $("save-all").disabled = !files.some((f) => live(f) || (f.step === "done" && f.segments.length));
 }
@@ -958,7 +997,7 @@ function modeOf(f) {
 
 /* Where the file is and what made its transcript, for its name's tooltip:
    the window keeps both out of sight. */
-const fileTip = (f) => (f.model ? `${f.path}\n${f.model} · took ${clock(f.took)}` : f.path);
+const fileTip = (f) => (f.model ? `${f.path}\n${t("work.made_by", { model: f.model, time: clock(f.took) })}` : f.path);
 const playable = (f) => !!f.audio && !f.audioWhy;
 
 let mainKey = "";
@@ -1002,10 +1041,10 @@ function buildMain(f, mode, key) {
   const wave = $("wave");
   if (review) {
     wave.removeAttribute("role");
-    $("wavebtn").setAttribute("aria-label", "Jump to a point in the audio");
+    $("wavebtn").setAttribute("aria-label", t("wave.jump"));
   } else {
     wave.setAttribute("role", "progressbar");
-    wave.setAttribute("aria-label", "Transcribed so far");
+    wave.setAttribute("aria-label", t("wave.progress"));
     wave.setAttribute("aria-valuemin", "0");
     wave.setAttribute("aria-valuemax", "100");
     $("wavebtn").removeAttribute("aria-label");
@@ -1036,7 +1075,7 @@ function updateHead(f, mode) {
   $("copy").hidden = !(review || mode === "running");
   // its icon, which everyone reads, and its words for tooltip and reader
   $("copy").innerHTML = ICON.copy;
-  $("copy").title = !review ? "Copy so far" : prefs.captions ? "Copy captions (SRT)" : "Copy text";
+  $("copy").title = t(!review ? "copy.so_far" : prefs.captions ? "copy.captions" : "copy.text");
   $("copy").setAttribute("aria-label", $("copy").title);
   $("copy").disabled = !has;
   // at work: from the file's start until its last words, before its first too
@@ -1044,12 +1083,12 @@ function updateHead(f, mode) {
   // saving is what a finished transcript is for
   $("save-as").classList.add("pk-btn-primary");
   $("save-as").hidden = !review;
-  $("save-as").innerHTML = `Save as${ICON.down}`;
+  $("save-as").innerHTML = `${esc(t("save.as"))}${ICON.down}`;
   $("save-as").disabled = !has;
   // not for a file gone from its place (added again from where it is now,
   // it is a new row) or one that is not media: neither can go better
-  $("again").hidden = !(f.step === "stopped" || (f.step === "error" && !["Not found", "Not audio or video"].includes(f.message)));
-  $("again").title = f.step === "stopped" ? `Stopped at ${percent(f.done)}%` : "";
+  $("again").hidden = !(f.step === "stopped" || (f.step === "error" && !["decode.not_found", "decode.not_media"].includes(f.problem && f.problem.key)));
+  $("again").title = f.step === "stopped" ? t("status.stopped_at", { pct: percent(f.done) }) : "";
   $("stop").hidden = mode !== "running";
 }
 
@@ -1057,7 +1096,7 @@ function updateRunning(f) {
   const going = f.step === "transcribing";
   $("pct").textContent = `${percent(going ? f.done : 0)}%`;
   // under it the step, and once the first audio is done, the pace so far
-  $("pace").textContent = f.step === "reading" ? "Reading the audio" : f.step === "loading" ? "Loading the model"
+  $("pace").textContent = f.step === "reading" ? t("status.reading") : f.step === "loading" ? t("status.loading")
     : going && f.done > 0 && f.transcribed > 0 ? realTime(f.done * f.duration, f.transcribed) : "";
   $("pct").title = going && f.eta > 0 ? timeLeft(f.eta) : "";
   $("dur").textContent = f.duration == null ? "" : lengthOf(f);
@@ -1075,10 +1114,10 @@ function updateRunning(f) {
 function segHtml(s, i, filling) {
   const cue = s.endMs !== undefined;
   const fast = cue && s.flags & 1 ?
-    `<span class="pk-fast" title="${(s.chars / (s.end - s.start)).toFixed(1)} characters a second, over the 20 a reader keeps up with">${ICON.zap}</span>` : "";
+    `<span class="pk-fast" title="${esc(t("seg.fast", { rate: num(s.chars / (s.end - s.start), 1) }))}">${ICON.zap}</span>` : "";
   const start = tc(s.start);
   return `<div class="pk-seg${cue ? " pk-cue" : ""}" data-i="${i}"><div class="pk-seg-times"><button class="pk-seg-t" type="button" tabindex="-1" ` +
-    `aria-label="Play from ${start}"${filling ? "" : ' title="Play from here"'}>${start}</button>` +
+    `aria-label="${esc(t("seg.play_from", { time: start }))}"${filling ? "" : ` title="${esc(t("seg.play_here"))}"`}>${start}</button>` +
     (cue ? `<span class="pk-seg-end">${tc(s.end)}${fast}</span>` : "") + `</div><p>${bodyHtml(s, i)}</p></div>`;
 }
 
@@ -1131,13 +1170,13 @@ function renderTranscript(f, mode) {
   curSeg = curWord = null;
   if (mode === "running") markLive();
   let msg = "", err = false;
-  if (mode === "waiting") msg = "Waiting";
+  if (mode === "waiting") msg = t("status.waiting");
   else if (mode === "error") {
-    msg = f.message || "Couldn't transcribe";
+    msg = failure(f);
     err = true;
-  } else if (mode === "review" && !f.segments.length) msg = f.step === "stopped" ? "Stopped before any speech" : "No speech in this file";
+  } else if (mode === "review" && !f.segments.length) msg = t(f.step === "stopped" ? "status.no_speech_stopped" : "status.no_speech");
   $("msg").textContent = msg;
-  $("msg").title = err ? f.detail : "";
+  $("msg").title = err ? detailOf(f) : "";
   $("msg").hidden = !msg;
   $("msg").classList.toggle("pk-err", err);
 }
@@ -1147,10 +1186,10 @@ function renderTranscript(f, mode) {
    took in all. */
 function statsHtml(f) {
   if (!f.took || !f.segments.length) return "";
-  const secs = (x) => (x < 10 ? `${x.toFixed(2)}s` : x < 60 ? `${x.toFixed(1)}s` : clock(x));
+  const secs = (x) => (x < 60 ? t("time.seconds", { s: num(x, x < 10 ? 2 : 1) }) : clock(x));
   const line = f.transcribed > 0
-    ? `Transcribed in ${secs(f.transcribed)}, ${realTime(f.duration, f.transcribed)}`
-    : `Took ${secs(f.took)}`;
+    ? t("stats.transcribed", { time: secs(f.transcribed), pace: realTime(f.duration, f.transcribed) })
+    : t("stats.took", { time: secs(f.took) });
   return `<p class="pk-stats">${esc(line)}</p>`;
 }
 
@@ -1303,7 +1342,7 @@ function showSpeed() {
   if (player.playbackRate !== rate) player.playbackRate = rate;
   $("speed").textContent = `${s}×`;
   $("speed").classList.toggle("is-on", s !== 1);
-  $("speed").setAttribute("aria-label", `Playback speed, ${s} times`);
+  $("speed").setAttribute("aria-label", t("speed.label", { s }));
   for (const c of $("menu").querySelectorAll("[data-speed]")) {
     c.classList.toggle("is-on", Number(c.dataset.speed) === s);
     c.setAttribute("aria-pressed", String(Number(c.dataset.speed) === s));
@@ -1323,10 +1362,10 @@ const stepSpeed = (d) => setSpeed(SPEEDS[Math.max(0, Math.min(SPEEDS.length - 1,
    keeps the menu open, for the next one */
 function speedMenu(anchor, keys) {
   const chip = (x) => `<button class="pk-rate" type="button" data-speed="${x}">${x}×</button>`;
-  const html = `<div class="pk-rates" role="group" aria-label="Playback speed">${SPEEDS.map(chip).join("")}</div>` +
+  const html = `<div class="pk-rates" role="group" aria-label="${esc(t("speed.group"))}">${SPEEDS.map(chip).join("")}</div>` +
     `<div class="pk-menu-sep" aria-hidden="true"></div>` +
-    `<button class="pk-mi" type="button" role="menuitem" data-step="-1"><span>Slower</span><span class="pk-key">&lt;</span></button>` +
-    `<button class="pk-mi" type="button" role="menuitem" data-step="1"><span>Faster</span><span class="pk-key">&gt;</span></button>`;
+    `<button class="pk-mi" type="button" role="menuitem" data-step="-1"><span>${esc(t("speed.slower"))}</span><span class="pk-key">&lt;</span></button>` +
+    `<button class="pk-mi" type="button" role="menuitem" data-step="1"><span>${esc(t("speed.faster"))}</span><span class="pk-key">&gt;</span></button>`;
   openMenu(anchor, keys, html, "down", (m) => {
     m.onclick = (e) => {
       const c = e.target.closest("[data-speed]"), b = e.target.closest("[data-step]");
@@ -1351,10 +1390,10 @@ function loadAudio(f) {
 /* The play button for the file shown; when it cannot play, its tooltip
    says why. */
 function setPlayIcon() {
-  const f = current(), what = playing ? "Pause" : "Play";
+  const f = current(), what = t(playing ? "play.pause" : "play.play");
   $("play").innerHTML = playing ? ICON.pause : ICON.play;
   $("play").setAttribute("aria-label", what);
-  $("play").title = (f && f.audioWhy) || `${what} (Space)`;
+  $("play").title = (f && f.audioWhy) || keyTip(what, t("key.space"));
   $("play").disabled = $("speed").disabled = !f || !playable(f);
 }
 
@@ -1372,11 +1411,11 @@ function togglePlay() {
    deadlocked and the window hung (the Mac, 2026-10-23: a seek to 1187 s,
    then play). The seek finishes first, then the play. */
 let playToken = 0;   // the latest play asked for; a pause, or a newer one, cancels the rest
-function playFrom(t) {
-  const start = () => player.play().catch((e) => toast("Can't play", { err: true, detail: e.message }));
+function playFrom(pos) {
+  const start = () => player.play().catch((e) => toast(t("play.cant"), { err: true, detail: e.message }));
   const mine = ++playToken;
-  if (Math.abs(player.currentTime - t) < 0.01 && !player.seeking) return start();
-  player.currentTime = t;
+  if (Math.abs(player.currentTime - pos) < 0.01 && !player.seeking) return start();
+  player.currentTime = pos;
   const go = () => {
     if (mine === playToken && player.seeking) return;   // a later seek's seeked comes next
     player.removeEventListener("seeked", go);
@@ -1435,7 +1474,7 @@ player.addEventListener("timeupdate", () => {
 player.addEventListener("error", () => {
   const f = files.find((x) => x.id === playId);
   if (!f || !f.audio) return;
-  f.audioWhy = "Can't play";
+  f.audioWhy = t("play.cant");
   if (current() !== f) return;
   setPlayIcon();
   $("wavebtn").disabled = true;
@@ -1516,10 +1555,10 @@ function timeMenu(anchor, keys) {
   const choice = (frames, label, sub) => `<button class="pk-mi" type="button" role="menuitemradio" aria-checked="${!!prefs.frames === frames}" ` +
     `data-frames="${frames ? 1 : 0}"><span>${label}</span><small>${sub}</small>${!!prefs.frames === frames ? ICON.check : ""}</button>`;
   const chip = (value, label, on) => `<button class="pk-rate${on ? " is-on" : ""}" type="button" data-rate="${value}" aria-pressed="${on}">${label}</button>`;
-  const html = choice(false, "Seconds", stamp(now)) +
-    choice(true, "Frames", `${timecode(now, rate)} at ${rateLabel(rate)} fps${own ? ", the video's" : ""}`) +
-    `<div class="pk-rates" role="group" aria-label="Frames a second">` +
-    (f.fps > 0 ? chip("video", `Video · ${rateLabel(f.fps)}`, own) : "") +
+  const html = choice(false, esc(t("times.seconds")), stamp(now)) +
+    choice(true, esc(t("times.frames")), esc(t(own ? "times.frames_at_video" : "times.frames_at", { time: timecode(now, rate), rate: rateLabel(rate) }))) +
+    `<div class="pk-rates" role="group" aria-label="${esc(t("times.rates"))}">` +
+    (f.fps > 0 ? chip("video", esc(t("times.video_rate", { rate: rateLabel(f.fps) })), own) : "") +
     RATES.map((r) => chip(r, r, !own && Math.abs(r - rate) < 0.001)).join("") + "</div>";
   openMenu(anchor, keys, html, "down wide", (m) => {
     m.onclick = async (e) => {
@@ -1755,11 +1794,11 @@ $("views").onclick = async (e) => {
 /* -------------------------------------------------------- copy and save -- */
 
 const FORMATS = [
-  { ext: "txt", label: () => (prefs.times ? "Text with times" : "Text"), key: ["S", false] },
-  { ext: "srt", label: () => "Subtitles", key: ["S", true] },
-  { ext: "vtt", label: () => "Web subtitles" },
-  { ext: "md", label: () => (prefs.times ? "Markdown with times" : "Markdown") },
-  { ext: "json", label: () => "JSON with word timings" },
+  { ext: "txt", label: () => t(prefs.times ? "format.txt_times" : "format.txt"), key: ["S", false] },
+  { ext: "srt", label: () => t("format.srt"), key: ["S", true] },
+  { ext: "vtt", label: () => t("format.vtt") },
+  { ext: "md", label: () => t(prefs.times ? "format.md_times" : "format.md") },
+  { ext: "json", label: () => t("format.json") },
 ];
 
 /* A file's text in a format, the bytes pktito-cli writes for it too
@@ -1777,9 +1816,9 @@ async function copyText() {
   const cues = !!prefs.captions && modeOf(f) === "review";
   try {
     await navigator.clipboard.writeText(await textOf(f, cues ? "srt" : "txt", false));
-    toast(cues ? "Copied captions" : "Copied");
+    toast(t(cues ? "copy.done_captions" : "copy.done"));
   } catch (e) {
-    toast("Couldn't copy", { err: true, detail: String(e) });
+    toast(t("copy.failed"), { err: true, detail: String(e) });
   }
 }
 
@@ -1791,7 +1830,7 @@ async function save(ext) {
   closeMenu();
   try {
     const r = await invoke("save_text", { original: f.path, ext, text: await textOf(f, ext), nextTo: prefs.next_to_original });
-    if (r) toast(`Saved ${baseName(r.path)}`, { reveal: r.path });
+    if (r) toast(t("save.saved", { name: baseName(r.path) }), { reveal: r.path });
   } catch (e) {
     toastErr(e);
   }
@@ -1823,7 +1862,7 @@ async function saveTo(list, kind, dir) {
   try {
     const out = await invoke("save_many", { dir,
       files: await Promise.all(list.flatMap((f) => exts.map(async (ext) => ({ original: f.path, ext, text: await textOf(f, ext) })))) });
-    if (out.length) toast(out.length === 1 ? `Saved ${baseName(out[0])}` : `Saved ${plural(out.length, "file")}`, { reveal: out[0] });
+    if (out.length) toast(out.length === 1 ? t("save.saved", { name: baseName(out[0]) }) : t("save.saved_files", { n: out.length }), { reveal: out[0] });
   } catch (e) {
     toastErr(e);
   }
@@ -1844,10 +1883,10 @@ const checkHtml = (pref, text, more = "") =>
 
 function saveMenu(anchor, keys) {
   const stem = stemOf(current().path);
-  const html = FORMATS.map((x) => `<button class="pk-mi" type="button" role="menuitem" data-save="${x.ext}"><span>${x.label()}</span>` +
+  const html = FORMATS.map((x) => `<button class="pk-mi" type="button" role="menuitem" data-save="${x.ext}"><span>${esc(x.label())}</span>` +
     `<small>${esc(stem)}.${x.ext}</small>${x.key ? `<span class="pk-kbd">${kbd(...x.key)}</span>` : ""}</button>`).join("") +
     `<div class="pk-menu-sep" aria-hidden="true"></div>` +
-    checkHtml("next_to_original", "Save next to the original") + checkHtml("times", "Timestamps in .txt and .md");
+    checkHtml("next_to_original", esc(t("save.next_to"))) + checkHtml("times", esc(t("save.times")));
   openMenu(anchor, keys, html, "down right", (m) => {
     m.onclick = (e) => {
       const b = e.target.closest("[data-save]");
@@ -1865,10 +1904,10 @@ function saveMenu(anchor, keys) {
 /* each choice with how many it saves now, and how many as they finish */
 function saveAllMenu(anchor, keys) {
   const n = files.filter((f) => f.step === "done" && f.segments.length).length, later = files.filter(live).length;
-  const count = (ext) => `${n} x .${ext}${later ? `, ${later} more as they finish` : ""}`;
-  const html = `<button class="pk-mi" type="button" role="menuitem" data-all="txt"><span>Text, next to each original</span><small>${count("txt")}</small></button>` +
-    `<button class="pk-mi" type="button" role="menuitem" data-all="srt"><span>Subtitles, next to each original</span><small>${count("srt")}</small></button>` +
-    `<button class="pk-mi" type="button" role="menuitem" data-all="folder"><span>All of them into one folder…</span><small>.txt .srt .vtt .md .json</small></button>`;
+  const count = (ext) => esc(t(later ? "save_all.count_later" : "save_all.count", { n, ext, later }));
+  const html = `<button class="pk-mi" type="button" role="menuitem" data-all="txt"><span>${esc(t("save_all.txt"))}</span><small>${count("txt")}</small></button>` +
+    `<button class="pk-mi" type="button" role="menuitem" data-all="srt"><span>${esc(t("save_all.srt"))}</span><small>${count("srt")}</small></button>` +
+    `<button class="pk-mi" type="button" role="menuitem" data-all="folder"><span>${esc(t("save_all.folder"))}</span><small>.txt .srt .vtt .md .json</small></button>`;
   openMenu(anchor, keys, html, "down right", (m) => {
     m.onclick = (e) => {
       const b = e.target.closest("[data-all]");
@@ -1943,24 +1982,23 @@ window.addEventListener("blur", () => closeMenu());
 
 let toastTimer = 0;
 
-/* A command's error, "what happened: what said so", as the Rust side
-   writes them */
+/* A command's error: a Problem (strings.rs), worded, its particulars in
+   the tooltip; anything else, as what said so */
 function toastErr(e) {
-  const s = String(e), i = s.indexOf(": ");
-  toast(i < 0 ? s : s.slice(0, i), { err: true, detail: i < 0 ? "" : s.slice(i + 2) });
+  toast(words(e), { err: true, detail: e && e.key ? e.detail : String(e) });
 }
 
 /* A few words; what said so, if anything, in the tooltip */
 function toast(text, { reveal = null, err = false, detail = "" } = {}) {
-  const t = $("toast");
-  t.innerHTML = `${err ? ICON.alert : ICON.check}<span></span>` +
-    (reveal ? `<button class="pk-linkbtn" type="button">${revealLabel()}</button>` : "");
-  t.querySelector("span").textContent = text;
-  t.querySelector("span").title = detail || text;
-  if (reveal) t.querySelector("button").onclick = () => invoke("reveal", { path: reveal }).catch((e) => toastErr(e));
-  t.hidden = false;
+  const box = $("toast");
+  box.innerHTML = `${err ? ICON.alert : ICON.check}<span></span>` +
+    (reveal ? `<button class="pk-linkbtn" type="button">${esc(revealLabel())}</button>` : "");
+  box.querySelector("span").textContent = text;
+  box.querySelector("span").title = detail || text;
+  if (reveal) box.querySelector("button").onclick = () => invoke("reveal", { path: reveal }).catch((e) => toastErr(e));
+  box.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, reveal || err ? 6000 : 3500);
+  toastTimer = setTimeout(() => { box.hidden = true; }, reveal || err ? 6000 : 3500);
 }
 
 /* --------------------------------------------------------------- about -- */
@@ -1999,7 +2037,7 @@ async function openAbout() {
   aboutFrom = document.activeElement;
   about = true;
   // the engine's code for this processor by its name; all of "neon-dp (ARMv8.2: SDOT)" in the tooltip
-  $("about-version").textContent = `Version ${st.version} · ${st.backend.split(" (")[0]}`;
+  $("about-version").textContent = t("about.version", { version: st.version, backend: st.backend.split(" (")[0] });
   $("about-version").title = st.backend;
   document.body.classList.add("is-about");
   $("about").hidden = false;
@@ -2059,13 +2097,13 @@ function noticesHtml() {
     `<span class="pk-nl">${esc(lic)}</span><span class="pk-nc">${esc(notice)}</span></li>`;
   const list = (xs) => `<ul class="pk-nlist">${xs.join("")}</ul>`;
   const system = { macos: "macOS", windows: "Windows", linux: "Linux" }[st.platform] || st.platform;
-  return `<p class="pk-small">This build of pktito includes the following open-source software and libraries:</p>
-    <h3>Typefaces and icons</h3>
+  return `<p class="pk-small">${esc(t("notices.intro"))}</p>
+    <h3>${esc(t("notices.type"))}</h3>
     ${list(extras.filter((e) => e[0] === "type").map((e) => row(e[1], e[3], e[2])))}
-    <h3>Libraries (${esc(system)})</h3>
+    <h3>${esc(t("notices.libraries", { system }))}</h3>
     ${list(extras.filter((e) => e[0] === "code").map((e) => row(e[1], e[3], e[2]))
       .concat(crates.map((c) => row(`${c[0]} ${c[1]}`, c[2], c[3], true))))}
-    <h3>License texts</h3>
+    <h3>${esc(t("notices.texts"))}</h3>
     ${keys.map((k) => `<h4>${esc(NOTICES.texts[k].title)}</h4><pre>${esc(NOTICES.texts[k].text)}</pre>`).join("")}`;
 }
 
@@ -2074,7 +2112,7 @@ async function openNotices() {
   try {
     await loadScript("notices.js");
   } catch (e) {
-    return toast("Couldn't load the list", { err: true, detail: String(e) });
+    return toast(t("notices.failed"), { err: true, detail: String(e) });
   }
   if (!about) return;
   const body = $("notices-body");
@@ -2124,10 +2162,10 @@ for (const id of ["notices", "privacy"]) {
 
 function showDrop(paths) {
   const ok = paths.filter(isMedia);
-  $("drop-line").textContent = ok.length ? `Drop to transcribe ${plural(ok.length, "file")}` : "Not audio or video";
+  $("drop-line").textContent = ok.length ? t("drop.files", { n: ok.length }) : t("decode.not_media");
   const names = (ok.length ? ok : paths).map(baseName);
   const chips = names.slice(0, 6).map((n) => `<li>${esc(n)}</li>`);
-  if (names.length > 6) chips.push(`<li>and ${names.length - 6} more</li>`);
+  if (names.length > 6) chips.push(`<li>${esc(t("drop.more", { n: names.length - 6 }))}</li>`);
   $("drop-names").innerHTML = chips.join("");
   $("drop").hidden = false;
   drawDecor($("drop-wave"));
@@ -2264,26 +2302,26 @@ async function start() {
   dl = st.download;
   for (const b of [$("back"), $("batch-back"), $("about-back")]) {
     b.innerHTML = ICON.back;
-    b.title = "Back (Esc)";
+    b.title = keyTip(t("nav.back"), t("key.esc"));
   }
-  $("add").innerHTML = `${ICON.plus}Add files`;
-  $("add").title = tip("Add files", "O");
-  $("save-all").innerHTML = `${ICON.download}Save all${ICON.down}`;
-  $("time").title = "Seconds or frames";
-  $("speed").title = "Playback speed (< slower, > faster)";
+  $("add").innerHTML = `${ICON.plus}${esc(t("batch.add"))}`;
+  $("add").title = tip(t("batch.add"), "O");
+  $("save-all").innerHTML = `${ICON.download}${esc(t("batch.save_all"))}${ICON.down}`;
+  $("time").title = t("times.tip");
+  $("speed").title = t("speed.tip");
   showSpeed();
   for (const id of ["notices-close", "privacy-close"]) {
     $(id).innerHTML = ICON.x;
-    $(id).title = "Close (Esc)";
+    $(id).title = keyTip(t("sheet.close"), t("key.esc"));
   }
   // the question's buttons where the system's own dialogs put Cancel: first
   // on macOS, last on Windows
   if (isMac()) $("ask-btns").prepend($("ask-no"));
-  $("find-box").title = tip("Find", "F");
+  $("find-box").title = tip(t("find.tip"), "F");
   $("find-prev").innerHTML = ICON.up;
-  $("find-prev").title = "Previous (Shift+Enter)";
+  $("find-prev").title = keyTip(t("find.previous_tip"), `${t("key.shift")}+${t("key.enter")}`);
   $("find-next").innerHTML = ICON.down;
-  $("find-next").title = "Next (Enter)";
+  $("find-next").title = keyTip(t("find.next_tip"), t("key.enter"));
   try {
     recent = await invoke("recent_list");
   } catch {
@@ -2315,12 +2353,12 @@ async function openModel(path) {
     await refresh();
     closeAbout();
     goHome();
-    toast(`Using ${name}`);
+    toast(t("models.using_file", { name }));
   } catch (e) {
     toastErr(e);
   }
 }
 
 start().catch((e) => {
-  document.body.textContent = `pktito could not start: ${e}`;
+  document.body.textContent = t("app.could_not_start", { why: e && e.key ? words(e) : String(e) });
 });

@@ -188,6 +188,28 @@ samples and so to a slightly different transcript, where a FLAC is the
 same samples through all of them. The M4 Pro, in use: 106.1x real time
 (2026-10-23).
 
+## The window's words
+
+Every word the window shows is in `ui/locales/en.json`, under a key:
+`"save.failed": "Couldn't save {name}"`, with `{name}` filled in where it is
+shown, and a key that counts as an object of plural forms (`"one"`,
+`"other"`, as `Intl.PluralRules` names them). The Rust side embeds the file
+and hands it to the page before its scripts run (`src-tauri/src/strings.rs`);
+the page words its own HTML by `data-t` attributes and the rest with `t(key,
+values)` (`ui/app.js`), and Rust reads the same file for what it draws
+itself: the macOS menu bar, the Windows system menu, the file dialogs'
+filters, macOS's password prompt. Something that went wrong comes from Rust
+as a key, its values, and the particulars as the OS or server said them,
+which the window folds into a tooltip or a Details. pktito-cli and the
+engine stay English.
+
+English is the only catalog so far. A translation is another file of the
+same keys; adding the first means choosing it from the system's language in
+`strings.rs`, where the catalog is read, with English under it for any key it
+lacks, and setting the page's `lang`. `cargo test` holds the catalog to the code: every key named is in it,
+and nothing in it is named nowhere. Brand names, the model names, and the
+copyright notices stay as they are.
+
 ## Building
 
 Rust, the Tauri CLI (`cargo install tauri-cli --version "^2" --locked`) and

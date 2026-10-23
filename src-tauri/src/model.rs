@@ -5,6 +5,7 @@
 //! PKTITO_MODEL_BASE points the download somewhere else (a mirror, or a
 //! local server while testing).
 
+use crate::strings::Problem;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs::{self, File, OpenOptions};
@@ -18,9 +19,10 @@ pub const DEFAULT_BASE: &str = "https://models.pktito.net/";
 #[derive(Clone, Copy, Serialize)]
 pub struct Entry {
     pub name: &'static str,
-    /// Its name in the window.
+    /// Its name, and what it transcribes in a line, for pktito-cli; the
+    /// window's are ui/locales' catalog.KEY and catalog.KEY.about (strings.rs).
+    pub key: &'static str,
     pub label: &'static str,
-    /// What it transcribes, in a line, for the window.
     pub about: &'static str,
     /// What it transcribes, as ISO 639-1 codes: the window offers the first
     /// model that speaks the system's language.
@@ -38,6 +40,7 @@ pub struct Entry {
 pub const CATALOG: &[Entry] = &[
     Entry {
         name: "parakeet-tdt-0.6b-v2",
+        key: "english",
         label: "English",
         about: "English only",
         languages: &["en"],
@@ -47,6 +50,7 @@ pub const CATALOG: &[Entry] = &[
     },
     Entry {
         name: "parakeet-tdt-0.6b-v3",
+        key: "multilingual",
         label: "Multilingual",
         about: "25 European languages",
         languages: &[
@@ -206,11 +210,10 @@ pub enum Stop {
     Paused,
     Cancelled,
     /// The network or the server, for now: worth trying again by itself.
-    /// What happened, in a line, and the request it happened to.
-    Net { why: String, detail: String },
-    /// What trying again will not mend by itself: what happened, in a few
-    /// words, and the particulars.
-    Hard { why: String, detail: String },
+    /// What happened, and the request it happened to as its particulars.
+    Net(Problem),
+    /// What trying again will not mend by itself.
+    Hard(Problem),
 }
 
 /// Download e into dir, from where a download that stopped left off,
@@ -245,10 +248,7 @@ pub fn download(e: &Entry, dir: &Path, ctl: &Ctl, mut progress: impl FnMut(u64, 
     drop(file);
     if digest != e.sha256 {
         let _ = fs::remove_file(&part);
-        return Err(Stop::Hard {
-            why: "Didn't match its checksum".into(),
-            detail: format!("SHA-256 {digest}\nexpected {}", e.sha256),
-        });
+        return Err(Stop::Hard(Problem::new("download.damaged").detail(format!("SHA-256 {digest}\nexpected {}", e.sha256))));
     }
     let dst = file_in(dir, e);
     fs::rename(&part, &dst).map_err(|err| written(&dst, err))?;
@@ -287,9 +287,9 @@ fn fetch(
         Err(ureq::Error::Status(code, r)) => {
             let what = format!("{code} {}", r.status_text());
             return Err(if code >= 500 || code == 429 {
-                Stop::Net { why: format!("{host} isn't answering"), detail: request(&what) }
+                Stop::Net(Problem::new("download.not_answering").with("host", host.clone()).detail(request(&what)))
             } else {
-                Stop::Hard { why: "Model not found".into(), detail: request(&what) }
+                Stop::Hard(Problem::new("download.not_found").detail(request(&what)))
             });
         }
         Err(ureq::Error::Transport(t)) => {
@@ -302,7 +302,7 @@ fn fetch(
             if let Some(s) = std::error::Error::source(&t) {
                 what += &format!(": {s}");
             }
-            return Err(Stop::Net { why: format!("Can’t reach {host}"), detail: request(&what) });
+            return Err(Stop::Net(Problem::new("download.cant_reach").with("host", host.clone()).detail(request(&what))));
         }
     };
     // a server that ignores the range sends the whole file: take it whole
@@ -326,7 +326,7 @@ fn fetch(
             Ok(k) => k,
             Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
             Err(err) => {
-                return Err(Stop::Net { why: "Connection lost".into(), detail: request(&err.to_string()) })
+                return Err(Stop::Net(Problem::new("download.connection_lost").detail(request(&err.to_string()))))
             }
         };
         if k == 0 {
@@ -335,26 +335,20 @@ fn fetch(
         if got + k as u64 > e.bytes {
             // a server that sends more than the file would fill the disk
             file.set_len(0).map_err(|err| written(part, err))?;
-            return Err(Stop::Hard {
-                why: format!("{host} sent too much"),
-                detail: request(&format!("more than {} bytes", e.bytes)),
-            });
+            return Err(Stop::Hard(Problem::new("download.too_much").with("host", host.clone()).detail(request(&format!("more than {} bytes", e.bytes)))));
         }
         file.write_all(&buf[..k]).map_err(|err| written(part, err))?;
         got += k as u64;
         progress(got, false);
     }
     if got < e.bytes {
-        return Err(Stop::Net {
-            why: "Connection lost".into(),
-            detail: request(&format!("it ended at {got} of {} bytes", e.bytes)),
-        });
+        return Err(Stop::Net(Problem::new("download.connection_lost").detail(request(&format!("it ended at {got} of {} bytes", e.bytes)))));
     }
     Ok(got)
 }
 
 fn sha256(file: &mut File, ctl: &Ctl) -> Result<String, Stop> {
-    let read_err = |err: io::Error| Stop::Hard { why: "Couldn't check the download".into(), detail: err.to_string() };
+    let read_err = |err: io::Error| Stop::Hard(Problem::new("download.cant_check").detail(err));
     file.seek(SeekFrom::Start(0)).map_err(read_err)?;
     let mut hash = Sha256::new();
     let mut buf = vec![0u8; 1 << 20];
@@ -375,9 +369,9 @@ fn sha256(file: &mut File, ctl: &Ctl) -> Result<String, Stop> {
 fn written(path: &Path, err: io::Error) -> Stop {
     let detail = format!("{err}\n{}", path.display());
     if err.kind() == io::ErrorKind::StorageFull {
-        Stop::Hard { why: "Not enough disk space".into(), detail }
+        Stop::Hard(Problem::new("download.disk_full").detail(detail))
     } else {
-        Stop::Hard { why: "Couldn't save the model".into(), detail }
+        Stop::Hard(Problem::new("download.cant_save").detail(detail))
     }
 }
 

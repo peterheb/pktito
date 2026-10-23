@@ -2,6 +2,7 @@
 //! so that the window can open it again, newest first. One file a
 //! transcript under recent/, and recent/index.json listing them.
 
+use crate::strings::Problem;
 use crate::transcribe::Segment;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -93,12 +94,12 @@ pub fn add(data: &Path, t: &Transcript) -> Result<Vec<String>, String> {
     Ok(gone)
 }
 
-pub fn load(data: &Path, id: &str) -> Result<Transcript, String> {
+pub fn load(data: &Path, id: &str) -> Result<Transcript, Problem> {
     if !valid(id) {
         return Err("no such transcript".into());
     }
-    let b = fs::read(dir(data).join(format!("{id}.json"))).map_err(|_| "Transcript gone")?;
-    serde_json::from_slice(&b).map_err(|e| format!("Can't read this transcript: {e}"))
+    let b = fs::read(dir(data).join(format!("{id}.json"))).map_err(|_| Problem::new("recent.gone"))?;
+    serde_json::from_slice(&b).map_err(|e| Problem::new("recent.unreadable").detail(e))
 }
 
 /// One transcript off the list, and its file.

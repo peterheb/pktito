@@ -4,6 +4,7 @@
 //! paused, resumed or cancelled from the window.
 
 use crate::model::{self, Ctl, Entry, Stop};
+use crate::strings::Problem;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -22,9 +23,8 @@ pub struct State {
     /// Bytes a second over the last few seconds; 0 until known.
     pub speed: f64,
     pub host: String,
-    /// A failure: what happened, in a few words, and the particulars.
-    pub why: String,
-    pub detail: String,
+    /// A failure: what happened.
+    pub problem: Option<Problem>,
     /// A failure it is trying again after, by itself.
     pub retry: bool,
     /// After a failure, trying again now: the failure stands until bytes come.
@@ -52,8 +52,7 @@ impl Job {
                 total: e.bytes,
                 speed: 0.0,
                 host: model::host(&model::download_url(e)).into(),
-                why: String::new(),
-                detail: String::new(),
+                problem: None,
                 retry: false,
                 trying: false,
             }),
@@ -157,15 +156,15 @@ impl Job {
                     self.set(|s| s.step = "cancelled");
                     return None;
                 }
-                Err(Stop::Hard { why, detail }) => {
+                Err(Stop::Hard(p)) => {
                     let got = model::partial(dir, e);
                     self.set(|s| {
                         (s.step, s.got, s.speed, s.retry, s.trying) = ("failed", got, 0.0, false, false);
-                        (s.why, s.detail) = (why, detail);
+                        s.problem = Some(p);
                     });
                     return None;
                 }
-                Err(Stop::Net { why, detail }) => {
+                Err(Stop::Net(p)) => {
                     let got = model::partial(dir, e);
                     if got > started {
                         // it was getting somewhere: the next wait starts short again
@@ -173,7 +172,7 @@ impl Job {
                     }
                     self.set(|s| {
                         (s.step, s.got, s.speed, s.retry, s.trying) = ("failed", got, 0.0, true, false);
-                        (s.why, s.detail) = (why, detail);
+                        s.problem = Some(p);
                     });
                     tell(&self.state());
                     let until = Instant::now() + wait;

@@ -6,7 +6,8 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use pktito_app::{audio, decode, download, format, model, pktito, recent, transcribe};
+use pktito_app::strings::{t, Problem};
+use pktito_app::{audio, decode, download, format, model, pktito, recent, strings, transcribe};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -112,7 +113,7 @@ fn ensure_engine<'a>(slot: &'a mut Option<Engine>, path: &Path) -> Result<&'a mu
 }
 
 #[tauri::command]
-fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, String> {
+fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, Problem> {
     let data = data_dir(&app)?;
     let mut s = model::load_settings(&data);
     if s.model_file.as_ref().map(|p| !p.is_file()).unwrap_or(false) {
@@ -141,31 +142,31 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, String> 
 }
 
 #[tauri::command]
-fn set_prefs(app: AppHandle, prefs: model::Prefs) -> Result<(), String> {
+fn set_prefs(app: AppHandle, prefs: model::Prefs) -> Result<(), Problem> {
     let data = data_dir(&app)?;
     let mut s = model::load_settings(&data);
     s.prefs = prefs;
-    model::save_settings(&data, &s)
+    Ok(model::save_settings(&data, &s)?)
 }
 
 /// Use a catalog model that is on this computer.
 #[tauri::command]
-fn choose_model(app: AppHandle, name: String) -> Result<(), String> {
+fn choose_model(app: AppHandle, name: String) -> Result<(), Problem> {
     let e = model::entry(&name).ok_or("no such model")?;
     let data = data_dir(&app)?;
     if !model::have(&data.join("models"), e) {
-        return Err("Not downloaded yet".into());
+        return Err(Problem::new("choose.not_downloaded"));
     }
     let mut s = model::load_settings(&data);
     s.model = Some(name);
     s.model_file = None;
-    model::save_settings(&data, &s)
+    Ok(model::save_settings(&data, &s)?)
 }
 
 /// Download a catalog model, or go on with its download; once it checks it
 /// is the model in use. "download" events say how it goes.
 #[tauri::command]
-fn download_model(app: AppHandle, state: State<'_, AppState>, name: String) -> Result<(), String> {
+fn download_model(app: AppHandle, state: State<'_, AppState>, name: String) -> Result<(), Problem> {
     let e = model::entry(&name).ok_or("no such model")?;
     let dir = data_dir(&app)?.join("models");
     let mut slot = state.download.lock().unwrap();
@@ -175,7 +176,7 @@ fn download_model(app: AppHandle, state: State<'_, AppState>, name: String) -> R
                 j.resume_now();
                 return Ok(());
             }
-            return Err(format!("{} is downloading. Cancel it first.", j.name()));
+            return Err(Problem::new("download.busy").with("name", j.name()));
         }
         // one cancelled and on its way out: let it delete what it had first
         let t = Instant::now();
@@ -213,7 +214,7 @@ fn pause_download(state: State<'_, AppState>) {
 
 /// Stop the download and delete what it had.
 #[tauri::command]
-fn cancel_download(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+fn cancel_download(app: AppHandle, state: State<'_, AppState>) -> Result<(), Problem> {
     let slot = state.download.lock().unwrap();
     let Some(j) = slot.as_ref() else { return Ok(()) };
     if j.alive() {
@@ -230,8 +231,8 @@ fn cancel_download(app: AppHandle, state: State<'_, AppState>) -> Result<(), Str
 
 /// A .pkf already on this computer, checked by loading it.
 #[tauri::command]
-async fn use_model_file(app: AppHandle, state: State<'_, AppState>) -> Result<bool, String> {
-    let Some(file) = file_dialog(&app).add_filter("pktito model", &["pkf"]).blocking_pick_file() else {
+async fn use_model_file(app: AppHandle, state: State<'_, AppState>) -> Result<bool, Problem> {
+    let Some(file) = file_dialog(&app).add_filter(t("dialog.model_files"), &["pkf"]).blocking_pick_file() else {
         return Ok(false);
     };
     use_file(&app, &state, &file.into_path().map_err(|e| e.to_string())?)?;
@@ -241,7 +242,7 @@ async fn use_model_file(app: AppHandle, state: State<'_, AppState>) -> Result<bo
 /// A .pkf opened from outside the window, double-clicked or given on the
 /// command line, as Open a model file uses one: its name, to say so.
 #[tauri::command]
-async fn open_model(app: AppHandle, state: State<'_, AppState>, path: String) -> Result<String, String> {
+async fn open_model(app: AppHandle, state: State<'_, AppState>, path: String) -> Result<String, Problem> {
     let path = PathBuf::from(path);
     use_file(&app, &state, &path)?;
     Ok(path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default())
@@ -249,12 +250,33 @@ async fn open_model(app: AppHandle, state: State<'_, AppState>, path: String) ->
 
 /// path the model in use once the engine has loaded it (model::choose_file):
 /// one pktito cannot load leaves the one in use as it was.
-fn use_file(app: &AppHandle, state: &AppState, path: &Path) -> Result<(), String> {
+fn use_file(app: &AppHandle, state: &AppState, path: &Path) -> Result<(), Problem> {
     {
         let mut slot = state.engine.lock().unwrap();
-        ensure_engine(&mut slot, path).map_err(|why| format!("Not a pktito model: {why}"))?;
+        ensure_engine(&mut slot, path).map_err(|why| Problem::new(model_trouble(&why)).detail(why))?;
     }
-    model::choose_file(&data_dir(app)?, path)
+    Ok(model::choose_file(&data_dir(app)?, path)?)
+}
+
+/// What a model file pktito could not load means to its user, as the
+/// catalog's key (strings.rs), from the
+/// engine's reason (core/model.c's pk_model_load, os.c's pk_map_file): a
+/// newer pktito's model, or one for another architecture, wants a newer
+/// app; a file that is not one at all is said so; one that is, but cut
+/// short or damaged, is told apart from it, as a download that stopped is.
+fn model_trouble(why: &str) -> &'static str {
+    let has = |words: &[&str]| words.iter().any(|w| why.contains(w));
+    if has(&["out of memory", "not enough memory"]) {
+        "problem.memory"
+    } else if has(&["model file version", "the architecture is not"]) {
+        "model_file.newer"
+    } else if has(&["not a pktito model file", "shorter than a header", "empty file", "no model bytes", "larger than any model file"]) {
+        "model_file.not_model"
+    } else if has(&["cannot map", "mmap:", "cannot tell its size", "No such file", "not found", "Permission denied", "denied"]) {
+        "model_file.cant_open"
+    } else {
+        "model_file.damaged"
+    }
 }
 
 /// Of these paths, the files that are there: the window queues no others.
@@ -312,8 +334,8 @@ fn hand_over(app: &AppHandle, files: Vec<String>) {
 }
 
 #[tauri::command]
-async fn pick_files(app: AppHandle) -> Result<Vec<String>, String> {
-    let files = file_dialog(&app).add_filter("Audio or video", decode::MEDIA).blocking_pick_files();
+async fn pick_files(app: AppHandle) -> Result<Vec<String>, Problem> {
+    let files = file_dialog(&app).add_filter(t("dialog.media_files"), decode::MEDIA).blocking_pick_files();
     Ok(files
         .unwrap_or_default()
         .into_iter()
@@ -346,16 +368,15 @@ struct JobEvent {
     model: String,
     /// Its place on the recent list.
     recent: Option<String>,
-    /// An error: what happened, in a few words, and what said so.
-    message: String,
-    detail: String,
+    /// An error: what happened.
+    problem: Option<Problem>,
 }
 
 #[tauri::command]
-async fn transcribe(app: AppHandle, id: u32, path: String) -> Result<(), String> {
+async fn transcribe(app: AppHandle, id: u32, path: String) -> Result<(), Problem> {
     tauri::async_runtime::spawn_blocking(move || job(&app, id, Path::new(&path)))
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| Problem::from(e.to_string()))
 }
 
 fn job(app: &AppHandle, id: u32, path: &Path) {
@@ -363,14 +384,16 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
     let send = |ev: JobEvent| {
         let _ = app.emit("job", JobEvent { id, ..ev });
     };
-    let fail = |message: &str, detail: String| send(JobEvent { step: "error", message: message.into(), detail, ..Default::default() });
+    let fail = |p: Problem| send(JobEvent { step: "error", problem: Some(p), ..Default::default() });
+    // the engine's own words for why it stopped: memory has words of its own
+    let trouble = |key: &'static str, why: String| Problem::new(if why.contains("memory") { "problem.memory" } else { key }).detail(why);
     // a Stop meant for this file's last run, which failed before it looked
     let _ = state.stop.compare_exchange(id, 0, Ordering::Relaxed, Ordering::Relaxed);
     let t0 = Instant::now();
     send(JobEvent { step: "reading", eta: -1.0, ..Default::default() });
     let x = match decode::decode(path) {
         Ok(x) => x,
-        Err(e) => return fail(e.why(), e.detail()),
+        Err(e) => return fail(e.problem()),
     };
     let duration = x.len() as f64 / decode::RATE as f64;
     let fps = fps_of(path);
@@ -382,10 +405,10 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
     let peaks = audio::peaks(&x, audio::PEAKS);
     let data = match data_dir(app) {
         Ok(d) => d,
-        Err(why) => return fail("Can't transcribe", why),
+        Err(why) => return fail(Problem::from(why)),
     };
     let Some(model_path) = model::usable(&data, &model::load_settings(&data)) else {
-        return fail("No model", String::new());
+        return fail(Problem::new("transcribe.no_model"));
     };
     let mut slot = state.engine.lock().unwrap();
     let loading = slot.as_ref().map(|e| e.path != model_path).unwrap_or(true);
@@ -400,7 +423,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
     });
     let Engine { model, asr, .. } = match ensure_engine(&mut slot, &model_path) {
         Ok(e) => e,
-        Err(why) => return fail("Can't load the model", why.to_string()),
+        Err(why) => return fail(trouble("transcribe.cant_load_model", why.to_string())),
     };
     if loading {
         send(JobEvent { step: "transcribing", eta: -1.0, duration, ..Default::default() });
@@ -455,7 +478,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
             });
         }
         Ok((_, false)) => send(JobEvent { step: "stopped", duration, ..Default::default() }),
-        Err(why) => fail("Can't transcribe", why),
+        Err(why) => fail(trouble("transcribe.failed", why)),
     }
 }
 
@@ -466,7 +489,7 @@ fn stop(state: State<'_, AppState>, id: u32) {
 }
 
 #[tauri::command]
-fn recent_list(app: AppHandle) -> Result<Vec<recent::Item>, String> {
+fn recent_list(app: AppHandle) -> Result<Vec<recent::Item>, Problem> {
     Ok(recent::list(&data_dir(&app)?))
 }
 
@@ -479,7 +502,7 @@ struct Opened {
 }
 
 #[tauri::command]
-fn open_recent(app: AppHandle, id: String) -> Result<Opened, String> {
+fn open_recent(app: AppHandle, id: String) -> Result<Opened, Problem> {
     let transcript = recent::load(&data_dir(&app)?, &id)?;
     let wav = audio::wav_in(&audio_dir(&app)?, &id);
     Ok(Opened { transcript, audio: wav.is_file().then(|| wav.to_string_lossy().into_owned()) })
@@ -488,16 +511,16 @@ fn open_recent(app: AppHandle, id: String) -> Result<Opened, String> {
 /// A recent transcript's audio, read again from its original once the cache
 /// has let it go.
 #[tauri::command]
-async fn reload_audio(app: AppHandle, id: String) -> Result<String, String> {
+async fn reload_audio(app: AppHandle, id: String) -> Result<String, Problem> {
     tauri::async_runtime::spawn_blocking(move || {
         let t = recent::load(&data_dir(&app)?, &id)?;
         if !t.item.path.is_file() {
-            return Err("File moved or deleted".to_string());
+            return Err(Problem::new("play.moved"));
         }
-        let x = decode::decode(&t.item.path).map_err(|e| e.why().to_string())?;
+        let x = decode::decode(&t.item.path).map_err(|e| e.problem())?;
         // 0.1 s: two of the encoder's frames; a file edited since is longer or shorter by more
         if (x.len() as f64 / decode::RATE as f64 - t.item.duration).abs() > 0.1 {
-            return Err("File changed since".to_string());
+            return Err(Problem::new("play.changed"));
         }
         let p = audio::save(&audio_dir(&app)?, &id, &x, decode::RATE as u32).map_err(|e| e.to_string())?;
         Ok(p.to_string_lossy().into_owned())
@@ -509,7 +532,7 @@ async fn reload_audio(app: AppHandle, id: String) -> Result<String, String> {
 /// Empty the recent list, once the user says so: the window asks (app.js,
 /// askClear), since the system's dialog can't make Cancel its default.
 #[tauri::command]
-fn clear_recent(app: AppHandle) -> Result<(), String> {
+fn clear_recent(app: AppHandle) -> Result<(), Problem> {
     let data = data_dir(&app)?;
     let dir = audio_dir(&app)?;
     for i in recent::list(&data) {
@@ -532,7 +555,7 @@ struct Saved {
 /// when next_to (unless its folder cannot be written), else where the
 /// dialog says. None if the dialog was cancelled.
 #[tauri::command]
-async fn save_text(app: AppHandle, original: String, ext: String, text: String, next_to: bool) -> Result<Option<Saved>, String> {
+async fn save_text(app: AppHandle, original: String, ext: String, text: String, next_to: bool) -> Result<Option<Saved>, Problem> {
     let original = Path::new(&original);
     let stem = stem_of(original);
     if next_to {
@@ -544,12 +567,12 @@ async fn save_text(app: AppHandle, original: String, ext: String, text: String, 
             }
         }
     }
-    let kind = match ext.as_str() {
-        "srt" | "vtt" => "Subtitles",
-        "md" => "Markdown",
-        "json" => "JSON",
-        _ => "Text",
-    };
+    let kind = t(match ext.as_str() {
+        "srt" | "vtt" => "dialog.subtitles",
+        "md" => "dialog.markdown",
+        "json" => "dialog.json",
+        _ => "dialog.text",
+    });
     let mut dialog = file_dialog(&app).set_file_name(format!("{stem}.{ext}")).add_filter(kind, &[ext.as_str()]);
     if let Some(dir) = original.parent().filter(|d| d.is_dir()) {
         dialog = dialog.set_directory(dir);
@@ -558,7 +581,7 @@ async fn save_text(app: AppHandle, original: String, ext: String, text: String, 
         return Ok(None);
     };
     let path = file.into_path().map_err(|e| e.to_string())?;
-    fs::write(&path, text).map_err(|e| format!("Couldn't save: {e}"))?;
+    fs::write(&path, text).map_err(|e| Problem::new("save.failed").with("name", stem_of(&path)).detail(e))?;
     Ok(Some(Saved { path: path.to_string_lossy().into_owned(), beside: false }))
 }
 
@@ -572,7 +595,7 @@ struct Export {
 /// Transcripts saved by their originals' names: each beside its original, or
 /// all into dir when there is one. The paths written.
 #[tauri::command]
-async fn save_many(dir: Option<String>, files: Vec<Export>) -> Result<Vec<String>, String> {
+async fn save_many(dir: Option<String>, files: Vec<Export>) -> Result<Vec<String>, Problem> {
     let mut written = Vec::new();
     for f in files {
         let original = Path::new(&f.original);
@@ -582,14 +605,14 @@ async fn save_many(dir: Option<String>, files: Vec<Export>) -> Result<Vec<String
         };
         let p = free_path(&d, &stem_of(original), &f.ext);
         let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-        fs::write(&p, &f.text).map_err(|e| format!("Couldn't save {name}: {e}"))?;
+        fs::write(&p, &f.text).map_err(|e| Problem::new("save.failed").with("name", name).detail(e))?;
         written.push(p.to_string_lossy().into_owned());
     }
     Ok(written)
 }
 
 #[tauri::command]
-async fn pick_folder(app: AppHandle) -> Result<Option<String>, String> {
+async fn pick_folder(app: AppHandle) -> Result<Option<String>, Problem> {
     let Some(dir) = file_dialog(&app).blocking_pick_folder() else {
         return Ok(None);
     };
@@ -599,7 +622,7 @@ async fn pick_folder(app: AppHandle) -> Result<Option<String>, String> {
 /// One transcript off the recent list, with its audio in the cache; the
 /// file it was made from is not touched.
 #[tauri::command]
-fn forget_recent(app: AppHandle, id: String) -> Result<(), String> {
+fn forget_recent(app: AppHandle, id: String) -> Result<(), Problem> {
     let data = data_dir(&app)?;
     recent::remove(&data, &id)?;
     if let Ok(dir) = audio_dir(&app) {
@@ -619,21 +642,21 @@ struct TimedWord {
 /// The cues of a transcript's subtitle track, from the engine's pk_captions,
 /// so that the app's .srt and .vtt are the CLI's: times in milliseconds.
 #[tauri::command]
-fn captions(words: Vec<TimedWord>, english: i32, duration: f64) -> Result<Vec<pktito::Cue>, String> {
+fn captions(words: Vec<TimedWord>, english: i32, duration: f64) -> Result<Vec<pktito::Cue>, Problem> {
     let ms = |s: f64| (s * 1000.0).round() as i64;
     let w: Vec<(String, i64, i64)> = words.into_iter().map(|w| (w.text, ms(w.start), ms(w.end))).collect();
-    pktito::captions(&w, english, ms(duration))
+    Ok(pktito::captions(&w, english, ms(duration))?)
 }
 
 /// pktito-cli on the PATH, from the macOS menu bar's Install Command Line
 /// Tool: elsewhere the installers put it there. What happened, to say; ""
 /// when the password was not given.
 #[tauri::command]
-async fn install_cli() -> Result<String, String> {
+async fn install_cli() -> Result<String, Problem> {
     #[cfg(target_os = "macos")]
-    return tauri::async_runtime::spawn_blocking(link_cli).await.map_err(|e| e.to_string())?;
+    return tauri::async_runtime::spawn_blocking(link_cli).await.map_err(|e| Problem::from(e.to_string()))?;
     #[cfg(not(target_os = "macos"))]
-    Err("The installer puts pktito-cli on the PATH here".into())
+    Err(Problem::new("cli.on_path"))
 }
 
 /// A link to the bundle's pktito-cli in /usr/local/bin, which macOS has on
@@ -642,30 +665,32 @@ async fn install_cli() -> Result<String, String> {
 /// administrator's password, through osascript's do shell script, which
 /// gets the path as an argument, so that nothing in it is read as a command.
 #[cfg(target_os = "macos")]
-fn link_cli() -> Result<String, String> {
+fn link_cli() -> Result<String, Problem> {
     use std::process::Command;
     const DST: &str = "/usr/local/bin/pktito-cli";
     let src = std::env::current_exe().map_err(|e| e.to_string())?.with_file_name("pktito-cli");
     if !src.is_file() {
-        return Err(format!("Couldn't install it: no {}", src.display()));
+        return Err(Problem::new("cli.missing").detail(src.display()));
     }
     if fs::read_link(DST).map(|t| t == src).unwrap_or(false) {
-        return Ok("pktito-cli is installed already".into());
+        return Ok(t("cli.already"));
     }
-    let done = "Installed pktito-cli in /usr/local/bin".to_string();
+    let done = t("cli.installed");
     let _ = fs::create_dir_all("/usr/local/bin");
     if Command::new("ln").arg("-sf").arg(&src).arg(DST).output().map(|o| o.status.success()).unwrap_or(false) {
         return Ok(done);
     }
+    // the prompt is an AppleScript string: its quotes and backslashes escaped
+    let prompt = t("cli.prompt").replace('\\', "\\\\").replace('"', "\\\"");
     let script = format!(
         "do shell script \"mkdir -p /usr/local/bin && ln -sf \" & quoted form of (item 1 of argv) & \" {DST}\" \
-         with prompt \"pktito is putting its command line tool, pktito-cli, in /usr/local/bin.\" with administrator privileges"
+         with prompt \"{prompt}\" with administrator privileges"
     );
     let out = Command::new("osascript")
         .args(["-e", "on run argv", "-e", &script, "-e", "end run"])
         .arg(&src)
         .output()
-        .map_err(|e| format!("Couldn't install it: {e}"))?;
+        .map_err(|e| Problem::new("cli.failed").detail(e))?;
     if out.status.success() {
         return Ok(done);
     }
@@ -674,26 +699,26 @@ fn link_cli() -> Result<String, String> {
     if why.contains("(-128)") {
         return Ok(String::new());
     }
-    Err(format!("Couldn't install it: {}", why.trim()))
+    Err(Problem::new("cli.failed").detail(why.trim()))
 }
 
 /// A finished transcript in one of Save's formats (format.rs), the bytes
 /// pktito-cli writes for it too.
 #[tauri::command]
-fn text_of(ext: String, name: String, duration: f64, model: Option<String>, segments: Vec<transcribe::Segment>, times: bool) -> Result<String, String> {
-    format::text(&format::Transcript { name: &name, duration, model: model.as_deref(), segments: &segments }, &ext, times)
+fn text_of(ext: String, name: String, duration: f64, model: Option<String>, segments: Vec<transcribe::Segment>, times: bool) -> Result<String, Problem> {
+    Ok(format::text(&format::Transcript { name: &name, duration, model: model.as_deref(), segments: &segments }, &ext, times)?)
 }
 
 /// Show a file in the file manager, selected.
 #[tauri::command]
-fn reveal(path: String) -> Result<(), String> {
+fn reveal(path: String) -> Result<(), Problem> {
     reveal_in_folder(Path::new(&path))
 }
 
 /// The model in use, in Finder or Explorer: its file selected, or the
 /// folder the app keeps its models in when none is there.
 #[tauri::command]
-fn reveal_model(app: AppHandle) -> Result<(), String> {
+fn reveal_model(app: AppHandle) -> Result<(), Problem> {
     let data = data_dir(&app)?;
     match model::usable(&data, &model::load_settings(&data)) {
         Some(file) => reveal_in_folder(&file),
@@ -757,8 +782,13 @@ fn window_menu(window: tauri::WebviewWindow, at_cursor: bool) {
             if menu.is_null() {
                 return;
             }
-            for (id, text) in [(SC_RESTORE, "Restore"), (SC_MOVE, "Move"), (SC_SIZE, "Size"), (SC_MINIMIZE, "Minimize"),
-                               (SC_MAXIMIZE, "Maximize"), (0, ""), (SC_CLOSE, "Close\tAlt+F4")] {
+            for (id, key) in [(SC_RESTORE, "window.restore"), (SC_MOVE, "window.move"), (SC_SIZE, "window.size"),
+                              (SC_MINIMIZE, "window.minimize"), (SC_MAXIMIZE, "window.maximize"), (0, ""), (SC_CLOSE, "window.close")] {
+                let text = match id {
+                    0 => String::new(),
+                    SC_CLOSE => format!("{}\tAlt+F4", t(key)),
+                    _ => t(key),
+                };
                 let w: Vec<u16> = text.encode_utf16().chain([0]).collect();
                 AppendMenuW(menu, if id == 0 { MF_SEPARATOR } else { 0 }, id as usize, w.as_ptr());
             }
@@ -791,23 +821,23 @@ fn window_menu(window: tauri::WebviewWindow, at_cursor: bool) {
 /// One of About's links, in the browser. An https address and nothing else,
 /// so that the page can open no file or program by it.
 #[tauri::command]
-fn open_link(url: String) -> Result<(), String> {
+fn open_link(url: String) -> Result<(), Problem> {
     if !url.starts_with("https://") || url.chars().any(|c| c.is_whitespace() || c.is_control()) {
-        return Err(format!("Not a web address: {url}"));
+        return Err(format!("Not a web address: {url}").into());
     }
     open_in_browser(&url)
 }
 
 #[cfg(target_os = "macos")]
-fn open_in_browser(url: &str) -> Result<(), String> {
-    std::process::Command::new("open").arg(url).spawn().map(|_| ()).map_err(|e| format!("Couldn't open it: {e}"))
+fn open_in_browser(url: &str) -> Result<(), Problem> {
+    std::process::Command::new("open").arg(url).spawn().map(|_| ()).map_err(|e| Problem::new("link.failed").detail(e))
 }
 
 /// The shell's own call, as reveal_in_folder's is, which hands the address
 /// to the default browser. It returns above 32 when it worked, else an error
 /// code (the Win32 documentation of ShellExecuteW).
 #[cfg(target_os = "windows")]
-fn open_in_browser(url: &str) -> Result<(), String> {
+fn open_in_browser(url: &str) -> Result<(), Problem> {
     use std::ffi::c_void;
     #[link(name = "shell32")]
     extern "system" {
@@ -818,7 +848,7 @@ fn open_in_browser(url: &str) -> Result<(), String> {
     let (op, file) = (wide("open"), wide(url));
     let r = unsafe { ShellExecuteW(std::ptr::null_mut(), op.as_ptr(), file.as_ptr(), std::ptr::null(), std::ptr::null(), SW_SHOWNORMAL) };
     if r <= 32 {
-        return Err(format!("Couldn't open it: Windows said {r}"));
+        return Err(Problem::new("link.failed").detail(format!("ShellExecuteW: {r}")));
     }
     Ok(())
 }
@@ -826,24 +856,23 @@ fn open_in_browser(url: &str) -> Result<(), String> {
 /// xdg-open, which xdg-utils brings and the .deb recommends. Where it is
 /// missing (WSL, a system with no desktop) the spawn's error, "No such file
 /// or directory", reads as if the file were missing, so `missing` says what
-/// is, with no ": " in it: the toast shows only what comes before one, and
-/// the rest as its tooltip. Any other error is `failed: why`.
+/// is; any other error is `failed`, with what the system said.
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-fn xdg_open(arg: impl AsRef<std::ffi::OsStr>, missing: &str, failed: &str) -> Result<(), String> {
+fn xdg_open(arg: impl AsRef<std::ffi::OsStr>, missing: &'static str, failed: &'static str) -> Result<(), Problem> {
     std::process::Command::new("xdg-open").arg(arg).spawn().map(|_| ()).map_err(|e| match e.kind() {
-        std::io::ErrorKind::NotFound => missing.to_string(),
-        _ => format!("{failed}: {e}"),
+        std::io::ErrorKind::NotFound => Problem::new(missing),
+        _ => Problem::new(failed).detail(e),
     })
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-fn open_in_browser(url: &str) -> Result<(), String> {
-    xdg_open(url, "Opening links needs xdg-utils", "Couldn't open it")
+fn open_in_browser(url: &str) -> Result<(), Problem> {
+    xdg_open(url, "link.needs_xdg", "link.failed")
 }
 
 #[cfg(target_os = "macos")]
-fn reveal_in_folder(path: &Path) -> Result<(), String> {
-    std::process::Command::new("open").arg("-R").arg(path).spawn().map(|_| ()).map_err(|e| e.to_string())
+fn reveal_in_folder(path: &Path) -> Result<(), Problem> {
+    std::process::Command::new("open").arg("-R").arg(path).spawn().map(|_| ()).map_err(|e| Problem::new("reveal.failed").detail(e))
 }
 
 /// The shell's own way. `explorer /select,"path"` started from the app
@@ -851,7 +880,7 @@ fn reveal_in_folder(path: &Path) -> Result<(), String> {
 /// call is what Explorer itself answers. Given one item's full ID list and no
 /// others, it opens the item's folder with the item selected.
 #[cfg(target_os = "windows")]
-fn reveal_in_folder(path: &Path) -> Result<(), String> {
+fn reveal_in_folder(path: &Path) -> Result<(), Problem> {
     use std::ffi::c_void;
     use std::os::windows::ffi::OsStrExt;
     #[link(name = "shell32")]
@@ -880,7 +909,7 @@ fn reveal_in_folder(path: &Path) -> Result<(), String> {
             CoUninitialize();
         }
         if hr < 0 {
-            return Err(format!("Couldn't show it: Explorer said 0x{:08x}", hr as u32));
+            return Err(Problem::new("reveal.failed").detail(format!("SHOpenFolderAndSelectItems: 0x{:08x}", hr as u32)));
         }
     }
     Ok(())
@@ -889,7 +918,7 @@ fn reveal_in_folder(path: &Path) -> Result<(), String> {
 /// The file manager's own D-Bus call where there is one (GNOME's Files,
 /// KDE's Dolphin), which selects it; else its folder, opened.
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-fn reveal_in_folder(path: &Path) -> Result<(), String> {
+fn reveal_in_folder(path: &Path) -> Result<(), Problem> {
     use std::process::{Command, Stdio};
     let mut uri = String::from("file://");
     for b in path.to_string_lossy().bytes() {
@@ -909,7 +938,7 @@ fn reveal_in_folder(path: &Path) -> Result<(), String> {
     if shown {
         return Ok(());
     }
-    xdg_open(path.parent().unwrap_or(Path::new("/")), "Show in folder needs xdg-utils", "Couldn't show it")
+    xdg_open(path.parent().unwrap_or(Path::new("/")), "reveal.needs_xdg", "reveal.failed")
 }
 
 /// `pktito-app --transcribe FILE [--model PKF] [--json]`: the window's
@@ -967,7 +996,7 @@ fn download_alone(args: &[String]) -> Result<PathBuf, String> {
         e,
         dir,
         |s| match s.step {
-            "failed" => eprintln!("\n{}: {}{}", s.why, s.detail.replace('\n', "; "), if s.retry { " (trying again)" } else { "" }),
+            "failed" => eprintln!("\n{}{}", s.problem.as_ref().map(|p| p.line()).unwrap_or_default(), if s.retry { " (trying again)" } else { "" }),
             _ => eprint!("\r{} {} of {} MB   ", s.step, s.got / 1_000_000, s.total / 1_000_000),
         },
         move |p| {
@@ -977,7 +1006,7 @@ fn download_alone(args: &[String]) -> Result<PathBuf, String> {
     while job.alive() {
         std::thread::sleep(Duration::from_millis(100));
     }
-    rx.try_recv().map_err(|_| job.state().why)
+    rx.try_recv().map_err(|_| job.state().problem.map(|p| p.line()).unwrap_or_default())
 }
 
 /// Where the traffic lights go: AppKit puts their left edge at x and their
@@ -1173,18 +1202,18 @@ fn menu_bar(app: &tauri::App) -> tauri::Result<()> {
             None => b.build(app),
         }
     };
-    let file = SubmenuBuilder::new(app, "File")
-        .item(&item("add", "Add Files…", Some("CmdOrCtrl+O"))?)
+    let file = SubmenuBuilder::new(app, t("menu.file"))
+        .item(&item("add", &t("menu.add"), Some("CmdOrCtrl+O"))?)
         .separator()
-        .item(&item("save-txt", "Save as Text", Some("CmdOrCtrl+S"))?)
-        .item(&item("save-srt", "Save as Subtitles", Some("CmdOrCtrl+Shift+S"))?)
-        .item(&item("save-vtt", "Save as Web Subtitles", None)?)
-        .item(&item("save-md", "Save as Markdown", None)?)
-        .item(&item("save-json", "Save as JSON", None)?)
+        .item(&item("save-txt", &t("menu.save_txt"), Some("CmdOrCtrl+S"))?)
+        .item(&item("save-srt", &t("menu.save_srt"), Some("CmdOrCtrl+Shift+S"))?)
+        .item(&item("save-vtt", &t("menu.save_vtt"), None)?)
+        .item(&item("save-md", &t("menu.save_md"), None)?)
+        .item(&item("save-json", &t("menu.save_json"), None)?)
         .separator()
         .item(&PredefinedMenuItem::close_window(app, None)?)
         .build()?;
-    let edit = SubmenuBuilder::new(app, "Edit")
+    let edit = SubmenuBuilder::new(app, t("menu.edit"))
         .item(&PredefinedMenuItem::undo(app, None)?)
         .item(&PredefinedMenuItem::redo(app, None)?)
         .separator()
@@ -1193,13 +1222,13 @@ fn menu_bar(app: &tauri::App) -> tauri::Result<()> {
         .item(&PredefinedMenuItem::paste(app, None)?)
         .item(&PredefinedMenuItem::select_all(app, None)?)
         .separator()
-        .item(&item("find", "Find…", Some("CmdOrCtrl+F"))?)
+        .item(&item("find", &t("menu.find"), Some("CmdOrCtrl+F"))?)
         .build()?;
     // the window's own About, which has the credits, not the system's panel
     let pktito = SubmenuBuilder::new(app, "pktito")
-        .item(&item("about", "About pktito", None)?)
+        .item(&item("about", &t("menu.about"), None)?)
         .separator()
-        .item(&item("install-cli", "Install Command Line Tool…", None)?)
+        .item(&item("install-cli", &t("menu.install_cli"), None)?)
         .separator()
         .item(&PredefinedMenuItem::hide(app, None)?)
         .item(&PredefinedMenuItem::hide_others(app, None)?)
@@ -1240,7 +1269,12 @@ fn main() {
     if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
     }
-    let builder = tauri::Builder::default();
+    // the catalog, before the page's scripts run: its words are the page's
+    // from the first frame (strings.rs)
+    let words = tauri::plugin::Builder::<tauri::Wry, ()>::new("strings")
+        .js_init_script(format!("window.PK_STRINGS = {};", strings::json()))
+        .build();
+    let builder = tauri::Builder::default().plugin(words);
     // a second start, a .pkf double-clicked while the window is open, hands
     // its files to the first and ends (macOS sends them as open events)
     #[cfg(any(target_os = "windows", target_os = "linux"))]

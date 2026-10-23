@@ -10,6 +10,7 @@
 //! (native/mix.h) brings them to one channel and 16 kHz, so a file reads the
 //! same whichever decoder read it.
 
+use crate::strings::Problem;
 use std::env;
 use std::ffi::{c_int, c_uint, c_void};
 use std::io::{self, Read};
@@ -28,41 +29,29 @@ pub const MEDIA: &[&str] = &[
 pub enum DecodeError {
     /// The file has no audio to transcribe.
     NoAudio,
-    /// It could not be read: what happened in a few words, for the window,
-    /// and what said so, for a tooltip.
+    /// It could not be read: what happened, as the catalog's key
+    /// (strings.rs), and what said so.
     Unreadable(&'static str, String),
 }
 
-const UNREADABLE: &str = "Can't read this file";
+const UNREADABLE: &str = "decode.unreadable";
 /// What ffmpeg, which reads nearly every format there is, cannot open as
 /// media at all. The OS's media libraries say nothing so clear: Windows'
 /// MF_E_UNSUPPORTED_BYTESTREAM_TYPE is also an Ogg file it has no reader
 /// for, which ffmpeg reads.
-const NOT_MEDIA: &str = "Not audio or video";
+const NOT_MEDIA: &str = "decode.not_media";
 
 impl DecodeError {
-    /// What happened, in a few words.
-    pub fn why(&self) -> &'static str {
+    pub fn problem(&self) -> Problem {
         match self {
-            DecodeError::NoAudio => "No audio track",
-            DecodeError::Unreadable(why, _) => why,
+            DecodeError::NoAudio => Problem::new("decode.no_audio"),
+            DecodeError::Unreadable(key, detail) => Problem::new(key).detail(detail),
         }
     }
 
-    /// What said so; empty when the few words are all there is.
-    pub fn detail(&self) -> String {
-        match self {
-            DecodeError::NoAudio => String::new(),
-            DecodeError::Unreadable(_, detail) => detail.clone(),
-        }
-    }
-
-    /// Both in a line, for the command line.
+    /// In a line, in English, for pktito-cli.
     pub fn message(&self) -> String {
-        match self.detail().as_str() {
-            "" => self.why().into(),
-            d => format!("{}: {d}", self.why()),
-        }
+        self.problem().line()
     }
 }
 
@@ -70,16 +59,13 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
     // the window queues only files that are there, so this is one moved
     // while it waited; Windows' own words for it are "(0x80070002)"
     if !path.is_file() {
-        return Err(DecodeError::Unreadable("Not found", String::new()));
+        return Err(DecodeError::Unreadable("decode.not_found", String::new()));
     }
     let forced = env::var("PKTITO_DECODER").unwrap_or_default().to_lowercase();
     if forced == "ffmpeg" || !cfg!(any(target_os = "macos", target_os = "windows")) {
         return match ffmpeg() {
             Some(ff) => decode_ffmpeg(&ff, path),
-            None => Err(DecodeError::Unreadable(
-                "Needs ffmpeg",
-                "Install ffmpeg with your package manager to read media files here.".into(),
-            )),
+            None => Err(DecodeError::Unreadable("decode.needs_ffmpeg", String::new())),
         };
     }
     match decode_os(path) {
@@ -87,10 +73,7 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
         Err(DecodeError::NoAudio) => Err(DecodeError::NoAudio),
         Err(DecodeError::Unreadable(why, detail)) => match (forced.as_str(), ffmpeg()) {
             ("os", _) => Err(DecodeError::Unreadable(why, detail)),
-            (_, None) if why == UNREADABLE => Err(DecodeError::Unreadable(
-                why,
-                format!("{detail}. With ffmpeg installed, pktito tries it another way."),
-            )),
+            (_, None) if why == UNREADABLE => Err(DecodeError::Unreadable("decode.unreadable_try_ffmpeg", detail)),
             (_, None) => Err(DecodeError::Unreadable(why, detail)),
             (_, Some(ff)) => decode_ffmpeg(&ff, path),
         },
@@ -107,7 +90,7 @@ extern "C" {
 }
 
 fn out_of_memory() -> DecodeError {
-    DecodeError::Unreadable("Not enough memory", String::new())
+    DecodeError::Unreadable("problem.memory", String::new())
 }
 
 /// A malloc'd signal from C, into a Vec, and freed.
@@ -136,7 +119,7 @@ impl Mix {
         let m = Mix { m: unsafe { pkapp_mix_new(RATE as c_uint) }, ch: f.ch as usize };
         if m.m.is_null() || unsafe { pkapp_mix_format_wave(m.m, f.rate, f.ch, f.mask) } != 0 {
             return Err(DecodeError::Unreadable(
-                "Can't convert its audio",
+                "decode.cant_convert",
                 format!("{} channels at {} Hz", f.ch, f.rate),
             ));
         }
@@ -228,7 +211,7 @@ fn decode_ffmpeg(ffmpeg: &Path, path: &Path) -> Result<Vec<f32>, DecodeError> {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|e| DecodeError::Unreadable("Can't start ffmpeg", e.to_string()))?;
+        .map_err(|e| DecodeError::Unreadable("decode.cant_start_ffmpeg", e.to_string()))?;
     // read on its own, so that a file ffmpeg complains about at length cannot
     // fill the pipe and stop it while its samples are being read
     let mut stderr = child.stderr.take().unwrap();
@@ -257,7 +240,7 @@ fn decode_ffmpeg(ffmpeg: &Path, path: &Path) -> Result<Vec<f32>, DecodeError> {
         }
         return Err(DecodeError::Unreadable(UNREADABLE, why.into()));
     }
-    read.unwrap_or_else(|| Err(DecodeError::Unreadable(UNREADABLE, "ffmpeg did not hand over what was asked of it".into())))
+    read.unwrap_or_else(|| Err(DecodeError::Unreadable(UNREADABLE, "ffmpeg returned no audio".into())))
 }
 
 /// The format of the float WAV ffmpeg writes, read up to its samples. A
