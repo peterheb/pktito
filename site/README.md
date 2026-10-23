@@ -83,3 +83,36 @@ The zone's password goes in a file, never on a command line:
 ```sh
 scripts/models-upload.sh storage.bunnycdn.com ZONE ../pktito/models/*.pkf
 ```
+
+## Screenshots
+
+One standard shot of the app, for the home page: LibriVox's _Alice's
+Adventures in Wonderland_, chapter 1 (`wonderland_ch_01_64kb.mp3`,
+archive.org's `alice_in_wonderland_librivox`), transcribed by the
+multilingual model, the window at its first size, scrolled past the
+recording's LibriVox notice so that "Alice's Adventures in Wonderland by
+Lewis Carroll." is the first row. Six of it, light and dark on each system,
+in `site/screenshots/`; a visitor sees their own system's, a phone its
+nearest (Android the Windows one, iPhone the Mac's), Linux the Linux one.
+
+| System  | Taken on              | How                                            | Files                               |
+| ------- | --------------------- | ---------------------------------------------- | ----------------------------------- |
+| macOS   | the Mac               | `scripts/screenshots-mac.sh`                   | `mac-light.png`, `mac-dark.png`     |
+| Windows | the 9950X, x64        | not yet: the same shot, the window's own frame | `win-light.png`, `win-dark.png`     |
+| Linux   | pi5a's desktop, labwc | not yet: the same shot, under its title bar    | `linux-light.png`, `linux-dark.png` |
+
+Why the multilingual model and the MP3: the English model runs the notice,
+the title and "Chapter one" together as one row, so no row is the title;
+and the first 16 rows of the MP3 are the same through macOS's decoder and
+ffmpeg, Linux's (2026-10-23, 0.8.5). Windows' Media Foundation is still to
+be compared.
+
+The Mac's script quits pktito, sets its settings for the shot and puts them
+back, opens the chapter (downloaded once and checked), scrolls three rows
+by simulated trackpad pixels, and captures the window with macOS's shadow in
+light and then dark, the system's appearance put back after. It needs
+Screen Recording and Accessibility for the terminal it runs in. Retake it
+after any change to the window's look; if the row spacing changes, its
+`SCROLL` (three one-line rows, 43 px each) changes with it. The Mac's
+display is 2560×1440 at 1×, so its shots are 1× (792×912 with the shadow); a
+Retina display would give 2×.
