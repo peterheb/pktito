@@ -579,7 +579,10 @@ code {
   vertical-align: 1px;
 }
 .copy:hover {
-  box-shadow: inset 0 0 0 1px var(--ink-muted);
+  background-image: linear-gradient(var(--tint), var(--tint));
+}
+.copy:active {
+  background-image: linear-gradient(var(--tint-press), var(--tint-press));
 }
 .legal-date {
   font-size: 13px;

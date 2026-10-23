@@ -1880,6 +1880,8 @@ function at(list, t) {
 /* The playhead at t: the time, the waveform, and the segment and word
    under it, brought into sight when follow says how: "smooth" while it
    plays, at once after a jump. */
+/* reduced motion: playback's scroll jumps to the row instead of gliding */
+const calm = matchMedia("(prefers-reduced-motion: reduce)");
 function showTime(t, follow = false) {
   const f = current();
   if (!f) return;
@@ -1908,7 +1910,7 @@ function showTime(t, follow = false) {
       if (along)
         seg.scrollIntoView({
           block: "center",
-          behavior: follow === "smooth" ? "smooth" : "auto",
+          behavior: follow === "smooth" && !calm.matches ? "smooth" : "auto",
         });
     }
     curSeg = seg;

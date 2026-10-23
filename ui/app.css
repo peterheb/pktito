@@ -780,9 +780,10 @@ html[data-chrome="win"] .pk-head {
     transform: rotate(360deg);
   }
 }
+/* with reduced motion it stays still: the ring alone says the file is at work */
 @media (prefers-reduced-motion: reduce) {
   .pk-spin {
-    animation-duration: 2.4s;
+    animation: none;
   }
 }
 /* the arrow drawn on the strip's left edge, its button's padding outside it */
@@ -919,7 +920,7 @@ html[data-chrome="win"] .pk-head {
   place-items: center;
   border: 0;
   padding: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--ink-muted);
   cursor: pointer;
@@ -1362,7 +1363,7 @@ html[data-chrome="win"] .pk-head {
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgba(16, 27, 51, 0.32);
+  background: var(--scrim);
 }
 .pk-notices-box {
   width: min(760px, 100%);
@@ -1444,7 +1445,7 @@ html[data-chrome="win"] .pk-head {
 }
 .pk-privacy h3 {
   margin: 16px 0 6px;
-  font: 600 17px/1.3 var(--font-sans);
+  font: 700 17px/1.3 var(--font-sans);
   letter-spacing: -0.005em;
 }
 .pk-notices-body pre {
@@ -1463,12 +1464,6 @@ html[data-chrome="win"] .pk-head {
   }
   .pk-nlist .pk-nc {
     grid-column: 1 / -1;
-  }
-}
-@media (prefers-color-scheme: dark) {
-  .pk-notices,
-  .pk-ask {
-    background: rgba(0, 0, 0, 0.55);
   }
 }
 
@@ -1514,7 +1509,7 @@ html[data-chrome="win"] .pk-head {
 .pk-view {
   border: 0;
   padding: 5px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--ink-muted);
   font: 500 13px/1.2 var(--font-sans);
@@ -1595,7 +1590,7 @@ html[data-chrome="win"] .pk-head {
   background: none;
   padding: 2px 4px;
   margin: -2px -4px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   text-align: left;
   cursor: pointer;
   font: 400 13px/1.5 var(--font-mono);
@@ -1755,7 +1750,7 @@ html[data-chrome="win"] .pk-head {
   border: 0;
   padding: 0;
   margin: 0 -4px 0 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--ink-muted);
   cursor: pointer;
@@ -1827,7 +1822,7 @@ html[data-chrome="win"] .pk-head {
   border: 0;
   background: none;
   color: var(--ink);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 8px 10px;
   cursor: pointer;
   font: 500 14px/1.35 var(--font-sans);
@@ -1871,7 +1866,7 @@ html[data-chrome="win"] .pk-head {
 .pk-rate {
   border: 0;
   padding: 4px 7px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--ink);
   font: 400 12px/1.2 var(--font-mono);

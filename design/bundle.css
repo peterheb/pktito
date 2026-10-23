@@ -1,117 +1,134 @@
-/* pktito components. Every value comes from tokens.css; classes are pk-*.
-   The site is square and flat. The app, and any [data-ui] fragment of it on
-   the site, uses radius-ui so it sits with the OS's own controls. */
+/* pktito's site components: buttons, links, the wordmark and the stage.
+   Every value comes from tokens.css; classes are pk-*. The site is square;
+   a [data-ui] fragment of the app on it takes the app's sizes and corners.
+   The app has its own stylesheet (ui/app.css) on the same tokens. */
 
-body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--font-sans);
-  font-size: 18px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
-.pk-pad { padding: var(--space-5) var(--margin-page); }
-.pk-row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
-.pk-num, .pk-stamp { font-variant-numeric: tabular-nums; }
-.pk-stamp { font: 400 13px/1.5 var(--font-mono); color: var(--ink-muted); }
-.pk-ico { width: 16px; height: 16px; flex: none; display: block; }
-code { font-family: var(--font-mono); font-size: .94em; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 18px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.pk-num {
+  font-variant-numeric: tabular-nums;
+}
+.pk-ico {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  display: block;
+}
+code {
+  font-family: var(--font-mono);
+  font-size: 0.94em;
+}
 
-.pk-btn:focus-visible, .pk-link:focus-visible, .pk-drop:focus-visible, .pk-seg button:focus-visible,
-.pk-file:focus-visible, .pk-seg-app button:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
-[data-ui] .pk-btn:focus-visible, .pk-app .pk-btn:focus-visible { outline-offset: 2px; }
+.pk-btn:focus-visible,
+.pk-link:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+[data-ui] .pk-btn:focus-visible {
+  outline-offset: 2px;
+}
 
 /* ---------------------------------------------------------------- Button -- */
-.pk-btn { display: inline-flex; align-items: center; gap: var(--space-2); height: 48px; padding: 0 22px;
-  border: 0; border-radius: var(--radius-0); font: 500 16px/1 var(--font-sans); cursor: pointer;
-  text-decoration: none; transition: background-color .15s ease, transform .1s ease; }
-.pk-btn:active { transform: translateY(1px); }
-.pk-btn-primary { background: var(--plume); color: var(--on-plume); }
-.pk-btn-primary:hover { background: var(--plume-press); }
-.pk-btn-ink { background: var(--ink); color: var(--ground); }
-.pk-btn-ink:hover { background: var(--ink-muted); }
-.pk-btn-quiet { background: var(--sunk); color: var(--ink); }
-.pk-btn-quiet:hover { background: var(--surface); box-shadow: inset 0 0 0 1px var(--ink-muted); }
-.pk-btn[disabled] { opacity: .45; cursor: default; transform: none; }
-/* app size */
-.pk-btn-app, [data-ui] .pk-btn, .pk-app .pk-btn { height: 32px; padding: 0 12px; border-radius: var(--radius-ui);
-  font: 500 14px/1 var(--font-sans); gap: 6px; }
-.pk-link { color: var(--link); text-decoration: underline; text-decoration-thickness: 1px;
-  text-underline-offset: .2em; font-weight: 500; }
-.pk-link:hover { text-decoration-thickness: 2px; }
-.pk-link .pk-arrow { display: inline-block; transition: transform .15s ease; }
-.pk-link:hover .pk-arrow { transform: translateX(3px); }
+.pk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 48px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: var(--radius-0);
+  font: 500 16px/1 var(--font-sans);
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.1s ease;
+}
+/* Hover and press as in the app: a tint over the fill, darker in light and
+   lighter in dark; on ink, term's lighter tint */
+.pk-btn:hover:not([disabled]) {
+  background-image: linear-gradient(var(--tint), var(--tint));
+}
+.pk-btn:active:not([disabled]) {
+  background-image: linear-gradient(var(--tint-press), var(--tint-press));
+  transform: translateY(1px);
+}
+.pk-btn-primary {
+  background-color: var(--plume);
+  color: var(--on-plume);
+}
+.pk-btn-ink {
+  background-color: var(--ink);
+  color: var(--ground);
+  --tint: var(--tint-term);
+  --tint-press: var(--tint-term-press);
+}
+.pk-btn-quiet {
+  background-color: var(--sunk);
+  color: var(--ink);
+}
+.pk-btn[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+/* the app's size, inside a picture of it */
+[data-ui] .pk-btn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-ui);
+  font: 500 14px/1 var(--font-sans);
+  gap: 6px;
+}
+.pk-link {
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  font-weight: 500;
+}
+.pk-link:hover {
+  text-decoration-thickness: 2px;
+}
+.pk-link .pk-arrow {
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+.pk-link:hover .pk-arrow {
+  transform: translateX(3px);
+}
 
 /* -------------------------------------------------------------- Wordmark -- */
-.pk-wordmark { display: inline-flex; align-items: baseline; gap: .08em; color: var(--ink); text-decoration: none;
-  font: 700 24px/1 var(--font-sans); letter-spacing: -.03em; }
-.pk-wordmark::after { content: ""; width: .5em; height: .5em; background: var(--beak); flex: none; }
-.pk-wordmark-lg { font-size: 72px; letter-spacing: -.04em; }
-.pk-wordmark-on-term { color: var(--term-ink); }
+.pk-wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.08em;
+  color: var(--ink);
+  text-decoration: none;
+  font: 700 24px/1 var(--font-sans);
+  letter-spacing: -0.03em;
+}
+.pk-wordmark::after {
+  content: "";
+  width: 0.5em;
+  height: 0.5em;
+  background: var(--beak);
+  flex: none;
+}
 
-/* ------------------------------------------------------- Stage (site hero) -- */
-.pk-stage { background: var(--plume); padding: var(--space-6) 0 0 var(--space-6); overflow: hidden; }
-.pk-panel { background: var(--term); color: var(--term-ink); border-radius: var(--radius-ui) 0 0 0; max-width: 680px; }
-.pk-panel-bar { display: flex; align-items: center; gap: var(--space-3); padding: 10px var(--space-4);
-  border-bottom: 1px solid var(--term-line); font: 400 13px/1.4 var(--font-mono); color: var(--term-dim); }
-.pk-panel-bar .pk-file-name { margin-right: auto; color: var(--term-ink); }
-.pk-panel-body { padding: var(--space-4); }
-.pk-wave { display: flex; align-items: center; gap: 2px; height: 56px; }
-.pk-wave i { display: block; width: calc(var(--frame) - 2px); height: var(--a); background: var(--wave); flex: none; }
-.pk-wave i.on { background: var(--wave-played); }
-.pk-wave i.head { background: var(--beak); }
-.pk-durs { display: flex; gap: 2px; margin-top: var(--space-1); height: 6px; }
-.pk-durs i { display: block; height: 6px; width: calc(var(--d) * var(--frame) - 2px); background: var(--wave); flex: none; }
-.pk-durs i.on { background: var(--wave-played); }
-.pk-panel-text { margin: var(--space-4) 0 0; font: 400 17px/1.6 var(--font-sans); min-height: 6.4em; max-width: 34em; }
-.pk-panel-text .now { box-shadow: inset 0 -2px 0 var(--beak); }
-.pk-panel-stat { margin: var(--space-3) 0 0; font: 400 13px/1.5 var(--font-mono); color: var(--term-dim); }
-@media (max-width: 640px) { .pk-stage { padding: var(--space-3) 0 0 var(--space-3); } .pk-panel-body { padding: var(--space-3); } }
-
-/* ------------------------------------------------------------ App shell -- */
-.pk-app { display: grid; grid-template-columns: var(--sidebar) 1fr; min-height: 420px; background: var(--ground);
-  color: var(--ink); font: 400 14px/1.4 var(--font-sans); border-radius: var(--radius-ui); overflow: hidden; }
-.pk-app-side { background: var(--surface); padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
-.pk-app-main { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
-.pk-app-head { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
-.pk-app-head h2 { margin: 0 auto 0 0; font: 500 14px/1.4 var(--font-sans); min-width: 0; overflow-wrap: anywhere; }
-@media (max-width: 879px) { .pk-app { grid-template-columns: 1fr; } }
-
-/* -------------------------------------------------------------- DropZone -- */
-.pk-drop { display: grid; justify-items: center; gap: var(--space-2); padding: var(--space-5) var(--space-4);
-  background: var(--sunk); color: var(--ink); border: 1.5px dashed var(--ink-muted); border-radius: var(--radius-ui);
-  text-align: center; cursor: pointer; transition: background-color .12s ease; }
-.pk-drop svg { width: 24px; height: 24px; }
-.pk-drop strong { font: 500 16px/1.3 var(--font-sans); }
-.pk-drop span { font-size: 13px; color: var(--ink-muted); }
-.pk-drop:hover { background: var(--surface); }
-.pk-drop.is-over { background: var(--plume-press); color: var(--on-plume); border-color: var(--on-plume); border-style: solid; }
-.pk-drop.is-over span { color: var(--on-plume); }
-.pk-drop-sm { padding: var(--space-3); grid-auto-flow: column; justify-content: center; align-items: center; }
-
-/* ------------------------------------------------------------- FileQueue -- */
-.pk-queue { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
-.pk-file { display: grid; grid-template-columns: 16px 1fr auto; column-gap: 10px; row-gap: 6px; align-items: center;
-  padding: 10px 12px; border-radius: var(--radius-ui); color: var(--ink); cursor: default; }
-.pk-file:hover { background: var(--sunk); }
-.pk-file[aria-selected="true"] { background: var(--ground); }
-.pk-file .pk-name { font: 500 14px/1.3 var(--font-sans); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pk-file .pk-stamp { text-align: right; }
-.pk-file .pk-status { grid-column: 2 / -1; font-size: 13px; color: var(--ink-muted); display: flex; gap: 6px; align-items: center; }
-.pk-file .pk-status.ok { color: var(--ok); }
-.pk-file .pk-status.err { color: var(--err); }
-.pk-bar { grid-column: 2 / -1; height: 4px; background: var(--sunk); border-radius: var(--radius-dot); overflow: hidden; }
-.pk-file[aria-selected="true"] .pk-bar { background: var(--surface); }
-.pk-bar i { display: block; height: 100%; width: var(--p); background: var(--plume); transition: width .3s ease; }
-.pk-bar.is-indeterminate i { width: 30%; animation: pk-slide 1.2s ease-in-out infinite; }
-@keyframes pk-slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
-
-/* ------------------------------------------------------------ Transcript -- */
-.pk-transcript { display: grid; gap: var(--space-4); max-width: var(--column-narrow); }
-.pk-seg { display: grid; grid-template-columns: 6.5em 1fr; column-gap: var(--space-3); align-items: baseline; }
-.pk-seg .pk-stamp { padding-top: 2px; }
-.pk-seg p { margin: 0; font: 400 17px/1.6 var(--font-sans); color: var(--ink); min-width: 0; }
-.pk-seg.is-current p { box-shadow: inset 3px 0 0 transparent; }
-.pk-seg.is-current .pk-stamp { color: var(--ink); }
-.pk-seg.is-current .pk-stamp::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px; background: var(--beak); vertical-align: 1px; }
-.pk-seg .pk-pending { color: var(--ink-muted); }
-@media (max-width: 520px) { .pk-seg { grid-template-columns: 1fr; row-gap: 2px; } }
+/* ----------------------------------------------------------------- Stage -- */
+.pk-stage {
+  background: var(--plume);
+  overflow: hidden;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .pk-btn, .pk-link .pk-arrow, .pk-drop, .pk-bar i { transition: none; }
-  .pk-bar.is-indeterminate i { animation: none; width: 100%; opacity: .5; }
+  .pk-btn,
+  .pk-link .pk-arrow {
+    transition: none;
+  }
 }
