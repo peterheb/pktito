@@ -2195,8 +2195,20 @@ listen("menu", (e) => {
   if (id === "add") chooseFiles();
   else if (id === "about") openAbout();
   else if (id === "find") openFind();
+  else if (id === "install-cli") installCli();
   else if (id.startsWith("save-")) save(id.slice(5));
 });
+
+/* pktito-cli on macOS's PATH (main.rs, install_cli): what happened, in a
+   toast; nothing when the password was not given */
+async function installCli() {
+  try {
+    const said = await invoke("install_cli");
+    if (said) toast(said);
+  } catch (e) {
+    toastErr(e);
+  }
+}
 
 /* --------------------------------------------------------------- start -- */
 

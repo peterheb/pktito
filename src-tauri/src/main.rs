@@ -578,6 +578,58 @@ fn captions(words: Vec<TimedWord>, english: i32, duration: f64) -> Result<Vec<pk
     pktito::captions(&w, english, ms(duration))
 }
 
+/// pktito-cli on the PATH, from the macOS menu bar's Install Command Line
+/// Tool: elsewhere the installers put it there. What happened, to say; ""
+/// when the password was not given.
+#[tauri::command]
+async fn install_cli() -> Result<String, String> {
+    #[cfg(target_os = "macos")]
+    return tauri::async_runtime::spawn_blocking(link_cli).await.map_err(|e| e.to_string())?;
+    #[cfg(not(target_os = "macos"))]
+    Err("The installer puts pktito-cli on the PATH here".into())
+}
+
+/// A link to the bundle's pktito-cli in /usr/local/bin, which macOS has on
+/// every PATH, as VS Code installs code. A folder the user can write to (an
+/// Intel Mac's, under Homebrew) takes it at once; else macOS asks for an
+/// administrator's password, through osascript's do shell script, which
+/// gets the path as an argument, so that nothing in it is read as a command.
+#[cfg(target_os = "macos")]
+fn link_cli() -> Result<String, String> {
+    use std::process::Command;
+    const DST: &str = "/usr/local/bin/pktito-cli";
+    let src = std::env::current_exe().map_err(|e| e.to_string())?.with_file_name("pktito-cli");
+    if !src.is_file() {
+        return Err(format!("Couldn't install it: no {}", src.display()));
+    }
+    if fs::read_link(DST).map(|t| t == src).unwrap_or(false) {
+        return Ok("pktito-cli is installed already".into());
+    }
+    let done = "Installed pktito-cli in /usr/local/bin".to_string();
+    let _ = fs::create_dir_all("/usr/local/bin");
+    if Command::new("ln").arg("-sf").arg(&src).arg(DST).output().map(|o| o.status.success()).unwrap_or(false) {
+        return Ok(done);
+    }
+    let script = format!(
+        "do shell script \"mkdir -p /usr/local/bin && ln -sf \" & quoted form of (item 1 of argv) & \" {DST}\" \
+         with prompt \"pktito is putting its command line tool, pktito-cli, in /usr/local/bin.\" with administrator privileges"
+    );
+    let out = Command::new("osascript")
+        .args(["-e", "on run argv", "-e", &script, "-e", "end run"])
+        .arg(&src)
+        .output()
+        .map_err(|e| format!("Couldn't install it: {e}"))?;
+    if out.status.success() {
+        return Ok(done);
+    }
+    let why = String::from_utf8_lossy(&out.stderr);
+    // the dialog's Cancel: nothing to say
+    if why.contains("(-128)") {
+        return Ok(String::new());
+    }
+    Err(format!("Couldn't install it: {}", why.trim()))
+}
+
 /// A finished transcript in one of Save's formats (format.rs), the bytes
 /// pktito-cli writes for it too.
 #[tauri::command]
@@ -1100,6 +1152,8 @@ fn menu_bar(app: &tauri::App) -> tauri::Result<()> {
     let pktito = SubmenuBuilder::new(app, "pktito")
         .item(&item("about", "About pktito", None)?)
         .separator()
+        .item(&item("install-cli", "Install Command Line Tool…", None)?)
+        .separator()
         .item(&PredefinedMenuItem::hide(app, None)?)
         .item(&PredefinedMenuItem::hide_others(app, None)?)
         .separator()
@@ -1181,6 +1235,7 @@ fn main() {
             open_link,
             captions,
             text_of,
+            install_cli,
             forget_recent,
             reveal_model,
             window_menu

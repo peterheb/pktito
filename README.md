@@ -156,9 +156,13 @@ pktito-cli download parakeet-tdt-0.6b-v3
 `.md`; `-o` names the file, or for several files the folder, and nothing is
 written over. A model downloaded from here is the app's too, and the one it
 uses if it had none. Progress goes to stderr when that is a terminal. The
-bundles carry it beside the window's program (`src-tauri/src/bin`): in
-`/usr/bin` from the Linux package, in `pktito.app/Contents/MacOS` on macOS,
-and in the install folder on Windows.
+bundles carry it beside the window's program (`src-tauri/src/bin`), and on
+the PATH: the Linux package in `/usr/bin`; on Windows the installer adds its
+folder to the user's PATH, and the uninstaller takes it out
+(`src-tauri/windows/path.ps1`); on macOS, where a disk image installs
+nothing, the app menu's Install Command Line Tool links it into
+`/usr/local/bin`, asking for an administrator's password where that folder
+is the system's.
 
 ## Building
 
