@@ -66,6 +66,8 @@ const ICON = {
   play: svg('<polygon points="6 3 20 12 6 21 6 3"/>', "pk-ico pk-ico-20 pk-ico-fill"),
   pause: svg('<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>', "pk-ico pk-ico-20 pk-ico-fill"),
   zap: svg('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', "pk-ico pk-ico-12"),
+  external: svg('<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/>' +
+    '<line x1="10" y1="14" x2="21" y2="3"/>', "pk-ico pk-ico-12"),
 };
 
 let st = null;          // the Rust side's status: the model, the catalog, the platform
@@ -247,16 +249,32 @@ async function useOwnFile() {
   }
 }
 
+/* A language's name in English, the window's language */
+const langNames = (() => {
+  try {
+    return new Intl.DisplayNames(["en"], { type: "language" });
+  } catch {
+    return null;
+  }
+})();
+const langName = (c) => (langNames && langNames.of(c)) || c;
+const ownLang = () => (navigator.language || "en").slice(0, 2).toLowerCase();
+/* After a model of several's count, the system's language where it is one
+   of them: whether theirs is there is what most who look want to know */
+const amongThem = (m) => (m.languages.length > 1 && m.languages.includes(ownLang()) ? `, ${langName(ownLang())} among them` : "");
+const langsOf = (m) => m.languages.map((c) => ({ c, n: langName(c) })).sort((a, b) => a.n.localeCompare(b.n));
+
 /* Each model as what it is for and whether it is here: "25 European
    languages", and Downloaded, in green, or its download's size. Its file's
-   name is its tooltip. Downloaded has no check of its own: the menu's check
-   is the model in use. */
+   name is its tooltip, with a model of several's languages. Downloaded has
+   no check of its own: the menu's check is the model in use. */
 function modelMenu(anchor, keys) {
   const items = st.catalog.map((m) => {
     const on = !st.model_file && st.model === m.name;
     const state = m.have ? `<span class="pk-have">Downloaded</span>` : `${mb(m.bytes)} MB download`;
-    return `<button class="pk-mi" type="button" role="menuitemradio" aria-checked="${on}" data-model="${m.name}" title="${esc(m.name)}">` +
-      `<span>${esc(m.label)}</span><small class="pk-sub">${esc(m.about)} · ${state}</small>${on ? ICON.check : ""}</button>`;
+    const title = m.languages.length > 1 ? `${m.name}: ${langsOf(m).map((x) => x.n).join(", ")}` : m.name;
+    return `<button class="pk-mi" type="button" role="menuitemradio" aria-checked="${on}" data-model="${m.name}" title="${esc(title)}">` +
+      `<span>${esc(m.label)}</span><small class="pk-sub">${esc(m.about + amongThem(m))} · ${state}</small>${on ? ICON.check : ""}</button>`;
   });
   if (st.model_file) {
     items.push(`<button class="pk-mi" type="button" role="menuitemradio" aria-checked="true" data-model="">` +
@@ -307,6 +325,18 @@ function renderSetup() {
   if (mode === "choose") {
     body.innerHTML = chooseHtml();
     for (const r of body.querySelectorAll('input[name="model"]')) r.onchange = () => { choice = r.value; updateChoose(); };
+    for (const b of body.querySelectorAll("[data-langs]")) b.onclick = (e) => {
+      // the card's label would choose its model too
+      e.preventDefault();
+      const box = b.closest(".pk-choice").querySelector(".pk-langs-box");
+      box.hidden = !box.hidden;
+      b.setAttribute("aria-expanded", String(!box.hidden));
+    };
+    // in the browser, not in the window
+    for (const a of body.querySelectorAll(".pk-langs-note a")) a.onclick = (e) => {
+      e.preventDefault();
+      invoke("open_link", { url: a.href }).catch((err) => toastErr(err));
+    };
     $("go").onclick = go;
     $("have-file").onclick = useOwnFile;
     return updateChoose();
@@ -324,15 +354,25 @@ function renderSetup() {
 }
 
 /* The model that speaks the system's language is picked to begin with:
-   the cards and the button say the rest. */
+   the cards and the button say the rest. A model of several's count opens
+   their list, three columns down, and under it a link to how accurate it is
+   in each. */
 function chooseHtml() {
-  const base = (navigator.language || "en").slice(0, 2).toLowerCase();
-  const fits = st.catalog.find((m) => m.languages.includes(base));
+  const fits = st.catalog.find((m) => m.languages.includes(ownLang()));
   if (!st.catalog.some((m) => m.name === choice)) choice = (inUse() || fits || st.catalog[0]).name;
-  const cards = st.catalog.map((m) =>
-    `<label class="pk-choice"><input type="radio" name="model" value="${m.name}"${m.name === choice ? " checked" : ""}>` +
-    `<span class="pk-name">${esc(m.label)}</span><span class="pk-stamp">${m.have ? "on this computer" : `${mb(m.bytes)} MB`}</span>` +
-    `<span class="pk-desc">${esc(m.name)} · ${esc(m.about)}</span></label>`).join("");
+  const cards = st.catalog.map((m) => {
+    const many = m.languages.length > 1;
+    const about = !many ? esc(m.about)
+      : `<button class="pk-linkbtn pk-linkbtn-sm" type="button" data-langs aria-expanded="false">${esc(m.about)}</button>${esc(amongThem(m))}`;
+    const list = !many ? "" : `<div class="pk-langs-box" hidden>` +
+      `<div class="pk-langs" style="grid-template-rows: repeat(${Math.ceil(m.languages.length / 3)}, auto)">` +
+      langsOf(m).map((x) => (x.c === ownLang() ? `<b>${esc(x.n)}</b>` : `<span>${esc(x.n)}</span>`)).join("") + "</div>" +
+      (m.accuracy ? `<p class="pk-langs-note">Accuracy varies by language. <a href="${esc(m.accuracy)}">Details${ICON.external}</a></p>` : "") +
+      "</div>";
+    return `<label class="pk-choice"><input type="radio" name="model" value="${m.name}"${m.name === choice ? " checked" : ""}>` +
+      `<span class="pk-name">${esc(m.label)}</span><span class="pk-stamp">${m.have ? "on this computer" : `${mb(m.bytes)} MB`}</span>` +
+      `<span class="pk-desc">${esc(m.name)} · ${about}</span>${list}</label>`;
+  }).join("");
   return `${WORDMARK}
     <div class="pk-intro"><h1 class="pk-lead">Choose a speech model</h1></div>
     <fieldset class="pk-choices"><legend>Speech model</legend>${cards}</fieldset>
@@ -956,7 +996,7 @@ function buildMain(f, mode, key) {
   updateHead(f, mode);
   const review = mode === "review";
   $("strip-wrap").hidden = mode === "error";
-  $("play").hidden = $("time").hidden = !review;
+  $("transport").hidden = $("time").hidden = !review;
   $("prog").hidden = review;
   $("dur").textContent = f.duration == null ? "" : lengthOf(f);
   const wave = $("wave");
@@ -1242,6 +1282,56 @@ let playId = null;    // the file the player holds
 let playing = false;
 let curSeg = null, curWord = null;
 
+/* Playback's speed, kept between runs (prefs.speed). The player keeps the
+   voice's pitch at any of them (preservesPitch, the web views' default), and
+   the playhead, the underline and the waveform follow the recording's own
+   time, which the speed leaves as it is. */
+const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
+const speed = () => (SPEEDS.includes(prefs.speed) ? prefs.speed : 1);
+
+function showSpeed() {
+  const s = speed();
+  // the default too, which a new file's load sets the speed back to
+  player.defaultPlaybackRate = player.playbackRate = s;
+  player.preservesPitch = true;
+  $("speed").textContent = `${s}×`;
+  $("speed").classList.toggle("is-on", s !== 1);
+  $("speed").setAttribute("aria-label", `Playback speed, ${s} times`);
+  for (const c of $("menu").querySelectorAll("[data-speed]")) {
+    c.classList.toggle("is-on", Number(c.dataset.speed) === s);
+    c.setAttribute("aria-pressed", String(Number(c.dataset.speed) === s));
+  }
+}
+
+function setSpeed(s) {
+  if (s === speed()) return;
+  prefs.speed = s;
+  showSpeed();
+  setPref("speed", s);
+}
+
+const stepSpeed = (d) => setSpeed(SPEEDS[Math.max(0, Math.min(SPEEDS.length - 1, SPEEDS.indexOf(speed()) + d))]);
+
+/* The speeds as chips, then Slower and Faster with their keys: a step
+   keeps the menu open, for the next one */
+function speedMenu(anchor, keys) {
+  const chip = (x) => `<button class="pk-rate" type="button" data-speed="${x}">${x}×</button>`;
+  const html = `<div class="pk-rates" role="group" aria-label="Playback speed">${SPEEDS.map(chip).join("")}</div>` +
+    `<div class="pk-menu-sep" aria-hidden="true"></div>` +
+    `<button class="pk-mi" type="button" role="menuitem" data-step="-1"><span>Slower</span><span class="pk-key">&lt;</span></button>` +
+    `<button class="pk-mi" type="button" role="menuitem" data-step="1"><span>Faster</span><span class="pk-key">&gt;</span></button>`;
+  openMenu(anchor, keys, html, "down", (m) => {
+    m.onclick = (e) => {
+      const c = e.target.closest("[data-speed]"), b = e.target.closest("[data-step]");
+      if (c) {
+        setSpeed(Number(c.dataset.speed));
+        closeMenu();
+      } else if (b) stepSpeed(Number(b.dataset.step));
+    };
+  });
+  showSpeed();
+}
+
 function loadAudio(f) {
   setPlayIcon();
   if (playId === f.id && player.getAttribute("src")) return;
@@ -1257,7 +1347,7 @@ function setPlayIcon() {
   $("play").innerHTML = playing ? ICON.pause : ICON.play;
   $("play").setAttribute("aria-label", what);
   $("play").title = (f && f.audioWhy) || `${what} (Space)`;
-  $("play").disabled = !f || !playable(f);
+  $("play").disabled = $("speed").disabled = !f || !playable(f);
 }
 
 function togglePlay() {
@@ -1442,6 +1532,7 @@ function retime() {
 
 $("time").onclick = (e) => timeMenu(e.currentTarget, !e.detail);
 $("play").onclick = () => togglePlay();
+$("speed").onclick = (e) => speedMenu(e.currentTarget, !e.detail);
 $("wavebtn").addEventListener("click", (e) => {
   const f = current();
   // Enter or Space on it is not a place on it
@@ -2092,6 +2183,18 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     return;
   }
+  /* < and > step playback's speed, as on YouTube: the keys point the way,
+     and [ and ] take AltGr on German, French and Spanish keyboards. AltGr
+     comes as Ctrl+Alt on Windows, so only a Ctrl or Cmd shortcut is left
+     alone. */
+  if ((e.key === "<" || e.key === ">") && !e.metaKey && !(e.ctrlKey && !e.altKey) && !typing(e.target) && shown() === "work") {
+    const f = current();
+    if (f && modeOf(f) === "review" && playable(f)) {
+      e.preventDefault();
+      stepSpeed(e.key === ">" ? 1 : -1);
+    }
+    return;
+  }
   if (e.key === " " && !menuFor && !typing(e.target) && shown() === "work") {
     const f = current();
     if (f && modeOf(f) === "review" && playable(f)) {
@@ -2135,6 +2238,8 @@ async function start() {
   $("add").title = tip("Add files", "O");
   $("save-all").innerHTML = `${ICON.download}Save all${ICON.down}`;
   $("time").title = "Seconds or frames";
+  $("speed").title = "Playback speed (< slower, > faster)";
+  showSpeed();
   $("notices-close").innerHTML = ICON.x;
   $("notices-close").title = "Close (Esc)";
   // the question's buttons where the system's own dialogs put Cancel: first

@@ -66,9 +66,9 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
    on or is filled with (design/README.md) */
 /* (:where, so that a rule that turns it off for a state, as for a transcript
    still filling in, needs no more than its own selector) */
-:where(.pk-btn, .pk-linkbtn, button.pk-wm, .pk-row, .pk-x, .pk-mi, .pk-seg-t, .pk-play, .pk-choice, .pk-find, .pk-find-step, .pk-view, .pk-timebtn, .pk-rate):hover:not([disabled]) {
+:where(.pk-btn, .pk-linkbtn, button.pk-wm, .pk-row, .pk-x, .pk-mi, .pk-seg-t, .pk-play, .pk-choice, .pk-find, .pk-find-step, .pk-view, .pk-timebtn, .pk-speed, .pk-rate):hover:not([disabled]) {
   background-image: linear-gradient(var(--tint), var(--tint)); }
-:where(.pk-btn, .pk-linkbtn, button.pk-wm, .pk-row, .pk-x, .pk-mi, .pk-seg-t, .pk-play, .pk-choice, .pk-find-step, .pk-view, .pk-timebtn, .pk-rate):active:not([disabled]) {
+:where(.pk-btn, .pk-linkbtn, button.pk-wm, .pk-row, .pk-x, .pk-mi, .pk-seg-t, .pk-play, .pk-choice, .pk-find-step, .pk-view, .pk-timebtn, .pk-speed, .pk-rate):active:not([disabled]) {
   background-image: linear-gradient(var(--tint-press), var(--tint-press)); }
 
 /* ----------------------------------------------------------- title bar -- */
@@ -145,10 +145,25 @@ html[data-chrome=win] .pk-head { padding-right: var(--caption); }
 .pk-choice { display: grid; grid-template-columns: 18px 1fr auto; column-gap: 12px; row-gap: 2px; align-items: baseline;
   padding: 14px 16px; border-radius: var(--radius-ui); background: var(--surface); cursor: pointer; box-shadow: inset 0 0 0 2px transparent; }
 .pk-choice.is-on { background: var(--ground); box-shadow: inset 0 0 0 2px var(--ink); }
-.pk-choice:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* the keyboard's ring, not a click's: the card holds a link and a button */
+.pk-choice:has(:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 .pk-choice input { margin: 0; width: 16px; height: 16px; accent-color: var(--ink); align-self: center; }
 .pk-choice .pk-name { font: 700 16px/1.3 var(--font-sans); letter-spacing: -.01em; }
 .pk-choice .pk-desc { grid-column: 2 / -1; font: 400 13px/1.45 var(--font-sans); color: var(--ink-muted); }
+/* A model of several languages: its count opens them, three columns down
+   and the system's own in ink, and under them that accuracy varies. Their
+   names are English, the window's language: its font has no Greek or
+   Cyrillic for theirs. */
+.pk-choice .pk-linkbtn { color: inherit; }
+.pk-langs-box { grid-column: 2 / -1; margin-top: 8px; cursor: auto; }
+.pk-langs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-flow: column; column-gap: 12px;
+  font: 400 13px/1.6 var(--font-sans); color: var(--ink-muted); }
+.pk-langs b { font-weight: 500; color: var(--ink); }
+.pk-langs-note { margin-top: 8px; font: 400 13px/1.45 var(--font-sans); color: var(--ink-muted); }
+.pk-langs-note a { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .2em; border-radius: 2px; }
+.pk-langs-note a:hover { text-decoration-thickness: 2px; }
+.pk-langs-note a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pk-langs-note .pk-ico { display: inline-block; vertical-align: -1px; margin-left: 3px; }
 
 /* the download */
 .pk-dl { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
@@ -275,7 +290,14 @@ html[data-chrome=win] .pk-head { padding-right: var(--caption); }
 /* the file's strip: the play button or the progress beside the waveform's
    top, the waveform the rest of the width, the times under its two ends */
 #strip { align-items: flex-start; }
-#strip > .pk-play { margin-top: 12px; }
+/* play at the waveform's top, and playback's speed under it on the line of
+   the times: dim at 1x and lit at any other, so that a changed speed shows */
+.pk-transport { align-self: stretch; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  padding-top: 12px; }
+.pk-speed { border: 0; padding: 2px 4px; margin: -2px -4px; border-radius: 4px; background-color: transparent; color: var(--term-dim); cursor: pointer; }
+.pk-speed.is-on { color: var(--term-ink); }
+.pk-speed:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.pk-speed[disabled] { opacity: .45; cursor: default; }
 .pk-lane { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .pk-times { display: flex; align-items: baseline; }
 .pk-times #dur { margin-left: auto; }
@@ -530,6 +552,12 @@ html[data-chrome=win] .pk-head { padding-right: var(--caption); }
   font-variant-numeric: tabular-nums; cursor: pointer; }
 .pk-rate.is-on { background: var(--ink); color: var(--ground); }
 .pk-rate:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+/* chips that open their menu, as playback's speeds do */
+.pk-menu > .pk-rates:first-child { padding-top: 8px; }
+/* a key to press, beside its menu item: its glyph on a key's tone step; a
+   lone < or > in the type of a shortcut read as no key at all */
+.pk-key { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 5px; background: var(--sunk);
+  font: 500 13px/1 var(--font-mono); color: var(--ink); }
 .pk-check { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; font: 400 14px/1.35 var(--font-sans); cursor: pointer; }
 .pk-check input { margin: 1px 0 0; width: 16px; height: 16px; accent-color: var(--ink); flex: none; }
 .pk-check small { display: block; font: 400 13px/1.4 var(--font-mono); color: var(--ink-muted); }

@@ -76,7 +76,7 @@ The one exception is the mascot on the app's About, its one kitschy corner: a vo
 
 Few, and always with a label.
 
-- The `Icons` group holds line icons after Feather (MIT): music (an audio file), film (a video file), file-text (a transcript), folder, copy, check, download, x. 24px grid, 2px round strokes, drawn in `ink`; inline, use `currentColor`. Show them at 16px in the app and 20px on the site.
+- The `Icons` group holds line icons after Feather (MIT): music (an audio file), film (a video file), file-text (a transcript), folder, copy, check, download, x, external-link (a page that opens in the browser, at 12px after its link's word). 24px grid, 2px round strokes, drawn in `ink`; inline, use `currentColor`. Show them at 16px in the app and 20px on the site.
 - Arrows in running text are the `→` glyph. No emoji, no icons in tinted squares.
 
 ## Logo

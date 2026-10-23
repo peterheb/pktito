@@ -25,6 +25,9 @@ pub struct Entry {
     /// What it transcribes, as ISO 639-1 codes: the window offers the first
     /// model that speaks the system's language.
     pub languages: &'static [&'static str],
+    /// Where its error rate in each language is, for a model of several:
+    /// the window links to it under their list; "" for none.
+    pub accuracy: &'static str,
     pub bytes: u64,
     pub sha256: &'static str,
 }
@@ -38,6 +41,7 @@ pub const CATALOG: &[Entry] = &[
         label: "English",
         about: "English only",
         languages: &["en"],
+        accuracy: "",
         bytes: 624_480_196,
         sha256: "8bfa6750b83cd7c447bad82057c7a12473563b72b3d35487fcca6da0786d83c7",
     },
@@ -49,6 +53,8 @@ pub const CATALOG: &[Entry] = &[
             "bg", "cs", "da", "de", "el", "en", "es", "et", "fi", "fr", "hr", "hu", "it", "lt", "lv", "mt", "nl", "pl",
             "pt", "ro", "ru", "sk", "sl", "sv", "uk",
         ],
+        // the model card's table of each language's word error rate
+        accuracy: "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3#multilingual-asr",
         bytes: 647_552_644,
         sha256: "35a59c9a433d4da2289640db93e73c42478b576e49a293090ef61b4ae595152a",
     },
@@ -85,11 +91,13 @@ pub struct Prefs {
     pub fps: f64,
     /// A video's frames counted at its own rate; false counts them at fps too.
     pub video_rate: bool,
+    /// Playback's speed, one of the window's 0.75 to 2.
+    pub speed: f64,
 }
 
 impl Default for Prefs {
     fn default() -> Prefs {
-        Prefs { next_to_original: true, times: false, captions: false, frames: false, fps: 24.0, video_rate: true }
+        Prefs { next_to_original: true, times: false, captions: false, frames: false, fps: 24.0, video_rate: true, speed: 1.0 }
     }
 }
 
