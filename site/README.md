@@ -43,9 +43,15 @@ npx wrangler@4 r2 object put pktito-releases/latest.json --file latest.json --co
 ```
 
 ```json
-{"version": "0.1.0", "files": {"macos": "pktito_0.1.0_aarch64.dmg",
-  "windows": "pktito_0.1.0_x64-setup.exe", "linux-deb": "pktito_0.1.0_amd64.deb",
-  "linux-appimage": "pktito_0.1.0_amd64.AppImage"}}
+{
+  "version": "0.1.0",
+  "files": {
+    "macos": "pktito_0.1.0_aarch64.dmg",
+    "windows": "pktito_0.1.0_x64-setup.exe",
+    "linux-deb": "pktito_0.1.0_amd64.deb",
+    "linux-appimage": "pktito_0.1.0_amd64.AppImage"
+  }
+}
 ```
 
 ## Download counts

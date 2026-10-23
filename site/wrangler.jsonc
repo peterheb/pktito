@@ -8,11 +8,17 @@
     "directory": "./public",
     "binding": "ASSETS",
     "html_handling": "drop-trailing-slash",
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
   },
   "r2_buckets": [{ "binding": "RELEASES", "bucket_name": "pktito-releases" }],
   // the download counts: `npx wrangler@4 d1 create pktito-stats` gives the id
-  "d1_databases": [{ "binding": "STATS", "database_name": "pktito-stats",
-    "database_id": "1f93a0b1-7817-4ca8-8ee3-f08b31f5228a", "migrations_dir": "migrations" }],
-  "routes": [{ "pattern": "pktito.net", "custom_domain": true }]
+  "d1_databases": [
+    {
+      "binding": "STATS",
+      "database_name": "pktito-stats",
+      "database_id": "1f93a0b1-7817-4ca8-8ee3-f08b31f5228a",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "routes": [{ "pattern": "pktito.net", "custom_domain": true }],
 }
