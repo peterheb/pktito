@@ -22,11 +22,15 @@ const CORE: &[&str] = &[
 fn base(os: &str, root: &PathBuf) -> cc::Build {
     let mut b = cc::Build::new();
     // pktito's numbers are the same bits on every backend only without
-    // contraction, and it is slow without optimization, debug build or not
+    // contraction, and it is slow without optimization, debug build or not.
+    // Without errno, sqrtf is the CPU's square root instruction (the same
+    // correctly rounded bits) and not a call into libm, whose sqrtf alone
+    // held a build on Ubuntu 26.04 to GLIBC_2.43
     b.std("c11")
         .opt_level(3)
         .debug(false)
         .flag("-ffp-contract=off")
+        .flag("-fno-math-errno")
         .warnings(false)
         .include(root.join("core"))
         .include(root.join("backend"));
