@@ -90,30 +90,29 @@
   </section>
 </div>
 
-<!-- A batch: two or more files at once, in the start screen's column, each
-     with its progress, a row opening its file; Save all for every
-     transcript, and Stop -->
-<section id="batch" class="pk-center" hidden>
-  <div class="pk-dragbar pk-band" data-tauri-drag-region></div>
-  <div class="pk-screen pk-batch">
-    <div class="pk-spread" data-tauri-drag-region="deep">
-      <div class="pk-batch-name">
-        <button class="pk-btn pk-btn-ghost pk-btn-ico pk-back" id="batch-back" type="button" aria-label="Back"></button>
-        <h1 class="pk-ui" id="batch-title"></h1>
-        <span class="pk-spin" id="batch-spin" hidden aria-hidden="true"></span>
+<!-- A batch: two or more files at once, under the header row a file's screen
+     has, so that the way back and the name stay where they are between the
+     two: Stop and Save all for every transcript in it; how far it has got
+     over the files' rows, each with its progress and opening its file -->
+<div id="batch" class="pk-work" hidden>
+  <section class="pk-main">
+    <header class="pk-head" data-tauri-drag-region="deep">
+      <button class="pk-btn pk-btn-ghost pk-btn-ico pk-back" id="batch-back" type="button" aria-label="Back"></button>
+      <h1 class="pk-ui" id="batch-title"></h1>
+      <span class="pk-spin" id="batch-spin" hidden aria-hidden="true"></span>
+      <span class="pk-grow"></span>
+      <button class="pk-btn pk-btn-ghost" id="batch-stop" type="button">Stop</button>
+      <button class="pk-btn pk-btn-primary" id="save-all" type="button" aria-haspopup="menu" aria-expanded="false"></button>
+    </header>
+    <div class="pk-batch">
+      <div class="pk-batch-files">
+        <p class="pk-small pk-num" id="tally" role="status"></p>
+        <ul id="queue" aria-label="Files"></ul>
       </div>
-      <div class="pk-batch-act">
-        <button class="pk-btn pk-btn-ghost" id="batch-stop" type="button">Stop</button>
-        <button class="pk-btn pk-btn-primary" id="save-all" type="button" aria-haspopup="menu" aria-expanded="false"></button>
-      </div>
+      <button class="pk-btn pk-batch-add" id="add" type="button"></button>
     </div>
-    <div class="pk-batch-files">
-      <p class="pk-small pk-num" id="tally" role="status"></p>
-      <ul id="queue" aria-label="Files"></ul>
-    </div>
-    <button class="pk-btn pk-batch-add" id="add" type="button"></button>
-  </div>
-</section>
+  </section>
+</div>
 
 <!-- About: the credits beside the mascot, over the screen that opened it;
      app.js adds the version, and mascot.js the mascot -->
