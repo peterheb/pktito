@@ -222,8 +222,11 @@ cargo tauri dev             # run it
 cargo tauri build           # the installer: .dmg, .msi/.exe, .deb/.AppImage
 ```
 
-The Rust is rustfmt's, with its defaults: `cargo fmt` in `src-tauri` before
-a commit (`cargo fmt --check` says whether it is due).
+The Rust is rustfmt's and the page's JavaScript, CSS, HTML and JSON
+Prettier's, each with its defaults: `cargo fmt` in `src-tauri` and `npx
+prettier@3.6.2 --write .` at the top before a commit (`--check` says whether
+either is due). `.prettierignore` leaves out what scripts write and the
+design system's own files.
 
 Windows on Arm builds on x64 Windows, cross-compiled: rustup's
 `stable-x86_64-pc-windows-gnullvm` toolchain with the

@@ -148,7 +148,10 @@
 
   "files.not_found": "Not found: {names}",
   "files.not_media": "Not audio or video: {names}",
-  "drop.files": { "one": "Drop to transcribe {n} file", "other": "Drop to transcribe {n} files" },
+  "drop.files": {
+    "one": "Drop to transcribe {n} file",
+    "other": "Drop to transcribe {n} files"
+  },
   "drop.more": "and {n} more",
 
   "status.waiting": "Waiting",

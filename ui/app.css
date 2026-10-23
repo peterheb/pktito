@@ -4,72 +4,272 @@
    own controls. Areas are told apart by a tone step, never a rule; only
    what floats (a menu, the toast) has a shadow. */
 
-html, body { height: 100%; }
-body { margin: 0; overflow: hidden; background: var(--ground); color: var(--ink); font: 400 14px/1.4 var(--font-sans);
-  -webkit-font-smoothing: antialiased; -webkit-user-select: none; user-select: none; cursor: default; }
-*, *::before, *::after { box-sizing: border-box; }
-[hidden] { display: none !important; }
-button, input { font: inherit; color: inherit; }
-h1, h2, p, ul { margin: 0; }
-ul { list-style: none; padding: 0; }
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--ground);
+  color: var(--ink);
+  font: 400 14px/1.4 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+[hidden] {
+  display: none !important;
+}
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+h1,
+h2,
+p,
+ul {
+  margin: 0;
+}
+ul {
+  list-style: none;
+  padding: 0;
+}
 
 /* ------------------------------------------------------------------ type -- */
-.pk-wm { display: inline-flex; align-items: baseline; gap: .08em; font: 700 20px/1 var(--font-sans); letter-spacing: -.03em; color: var(--ink); }
-.pk-wm::after { content: ""; width: .5em; height: .5em; background: var(--beak); flex: none; }
+.pk-wm {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.08em;
+  font: 700 20px/1 var(--font-sans);
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.pk-wm::after {
+  content: "";
+  width: 0.5em;
+  height: 0.5em;
+  background: var(--beak);
+  flex: none;
+}
 /* the wordmark on a screen is the way to About, its padding outside it so
    that the hover tint has room and the word stays where it was */
-button.pk-wm { width: max-content; border: 0; background: none; padding: 4px 6px; margin: -4px -6px; cursor: pointer;
-  border-radius: var(--radius-ui); }
-button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.pk-wm-lg { font-size: 56px; }
-.pk-lead { font: 500 26px/1.25 var(--font-sans); letter-spacing: -.01em; text-wrap: balance; }
-.pk-text { font: 400 15px/1.5 var(--font-sans); }
-.pk-ui { font: 500 14px/1.4 var(--font-sans); }
-.pk-small { font: 400 13px/1.45 var(--font-sans); color: var(--ink-muted); }
-.pk-stamp { font: 400 13px/1.5 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink-muted); white-space: nowrap; }
-.pk-figure { font: 700 64px/.9 var(--font-sans); letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
-.pk-num { font-variant-numeric: tabular-nums; }
-.pk-kbd { font: 400 13px/1 var(--font-mono); color: var(--ink-muted); white-space: nowrap; }
-.pk-ok { color: var(--ok); }
-.pk-err { color: var(--err); }
+button.pk-wm {
+  width: max-content;
+  border: 0;
+  background: none;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  cursor: pointer;
+  border-radius: var(--radius-ui);
+}
+button.pk-wm:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.pk-wm-lg {
+  font-size: 56px;
+}
+.pk-lead {
+  font: 500 26px/1.25 var(--font-sans);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.pk-text {
+  font: 400 15px/1.5 var(--font-sans);
+}
+.pk-ui {
+  font: 500 14px/1.4 var(--font-sans);
+}
+.pk-small {
+  font: 400 13px/1.45 var(--font-sans);
+  color: var(--ink-muted);
+}
+.pk-stamp {
+  font: 400 13px/1.5 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+.pk-figure {
+  font: 700 64px/0.9 var(--font-sans);
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.pk-num {
+  font-variant-numeric: tabular-nums;
+}
+.pk-kbd {
+  font: 400 13px/1 var(--font-mono);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+.pk-ok {
+  color: var(--ok);
+}
+.pk-err {
+  color: var(--err);
+}
 
 /* ----------------------------------------------------------------- icons -- */
-.pk-ico { width: 16px; height: 16px; flex: none; display: block; fill: none; stroke: currentColor; stroke-width: 2;
-  stroke-linecap: round; stroke-linejoin: round; }
-.pk-ico-fill { fill: currentColor; stroke: none; }
-.pk-ico-20 { width: 20px; height: 20px; }
-.pk-ico-12 { width: 12px; height: 12px; }
+.pk-ico {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pk-ico-fill {
+  fill: currentColor;
+  stroke: none;
+}
+.pk-ico-20 {
+  width: 20px;
+  height: 20px;
+}
+.pk-ico-12 {
+  width: 12px;
+  height: 12px;
+}
 
 /* --------------------------------------------------------------- buttons -- */
-.pk-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px; flex: none;
-  border: 0; border-radius: var(--radius-ui); background: var(--sunk); color: var(--ink); font: 500 14px/1 var(--font-sans);
-  cursor: pointer; white-space: nowrap; transition: background-color .12s ease, transform .1s ease; }
-.pk-btn:active { transform: translateY(1px); }
-.pk-btn-primary { background: var(--plume); color: var(--on-plume); }
-.pk-btn-ghost { background: transparent; }
-.pk-btn-ground { background: var(--ground); }
-.pk-btn-lg { height: 44px; padding: 0 18px; font-size: 15px; }
-.pk-btn-ico { width: 32px; padding: 0; }
-.pk-btn[disabled] { opacity: .45; cursor: default; transform: none; }
+.pk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  flex: none;
+  border: 0;
+  border-radius: var(--radius-ui);
+  background: var(--sunk);
+  color: var(--ink);
+  font: 500 14px/1 var(--font-sans);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 0.12s ease,
+    transform 0.1s ease;
+}
+.pk-btn:active {
+  transform: translateY(1px);
+}
+.pk-btn-primary {
+  background: var(--plume);
+  color: var(--on-plume);
+}
+.pk-btn-ghost {
+  background: transparent;
+}
+.pk-btn-ground {
+  background: var(--ground);
+}
+.pk-btn-lg {
+  height: 44px;
+  padding: 0 18px;
+  font-size: 15px;
+}
+.pk-btn-ico {
+  width: 32px;
+  padding: 0;
+}
+.pk-btn[disabled] {
+  opacity: 0.45;
+  cursor: default;
+  transform: none;
+}
 /* its padding outside it, as the wordmark's, for the hover tint */
-.pk-linkbtn { border: 0; background: none; padding: 2px 4px; margin: -2px -4px; border-radius: 4px; color: var(--ink);
-  font: 500 14px/1.4 var(--font-sans); cursor: pointer; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .2em; }
-.pk-linkbtn-sm { font-weight: 400; font-size: 13px; }
-.pk-btn:focus-visible, .pk-linkbtn:focus-visible, .pk-mi:focus-visible, .pk-seg-t:focus-visible, .pk-wavebtn:focus-visible,
-.pk-play:focus-visible, .pk-row:focus-visible, .pk-check input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pk-linkbtn {
+  border: 0;
+  background: none;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border-radius: 4px;
+  color: var(--ink);
+  font: 500 14px/1.4 var(--font-sans);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+.pk-linkbtn-sm {
+  font-weight: 400;
+  font-size: 13px;
+}
+.pk-btn:focus-visible,
+.pk-linkbtn:focus-visible,
+.pk-mi:focus-visible,
+.pk-seg-t:focus-visible,
+.pk-wavebtn:focus-visible,
+.pk-play:focus-visible,
+.pk-row:focus-visible,
+.pk-check input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
 /* on the dark strip and the toast, the dark theme's ring in both themes:
    the light theme's is the strip's own navy (the Windows test, 2026-10-21);
    and term's tints */
-.pk-strip, .pk-toast { --focus: var(--plume); --tint: var(--tint-term); --tint-press: var(--tint-term-press); }
+.pk-strip,
+.pk-toast {
+  --focus: var(--plume);
+  --tint: var(--tint-term);
+  --tint-press: var(--tint-term-press);
+}
 
 /* Hover and press, one rule for every control: a tint over whatever it sits
    on or is filled with (design/README.md) */
 /* (:where, so that a rule that turns it off for a state, as for a transcript
    still filling in, needs no more than its own selector) */
-:where(.pk-btn, .pk-linkbtn, button.pk-wm, .pk-row, .pk-x, .pk-mi, .pk-seg-t, .pk-play, .pk-choice, .pk-find, .pk-find-step, .pk-view, .pk-timebtn, .pk-speed, .pk-rate):hover:not([disabled]) {
-  background-image: linear-gradient(var(--tint), var(--tint)); }
-:where(.pk-btn, .pk-linkbtn, button.pk-wm, .pk-row, .pk-x, .pk-mi, .pk-seg-t, .pk-play, .pk-choice, .pk-find-step, .pk-view, .pk-timebtn, .pk-speed, .pk-rate):active:not([disabled]) {
-  background-image: linear-gradient(var(--tint-press), var(--tint-press)); }
+:where(
+    .pk-btn,
+    .pk-linkbtn,
+    button.pk-wm,
+    .pk-row,
+    .pk-x,
+    .pk-mi,
+    .pk-seg-t,
+    .pk-play,
+    .pk-choice,
+    .pk-find,
+    .pk-find-step,
+    .pk-view,
+    .pk-timebtn,
+    .pk-speed,
+    .pk-rate
+  ):hover:not([disabled]) {
+  background-image: linear-gradient(var(--tint), var(--tint));
+}
+:where(
+    .pk-btn,
+    .pk-linkbtn,
+    button.pk-wm,
+    .pk-row,
+    .pk-x,
+    .pk-mi,
+    .pk-seg-t,
+    .pk-play,
+    .pk-choice,
+    .pk-find-step,
+    .pk-view,
+    .pk-timebtn,
+    .pk-speed,
+    .pk-rate
+  ):active:not([disabled]) {
+  background-image: linear-gradient(var(--tint-press), var(--tint-press));
+}
 
 /* ----------------------------------------------------------- title bar -- */
 /* Where the window has no title bar of its own (macOS: app.js, data-chrome)
@@ -80,14 +280,28 @@ button.pk-wm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
    (index.html, data-tauri-drag-region). Full screen shows no lights. */
 /* at 92 px the back arrow sat 15 px from the lights, which are 9 px apart,
    and looked pressed against them */
-html[data-chrome=mac] { --lights: 100px; }
-html[data-chrome=mac]:not([data-fullscreen]) .pk-head { padding-left: var(--lights); }
-html[data-chrome=mac]:not([data-fullscreen]) .pk-about > .pk-back { left: calc(var(--lights) - 8px); }
+html[data-chrome="mac"] {
+  --lights: 100px;
+}
+html[data-chrome="mac"]:not([data-fullscreen]) .pk-head {
+  padding-left: var(--lights);
+}
+html[data-chrome="mac"]:not([data-fullscreen]) .pk-about > .pk-back {
+  left: calc(var(--lights) - 8px);
+}
 /* A one-column screen's top row is beside the lights where the column
    starts past them, at 744 px wide (640 px centred, 40 px padding), and
    below them where it would not. */
-@media (min-width: 744px) { html[data-chrome=mac]:not([data-fullscreen]) .has-recent .pk-ready { padding-top: 14px; } }
-@media (max-width: 743px) { html[data-chrome=mac]:not([data-fullscreen]) .pk-center { padding-top: 40px; } }
+@media (min-width: 744px) {
+  html[data-chrome="mac"]:not([data-fullscreen]) .has-recent .pk-ready {
+    padding-top: 14px;
+  }
+}
+@media (max-width: 743px) {
+  html[data-chrome="mac"]:not([data-fullscreen]) .pk-center {
+    padding-top: 40px;
+  }
+}
 /* About's top, where its stage draws the mascot to the window's edge; and a
    one-column screen's band across the window's top, the header rows'
    height, beneath the column, which lets the pointer through but on its
@@ -95,158 +309,514 @@ html[data-chrome=mac]:not([data-fullscreen]) .pk-about > .pk-back { left: calc(v
    middle-of-the-window width as well when the window is wide (the Windows
    recheck, maximized, 2026-10-22). Only these and the header rows drag:
    a double-click on a screen's empty middle zoomed it, mid-drag. */
-.pk-dragbar { position: absolute; top: 0; left: 0; right: 0; height: 52px; z-index: 1; }
-.pk-band { height: 60px; z-index: 0; display: none; }
-html[data-chrome] .pk-band { display: block; }
-html[data-chrome] .pk-center > .pk-screen { position: relative; z-index: 1; pointer-events: none; }
-html[data-chrome] .pk-center > .pk-screen > * { pointer-events: auto; }
-html:not([data-chrome]) .pk-dragbar { display: none; }
+.pk-dragbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  z-index: 1;
+}
+.pk-band {
+  height: 60px;
+  z-index: 0;
+  display: none;
+}
+html[data-chrome] .pk-band {
+  display: block;
+}
+html[data-chrome] .pk-center > .pk-screen {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+html[data-chrome] .pk-center > .pk-screen > * {
+  pointer-events: auto;
+}
+html:not([data-chrome]) .pk-dragbar {
+  display: none;
+}
 /* Windows: the caption buttons at the top right, over everything, as
    Windows 11 draws them: 46 by 32, Segoe Fluent Icons' glyphs at 10 px, its
    subtle fills on hover and press, and close red. What would sit under them
    moves left of --caption, their 138 px and a gap: the header row; and a
    one-column screen below them where its column would reach them, under
    860 px wide. */
-html[data-chrome=win] { --caption: 150px; }
-.pk-caption { position: fixed; top: 0; right: 0; z-index: 100; display: flex; }
-/* (the glyph 2 px over the middle, where Windows 11's sit: the Windows test, 2026-10-22) */
-.pk-cap { width: 46px; height: 32px; border: 0; padding: 0 0 4px; background: transparent; color: var(--ink); cursor: default;
-  font: 400 10px/1 "Segoe Fluent Icons", "Segoe MDL2 Assets", sans-serif; display: grid; place-items: center; }
-/* minimize's line 1 px lower than that, at Windows 11's y 15 */
-#cap-min { padding-bottom: 2px; }
-.pk-cap:hover { background: rgba(0, 0, 0, .0373); }
-.pk-cap:active { background: rgba(0, 0, 0, .0241); color: color-mix(in srgb, var(--ink) 60%, transparent); }
-/* (two classes, over the dark theme's hover below) */
-.pk-cap.pk-cap-close:hover { background: #c42b1c; color: #fff; }
-.pk-cap.pk-cap-close:active { background: rgba(196, 43, 28, .9); color: rgba(255, 255, 255, .7); }
-html[data-inactive] .pk-cap:not(:hover) { color: color-mix(in srgb, var(--ink) 40%, transparent); }
-@media (prefers-color-scheme: dark) {
-  .pk-cap:hover { background: rgba(255, 255, 255, .0605); }
-  .pk-cap:active { background: rgba(255, 255, 255, .0419); }
+html[data-chrome="win"] {
+  --caption: 150px;
 }
-html[data-chrome=win] .pk-head { padding-right: var(--caption); }
-@media (max-width: 859px) { html[data-chrome=win] .pk-center { padding-top: 40px; } }
+.pk-caption {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+}
+/* (the glyph 2 px over the middle, where Windows 11's sit: the Windows test, 2026-10-22) */
+.pk-cap {
+  width: 46px;
+  height: 32px;
+  border: 0;
+  padding: 0 0 4px;
+  background: transparent;
+  color: var(--ink);
+  cursor: default;
+  font:
+    400 10px/1 "Segoe Fluent Icons",
+    "Segoe MDL2 Assets",
+    sans-serif;
+  display: grid;
+  place-items: center;
+}
+/* minimize's line 1 px lower than that, at Windows 11's y 15 */
+#cap-min {
+  padding-bottom: 2px;
+}
+.pk-cap:hover {
+  background: rgba(0, 0, 0, 0.0373);
+}
+.pk-cap:active {
+  background: rgba(0, 0, 0, 0.0241);
+  color: color-mix(in srgb, var(--ink) 60%, transparent);
+}
+/* (two classes, over the dark theme's hover below) */
+.pk-cap.pk-cap-close:hover {
+  background: #c42b1c;
+  color: #fff;
+}
+.pk-cap.pk-cap-close:active {
+  background: rgba(196, 43, 28, 0.9);
+  color: rgba(255, 255, 255, 0.7);
+}
+html[data-inactive] .pk-cap:not(:hover) {
+  color: color-mix(in srgb, var(--ink) 40%, transparent);
+}
+@media (prefers-color-scheme: dark) {
+  .pk-cap:hover {
+    background: rgba(255, 255, 255, 0.0605);
+  }
+  .pk-cap:active {
+    background: rgba(255, 255, 255, 0.0419);
+  }
+}
+html[data-chrome="win"] .pk-head {
+  padding-right: var(--caption);
+}
+@media (max-width: 859px) {
+  html[data-chrome="win"] .pk-center {
+    padding-top: 40px;
+  }
+}
 
 /* ------------------------------------------- setup and ready: one column -- */
-.pk-center { position: relative; height: 100%; overflow: auto; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; }
-.pk-screen { width: min(640px, 100%); min-height: min(100%, 520px); display: flex; flex-direction: column; gap: 20px;
-  padding: 28px 40px 24px; }
-.pk-intro { display: flex; flex-direction: column; gap: 8px; }
-.pk-intro .pk-text { overflow-wrap: anywhere; }
-.pk-foot-row { margin-top: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.pk-foot-col { margin-top: auto; display: flex; flex-direction: column; gap: 14px; }
-.pk-wide { width: 100%; }
-.pk-foot-row .pk-small { margin-left: auto; }
-.pk-spread { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.pk-center {
+  position: relative;
+  height: 100%;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+}
+.pk-screen {
+  width: min(640px, 100%);
+  min-height: min(100%, 520px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px 40px 24px;
+}
+.pk-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pk-intro .pk-text {
+  overflow-wrap: anywhere;
+}
+.pk-foot-row {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pk-foot-col {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.pk-wide {
+  width: 100%;
+}
+.pk-foot-row .pk-small {
+  margin-left: auto;
+}
+.pk-spread {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
 
 /* the model choice */
-.pk-choices { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.pk-choices legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-.pk-choice { display: grid; grid-template-columns: 18px 1fr auto; column-gap: 12px; row-gap: 2px; align-items: baseline;
-  padding: 14px 16px; border-radius: var(--radius-ui); background: var(--surface); cursor: pointer; box-shadow: inset 0 0 0 2px transparent; }
-.pk-choice.is-on { background: var(--ground); box-shadow: inset 0 0 0 2px var(--ink); }
+.pk-choices {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.pk-choices legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.pk-choice {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  column-gap: 12px;
+  row-gap: 2px;
+  align-items: baseline;
+  padding: 14px 16px;
+  border-radius: var(--radius-ui);
+  background: var(--surface);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 2px transparent;
+}
+.pk-choice.is-on {
+  background: var(--ground);
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
 /* the keyboard's ring, not a click's: the card holds a link and a button */
-.pk-choice:has(:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
-.pk-choice input { margin: 0; width: 16px; height: 16px; accent-color: var(--ink); align-self: center; }
-.pk-choice .pk-name { font: 700 16px/1.3 var(--font-sans); letter-spacing: -.01em; }
-.pk-choice .pk-desc { grid-column: 2 / -1; font: 400 13px/1.45 var(--font-sans); color: var(--ink-muted); }
+.pk-choice:has(:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.pk-choice input {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ink);
+  align-self: center;
+}
+.pk-choice .pk-name {
+  font: 700 16px/1.3 var(--font-sans);
+  letter-spacing: -0.01em;
+}
+.pk-choice .pk-desc {
+  grid-column: 2 / -1;
+  font: 400 13px/1.45 var(--font-sans);
+  color: var(--ink-muted);
+}
 /* A model of several languages: its count opens them, three columns down
    and the system's own in ink, and under them that accuracy varies. Their
    names are English, the window's language: its font has no Greek or
    Cyrillic for theirs. */
-.pk-choice .pk-linkbtn { color: inherit; }
-.pk-langs-box { grid-column: 2 / -1; margin-top: 8px; cursor: auto; }
-.pk-langs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-flow: column; column-gap: 12px;
-  font: 400 13px/1.6 var(--font-sans); color: var(--ink-muted); }
-.pk-langs b { font-weight: 500; color: var(--ink); }
-.pk-langs-note { margin-top: 8px; font: 400 13px/1.45 var(--font-sans); color: var(--ink-muted); }
-.pk-langs-note a { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .2em; border-radius: 2px; }
-.pk-langs-note a:hover { text-decoration-thickness: 2px; }
-.pk-langs-note a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.pk-langs-note .pk-ico { display: inline-block; vertical-align: -1px; margin-left: 3px; }
+.pk-choice .pk-linkbtn {
+  color: inherit;
+}
+.pk-langs-box {
+  grid-column: 2 / -1;
+  margin-top: 8px;
+  cursor: auto;
+}
+.pk-langs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-flow: column;
+  column-gap: 12px;
+  font: 400 13px/1.6 var(--font-sans);
+  color: var(--ink-muted);
+}
+.pk-langs b {
+  font-weight: 500;
+  color: var(--ink);
+}
+.pk-langs-note {
+  margin-top: 8px;
+  font: 400 13px/1.45 var(--font-sans);
+  color: var(--ink-muted);
+}
+.pk-langs-note a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  border-radius: 2px;
+}
+.pk-langs-note a:hover {
+  text-decoration-thickness: 2px;
+}
+.pk-langs-note a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.pk-langs-note .pk-ico {
+  display: inline-block;
+  vertical-align: -1px;
+  margin-left: 3px;
+}
 
 /* the download */
-.pk-dl { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
-.pk-dl .pk-spread { align-items: flex-end; }
-.pk-dl .pk-stamp { padding-bottom: 4px; white-space: normal; }
-.pk-bar { height: 6px; background: var(--sunk); border-radius: var(--radius-dot); overflow: hidden; }
+.pk-dl {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+.pk-dl .pk-spread {
+  align-items: flex-end;
+}
+.pk-dl .pk-stamp {
+  padding-bottom: 4px;
+  white-space: normal;
+}
+.pk-bar {
+  height: 6px;
+  background: var(--sunk);
+  border-radius: var(--radius-dot);
+  overflow: hidden;
+}
 /* the fill in the waveform's blue on the light theme, 3.5:1 against the
    track, where plume was 1.5:1, under the 3:1 a state's cue needs (WCAG
    1.4.11); plume on the dark theme, 8.1:1 (the tokens' contrast,
    2026-10-22) */
-.pk-bar > i { display: block; height: 100%; background: var(--wave); transition: width .3s ease; }
-@media (prefers-color-scheme: dark) { .pk-bar > i { background: var(--plume); } }
-.pk-bar.is-paused > i { background: var(--ink-muted); }
-.pk-mini { height: 4px; }
-.pk-stopped { display: flex; flex-direction: column; gap: 10px; }
-.pk-stopped .pk-err { display: flex; align-items: center; gap: 6px; }
-.pk-details { background: var(--sunk); border-radius: var(--radius-ui); padding: 12px 14px; }
-.pk-details summary { display: flex; align-items: center; gap: 6px; cursor: pointer; list-style: none; width: max-content; }
-.pk-details summary::-webkit-details-marker { display: none; }
-.pk-details:not([open]) summary .pk-ico { transform: rotate(-90deg); }
-.pk-details p { margin-top: 8px; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; -webkit-user-select: text; user-select: text; }
+.pk-bar > i {
+  display: block;
+  height: 100%;
+  background: var(--wave);
+  transition: width 0.3s ease;
+}
+@media (prefers-color-scheme: dark) {
+  .pk-bar > i {
+    background: var(--plume);
+  }
+}
+.pk-bar.is-paused > i {
+  background: var(--ink-muted);
+}
+.pk-mini {
+  height: 4px;
+}
+.pk-stopped {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pk-stopped .pk-err {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pk-details {
+  background: var(--sunk);
+  border-radius: var(--radius-ui);
+  padding: 12px 14px;
+}
+.pk-details summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  list-style: none;
+  width: max-content;
+}
+.pk-details summary::-webkit-details-marker {
+  display: none;
+}
+.pk-details:not([open]) summary .pk-ico {
+  transform: rotate(-90deg);
+}
+.pk-details p {
+  margin-top: 8px;
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}
 
 /* ready */
-.pk-ready { height: min(100%, 600px); min-height: 0; gap: 22px; padding-top: 20px; padding-bottom: 20px; }
+.pk-ready {
+  height: min(100%, 600px);
+  min-height: 0;
+  gap: 22px;
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
 /* the model's button with its chevron on the strip's right edge, as the
    wordmark is on its left: its padding outside it (Peter's screenshot,
    2026-10-22) */
-#ready-model { margin-right: -12px; }
-.pk-ready-text { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
-.pk-ready-act { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: -6px; }
-.pk-recent { margin-top: auto; display: flex; flex-direction: column; gap: 4px; min-height: 0; }
+#ready-model {
+  margin-right: -12px;
+}
+.pk-ready-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+.pk-ready-act {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: -6px;
+}
+.pk-recent {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+}
 /* with a recent list the column is the window's height, the list taking
    what is left below the button: a tall window shows more of it */
-.has-recent .pk-ready { height: 100%; }
-.has-recent .pk-recent { margin-top: 8px; flex: 1 1 auto; }
-.pk-recent .pk-spread { padding: 0 12px 4px; }
+.has-recent .pk-ready {
+  height: 100%;
+}
+.has-recent .pk-recent {
+  margin-top: 8px;
+  flex: 1 1 auto;
+}
+.pk-recent .pk-spread {
+  padding: 0 12px 4px;
+}
 /* the list's one action, a ghost button as Stop is, small for the header,
    its padding outside it so that its word ends over the dates, in their
    grey: underlined, it read as a link beside a heading (Peter, 2026-10-22) */
-#clear-recent { height: 28px; margin: -6px -8px -6px 0; padding: 0 8px; font-size: 13px; color: var(--ink-muted); }
+#clear-recent {
+  height: 28px;
+  margin: -6px -8px -6px 0;
+  padding: 0 8px;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
 /* room inside the scroll for a row's focus ring, 2px out and 2px wide; and
    where a scrollbar takes room from the list (--sb, app.js), the list reaches
    that much further right, so that its rows end with the column, under
    Clear, and the scrollbar hangs beside them - at most the 16px a narrow
    window's 20px edge leaves past the ring's 4 */
-.pk-recent ul { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; padding: 4px;
-  margin: -4px calc(-4px - min(var(--sb, 0px), 16px)) -4px -4px; }
-.pk-recent .pk-row { grid-template-columns: 16px minmax(0, 1fr) auto 72px; }
-.pk-when { text-align: right; }
+.pk-recent ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 4px;
+  margin: -4px calc(-4px - min(var(--sb, 0px), 16px)) -4px -4px;
+}
+.pk-recent .pk-row {
+  grid-template-columns: 16px minmax(0, 1fr) auto 72px;
+}
+.pk-when {
+  text-align: right;
+}
 /* a recent row's ×, as a batch row's, over its date */
-.pk-recent .pk-qi:hover .pk-row .pk-stamp { visibility: visible; }
-.pk-recent .pk-qi:hover .pk-when { visibility: hidden; }
+.pk-recent .pk-qi:hover .pk-row .pk-stamp {
+  visibility: visible;
+}
+.pk-recent .pk-qi:hover .pk-when {
+  visibility: hidden;
+}
 
 /* ------------------------------------------------------------------ work -- */
-.pk-work { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr); }
-.pk-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.pk-work {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.pk-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
 /* The work screen's vertical rhythm is one step, --space-3 (16 px): under the
    header's buttons, between the strip and the views, from the views to the
    first row's text, and between rows (each row's 8 px padding, twice). The
    header's top stays 14 px, so that its buttons stay level with the traffic
    lights' centre, 30 px down (the title bar, above). */
-.pk-head { display: flex; align-items: center; gap: 10px; padding: 14px 24px var(--space-3); min-height: 62px; }
+.pk-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px var(--space-3);
+  min-height: 62px;
+}
 /* the file's name gives way first, down to nothing, before Find: shrunk in
    proportion, a long name left Find a letter of its search (the Windows
    test, 2026-10-22) */
-.pk-head h1 { flex: 0 1000 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pk-head h1 {
+  flex: 0 1000 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 /* beside the name while the file is at work, from the moment it starts:
    the strip says nothing until the audio is read */
-.pk-spin { flex: none; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--sunk); border-top-color: var(--ink-muted);
-  animation: pk-spin .9s linear infinite; }
-.pk-spin[hidden] { display: none; }
-@keyframes pk-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .pk-spin { animation-duration: 2.4s; } }
+.pk-spin {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--sunk);
+  border-top-color: var(--ink-muted);
+  animation: pk-spin 0.9s linear infinite;
+}
+.pk-spin[hidden] {
+  display: none;
+}
+@keyframes pk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pk-spin {
+    animation-duration: 2.4s;
+  }
+}
 /* the arrow drawn on the strip's left edge, its button's padding outside it */
-.pk-head .pk-back { margin-left: -8px; }
-.pk-grow { flex: 1; }
-.pk-strip-wrap { padding: 0 24px; }
+.pk-head .pk-back {
+  margin-left: -8px;
+}
+.pk-grow {
+  flex: 1;
+}
+.pk-strip-wrap {
+  padding: 0 24px;
+}
 /* the 8 px over the first row a margin, outside the scroll: inside it, a
    transcript scrolled down ran up against the views (Peter's screenshot,
    2026-10-22) */
-.pk-transcript { flex: 1; min-height: 0; overflow-y: auto; margin-top: var(--space-2); padding: 0 12px 24px; display: flex; flex-direction: column; }
-.pk-msg { margin: 16px 24px 0; max-width: 712px; font: 400 15px/1.5 var(--font-sans); color: var(--ink-muted); overflow-wrap: anywhere; }
-.pk-msg.pk-err { color: var(--err); }
+.pk-transcript {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin-top: var(--space-2);
+  padding: 0 12px 24px;
+  display: flex;
+  flex-direction: column;
+}
+.pk-msg {
+  margin: 16px 24px 0;
+  max-width: 712px;
+  font: 400 15px/1.5 var(--font-sans);
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}
+.pk-msg.pk-err {
+  color: var(--err);
+}
 
 /* ----------------------------------------------------------------- batch -- */
 /* Two or more files at once, under the header row a file's screen has (the
@@ -256,200 +826,713 @@ html[data-chrome=win] .pk-head { padding-right: var(--caption); }
    2026-10-23). Below it, how far it has got over the files' rows, which
    scroll, left under the header and as wide as a transcript's rows; more to
    add under them. */
-.pk-batch { flex: 1; min-height: 0; max-width: calc(var(--row) + 24px); display: flex; flex-direction: column; gap: 16px;
-  margin-top: var(--space-2); padding: 0 12px 24px; }
-.pk-batch-files { display: flex; flex-direction: column; gap: 4px; min-height: 0; }
-.pk-batch-files .pk-small { padding: 0 12px; }
+.pk-batch {
+  flex: 1;
+  min-height: 0;
+  max-width: calc(var(--row) + 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: var(--space-2);
+  padding: 0 12px 24px;
+}
+.pk-batch-files {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+}
+.pk-batch-files .pk-small {
+  padding: 0 12px;
+}
 /* room inside the scroll for a row's focus ring */
-.pk-batch-files ul { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; padding: 4px; margin: -4px; }
-.pk-batch-add { align-self: flex-start; }
+.pk-batch-files ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 4px;
+  margin: -4px;
+}
+.pk-batch-add {
+  align-self: flex-start;
+}
 
 /* the batch's rows, and the recent list's */
-.pk-row { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 6px; align-items: center; width: 100%;
-  border: 0; background: none; text-align: left; color: var(--ink); padding: 10px 12px; border-radius: var(--radius-ui); cursor: pointer; }
-.pk-row .pk-name { font: 500 14px/1.3 var(--font-sans); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pk-row .pk-status { grid-column: 2 / -1; display: flex; gap: 6px; align-items: center; font: 400 13px/1.4 var(--font-sans); color: var(--ink-muted); min-width: 0; }
-.pk-row .pk-status.pk-ok { color: var(--ok); }
-.pk-row .pk-status.pk-err { color: var(--err); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
-.pk-row .pk-bar { grid-column: 2 / -1; }
+.pk-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  column-gap: 10px;
+  row-gap: 6px;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  background: none;
+  text-align: left;
+  color: var(--ink);
+  padding: 10px 12px;
+  border-radius: var(--radius-ui);
+  cursor: pointer;
+}
+.pk-row .pk-name {
+  font: 500 14px/1.3 var(--font-sans);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pk-row .pk-status {
+  grid-column: 2 / -1;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font: 400 13px/1.4 var(--font-sans);
+  color: var(--ink-muted);
+  min-width: 0;
+}
+.pk-row .pk-status.pk-ok {
+  color: var(--ok);
+}
+.pk-row .pk-status.pk-err {
+  color: var(--err);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.pk-row .pk-bar {
+  grid-column: 2 / -1;
+}
 /* a row's ×, over its duration, under the pointer */
-.pk-qi { position: relative; }
-.pk-x { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; display: grid; place-items: center; border: 0; padding: 0;
-  border-radius: 6px; background: none; color: var(--ink-muted); cursor: pointer; opacity: 0; }
-.pk-qi:hover .pk-x { opacity: 1; }
-.pk-qi:hover .pk-row .pk-stamp { visibility: hidden; }
-.pk-x:hover { color: var(--ink); }
+.pk-qi {
+  position: relative;
+}
+.pk-x {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  opacity: 0;
+}
+.pk-qi:hover .pk-x {
+  opacity: 1;
+}
+.pk-qi:hover .pk-row .pk-stamp {
+  visibility: hidden;
+}
+.pk-x:hover {
+  color: var(--ink);
+}
 /* its target 6 px past it each way: 28 px alone was easy to miss beside the
    row (the Windows test, 2026-10-22) */
-.pk-x::before { content: ""; position: absolute; inset: -6px; }
+.pk-x::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
 
 /* ------------------------------------- the strip: waveform, playhead, time -- */
-.pk-strip { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: var(--radius-ui); background: var(--term);
-  color: var(--term-ink); min-width: 0; }
+.pk-strip {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: var(--radius-ui);
+  background: var(--term);
+  color: var(--term-ink);
+  min-width: 0;
+}
 /* the file's strip: the play button or the progress beside the waveform's
    top, the waveform the rest of the width, the times under its two ends */
-#strip { align-items: flex-start; }
+#strip {
+  align-items: flex-start;
+}
 /* play at the waveform's top, and playback's speed under it on the line of
    the times: dim at 1x and lit at any other, so that a changed speed shows */
-.pk-transport { align-self: stretch; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-  padding-top: 12px; }
-.pk-speed { border: 0; padding: 2px 4px; margin: -2px -4px; border-radius: 4px; background-color: transparent; color: var(--term-dim); cursor: pointer; }
-.pk-speed.is-on { color: var(--term-ink); }
-.pk-speed:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
-.pk-speed[disabled] { opacity: .45; cursor: default; }
-.pk-lane { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.pk-times { display: flex; align-items: baseline; }
-.pk-times #dur { margin-left: auto; }
+.pk-transport {
+  align-self: stretch;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+}
+.pk-speed {
+  border: 0;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border-radius: 4px;
+  background-color: transparent;
+  color: var(--term-dim);
+  cursor: pointer;
+}
+.pk-speed.is-on {
+  color: var(--term-ink);
+}
+.pk-speed:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.pk-speed[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+.pk-lane {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.pk-times {
+  display: flex;
+  align-items: baseline;
+}
+.pk-times #dur {
+  margin-left: auto;
+}
 /* the time, the button for its format, its padding outside it */
-.pk-timebtn { border: 0; padding: 2px 4px; margin: -2px -4px; border-radius: 4px; background-color: transparent; cursor: pointer; }
-.pk-timebtn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.pk-timebtn {
+  border: 0;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border-radius: 4px;
+  background-color: transparent;
+  cursor: pointer;
+}
+.pk-timebtn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
 /* a match's tick, 2 px drawn in a target 9 px wide that reaches down to the
    times: 7 px tall alone was hard to hit (the Windows test, 2026-10-22);
    the current one lighter, wider, and taller by the lane's gaps above and
    below, so that its shape tells it too: its colour is 1.6:1 against the
    others' (the tokens' contrast, 2026-10-22) */
-.pk-ticks { position: relative; height: 9px; }
-.pk-ticks i { position: absolute; top: 0; bottom: 0; width: 9px; margin-left: -4px; cursor: pointer;
-  background: linear-gradient(var(--plume), var(--plume)) center / 2px 100% no-repeat; }
-.pk-ticks i::before { content: ""; position: absolute; inset: 0 0 -9px; }
-.pk-ticks i.is-on { top: -3px; bottom: -3px; background-image: linear-gradient(var(--term-ink), var(--term-ink)); background-size: 3px 100%; }
+.pk-ticks {
+  position: relative;
+  height: 9px;
+}
+.pk-ticks i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 9px;
+  margin-left: -4px;
+  cursor: pointer;
+  background: linear-gradient(var(--plume), var(--plume)) center / 2px 100%
+    no-repeat;
+}
+.pk-ticks i::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 -9px;
+}
+.pk-ticks i.is-on {
+  top: -3px;
+  bottom: -3px;
+  background-image: linear-gradient(var(--term-ink), var(--term-ink));
+  background-size: 3px 100%;
+}
 /* bars 2 px wide a pixel apart, as app.js's BAR counts them; the playhead
    a pixel wider each side, over the gaps, so that it moves nothing */
-.pk-wave { flex: 1; min-width: 0; display: flex; align-items: center; gap: 1px; height: 64px; overflow: hidden; }
-.pk-wave i { display: block; flex: none; width: 2px; height: 3px; background: var(--wave); }
-.pk-wave i.on { background: var(--wave-played); }
-.pk-wave i.head { background: var(--beak); box-shadow: 0 0 0 1px var(--beak); }
-.pk-wave.is-idle i { background: var(--term-line); }
-.pk-wave.is-idle i.head { background: var(--beak); }
-.pk-wave.is-off { opacity: .45; }
-.pk-wavebtn { flex: 1; min-width: 0; border: 0; padding: 0; background: none; display: block; border-radius: 2px; }
-.pk-wavebtn:not([disabled]) { cursor: pointer; }
-.pk-play { flex: none; width: 40px; height: 40px; border-radius: var(--radius-ui); border: 0; display: grid; place-items: center; cursor: pointer;
-  background: var(--term-line); color: var(--term-ink); }
-.pk-play[disabled] { opacity: .45; cursor: default; background: var(--term-line); }
-.pk-tstamp { font: 400 13px/1 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--term-ink); white-space: nowrap; }
-.pk-tdim { color: var(--term-dim); }
-.pk-prog { display: flex; flex-direction: column; gap: 6px; width: 120px; flex: none; margin-top: 10px; }
-.pk-pct { font: 700 28px/1 var(--font-sans); letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--term-ink); }
-.pk-prog .pk-small { color: var(--term-dim); }
-.pk-strip-idle { padding: 12px 16px; }
+.pk-wave {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  height: 64px;
+  overflow: hidden;
+}
+.pk-wave i {
+  display: block;
+  flex: none;
+  width: 2px;
+  height: 3px;
+  background: var(--wave);
+}
+.pk-wave i.on {
+  background: var(--wave-played);
+}
+.pk-wave i.head {
+  background: var(--beak);
+  box-shadow: 0 0 0 1px var(--beak);
+}
+.pk-wave.is-idle i {
+  background: var(--term-line);
+}
+.pk-wave.is-idle i.head {
+  background: var(--beak);
+}
+.pk-wave.is-off {
+  opacity: 0.45;
+}
+.pk-wavebtn {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+  display: block;
+  border-radius: 2px;
+}
+.pk-wavebtn:not([disabled]) {
+  cursor: pointer;
+}
+.pk-play {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-ui);
+  border: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  background: var(--term-line);
+  color: var(--term-ink);
+}
+.pk-play[disabled] {
+  opacity: 0.45;
+  cursor: default;
+  background: var(--term-line);
+}
+.pk-tstamp {
+  font: 400 13px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--term-ink);
+  white-space: nowrap;
+}
+.pk-tdim {
+  color: var(--term-dim);
+}
+.pk-prog {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 120px;
+  flex: none;
+  margin-top: 10px;
+}
+.pk-pct {
+  font: 700 28px/1 var(--font-sans);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--term-ink);
+}
+.pk-prog .pk-small {
+  color: var(--term-dim);
+}
+.pk-strip-idle {
+  padding: 12px 16px;
+}
 /* (not flex's share of the lane, which was nothing: the playhead a dot) */
-.pk-strip-idle .pk-wave { flex: none; height: 40px; }
+.pk-strip-idle .pk-wave {
+  flex: none;
+  height: 40px;
+}
 
 /* the drop: the whole window, while files are dragged over it */
-.pk-drop { position: fixed; inset: 0; z-index: 50; padding: 12px; background: var(--plume-press); color: var(--on-plume); }
-.pk-drop-in { height: 100%; border: 2px dashed var(--on-plume); border-radius: var(--radius-ui); display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 24px; padding: 32px; }
-.pk-drop .pk-strip { width: 100%; max-width: 480px; padding: 14px 16px; }
-.pk-drop .pk-wave { height: 72px; justify-content: center; }
-.pk-drop .pk-lead { color: var(--on-plume); text-align: center; }
-.pk-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 480px; }
+.pk-drop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  padding: 12px;
+  background: var(--plume-press);
+  color: var(--on-plume);
+}
+.pk-drop-in {
+  height: 100%;
+  border: 2px dashed var(--on-plume);
+  border-radius: var(--radius-ui);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 32px;
+}
+.pk-drop .pk-strip {
+  width: 100%;
+  max-width: 480px;
+  padding: 14px 16px;
+}
+.pk-drop .pk-wave {
+  height: 72px;
+  justify-content: center;
+}
+.pk-drop .pk-lead {
+  color: var(--on-plume);
+  text-align: center;
+}
+.pk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: 480px;
+}
 /* the light ground at 55% over plume-press, in both themes: plume does not change with them */
-.pk-chips li { font: 400 13px/1.5 var(--font-mono); color: var(--on-plume); background: rgba(244, 246, 249, .55); padding: 4px 8px;
-  border-radius: var(--radius-ui); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pk-chips li {
+  font: 400 13px/1.5 var(--font-mono);
+  color: var(--on-plume);
+  background: rgba(244, 246, 249, 0.55);
+  padding: 4px 8px;
+  border-radius: var(--radius-ui);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* ------------------------------------------------------------------ about -- */
 /* over the screen that opened it, which stays as it was beneath: its
    scroll, its place and its work */
-.pk-about { position: fixed; inset: 0; z-index: 30; display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
-  background: var(--ground); }
-.is-about #setup, .is-about #ready, .is-about #batch, .is-about #work { visibility: hidden; }
-.pk-about-stage { position: relative; min-height: 0; background: var(--surface); }
-.pk-about-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; outline: none; }
-.pk-about-stage canvas:active { cursor: grabbing; }
-.pk-about-stage canvas:focus-visible { outline: 2px solid var(--focus); outline-offset: -6px; border-radius: var(--radius-ui); }
+.pk-about {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  background: var(--ground);
+}
+.is-about #setup,
+.is-about #ready,
+.is-about #batch,
+.is-about #work {
+  visibility: hidden;
+}
+.pk-about-stage {
+  position: relative;
+  min-height: 0;
+  background: var(--surface);
+}
+.pk-about-stage canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+  outline: none;
+}
+.pk-about-stage canvas:active {
+  cursor: grabbing;
+}
+.pk-about-stage canvas:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -6px;
+  border-radius: var(--radius-ui);
+}
 /* without WebGL 2, the credits alone, under the arrow */
-.pk-about.no-stage { grid-template-columns: minmax(0, 1fr); }
-.pk-about.no-stage .pk-about-stage { display: none; }
-.pk-about.no-stage .pk-about-text { padding-top: 64px; }
+.pk-about.no-stage {
+  grid-template-columns: minmax(0, 1fr);
+}
+.pk-about.no-stage .pk-about-stage {
+  display: none;
+}
+.pk-about.no-stage .pk-about-text {
+  padding-top: 64px;
+}
 /* the arrow at the window's top left, where a file's is */
 /* where a header row's arrow is: 16 px in, the row's 24 less the 8 of the
    button's padding outside it, and 8 px under 600 px wide */
-.pk-about > .pk-back { position: absolute; top: 14px; left: 16px; z-index: 1; }
-.pk-about-text { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding: 32px 40px; }
+.pk-about > .pk-back {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  z-index: 1;
+}
+.pk-about-text {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 40px;
+}
 /* in the middle while it fits, else scrolled from its top */
-.pk-about-in { margin: auto 0; display: flex; flex-direction: column; gap: 12px; max-width: var(--measure); }
-.pk-about-in .pk-wm { align-self: flex-start; margin-bottom: 8px; }
-.pk-credits { display: grid; grid-template-columns: 7.5em minmax(0, 1fr); gap: 10px 16px; margin: 20px 0 0; cursor: auto;
-  -webkit-user-select: text; user-select: text; }
-.pk-credits dt { font: 500 14px/1.45 var(--font-sans); }
-.pk-credits dd { margin: 0; font: 400 13px/1.45 var(--font-sans); color: var(--ink-muted); }
-.pk-about a { color: var(--link); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .2em; cursor: pointer;
-  border-radius: 2px; }
-.pk-about a:hover { text-decoration-thickness: 2px; }
-.pk-about a .pk-ico { display: inline-block; vertical-align: -1px; margin-left: 3px; }
-.pk-about a .pk-nowrap { white-space: nowrap; }
-.pk-about a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pk-about-in {
+  margin: auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: var(--measure);
+}
+.pk-about-in .pk-wm {
+  align-self: flex-start;
+  margin-bottom: 8px;
+}
+.pk-credits {
+  display: grid;
+  grid-template-columns: 7.5em minmax(0, 1fr);
+  gap: 10px 16px;
+  margin: 20px 0 0;
+  cursor: auto;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.pk-credits dt {
+  font: 500 14px/1.45 var(--font-sans);
+}
+.pk-credits dd {
+  margin: 0;
+  font: 400 13px/1.45 var(--font-sans);
+  color: var(--ink-muted);
+}
+.pk-about a {
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.pk-about a:hover {
+  text-decoration-thickness: 2px;
+}
+.pk-about a .pk-ico {
+  display: inline-block;
+  vertical-align: -1px;
+  margin-left: 3px;
+}
+.pk-about a .pk-nowrap {
+  white-space: nowrap;
+}
+.pk-about a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
 @media (max-width: 879px) {
-  .pk-about-text { padding: 28px 24px; }
-  .pk-credits { grid-template-columns: minmax(0, 1fr); row-gap: 2px; }
-  .pk-credits dd + dt { margin-top: 10px; }
+  .pk-about-text {
+    padding: 28px 24px;
+  }
+  .pk-credits {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2px;
+  }
+  .pk-credits dd + dt {
+    margin-top: 10px;
+  }
 }
 /* a portrait window, as the default one is, or a narrow one: the mascot
    over the credits, which then have the window's width */
 @media (orientation: portrait), (max-width: 599px) {
   /* the credits as tall as they are, the mascot the rest: a band was left
      between them when they shared the height (the Windows test) */
-  .pk-about { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, max-content); }
-  .pk-about-text { padding: 28px 40px 32px; }
-  .pk-about-in { margin: 0; }
-  .pk-credits { grid-template-columns: 7.5em minmax(0, 1fr); row-gap: 10px; }
-  .pk-credits dd + dt { margin-top: 0; }
+  .pk-about {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, max-content);
+  }
+  .pk-about-text {
+    padding: 28px 40px 32px;
+  }
+  .pk-about-in {
+    margin: 0;
+  }
+  .pk-credits {
+    grid-template-columns: 7.5em minmax(0, 1fr);
+    row-gap: 10px;
+  }
+  .pk-credits dd + dt {
+    margin-top: 0;
+  }
 }
 
 /* Everything else: a panel over About, which floats as a menu does, its
    list scrolling inside it. The question before the recent list is
    cleared dims the window as it does. */
-.pk-notices, .pk-ask { position: fixed; inset: 0; z-index: 35; display: grid; place-items: center; padding: 24px; background: rgba(16, 27, 51, .32); }
-.pk-notices-box { width: min(760px, 100%); height: min(760px, 100%); display: flex; flex-direction: column; overflow: hidden;
-  border-radius: var(--radius-ui); background: var(--ground); box-shadow: var(--shadow-float); }
-.pk-notices-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 10px 10px 24px;
-  background: var(--surface); }
-.pk-notices-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 24px 28px; cursor: auto; -webkit-user-select: text; user-select: text; }
-.pk-notices-body:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-.pk-notices-body h3 { margin: 24px 0 6px; font: 500 14px/1.4 var(--font-sans); }
-.pk-notices-body h4 { margin: 20px 0 6px; font: 500 13px/1.4 var(--font-sans); }
-.pk-notices-body h3 + .pk-small { margin-bottom: 6px; }
-.pk-nlist li { display: grid; grid-template-columns: minmax(0, 15em) 9em minmax(0, 1fr); column-gap: 12px; padding: 3px 0;
-  font: 400 13px/1.45 var(--font-sans); color: var(--ink-muted); }
-.pk-nlist .pk-nn { color: var(--ink); overflow-wrap: anywhere; }
-.pk-nlist .pk-code { font: 400 12.5px/1.55 var(--font-mono); }
-.pk-nlist .pk-nc { overflow-wrap: anywhere; }
-.pk-privacy-box { height: auto; max-height: min(760px, 100%); width: min(600px, 100%); }
-.pk-privacy p { margin: 0 0 12px; max-width: 560px; }
-.pk-privacy ul { margin: 0 0 12px; padding-left: 22px; max-width: 560px; list-style: disc; }
-.pk-privacy li { margin: 0 0 6px; }
-.pk-privacy h3 { margin: 16px 0 6px; font: 600 17px/1.3 var(--font-sans); letter-spacing: -0.005em; }
-.pk-notices-body pre { margin: 0; padding: 12px 14px; border-radius: var(--radius-ui); background: var(--surface);
-  font: 400 12px/1.5 var(--font-mono); color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
-@media (max-width: 879px) {
-  .pk-nlist li { grid-template-columns: minmax(0, 1fr) auto; }
-  .pk-nlist .pk-nc { grid-column: 1 / -1; }
+.pk-notices,
+.pk-ask {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(16, 27, 51, 0.32);
 }
-@media (prefers-color-scheme: dark) { .pk-notices, .pk-ask { background: rgba(0, 0, 0, .55); } }
+.pk-notices-box {
+  width: min(760px, 100%);
+  height: min(760px, 100%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-ui);
+  background: var(--ground);
+  box-shadow: var(--shadow-float);
+}
+.pk-notices-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 10px 10px 24px;
+  background: var(--surface);
+}
+.pk-notices-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 24px 28px;
+  cursor: auto;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.pk-notices-body:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.pk-notices-body h3 {
+  margin: 24px 0 6px;
+  font: 500 14px/1.4 var(--font-sans);
+}
+.pk-notices-body h4 {
+  margin: 20px 0 6px;
+  font: 500 13px/1.4 var(--font-sans);
+}
+.pk-notices-body h3 + .pk-small {
+  margin-bottom: 6px;
+}
+.pk-nlist li {
+  display: grid;
+  grid-template-columns: minmax(0, 15em) 9em minmax(0, 1fr);
+  column-gap: 12px;
+  padding: 3px 0;
+  font: 400 13px/1.45 var(--font-sans);
+  color: var(--ink-muted);
+}
+.pk-nlist .pk-nn {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.pk-nlist .pk-code {
+  font: 400 12.5px/1.55 var(--font-mono);
+}
+.pk-nlist .pk-nc {
+  overflow-wrap: anywhere;
+}
+.pk-privacy-box {
+  height: auto;
+  max-height: min(760px, 100%);
+  width: min(600px, 100%);
+}
+.pk-privacy p {
+  margin: 0 0 12px;
+  max-width: 560px;
+}
+.pk-privacy ul {
+  margin: 0 0 12px;
+  padding-left: 22px;
+  max-width: 560px;
+  list-style: disc;
+}
+.pk-privacy li {
+  margin: 0 0 6px;
+}
+.pk-privacy h3 {
+  margin: 16px 0 6px;
+  font: 600 17px/1.3 var(--font-sans);
+  letter-spacing: -0.005em;
+}
+.pk-notices-body pre {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-ui);
+  background: var(--surface);
+  font: 400 12px/1.5 var(--font-mono);
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 879px) {
+  .pk-nlist li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .pk-nlist .pk-nc {
+    grid-column: 1 / -1;
+  }
+}
+@media (prefers-color-scheme: dark) {
+  .pk-notices,
+  .pk-ask {
+    background: rgba(0, 0, 0, 0.55);
+  }
+}
 
 /* The question: Cancel, the default, in plume; Clear's word in err, the
    one button that destroys something (design/README.md) */
-.pk-ask-box { width: min(400px, 100%); padding: var(--space-4); border-radius: var(--radius-ui); background: var(--ground);
-  box-shadow: var(--shadow-float); }
-.pk-ask-box:focus { outline: none; }
-.pk-ask-box p { margin-top: var(--space-2); }
-.pk-ask-btns { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-4); }
-.pk-ask-btns .pk-btn { min-width: 80px; }
-.pk-btn-del { color: var(--err); }
+.pk-ask-box {
+  width: min(400px, 100%);
+  padding: var(--space-4);
+  border-radius: var(--radius-ui);
+  background: var(--ground);
+  box-shadow: var(--shadow-float);
+}
+.pk-ask-box:focus {
+  outline: none;
+}
+.pk-ask-box p {
+  margin-top: var(--space-2);
+}
+.pk-ask-btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+.pk-ask-btns .pk-btn {
+  min-width: 80px;
+}
+.pk-btn-del {
+  color: var(--err);
+}
 
 /* -------------------------------------------- sentences or captions -- */
 /* two buttons in a sunk track, the one chosen raised to the ground */
-.pk-views { display: flex; gap: 2px; align-self: flex-start; margin: var(--space-3) 24px 0; padding: 2px; border-radius: var(--radius-ui);
-  background: var(--sunk); }
-.pk-view { border: 0; padding: 5px 10px; border-radius: 6px; background: none; color: var(--ink-muted); font: 500 13px/1.2 var(--font-sans);
-  cursor: pointer; }
+.pk-views {
+  display: flex;
+  gap: 2px;
+  align-self: flex-start;
+  margin: var(--space-3) 24px 0;
+  padding: 2px;
+  border-radius: var(--radius-ui);
+  background: var(--sunk);
+}
+.pk-view {
+  border: 0;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink-muted);
+  font: 500 13px/1.2 var(--font-sans);
+  cursor: pointer;
+}
 /* the one chosen raised to the ground, with an edge in ink-muted: the tone
    step alone is 1.2:1 against the track, the edge 5.6:1 (6.5:1 dark), over
    the 3:1 a state's cue needs (WCAG 1.4.11; the tokens' contrast,
    2026-10-22) */
-.pk-view[aria-checked="true"] { background: var(--ground); color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink-muted); }
-.pk-view:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.pk-view[aria-checked="true"] {
+  background: var(--ground);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink-muted);
+}
+.pk-view:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
 
 /* ------------------------------------------------------------- transcript -- */
 /* A row: its time in a 112 px column, which a fast cue's end time and its
@@ -457,39 +1540,109 @@ html[data-chrome=win] .pk-head { padding-right: var(--caption); }
    about 72 characters a line): rows of 760 px ran to 79 (the window study,
    2026-10-23). 136 px is the row's padding, the times and their gap. A
    batch's file rows are as wide. */
-:root { --row: calc(136px + var(--column-narrow) + 12px); }
-.pk-seg { display: grid; grid-template-columns: 112px minmax(0, 1fr); column-gap: 12px; align-items: baseline; padding: 8px 12px;
-  border-radius: var(--radius-ui); max-width: var(--row); }
-.pk-seg.is-current { background: var(--surface); }
+:root {
+  --row: calc(136px + var(--column-narrow) + 12px);
+}
+.pk-seg {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: baseline;
+  padding: 8px 12px;
+  border-radius: var(--radius-ui);
+  max-width: var(--row);
+}
+.pk-seg.is-current {
+  background: var(--surface);
+}
 /* what the transcript cost, after its last row: quiet, under the text column */
-.pk-stats { margin: var(--space-3) 0 0; padding: 0 12px 0 136px; max-width: var(--row); font: 400 12px/1.5 var(--font-sans);
-  font-variant-numeric: tabular-nums; color: var(--ink-muted); }
+.pk-stats {
+  margin: var(--space-3) 0 0;
+  padding: 0 12px 0 136px;
+  max-width: var(--row);
+  font: 400 12px/1.5 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+}
 /* a row's times: a segment's start; a cue's start and its end under it,
    with a mark if it reads faster than 20 characters a second. The two the
    same size, so that their digits stand in columns: at 12 px the end sat
    narrower than the start (Peter's screenshot, 2026-10-22). */
-.pk-seg-times { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
-.pk-seg-end { display: inline-flex; align-items: center; gap: 4px; font: 400 13px/1.5 var(--font-mono); font-variant-numeric: tabular-nums;
-  color: var(--ink-muted); }
-.pk-fast { display: inline-flex; color: var(--ink-muted); }
+.pk-seg-times {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.pk-seg-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: 400 13px/1.5 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+}
+.pk-fast {
+  display: inline-flex;
+  color: var(--ink-muted);
+}
 /* a cue's lines as the subtitle shows them */
-.pk-cue p { white-space: pre-line; }
-.pk-seg-t { border: 0; background: none; padding: 2px 4px; margin: -2px -4px; border-radius: 6px; text-align: left; cursor: pointer;
-  font: 400 13px/1.5 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink-muted); display: inline-flex; align-items: baseline;
-  gap: 3px; justify-self: start; }
-.pk-seg-t:hover { color: var(--ink); }
-.is-live .pk-seg-t { cursor: default; }
-.is-live .pk-seg-t:hover { color: var(--ink-muted); background-image: none; }
+.pk-cue p {
+  white-space: pre-line;
+}
+.pk-seg-t {
+  border: 0;
+  background: none;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border-radius: 6px;
+  text-align: left;
+  cursor: pointer;
+  font: 400 13px/1.5 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  justify-self: start;
+}
+.pk-seg-t:hover {
+  color: var(--ink);
+}
+.is-live .pk-seg-t {
+  cursor: default;
+}
+.is-live .pk-seg-t:hover {
+  color: var(--ink-muted);
+  background-image: none;
+}
 /* the row playing: its time as every other's, and the beak's square after
    it on the line, as after the wordmark; in ink, and before it, the time
    looked larger and moved over (Peter's screenshot, 2026-10-22) */
-.pk-seg.is-current .pk-seg-t::after { content: ""; width: 7px; height: 7px; background: var(--beak); flex: none; }
-.pk-seg p { font: 400 17px/1.6 var(--font-sans); color: var(--ink); min-width: 0; overflow-wrap: break-word;
-  -webkit-user-select: text; user-select: text; cursor: text; }
+.pk-seg.is-current .pk-seg-t::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  background: var(--beak);
+  flex: none;
+}
+.pk-seg p {
+  font: 400 17px/1.6 var(--font-sans);
+  color: var(--ink);
+  min-width: 0;
+  overflow-wrap: break-word;
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: text;
+}
 /* the word playing: underlined in the text's own decoration, which a
    match's mark does not cover as it covered a shadow */
-.pk-now { text-decoration: underline var(--beak); text-decoration-thickness: 2px; text-underline-offset: 4px;
-  text-decoration-skip-ink: none; }
+.pk-now {
+  text-decoration: underline var(--beak);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  text-decoration-skip-ink: none;
+}
 /* A match: a highlighter's band reaching a little past the letters (a
    shadow, which moves no text), the current one in the full colour and the
    others paler, opaque so that a match's pieces meet without a seam. No
@@ -498,90 +1651,317 @@ html[data-chrome=win] .pk-head { padding-right: var(--caption); }
    the lines: plume against the paler band is 1.4:1 on the light theme,
    under the 3:1 a state's cue needs (WCAG 1.4.11; the tokens' contrast,
    2026-10-22). */
-.pk-hit { --hl: color-mix(in srgb, var(--plume) 45%, var(--ground)); background: var(--hl); color: inherit; border-radius: 3px;
-  box-shadow: 0 0 0 2px var(--hl); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
-.pk-hit.is-on { --hl: var(--plume); color: var(--on-plume); box-shadow: 0 0 0 2px var(--hl), 0 4px 0 0 var(--ink); }
+.pk-hit {
+  --hl: color-mix(in srgb, var(--plume) 45%, var(--ground));
+  background: var(--hl);
+  color: inherit;
+  border-radius: 3px;
+  box-shadow: 0 0 0 2px var(--hl);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.pk-hit.is-on {
+  --hl: var(--plume);
+  color: var(--on-plume);
+  box-shadow:
+    0 0 0 2px var(--hl),
+    0 4px 0 0 var(--ink);
+}
 /* each row's time above its text up to 619 px: beside it, the times' column
    left 51 characters a line at 577 px, and above it 68 (the window study,
    2026-10-23) */
 @media (max-width: 619px) {
-  .pk-seg { grid-template-columns: 1fr; row-gap: 2px; }
-  .pk-stats { padding-left: 12px; }
+  .pk-seg {
+    grid-template-columns: 1fr;
+    row-gap: 2px;
+  }
+  .pk-stats {
+    padding-left: 12px;
+  }
   /* a cue's start and end side by side above its lines */
-  .pk-seg-times { flex-direction: row; align-items: baseline; gap: 10px; }
+  .pk-seg-times {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 10px;
+  }
 }
 /* a narrow window, down to the 480 it allows: the edges closer in */
 @media (max-width: 599px) {
-  .pk-screen { padding-left: 20px; padding-right: 20px; }
-  .pk-head { padding: 14px 16px var(--space-3); }
-  .pk-strip-wrap { padding: 0 16px; }
-  .pk-views { margin-left: 16px; margin-right: 16px; }
-  .pk-msg { margin-left: 16px; margin-right: 16px; }
-  .pk-about-text { padding: 24px 20px 28px; }
-  .pk-about > .pk-back { left: 8px; }
+  .pk-screen {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  .pk-head {
+    padding: 14px 16px var(--space-3);
+  }
+  .pk-strip-wrap {
+    padding: 0 16px;
+  }
+  .pk-views {
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+  .pk-msg {
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+  .pk-about-text {
+    padding: 24px 20px 28px;
+  }
+  .pk-about > .pk-back {
+    left: 8px;
+  }
 }
 
 /* ------------------------------------------------------------ the finder -- */
-.pk-find { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border-radius: var(--radius-ui); background: var(--sunk);
-  color: var(--ink-muted); flex: 0 1 200px; min-width: 120px; cursor: text; }
-.pk-find input { border: 0; background: none; outline: none; font: 400 14px/1 var(--font-sans); color: var(--ink); width: 100%; min-width: 0; padding: 0;
-  -webkit-user-select: text; user-select: text; }
-.pk-find input::placeholder { color: var(--ink-muted); }
-.pk-find input::-webkit-search-cancel-button { display: none; }
+.pk-find {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-ui);
+  background: var(--sunk);
+  color: var(--ink-muted);
+  flex: 0 1 200px;
+  min-width: 120px;
+  cursor: text;
+}
+.pk-find input {
+  border: 0;
+  background: none;
+  outline: none;
+  font: 400 14px/1 var(--font-sans);
+  color: var(--ink);
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.pk-find input::placeholder {
+  color: var(--ink-muted);
+}
+.pk-find input::-webkit-search-cancel-button {
+  display: none;
+}
 /* previous and next, while there is something to find */
-.pk-find-step { display: none; flex: none; width: 22px; height: 22px; place-items: center; border: 0; padding: 0; margin: 0 -4px 0 0;
-  border-radius: 6px; background: none; color: var(--ink-muted); cursor: pointer; }
-.pk-find-step + .pk-find-step { margin-right: -6px; }
-.pk-find.has-query .pk-find-step { display: grid; }
-.pk-find-step:hover:not([disabled]) { color: var(--ink); }
-.pk-find-step[disabled] { opacity: .45; cursor: default; }
-.pk-find-step:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
-.pk-find:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pk-find-step {
+  display: none;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  margin: 0 -4px 0 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.pk-find-step + .pk-find-step {
+  margin-right: -6px;
+}
+.pk-find.has-query .pk-find-step {
+  display: grid;
+}
+.pk-find-step:hover:not([disabled]) {
+  color: var(--ink);
+}
+.pk-find-step[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+.pk-find-step:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.pk-find:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
 /* wider with a search in it, for the count and the arrows beside the words */
-.pk-find.has-query { flex-basis: 280px; min-width: 190px; }
+.pk-find.has-query {
+  flex-basis: 280px;
+  min-width: 190px;
+}
 /* folded to its icon where the header has no room for it, under 860px, and
    opened by a click or the shortcut */
-@media (max-width: 859px) { .pk-find:not(:focus-within):not(.has-query) { flex: none; width: 32px; min-width: 32px; padding: 0 8px; }
-  .pk-find:not(:focus-within):not(.has-query) :is(input, .pk-kbd) { width: 0; opacity: 0; } }
+@media (max-width: 859px) {
+  .pk-find:not(:focus-within):not(.has-query) {
+    flex: none;
+    width: 32px;
+    min-width: 32px;
+    padding: 0 8px;
+  }
+  .pk-find:not(:focus-within):not(.has-query) :is(input, .pk-kbd) {
+    width: 0;
+    opacity: 0;
+  }
+}
 
 /* ------------------------------------------------------------------ menus -- */
-.pk-menu { position: fixed; z-index: 40; background: var(--ground); border-radius: var(--radius-ui); box-shadow: var(--shadow-float), 0 0 0 1px var(--sunk);
-  padding: 6px; display: grid; gap: 2px; width: max-content; min-width: 240px; max-width: min(420px, calc(100vw - 24px)); }
-.pk-mi { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; align-items: center; text-align: left; width: 100%;
-  border: 0; background: none; color: var(--ink); border-radius: 6px; padding: 8px 10px; cursor: pointer; font: 500 14px/1.35 var(--font-sans); }
-.pk-mi small { grid-column: 1; font: 400 13px/1.4 var(--font-mono); color: var(--ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pk-mi .pk-kbd, .pk-mi > .pk-ico { grid-row: 1; grid-column: 2; }
+.pk-menu {
+  position: fixed;
+  z-index: 40;
+  background: var(--ground);
+  border-radius: var(--radius-ui);
+  box-shadow:
+    var(--shadow-float),
+    0 0 0 1px var(--sunk);
+  padding: 6px;
+  display: grid;
+  gap: 2px;
+  width: max-content;
+  min-width: 240px;
+  max-width: min(420px, calc(100vw - 24px));
+}
+.pk-mi {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 16px;
+  align-items: center;
+  text-align: left;
+  width: 100%;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font: 500 14px/1.35 var(--font-sans);
+}
+.pk-mi small {
+  grid-column: 1;
+  font: 400 13px/1.4 var(--font-mono);
+  color: var(--ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pk-mi .pk-kbd,
+.pk-mi > .pk-ico {
+  grid-row: 1;
+  grid-column: 2;
+}
 /* a line of words, not a file name: the model menu's */
-.pk-mi small.pk-sub { font: 400 13px/1.4 var(--font-sans); }
-.pk-have { color: var(--ok); }
-.pk-menu.is-wide { max-width: min(480px, calc(100vw - 24px)); }
+.pk-mi small.pk-sub {
+  font: 400 13px/1.4 var(--font-sans);
+}
+.pk-have {
+  color: var(--ok);
+}
+.pk-menu.is-wide {
+  max-width: min(480px, calc(100vw - 24px));
+}
 /* between a menu's groups, the line the platforms' own menus draw (design/README.md) */
-.pk-menu-sep { height: 1px; margin: 3px 10px; background: var(--sunk); }
+.pk-menu-sep {
+  height: 1px;
+  margin: 3px 10px;
+  background: var(--sunk);
+}
 /* the frame rates, a row of chips under the choice they serve */
-.pk-rates { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 10px 8px; }
-.pk-rate { border: 0; padding: 4px 7px; border-radius: 6px; background: var(--surface); color: var(--ink); font: 400 12px/1.2 var(--font-mono);
-  font-variant-numeric: tabular-nums; cursor: pointer; }
-.pk-rate.is-on { background: var(--ink); color: var(--ground); }
-.pk-rate:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.pk-rates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 2px 10px 8px;
+}
+.pk-rate {
+  border: 0;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 400 12px/1.2 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.pk-rate.is-on {
+  background: var(--ink);
+  color: var(--ground);
+}
+.pk-rate:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
 /* chips that open their menu, as playback's speeds do */
-.pk-menu > .pk-rates:first-child { padding-top: 8px; }
+.pk-menu > .pk-rates:first-child {
+  padding-top: 8px;
+}
 /* a key to press, beside its menu item: its glyph on a key's tone step; a
    lone < or > in the type of a shortcut read as no key at all */
-.pk-key { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 5px; background: var(--sunk);
-  font: 500 13px/1 var(--font-mono); color: var(--ink); }
-.pk-check { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; font: 400 14px/1.35 var(--font-sans); cursor: pointer; }
-.pk-check input { margin: 1px 0 0; width: 16px; height: 16px; accent-color: var(--ink); flex: none; }
-.pk-check small { display: block; font: 400 13px/1.4 var(--font-mono); color: var(--ink-muted); }
+.pk-key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: var(--sunk);
+  font: 500 13px/1 var(--font-mono);
+  color: var(--ink);
+}
+.pk-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  font: 400 14px/1.35 var(--font-sans);
+  cursor: pointer;
+}
+.pk-check input {
+  margin: 1px 0 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ink);
+  flex: none;
+}
+.pk-check small {
+  display: block;
+  font: 400 13px/1.4 var(--font-mono);
+  color: var(--ink-muted);
+}
 
 /* ------------------------------------------------------------------ toast -- */
 /* as wide as its words, up to the window's width: centred from left 50%
    without a width of its own, it had half the window to fit in */
-.pk-toast { position: fixed; z-index: 45; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px;
-  width: max-content; max-width: calc(100vw - 48px); padding: 10px 12px 10px 14px; border-radius: var(--radius-ui); background: var(--term); color: var(--term-ink);
-  box-shadow: var(--shadow-float); font: 500 14px/1.3 var(--font-sans); }
+.pk-toast {
+  position: fixed;
+  z-index: 45;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: calc(100vw - 48px);
+  padding: 10px 12px 10px 14px;
+  border-radius: var(--radius-ui);
+  background: var(--term);
+  color: var(--term-ink);
+  box-shadow: var(--shadow-float);
+  font: 500 14px/1.3 var(--font-sans);
+}
 /* two lines at most, so that a long file's name shows whole in a narrow window */
-.pk-toast span { min-width: 0; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2; }
-.pk-toast .pk-linkbtn { color: var(--term-ink); flex: none; }
+.pk-toast span {
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.pk-toast .pk-linkbtn {
+  color: var(--term-ink);
+  flex: none;
+}
 
-@media (prefers-reduced-motion: reduce) { .pk-btn, .pk-bar > i { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .pk-btn,
+  .pk-bar > i {
+    transition: none;
+  }
+}

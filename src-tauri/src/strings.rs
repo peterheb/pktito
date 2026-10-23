@@ -116,38 +116,43 @@ mod tests {
 
     /// How a key is named, up to its opening quote: the page's data-t
     /// attributes and t calls, and Rust's t, tf, Problem::new and Unreadable.
+    /// A call's key may be on the next line, where a formatter puts it.
     const NAMED: &[&str] = &[
-        "data-t=\"",
-        "data-t-html=\"",
-        "data-t-aria-label=\"",
-        "data-t-title=\"",
-        "data-t-placeholder=\"",
-        "t(\"",
-        "tf(\"",
-        "Problem::new(\"",
-        "Unreadable(\"",
+        "data-t=",
+        "data-t-html=",
+        "data-t-aria-label=",
+        "data-t-title=",
+        "data-t-placeholder=",
+        "t(",
+        "tf(",
+        "Problem::new(",
+        "Unreadable(",
     ];
 
     /// The keys named in text: after each of NAMED, not inside a longer name
-    /// (set(" is not t("), the key's characters, then its closing quote.
+    /// (set( is not t(), past any white space, the key in quotes.
     fn named(text: &str) -> Vec<String> {
         let mut out = vec![];
         for pre in NAMED {
             let mut at = 0;
             while let Some(i) = text[at..].find(pre) {
-                let (begin, start) = (at + i, at + i + pre.len());
-                at = start;
+                let (begin, after) = (at + i, at + i + pre.len());
+                at = after;
                 let word = |c: char| c.is_ascii_alphanumeric() || c == '_' || c == ':';
                 if text[..begin].chars().next_back().is_some_and(word) {
                     continue;
                 }
-                let key: String = text[start..]
+                let rest = text[after..].trim_start();
+                let Some(rest) = rest.strip_prefix('"') else {
+                    continue;
+                };
+                let key: String = rest
                     .chars()
                     .take_while(|c| {
                         c.is_ascii_lowercase() || c.is_ascii_digit() || *c == '_' || *c == '.'
                     })
                     .collect();
-                if !key.is_empty() && text[start + key.len()..].starts_with('"') {
+                if !key.is_empty() && rest[key.len()..].starts_with('"') {
                     out.push(key);
                 }
             }

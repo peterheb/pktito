@@ -3,6 +3,12 @@
   "identifier": "default",
   "description": "The main window: events, the window itself, its dragging by the header rows and the caption buttons the page draws on Windows, and the file dialogs.",
   "windows": ["main"],
-  "permissions": ["core:default", "core:window:allow-start-dragging", "core:window:allow-minimize",
-    "core:window:allow-toggle-maximize", "core:window:allow-close", "dialog:default"]
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-close",
+    "dialog:default"
+  ]
 }

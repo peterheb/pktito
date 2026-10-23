@@ -1,0 +1,11 @@
+# made by scripts: formatted by what writes them
+ui/mascot-model.js
+ui/notices.js
+ui/tokens.css
+site/public/
+# the design system's own files, as it publishes them
+design/
+# Rust's and Tauri's
+src-tauri/target/
+src-tauri/gen/
+vendor/

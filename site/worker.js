@@ -24,13 +24,20 @@ export default {
   async fetch(request, env, ctx) {
     let parts;
     try {
-      parts = new URL(request.url).pathname.split("/").filter(Boolean).map(decodeURIComponent);
+      parts = new URL(request.url).pathname
+        .split("/")
+        .filter(Boolean)
+        .map(decodeURIComponent);
     } catch {
       return env.ASSETS.fetch(request); // a malformed %-escape
     }
-    if (parts[0] === "download" && (request.method === "GET" || request.method === "HEAD")) {
+    if (
+      parts[0] === "download" &&
+      (request.method === "GET" || request.method === "HEAD")
+    ) {
       if (parts.length === 2) return latest(request, env, parts[1]);
-      if (parts.length === 3) return file(request, env, ctx, parts[1], parts[2]);
+      if (parts.length === 3)
+        return file(request, env, ctx, parts[1], parts[2]);
     }
     return env.ASSETS.fetch(request);
   },
@@ -44,12 +51,19 @@ async function latest(request, env, system) {
   const name = release?.files?.[system];
   if (!name) {
     // before the first release, and a system a release leaves out
-    if (!["macos", "windows", "linux-deb", "linux-appimage"].includes(system)) return env.ASSETS.fetch(request);
-    return new Response(null, { status: 302, headers: { location: "/soon", "cache-control": "no-store" } });
+    if (!["macos", "windows", "linux-deb", "linux-appimage"].includes(system))
+      return env.ASSETS.fetch(request);
+    return new Response(null, {
+      status: 302,
+      headers: { location: "/soon", "cache-control": "no-store" },
+    });
   }
   return new Response(null, {
     status: 302,
-    headers: { location: `/download/${release.version}/${encodeURIComponent(name)}`, "cache-control": "public, max-age=300" },
+    headers: {
+      location: `/download/${release.version}/${encodeURIComponent(name)}`,
+      "cache-control": "public, max-age=300",
+    },
   });
 }
 
@@ -58,30 +72,49 @@ async function latest(request, env, system) {
 async function file(request, env, ctx, version, name) {
   const key = `${version}/${name}`;
   const head = request.method === "HEAD";
-  const obj = head ? await env.RELEASES.head(key)
-    : await env.RELEASES.get(key, { range: request.headers, onlyIf: request.headers });
+  const obj = head
+    ? await env.RELEASES.head(key)
+    : await env.RELEASES.get(key, {
+        range: request.headers,
+        onlyIf: request.headers,
+      });
   if (!obj) return env.ASSETS.fetch(request);
   const headers = new Headers();
   obj.writeHttpMetadata(headers);
   headers.set("etag", obj.httpEtag);
   headers.set("cache-control", IMMUTABLE);
   headers.set("accept-ranges", "bytes");
-  headers.set("content-disposition", `attachment; filename="${name.replace(/["\\]/g, "")}"`);
+  headers.set(
+    "content-disposition",
+    `attachment; filename="${name.replace(/["\\]/g, "")}"`,
+  );
   if (head) {
     headers.set("content-length", String(obj.size));
     return new Response(null, { headers });
   }
   if (!("body" in obj)) {
     // a precondition held back the body: unchanged since the copy the client has, or not the one it asked for
-    return new Response(null, { status: request.headers.has("if-none-match") || request.headers.has("if-modified-since") ? 304 : 412, headers });
+    return new Response(null, {
+      status:
+        request.headers.has("if-none-match") ||
+        request.headers.has("if-modified-since")
+          ? 304
+          : 412,
+      headers,
+    });
   }
   if (starts(request)) ctx.waitUntil(count(env, version, name));
   if (request.headers.has("range") && obj.range) {
     // R2 says which bytes it sent as an offset and length, or a suffix (the last n); the others undefined
     const r = obj.range;
-    const offset = r.suffix !== undefined ? obj.size - r.suffix : (r.offset ?? 0);
-    const length = r.suffix !== undefined ? r.suffix : (r.length ?? obj.size - offset);
-    headers.set("content-range", `bytes ${offset}-${offset + length - 1}/${obj.size}`);
+    const offset =
+      r.suffix !== undefined ? obj.size - r.suffix : (r.offset ?? 0);
+    const length =
+      r.suffix !== undefined ? r.suffix : (r.length ?? obj.size - offset);
+    headers.set(
+      "content-range",
+      `bytes ${offset}-${offset + length - 1}/${obj.size}`,
+    );
     headers.set("content-length", String(length));
     return new Response(obj.body, { status: 206, headers });
   }
@@ -95,7 +128,9 @@ async function file(request, env, ctx, version, name) {
 function starts(request) {
   const range = request.headers.get("range");
   if (range && !/^bytes=0-$/.test(range.trim())) return false;
-  return !/bot|crawl|spider|slurp|preview/i.test(request.headers.get("user-agent") || "");
+  return !/bot|crawl|spider|slurp|preview/i.test(
+    request.headers.get("user-agent") || "",
+  );
 }
 
 /* One more download of version/name today (UTC). The response does not
@@ -106,8 +141,10 @@ async function count(env, version, name) {
   try {
     await env.STATS.prepare(
       "INSERT INTO downloads (day, version, file, n) VALUES (?1, ?2, ?3, 1) " +
-      "ON CONFLICT (day, version, file) DO UPDATE SET n = n + 1",
-    ).bind(day, version, name).run();
+        "ON CONFLICT (day, version, file) DO UPDATE SET n = n + 1",
+    )
+      .bind(day, version, name)
+      .run();
   } catch {
     // the download goes on
   }
