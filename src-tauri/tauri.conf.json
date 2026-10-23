@@ -12,8 +12,8 @@
       {
         "label": "main",
         "title": "pktito",
-        "width": 720,
-        "height": 1018,
+        "width": 680,
+        "height": 800,
         "minWidth": 480,
         "minHeight": 480,
         "visible": false,

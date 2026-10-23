@@ -967,19 +967,21 @@ fn place_window(w: &tauri::WebviewWindow, saved: Option<[f64; 2]>) {
     let _ = w.show();
 }
 
-/// The window's size: as the user last left it, else a portrait page in a
-/// sheet of paper's proportion, 1 by the square root of 2, 720 by 1018. It
-/// reads a transcript down and shows more of the recent list. Either way it
-/// stays within room, the work area less the window's frame: the page made
-/// smaller in proportion, 509 by 720 under a 1366 by 768 screen's taskbar,
-/// and a size the user left cut to fit. Neither goes below the window's
+/// The window's size: as the user last left it, else 680 by 800, 65
+/// characters a line of transcript and 20 lines of it. 720 by 1018, a sheet
+/// of paper's proportion, took the work area's whole height on the commonest
+/// screens, and shrunk in proportion it opened 577 px wide on a 1536 by 864
+/// laptop, at 51 characters a line (the window study, 2026-10-23). It stays
+/// within room, the work area less the window's frame: shorter where it
+/// would take more than nine tenths of its height, 680 by 648 under a 1366
+/// by 768 screen's taskbar, and narrower only on a screen narrower than it;
+/// a size the user left is cut to fit. Neither goes below the window's
 /// minimum, 480 by 480 (tauri.conf.json).
 fn fit_size(saved: Option<[f64; 2]>, room: Option<(f64, f64)>) -> (f64, f64) {
-    let [mut width, mut height] = saved.unwrap_or([720.0, 1018.0]);
+    let [mut width, mut height] = saved.unwrap_or([680.0, 800.0]);
     if let Some((w, h)) = room {
         if saved.is_none() {
-            let k = (w / width).min(h / height).min(1.0);
-            (width, height) = (width * k, height * k);
+            height = height.min((h * 0.9).floor());
         }
         (width, height) = (width.min(w), height.min(h));
     }
@@ -1224,17 +1226,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn page_smaller_in_proportion() {
-        assert_eq!(fit_size(None, Some((2560.0, 1400.0))), (720.0, 1018.0));
-        // 1366 by 768 under Windows 11's 48 px taskbar
-        assert_eq!(fit_size(None, Some((1366.0, 720.0))), (509.0, 720.0));
-        // a screen narrower than the page
-        assert_eq!(fit_size(None, Some((600.0, 1000.0))), (600.0, 848.0));
-        // 1920 by 1080 at 150%: in proportion it would be 475 wide
-        assert_eq!(fit_size(None, Some((1280.0, 672.0))), (480.0, 672.0));
+    fn shorter_not_narrower() {
+        assert_eq!(fit_size(None, Some((2560.0, 1400.0))), (680.0, 800.0));
+        // 1366 by 768 under Windows 11's 48 px taskbar: nine tenths of 720
+        assert_eq!(fit_size(None, Some((1366.0, 720.0))), (680.0, 648.0));
+        // a screen narrower than the window
+        assert_eq!(fit_size(None, Some((600.0, 1000.0))), (600.0, 800.0));
+        // 1920 by 1080 at 150%
+        assert_eq!(fit_size(None, Some((1280.0, 672.0))), (680.0, 604.0));
         // shorter than the window's minimum, which wins
-        assert_eq!(fit_size(None, Some((910.0, 464.0))), (480.0, 480.0));
-        assert_eq!(fit_size(None, None), (720.0, 1018.0));
+        assert_eq!(fit_size(None, Some((910.0, 464.0))), (680.0, 480.0));
+        assert_eq!(fit_size(None, None), (680.0, 800.0));
     }
 
     #[test]

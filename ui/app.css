@@ -422,11 +422,15 @@ html[data-chrome=win] .pk-head { padding-right: var(--caption); }
 .pk-view:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 
 /* ------------------------------------------------------------- transcript -- */
+/* A row: its time in a 112 px column, which a fast cue's end time and its
+   mark fill to 102 px, then its text, at most --column-narrow wide (560 px,
+   about 72 characters a line): rows of 760 px ran to 79 (the window study,
+   2026-10-23). 136 px is the row's padding, the times and their gap. */
 .pk-seg { display: grid; grid-template-columns: 112px minmax(0, 1fr); column-gap: 12px; align-items: baseline; padding: 8px 12px;
-  border-radius: var(--radius-ui); max-width: 760px; }
+  border-radius: var(--radius-ui); max-width: calc(136px + var(--column-narrow) + 12px); }
 .pk-seg.is-current { background: var(--surface); }
 /* what the transcript cost, after its last row: quiet, under the text column */
-.pk-stats { margin: var(--space-3) 0 0; padding: 0 12px 0 136px; max-width: 760px; font: 400 12px/1.5 var(--font-sans);
+.pk-stats { margin: var(--space-3) 0 0; padding: 0 12px 0 136px; max-width: calc(136px + var(--column-narrow) + 12px); font: 400 12px/1.5 var(--font-sans);
   font-variant-numeric: tabular-nums; color: var(--ink-muted); }
 /* a row's times: a segment's start; a cue's start and its end under it,
    with a mark if it reads faster than 20 characters a second. The two the
@@ -465,7 +469,10 @@ html[data-chrome=win] .pk-head { padding-right: var(--caption); }
 .pk-hit { --hl: color-mix(in srgb, var(--plume) 45%, var(--ground)); background: var(--hl); color: inherit; border-radius: 3px;
   box-shadow: 0 0 0 2px var(--hl); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .pk-hit.is-on { --hl: var(--plume); color: var(--on-plume); box-shadow: 0 0 0 2px var(--hl), 0 4px 0 0 var(--ink); }
-@media (max-width: 560px) {
+/* each row's time above its text up to 619 px: beside it, the times' column
+   left 51 characters a line at 577 px, and above it 68 (the window study,
+   2026-10-23) */
+@media (max-width: 619px) {
   .pk-seg { grid-template-columns: 1fr; row-gap: 2px; }
   .pk-stats { padding-left: 12px; }
   /* a cue's start and end side by side above its lines */
