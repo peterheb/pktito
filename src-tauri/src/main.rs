@@ -757,9 +757,21 @@ fn open_in_browser(url: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// xdg-open, which xdg-utils brings and the .deb recommends. Where it is
+/// missing (WSL, a system with no desktop) the spawn's error is "No such file
+/// or directory", which reads as if the file were missing; this says "no
+/// xdg-open" instead.
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+fn xdg_open(arg: impl AsRef<std::ffi::OsStr>, failed: &str) -> Result<(), String> {
+    std::process::Command::new("xdg-open").arg(arg).spawn().map(|_| ()).map_err(|e| match e.kind() {
+        std::io::ErrorKind::NotFound => format!("{failed}: no xdg-open"),
+        _ => format!("{failed}: {e}"),
+    })
+}
+
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn open_in_browser(url: &str) -> Result<(), String> {
-    std::process::Command::new("xdg-open").arg(url).spawn().map(|_| ()).map_err(|e| format!("Couldn't open it: {e}"))
+    xdg_open(url, "Couldn't open it")
 }
 
 #[cfg(target_os = "macos")]
@@ -830,7 +842,7 @@ fn reveal_in_folder(path: &Path) -> Result<(), String> {
     if shown {
         return Ok(());
     }
-    Command::new("xdg-open").arg(path.parent().unwrap_or(Path::new("/"))).spawn().map(|_| ()).map_err(|e| e.to_string())
+    xdg_open(path.parent().unwrap_or(Path::new("/")), "Couldn't show it")
 }
 
 /// `pktito-app --transcribe FILE [--model PKF] [--json]`: the window's
