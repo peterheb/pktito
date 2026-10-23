@@ -413,6 +413,8 @@ html[data-chrome=win] .pk-head { padding-right: var(--caption); }
 .pk-nlist .pk-nn { color: var(--ink); overflow-wrap: anywhere; }
 .pk-nlist .pk-code { font: 400 12.5px/1.55 var(--font-mono); }
 .pk-nlist .pk-nc { overflow-wrap: anywhere; }
+.pk-privacy-box { height: auto; max-height: min(760px, 100%); width: min(600px, 100%); }
+.pk-privacy p { margin: 0 0 12px; max-width: 560px; }
 .pk-notices-body pre { margin: 0; padding: 12px 14px; border-radius: var(--radius-ui); background: var(--surface);
   font: 400 12px/1.5 var(--font-mono); color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
 @media (max-width: 879px) {

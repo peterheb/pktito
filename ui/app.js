@@ -2006,7 +2006,7 @@ async function openAbout() {
 function closeAbout() {
   if (!about) return false;
   about = false;
-  closeNotices();
+  closeSheet();
   if (mascot) mascot.hide();
   document.body.classList.remove("is-about");
   $("about").hidden = true;
@@ -2065,34 +2065,46 @@ async function openNotices() {
   if (!about) return;
   const body = $("notices-body");
   if (!body.childElementCount) body.innerHTML = noticesHtml();
-  body.scrollTop = 0;
-  $("notices").hidden = false;
-  body.focus({ preventScroll: true });
+  openSheet("notices");
+}
+
+/* About's two sheets, the licenses and Privacy: one open at a time, over
+   About, the keyboard kept in it */
+function openSheet(id) {
+  if (!about || !$(id).hidden) return;
+  $(`${id}-body`).scrollTop = 0;
+  $(id).hidden = false;
+  $(`${id}-body`).focus({ preventScroll: true });
   // the mascot rests behind it, home, and draws nothing: it glanced at the
   // pointer moving over the list (the Windows test, 2026-10-21)
   if (mascot) mascot.hide();
 }
 
-/* false if the list was not open */
-function closeNotices() {
-  if ($("notices").hidden) return false;
-  $("notices").hidden = true;
-  $("notices-open").focus({ preventScroll: true });
+/* false if neither was open */
+function closeSheet() {
+  const id = ["notices", "privacy"].find((x) => !$(x).hidden);
+  if (!id) return false;
+  $(id).hidden = true;
+  $(`${id}-open`).focus({ preventScroll: true });
   if (about && mascot) mascot.show();
   return true;
 }
 
 $("notices-open").onclick = () => openNotices();
-$("notices-close").onclick = () => closeNotices();
-$("notices").addEventListener("click", (e) => {
-  if (e.target === $("notices")) closeNotices();
-});
-/* the keyboard stays in the list: its two places, the close button and the text */
-$("notices").addEventListener("keydown", (e) => {
-  if (e.key !== "Tab") return;
-  e.preventDefault();
-  (document.activeElement === $("notices-close") ? $("notices-body") : $("notices-close")).focus();
-});
+$("privacy-open").onclick = () => openSheet("privacy");
+for (const id of ["notices", "privacy"]) {
+  $(`${id}-close`).onclick = () => closeSheet();
+  $(id).addEventListener("click", (e) => {
+    if (e.target === $(id)) closeSheet();
+  });
+  /* the keyboard stays in the sheet: its two places, the close button and
+     the text, whose links Tab passes over (the arrow keys scroll it) */
+  $(id).addEventListener("keydown", (e) => {
+    if (e.key !== "Tab") return;
+    e.preventDefault();
+    (document.activeElement === $(`${id}-close`) ? $(`${id}-body`) : $(`${id}-close`)).focus();
+  });
+}
 
 /* ------------------------------------------------------- drag and drop -- */
 
@@ -2160,7 +2172,7 @@ document.addEventListener("keydown", (e) => {
   // file, then its batch
   if (e.key === "Escape") {
     e.preventDefault();
-    if (closeAsk() || closeMenu() || closeNotices() || closeAbout()) return;
+    if (closeAsk() || closeMenu() || closeSheet() || closeAbout()) return;
     if (query && viewName() === "work") clearFind();
     else back();
     return;
@@ -2204,7 +2216,7 @@ document.addEventListener("keydown", (e) => {
 document.addEventListener("mouseup", (e) => {
   if (e.button !== 3 || !st) return;
   e.preventDefault();
-  if (closeAsk() || closeMenu() || closeNotices() || closeAbout()) return;
+  if (closeAsk() || closeMenu() || closeSheet() || closeAbout()) return;
   back();
 });
 
@@ -2246,8 +2258,10 @@ async function start() {
   $("time").title = "Seconds or frames";
   $("speed").title = "Playback speed (< slower, > faster)";
   showSpeed();
-  $("notices-close").innerHTML = ICON.x;
-  $("notices-close").title = "Close (Esc)";
+  for (const id of ["notices-close", "privacy-close"]) {
+    $(id).innerHTML = ICON.x;
+    $(id).title = "Close (Esc)";
+  }
   // the question's buttons where the system's own dialogs put Cancel: first
   // on macOS, last on Windows
   if (isMac()) $("ask-btns").prepend($("ask-no"));
