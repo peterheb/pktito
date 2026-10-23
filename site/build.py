@@ -460,14 +460,14 @@ write("about", "About pktito",
 privacy = f"""<main class="wrap">
 <section class="page-head">
   <h1 class="display">Privacy</h1>
-  <p class="measure">pktito turns speech into text on your computer. Your recordings, transcripts and settings stay there. The app doesn't send them anywhere, and it has no accounts, ads or tracking. This page says what does reach the internet, and what happens to it.</p>
+  <p class="measure">pktito is local transcription software: it turns speech into text on your computer. Your media files are not uploaded to cloud servers, and the app has no accounts, ads or tracking. This page says what does reach the internet, and what happens to it.</p>
   <p class="measure legal-date">Last updated October 23, 2026</p>
 </section>
 
 <section class="part">
   <h2 class="lead">Downloading a model</h2>
-  <p class="measure">The app downloads its speech model from models.pktito.net, which bunny.net, a content delivery network, serves. As with any website, the server receives your IP address, the time, the file requested and a standard user-agent string. The app sends nothing else: no name, account or device ID, and nothing from your files.</p>
-  <p class="measure">The server logs these requests to keep the service secure and working. We use the logs only to count downloads in aggregate. We don't use them to identify you, combine them with other data, or sell or share them. To skip the download, use a model file you already have: choose “Open a model file…” in the app.</p>
+  <p class="measure">The app downloads AI models from models.pktito.net, hosted on a content delivery network (Cloudflare or bunny.net). The server logs your IP address, the time, the file requested and a standard user-agent string, but no name, account or device identifier.</p>
+  <p class="measure">These logs are used to keep the service secure and to count downloads in aggregate. We don't use them to identify you, combine them with other data, or sell or share them. To skip the download, use a model file you already have: choose “Open a model file…” in the app.</p>
 </section>
 
 <section class="part">
