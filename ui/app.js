@@ -2036,6 +2036,13 @@ $("about").addEventListener("click", (e) => {
 $("about").addEventListener("auxclick", (e) => {
   if (e.target.closest("a[href]")) e.preventDefault();
 });
+/* each says so, with the external icon the language list's Details has,
+   held to the link's last word so that a line never starts with it alone;
+   the licenses sheet, filled later, keeps its long list plain */
+for (const a of $("about").querySelectorAll("a[href]")) {
+  const text = a.textContent, cut = text.lastIndexOf(" ") + 1;
+  a.innerHTML = `${esc(text.slice(0, cut))}<span class="pk-nowrap">${esc(text.slice(cut))}${ICON.external}</span>`;
+}
 
 /* Open source licenses, under About's Everything else: what pktito is
    built from beside its own code and the models About names, each with its

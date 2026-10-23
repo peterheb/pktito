@@ -377,6 +377,8 @@ html[data-chrome=win] .pk-head { padding-right: var(--caption); }
 .pk-about a { color: var(--link); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .2em; cursor: pointer;
   border-radius: 2px; }
 .pk-about a:hover { text-decoration-thickness: 2px; }
+.pk-about a .pk-ico { display: inline-block; vertical-align: -1px; margin-left: 3px; }
+.pk-about a .pk-nowrap { white-space: nowrap; }
 .pk-about a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 @media (max-width: 879px) {
   .pk-about-text { padding: 28px 24px; }
