@@ -1727,11 +1727,6 @@ $("views").onclick = async (e) => {
 
 /* -------------------------------------------------------- copy and save -- */
 
-const plain = (f) => f.segments.map((s) => s.text).join("\n") + "\n";
-const r3 = (x) => Math.round(x * 1000) / 1000;
-/* what Markdown would read as markup, as text */
-const mdEsc = (s) => s.replace(/([\\`*_[\]<>])/g, "\\$1").replace(/^(#|\d+\.|[-+] )/, "\\$1");
-
 const FORMATS = [
   { ext: "txt", label: () => (prefs.times ? "Text with times" : "Text"), key: ["S", false] },
   { ext: "srt", label: () => "Subtitles", key: ["S", true] },
@@ -1740,42 +1735,21 @@ const FORMATS = [
   { ext: "json", label: () => "JSON with word timings" },
 ];
 
-/* hh:mm:ss,mmm of a time in milliseconds, as SRT and WebVTT write one */
-const msStamp = (ms, sep) => `${hms(Math.floor(ms / 1000))}${sep}${String(ms % 1000).padStart(3, "0")}`;
-/* WebVTT reads & < > as markup, so the words' are written as text */
-const vttText = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-/* A file's text in a format: the subtitles its cues, a line break where a
-   cue's second line begins; the JSON both its segments and its cues. */
-async function textOf(f, ext) {
-  const segs = f.segments;
-  if (ext === "txt") return segs.map((s) => (prefs.times ? `${stamp(s.start)}  ` : "") + s.text).join("\n") + "\n";
-  const cues = ext === "srt" || ext === "vtt" || ext === "json" ? await cuesOf(f) : [];
-  if (ext === "srt") return cues.map((c, i) => `${i + 1}\n${msStamp(c.startMs, ",")} --> ${msStamp(c.endMs, ",")}\n${c.text}\n\n`).join("");
-  if (ext === "vtt") {
-    return "WEBVTT\n\n" + cues.map((c, i) => `${i + 1}\n${msStamp(c.startMs, ".")} --> ${msStamp(c.endMs, ".")}\n${vttText(c.text)}\n\n`).join("");
-  }
-  if (ext === "md") {
-    return `# ${mdEsc(f.name)}\n\n` + segs.map((s) => (prefs.times ? `\`${stamp(s.start)}\` ` : "") + mdEsc(s.text)).join("\n\n") + "\n";
-  }
-  // a segment to a few lines, a word to a line
-  const j = JSON.stringify;
-  const seg = (s) => `    {"start": ${r3(s.start)}, "end": ${r3(s.end)}, "text": ${j(s.text)}, "words": [\n` +
-    (s.words || []).map((w) => `      {"start": ${r3(w.start)}, "end": ${r3(w.end)}, "text": ${j(w.text)}}`).join(",\n") + "\n    ]}";
-  const cue = (c) => `    {"start": ${r3(c.start)}, "end": ${r3(c.end)}, "lines": ${j(c.text.split("\n"))}}`;
-  return `{\n  "file": ${j(f.name)},\n  "duration": ${r3(f.duration || 0)},\n  "model": ${j(f.model || null)},\n  "segments": [\n` +
-    segs.map(seg).join(",\n") + "\n  ],\n  \"captions\": [\n" + cues.map(cue).join(",\n") + "\n  ]\n}\n";
-}
+/* A file's text in a format, the bytes pktito-cli writes for it too
+   (src-tauri/src/format.rs): times before each sentence of .txt and .md
+   as the Save menu has them, unless told */
+const textOf = (f, ext, times = !!prefs.times) =>
+  invoke("text_of", { ext, name: f.name, duration: f.duration || 0, model: f.model || null, segments: f.segments, times });
 
 /* What the view shows: a finished transcript's captions as an .srt's text,
    numbered cues and their times, the form subtitle tools take; or its
-   sentences. */
+   sentences, without their times. */
 async function copyText() {
   const f = current();
   if (!f || !f.segments.length) return;
   const cues = !!prefs.captions && modeOf(f) === "review";
   try {
-    await navigator.clipboard.writeText(cues ? await textOf(f, "srt") : plain(f));
+    await navigator.clipboard.writeText(await textOf(f, cues ? "srt" : "txt", false));
     toast(cues ? "Copied captions" : "Copied");
   } catch (e) {
     toast("Couldn't copy", { err: true, detail: String(e) });

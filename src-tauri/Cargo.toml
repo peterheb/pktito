@@ -5,6 +5,9 @@ description = "pktito: drop an audio or video file, read its transcript. On this
 license = "MIT"
 edition = "2021"
 publish = false
+# the window; src/bin/pktito-cli.rs is the command line, which the bundles
+# carry beside it
+default-run = "pktito-app"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -17,6 +20,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
 ureq = "2"
+# the app's data folder for pktito-cli, found as Tauri finds it (its dirs)
+dirs = "7"
 
 # unoptimized, a debug build hashes the model's download at 28 MB/s
 [profile.dev.package.sha2]

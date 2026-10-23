@@ -6,15 +6,7 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod audio;
-mod decode;
-mod download;
-mod model;
-mod mp4;
-mod pktito;
-mod recent;
-mod transcribe;
-
+use pktito_app::{audio, decode, download, format, model, pktito, recent, transcribe};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -93,17 +85,6 @@ struct Status {
     video: &'static [&'static str],
 }
 
-/// The model file to transcribe with: the user's own, else the catalog
-/// model in use, if it is on this computer.
-fn usable(data: &Path, s: &model::Settings) -> Option<PathBuf> {
-    if let Some(p) = s.model_file.as_ref().filter(|p| p.is_file()) {
-        return Some(p.clone());
-    }
-    let e = model::entry(s.model.as_deref()?)?;
-    let dir = data.join("models");
-    model::have(&dir, e).then(|| model::file_in(&dir, e))
-}
-
 /// A file dialog owned by the window on Windows, so that it is modal and in
 /// front of it: one without an owner opened behind the window in the
 /// Windows test (2026-10-21), where it could sit unnoticed. macOS runs its
@@ -117,18 +98,13 @@ fn file_dialog(app: &AppHandle) -> FileDialogBuilder<tauri::Wry> {
     d
 }
 
-/// Load the model at path into the engine, unless it is the one there.
-/// PKTITO_THREADS, for finding out what a machine does on fewer threads (the
-/// CLI's -t); unset, 0: one a core, and pktito's choice among them.
-fn threads_wanted() -> i32 {
-    std::env::var("PKTITO_THREADS").ok().and_then(|t| t.trim().parse().ok()).unwrap_or(0)
-}
-
+/// Load the model at path into the engine, unless it is the one there, on
+/// PKTITO_THREADS's threads (transcribe::threads_wanted).
 fn ensure_engine<'a>(slot: &'a mut Option<Engine>, path: &Path) -> Result<&'a mut Engine, String> {
     if slot.as_ref().map(|e| e.path != path).unwrap_or(true) {
         *slot = None;
         let model = pktito::Model::load(path)?;
-        let asr = pktito::Asr::new(&model, threads_wanted())?;
+        let asr = pktito::Asr::new(&model, transcribe::threads_wanted())?;
         *slot = Some(Engine { model, asr, path: path.to_path_buf() });
     }
     Ok(slot.as_mut().unwrap())
@@ -146,7 +122,7 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, String> 
     let dir = data.join("models");
     let download = state.download.lock().unwrap().as_ref().map(|j| j.state()).filter(|d| d.step != "done" && d.step != "cancelled");
     Ok(Status {
-        ready: usable(&data, &s).is_some(),
+        ready: model::usable(&data, &s).is_some(),
         model: s.model,
         model_file: s.model_file,
         catalog: model::CATALOG
@@ -361,7 +337,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
         Ok(d) => d,
         Err(why) => return fail("Can't transcribe", why),
     };
-    let Some(model_path) = usable(&data, &model::load_settings(&data)) else {
+    let Some(model_path) = model::usable(&data, &model::load_settings(&data)) else {
         return fail("No model", String::new());
     };
     let mut slot = state.engine.lock().unwrap();
@@ -496,23 +472,7 @@ fn clear_recent(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// Where stem.ext can go in dir without writing over anything: stem.ext,
-/// else "stem 2.ext" ("stem (2).ext" on Windows, as Explorer numbers
-/// copies), and so on.
-fn free_path(dir: &Path, stem: &str, ext: &str) -> PathBuf {
-    let first = dir.join(format!("{stem}.{ext}"));
-    if !first.exists() {
-        return first;
-    }
-    (2..)
-        .map(|n| dir.join(if cfg!(windows) { format!("{stem} ({n}).{ext}") } else { format!("{stem} {n}.{ext}") }))
-        .find(|p| !p.exists())
-        .unwrap()
-}
-
-fn stem_of(original: &Path) -> String {
-    original.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_else(|| "transcript".into())
-}
+use format::{free_path, stem_of};
 
 #[derive(Serialize)]
 struct Saved {
@@ -618,6 +578,13 @@ fn captions(words: Vec<TimedWord>, english: i32, duration: f64) -> Result<Vec<pk
     pktito::captions(&w, english, ms(duration))
 }
 
+/// A finished transcript in one of Save's formats (format.rs), the bytes
+/// pktito-cli writes for it too.
+#[tauri::command]
+fn text_of(ext: String, name: String, duration: f64, model: Option<String>, segments: Vec<transcribe::Segment>, times: bool) -> Result<String, String> {
+    format::text(&format::Transcript { name: &name, duration, model: model.as_deref(), segments: &segments }, &ext, times)
+}
+
 /// Show a file in the file manager, selected.
 #[tauri::command]
 fn reveal(path: String) -> Result<(), String> {
@@ -629,7 +596,7 @@ fn reveal(path: String) -> Result<(), String> {
 #[tauri::command]
 fn reveal_model(app: AppHandle) -> Result<(), String> {
     let data = data_dir(&app)?;
-    match usable(&data, &model::load_settings(&data)) {
+    match model::usable(&data, &model::load_settings(&data)) {
         Some(file) => reveal_in_folder(&file),
         None => {
             let dir = data.join("models");
@@ -861,7 +828,7 @@ fn headless(args: &[String]) -> Result<(), String> {
     let fps = fps_of(Path::new(file));
     let t1 = Instant::now();
     let model = pktito::Model::load(&model_path)?;
-    let mut asr = pktito::Asr::new(&model, threads_wanted())?;
+    let mut asr = pktito::Asr::new(&model, transcribe::threads_wanted())?;
     let (segs, _) = transcribe::run(
         &model,
         &mut asr,
@@ -1213,6 +1180,7 @@ fn main() {
             reveal,
             open_link,
             captions,
+            text_of,
             forget_recent,
             reveal_model,
             window_menu

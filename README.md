@@ -122,7 +122,8 @@ credits alone.
 The window shows no shortcuts; tooltips name them. Only macOS has a menu
 bar. On Windows and Linux the page takes the shortcuts itself: Ctrl+O adds
 files, Ctrl+S and Ctrl+Shift+S save as text and as subtitles, Ctrl+F finds.
-Space plays and pauses.
+Space plays and pauses; < and > slow playback down and speed it up, from
+0.75x to 2x, which the word under the play button shows and opens.
 
 A finished transcript reads as its sentences, as the model wrote them, or as
 Captions: its subtitle track, cut into cues of one or two lines of 42
@@ -134,6 +135,30 @@ ticks work in either. Saving writes `.txt`, `.srt`, `.vtt`, `.md`, or
 captions' cues, the text and Markdown the sentences, and the JSON both, with
 every word's start and end. It never writes over a file: a second save is
 "name 2.txt" ("name (2).txt" on Windows, as Explorer numbers copies).
+
+## Command line
+
+`pktito-cli` is the app's transcription from a terminal, and comes with it:
+the same decoders, the model the app is set to, and Save's five formats,
+written by the same code as the window's (`src-tauri/src/format.rs`), so
+that the two write the same bytes.
+
+```sh
+pktito-cli talk.mp4                      # the transcript, on the terminal
+pktito-cli --srt *.mp4                   # subtitles beside each file
+pktito-cli -m multilingual -f json -o out interview.m4a
+pktito-cli models                        # which are here, which is in use
+pktito-cli download parakeet-tdt-0.6b-v3
+```
+
+`-m` takes a model's name, its label (`english`, `multilingual`) or a
+`.pkf` file; `--times` puts each sentence's time before it in `.txt` and
+`.md`; `-o` names the file, or for several files the folder, and nothing is
+written over. A model downloaded from here is the app's too, and the one it
+uses if it had none. Progress goes to stderr when that is a terminal. The
+bundles carry it beside the window's program (`src-tauri/src/bin`): in
+`/usr/bin` from the Linux package, in `pktito.app/Contents/MacOS` on macOS,
+and in the install folder on Windows.
 
 ## Building
 

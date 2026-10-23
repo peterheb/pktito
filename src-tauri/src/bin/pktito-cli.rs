@@ -1,0 +1,269 @@
+//! pktito-cli: the app's transcription from a terminal. It reads every file
+//! the window reads, through the same decoders (decode.rs), uses the model
+//! the app is set to unless told another, and writes Save's formats with
+//! the window's own code (format.rs), so its files and the window's are the
+//! same bytes. It comes with the app, beside the window's program: the
+//! bundles carry every program in src/bin.
+
+use pktito_app::{decode, download, format, model, pktito, transcribe};
+use std::fs;
+use std::io::{IsTerminal, Write};
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::time::Duration;
+
+const USAGE: &str = "\
+usage: pktito-cli [options] FILE...    transcribe audio or video: one file's
+                                      transcript on the terminal, several's
+                                      each beside its file
+       pktito-cli models               the models, which are here, which is in use
+       pktito-cli download MODEL       a model, for the app and pktito-cli both
+  -m, --model MODEL    a model's name (pktito-cli models lists them) or a .pkf
+                       file (default: the one the app uses)
+  -f, --format F       txt, md, srt, vtt or json (default txt); or --txt, --md,
+                       --srt, --vtt, --json
+      --times          each sentence's time before it, in txt and md
+  -o, --output PATH    one file's transcript to PATH; several's into the
+                       folder PATH
+  -t, --threads N      threads (default: one a core)
+  -q, --quiet          no progress
+";
+
+fn main() {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    std::process::exit(match run(&args) {
+        Ok(code) => code,
+        Err(why) => {
+            eprintln!("pktito-cli: {why}");
+            1
+        }
+    });
+}
+
+struct Opts {
+    files: Vec<String>,
+    model: Option<String>,
+    ext: String,
+    times: bool,
+    output: Option<PathBuf>,
+    threads: i32,
+    quiet: bool,
+}
+
+fn run(args: &[String]) -> Result<i32, String> {
+    match args.first().map(String::as_str) {
+        None | Some("-h" | "--help" | "help") => {
+            print!("{USAGE}");
+            return Ok(if args.is_empty() { 2 } else { 0 });
+        }
+        Some("--version") => {
+            println!("pktito-cli {}", env!("CARGO_PKG_VERSION"));
+            return Ok(0);
+        }
+        Some("models") => return models(),
+        Some("download") => return fetch(args.get(1).ok_or("download MODEL: which model?")?),
+        _ => {}
+    }
+    let mut o = Opts { files: vec![], model: None, ext: "txt".into(), times: false, output: None, threads: transcribe::threads_wanted(), quiet: false };
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        let mut value = |flag: &str| it.next().cloned().ok_or(format!("{flag} needs a value"));
+        match a.as_str() {
+            "-m" | "--model" => o.model = Some(value(a)?),
+            "-f" | "--format" => o.ext = value(a)?.to_lowercase(),
+            "--txt" | "--md" | "--srt" | "--vtt" | "--json" => o.ext = a[2..].into(),
+            "--times" => o.times = true,
+            "-o" | "--output" => o.output = Some(PathBuf::from(value(a)?)),
+            "-t" | "--threads" => o.threads = value(a)?.parse().map_err(|_| format!("{a}: a number of threads"))?,
+            "-q" | "--quiet" => o.quiet = true,
+            "-" => return Err("reads files, not standard input".into()),
+            f if f.starts_with('-') => return Err(format!("no option {f}\n{USAGE}")),
+            f => o.files.push(f.into()),
+        }
+    }
+    if !format::FORMATS.contains(&o.ext.as_str()) {
+        return Err(format!("no format {}: txt, md, srt, vtt or json", o.ext));
+    }
+    if o.files.is_empty() {
+        return Err(format!("which files?\n{USAGE}"));
+    }
+    transcribe_all(&o)
+}
+
+/// Each file transcribed and written: on to the next after one that fails,
+/// which says why; 1 if any did.
+fn transcribe_all(o: &Opts) -> Result<i32, String> {
+    let path = model_path(o.model.as_deref())?;
+    let model = pktito::Model::load(&path)?;
+    let mut asr = pktito::Asr::new(&model, o.threads)?;
+    let name = model.name();
+    let show = !o.quiet && std::io::stderr().is_terminal();
+    let mut failed = 0;
+    for f in &o.files {
+        let file = Path::new(f);
+        let label = file.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| f.clone());
+        let done = (|| -> Result<Option<PathBuf>, String> {
+            if show {
+                status(&format!("{label}: reading the audio"));
+            }
+            let x = decode::decode(file).map_err(|e| e.message())?;
+            let (segs, _) = transcribe::run(
+                &model,
+                &mut asr,
+                &x,
+                |done, _| {
+                    if show {
+                        status(&format!("{label}: transcribing {:.0}%", done * 100.0));
+                    }
+                },
+                || false,
+            )?;
+            let t = format::Transcript { name: &label, duration: x.len() as f64 / decode::RATE as f64, model: Some(name.as_str()), segments: &segs };
+            let text = format::text(&t, &o.ext, o.times)?;
+            let to = destination(o, file);
+            if show {
+                status("");
+            }
+            match &to {
+                None => {
+                    let mut out = std::io::stdout().lock();
+                    out.write_all(text.as_bytes()).and_then(|_| out.flush()).map_err(|e| e.to_string())?;
+                }
+                Some(p) => fs::write(p, &text).map_err(|e| format!("couldn't write {}: {e}", p.display()))?,
+            }
+            Ok(to)
+        })();
+        match done {
+            Ok(Some(p)) if !o.quiet => eprintln!("{label}: {}", p.display()),
+            Ok(_) => {}
+            Err(why) => {
+                if show {
+                    status("");
+                }
+                eprintln!("pktito-cli: {label}: {why}");
+                failed += 1;
+            }
+        }
+    }
+    Ok(if failed > 0 { 1 } else { 0 })
+}
+
+/// A line of progress on stderr, written over the last: padded with spaces
+/// rather than cleared with an escape, which an older Windows console would
+/// print as it is; "" clears it.
+fn status(line: &str) {
+    if line.is_empty() {
+        eprint!("\r{:79}\r", "");
+    } else {
+        eprint!("\r{line:<79}");
+    }
+}
+
+/// Where a file's transcript goes: the terminal, for one file and no -o;
+/// -o itself for one file, unless it is a folder; else into -o's folder,
+/// or beside the file, by its name and never over another (format.rs,
+/// free_path, as the window saves)
+fn destination(o: &Opts, file: &Path) -> Option<PathBuf> {
+    let one = o.files.len() == 1;
+    let stem = format::stem_of(file);
+    match &o.output {
+        None if one => None,
+        None => Some(format::free_path(file.parent().unwrap_or(Path::new("")), &stem, &o.ext)),
+        Some(p) if one && !p.is_dir() && !p.to_string_lossy().ends_with(['/', '\\']) => Some(p.clone()),
+        Some(dir) => {
+            let _ = fs::create_dir_all(dir);
+            Some(format::free_path(dir, &stem, &o.ext))
+        }
+    }
+}
+
+/// The model to transcribe with: a .pkf named, or a catalog model by name,
+/// downloaded; else the one the app uses (model::usable)
+fn model_path(arg: Option<&str>) -> Result<PathBuf, String> {
+    let data = model::data_dir().ok_or("no data folder for the app on this system")?;
+    let Some(m) = arg else {
+        return model::usable(&data, &model::load_settings(&data))
+            .ok_or_else(|| "no model yet: choose one in the app, or pktito-cli download parakeet-tdt-0.6b-v2".into());
+    };
+    if Path::new(m).is_file() {
+        return Ok(PathBuf::from(m));
+    }
+    let e = entry(m)?;
+    let dir = data.join("models");
+    if !model::have(&dir, e) {
+        return Err(format!("{} isn't downloaded: pktito-cli download {}", e.name, e.name));
+    }
+    Ok(model::file_in(&dir, e))
+}
+
+/// A catalog model by its name, its label ("english", "multilingual") or its
+/// name's last part ("v2")
+fn entry(m: &str) -> Result<&'static model::Entry, String> {
+    model::CATALOG
+        .iter()
+        .find(|e| e.name == m || e.label.eq_ignore_ascii_case(m) || e.name.rsplit('-').next() == Some(m))
+        .ok_or_else(|| format!("no model {m}: pktito-cli models lists them"))
+}
+
+/// The catalog, each model's size and whether it is here, and the one in use
+fn models() -> Result<i32, String> {
+    let data = model::data_dir().ok_or("no data folder for the app on this system")?;
+    let s = model::load_settings(&data);
+    let using = model::usable(&data, &s);
+    let dir = data.join("models");
+    for e in model::CATALOG {
+        let here = model::have(&dir, e);
+        let state = if !here { "not downloaded" } else if using.as_deref() == Some(model::file_in(&dir, e).as_path()) { "in use" } else { "downloaded" };
+        println!("{:<22}{:<14}{:<24}{:>4} MB  {state}", e.name, e.label, e.about, (e.bytes as f64 / 1e6).round());
+    }
+    if let Some(own) = s.model_file.as_ref().filter(|p| p.is_file()) {
+        println!("{:<22}{}  in use", "your own file", own.display());
+    }
+    Ok(0)
+}
+
+/// A model downloaded into the app's models folder, as the window does it:
+/// resuming what a stopped one kept, trying again, and checked against its
+/// size and SHA-256. The app then uses it if it had none.
+fn fetch(m: &str) -> Result<i32, String> {
+    let e = entry(m)?;
+    let data = model::data_dir().ok_or("no data folder for the app on this system")?;
+    let dir = data.join("models");
+    if model::have(&dir, e) {
+        println!("{}", model::file_in(&dir, e).display());
+        return Ok(0);
+    }
+    fs::create_dir_all(&dir).map_err(|err| format!("couldn't make {}: {err}", dir.display()))?;
+    let job = Arc::new(download::Job::new(e, &dir));
+    let (tx, rx) = std::sync::mpsc::channel();
+    let show = std::io::stderr().is_terminal();
+    job.start(
+        e,
+        dir.clone(),
+        move |s| match s.step {
+            "failed" => {
+                status("");
+                eprintln!("{}: {}{}", s.why, s.detail.replace('\n', "; "), if s.retry { " (trying again)" } else { "" })
+            }
+            _ if show => status(&format!("{} {}: {} of {} MB", s.step, s.name, s.got / 1_000_000, s.total / 1_000_000)),
+            _ => {}
+        },
+        move |p| {
+            let _ = tx.send(p);
+        },
+    );
+    while job.alive() {
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    if show {
+        status("");
+    }
+    let path = rx.try_recv().map_err(|_| job.state().why)?;
+    let mut s = model::load_settings(&data);
+    if s.model.is_none() && s.model_file.is_none() {
+        s.model = Some(e.name.to_string());
+        model::save_settings(&data, &s)?;
+    }
+    println!("{}", path.display());
+    Ok(0)
+}

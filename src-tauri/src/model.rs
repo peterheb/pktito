@@ -64,6 +64,27 @@ pub fn entry(name: &str) -> Option<&'static Entry> {
     CATALOG.iter().find(|e| e.name == name)
 }
 
+/// tauri.conf.json's identifier, which names the app's data folder
+pub const IDENTIFIER: &str = "net.pktito.app";
+
+/// The app's data folder, its settings, models and recent list: where Tauri
+/// puts it for the window (app_data_dir: the system's data folder, then the
+/// identifier), for pktito-cli, which has no Tauri to ask.
+pub fn data_dir() -> Option<PathBuf> {
+    dirs::data_dir().map(|d| d.join(IDENTIFIER))
+}
+
+/// The model file to transcribe with: the user's own, else the catalog
+/// model in use, if it is on this computer.
+pub fn usable(data: &Path, s: &Settings) -> Option<PathBuf> {
+    if let Some(p) = s.model_file.as_ref().filter(|p| p.is_file()) {
+        return Some(p.clone());
+    }
+    let e = entry(s.model.as_deref()?)?;
+    let dir = data.join("models");
+    have(&dir, e).then(|| file_in(&dir, e))
+}
+
 /// What the app remembers between runs: the catalog model in use, or a
 /// model file of the user's own, used instead when set; how it saves; and
 /// the window's size as the user last left it, in logical pixels.

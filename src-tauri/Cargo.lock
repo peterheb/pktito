@@ -2232,6 +2232,7 @@ name = "pktito-app"
 version = "0.8.2"
 dependencies = [
  "cc",
+ "dirs",
  "serde",
  "serde_json",
  "sha2",

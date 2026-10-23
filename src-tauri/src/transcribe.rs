@@ -12,6 +12,12 @@ pub const MAX_CHUNK_S: f64 = 30.0;
 /// A segment with no sentence end in this long is cut at a word anyway.
 const MAX_SEGMENT_S: f64 = 20.0;
 
+/// PKTITO_THREADS, for finding out what a machine does on fewer threads (the
+/// engine CLI's -t); unset, 0: one a core, and pktito's choice among them.
+pub fn threads_wanted() -> i32 {
+    std::env::var("PKTITO_THREADS").ok().and_then(|t| t.trim().parse().ok()).unwrap_or(0)
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Word {
     pub start: f64,
