@@ -21,14 +21,23 @@ pub fn free_path(dir: &Path, stem: &str, ext: &str) -> PathBuf {
         return first;
     }
     (2..)
-        .map(|n| dir.join(if cfg!(windows) { format!("{stem} ({n}).{ext}") } else { format!("{stem} {n}.{ext}") }))
+        .map(|n| {
+            dir.join(if cfg!(windows) {
+                format!("{stem} ({n}).{ext}")
+            } else {
+                format!("{stem} {n}.{ext}")
+            })
+        })
         .find(|p| !p.exists())
         .unwrap()
 }
 
 /// A transcript's name, its original's without the extension
 pub fn stem_of(original: &Path) -> String {
-    original.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_else(|| "transcript".into())
+    original
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "transcript".into())
 }
 
 /// What a transcript is written from: the file's name, the recording's
@@ -45,20 +54,57 @@ pub fn text(t: &Transcript, ext: &str, times: bool) -> Result<String, String> {
     let segs = t.segments;
     Ok(match ext {
         "txt" => {
-            let lines: Vec<String> = segs.iter().map(|s| if times { format!("{}  {}", stamp(s.start), s.text) } else { s.text.clone() }).collect();
+            let lines: Vec<String> = segs
+                .iter()
+                .map(|s| {
+                    if times {
+                        format!("{}  {}", stamp(s.start), s.text)
+                    } else {
+                        s.text.clone()
+                    }
+                })
+                .collect();
             lines.join("\n") + "\n"
         }
         "md" => {
-            let paras: Vec<String> =
-                segs.iter().map(|s| if times { format!("`{}` {}", stamp(s.start), md_esc(&s.text)) } else { md_esc(&s.text) }).collect();
+            let paras: Vec<String> = segs
+                .iter()
+                .map(|s| {
+                    if times {
+                        format!("`{}` {}", stamp(s.start), md_esc(&s.text))
+                    } else {
+                        md_esc(&s.text)
+                    }
+                })
+                .collect();
             format!("# {}\n\n{}\n", md_esc(t.name), paras.join("\n\n"))
         }
-        "srt" => cues(t)?.iter().enumerate().map(|(i, c)| format!("{}\n{} --> {}\n{}\n\n", i + 1, ms_stamp(c.start, ','), ms_stamp(c.end, ','), c.text)).collect(),
+        "srt" => cues(t)?
+            .iter()
+            .enumerate()
+            .map(|(i, c)| {
+                format!(
+                    "{}\n{} --> {}\n{}\n\n",
+                    i + 1,
+                    ms_stamp(c.start, ','),
+                    ms_stamp(c.end, ','),
+                    c.text
+                )
+            })
+            .collect(),
         "vtt" => {
             let body: String = cues(t)?
                 .iter()
                 .enumerate()
-                .map(|(i, c)| format!("{}\n{} --> {}\n{}\n\n", i + 1, ms_stamp(c.start, '.'), ms_stamp(c.end, '.'), vtt_text(&c.text)))
+                .map(|(i, c)| {
+                    format!(
+                        "{}\n{} --> {}\n{}\n\n",
+                        i + 1,
+                        ms_stamp(c.start, '.'),
+                        ms_stamp(c.end, '.'),
+                        vtt_text(&c.text)
+                    )
+                })
                 .collect();
             format!("WEBVTT\n\n{body}")
         }
@@ -83,7 +129,10 @@ const PK_CUE_PAUSE: i32 = 8;
 fn cues(t: &Transcript) -> Result<Vec<Cue>, String> {
     let ms = |s: f64| (s * 1000.0).round() as i64;
     let words: Vec<&crate::transcribe::Word> = t.segments.iter().flat_map(|s| &s.words).collect();
-    let timed: Vec<(String, i64, i64)> = words.iter().map(|w| (w.text.clone(), ms(w.start), ms(w.end))).collect();
+    let timed: Vec<(String, i64, i64)> = words
+        .iter()
+        .map(|w| (w.text.clone(), ms(w.start), ms(w.end)))
+        .collect();
     let english = match t.model.and_then(model::entry) {
         Some(e) if e.languages == ["en"] => 1,
         _ => -1,
@@ -95,14 +144,22 @@ fn cues(t: &Transcript) -> Result<Vec<Cue>, String> {
             let mut text = String::new();
             for (k, w) in words[first..first + n].iter().enumerate() {
                 if k > 0 {
-                    text.push(if (first + k) as i32 == c.line2 { '\n' } else { ' ' });
+                    text.push(if (first + k) as i32 == c.line2 {
+                        '\n'
+                    } else {
+                        ' '
+                    });
                 }
                 text.push_str(&w.text);
             }
             if c.flags & PK_CUE_PAUSE != 0 {
                 text.push('\u{2026}');
             }
-            Cue { start: c.start, end: c.end, text }
+            Cue {
+                start: c.start,
+                end: c.end,
+                text,
+            }
         })
         .collect())
 }
@@ -111,9 +168,25 @@ fn cues(t: &Transcript) -> Result<Vec<Cue>, String> {
 fn json(t: &Transcript, cues: &[Cue]) -> String {
     let j = |s: &str| serde_json::to_string(s).unwrap();
     let seg = |s: &Segment| {
-        let words: Vec<String> =
-            s.words.iter().map(|w| format!("      {{\"start\": {}, \"end\": {}, \"text\": {}}}", r3(w.start), r3(w.end), j(&w.text))).collect();
-        format!("    {{\"start\": {}, \"end\": {}, \"text\": {}, \"words\": [\n{}\n    ]}}", r3(s.start), r3(s.end), j(&s.text), words.join(",\n"))
+        let words: Vec<String> = s
+            .words
+            .iter()
+            .map(|w| {
+                format!(
+                    "      {{\"start\": {}, \"end\": {}, \"text\": {}}}",
+                    r3(w.start),
+                    r3(w.end),
+                    j(&w.text)
+                )
+            })
+            .collect();
+        format!(
+            "    {{\"start\": {}, \"end\": {}, \"text\": {}, \"words\": [\n{}\n    ]}}",
+            r3(s.start),
+            r3(s.end),
+            j(&s.text),
+            words.join(",\n")
+        )
     };
     let cue = |c: &Cue| {
         let lines: Vec<&str> = c.text.split('\n').collect();
@@ -185,7 +258,9 @@ fn md_esc(s: &str) -> String {
 
 /// WebVTT reads & < > as markup, so the words' are written as text
 fn vtt_text(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }
 
 #[cfg(test)]
@@ -194,12 +269,25 @@ mod tests {
     use crate::transcribe::Word;
 
     fn word(text: &str, start: f64, end: f64) -> Word {
-        Word { start, end, text: text.into() }
+        Word {
+            start,
+            end,
+            text: text.into(),
+        }
     }
 
     fn segment(words: Vec<Word>) -> Segment {
-        let text = words.iter().map(|w| w.text.as_str()).collect::<Vec<_>>().join(" ");
-        Segment { start: words[0].start, end: words.last().unwrap().end, text, words }
+        let text = words
+            .iter()
+            .map(|w| w.text.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
+        Segment {
+            start: words[0].start,
+            end: words.last().unwrap().end,
+            text,
+            words,
+        }
     }
 
     #[test]
@@ -216,7 +304,10 @@ mod tests {
 
     #[test]
     fn markup_written_as_text() {
-        assert_eq!(md_esc("a *b* [c] <d> e_f `g` h\\i"), "a \\*b\\* \\[c\\] \\<d\\> e\\_f \\`g\\` h\\\\i");
+        assert_eq!(
+            md_esc("a *b* [c] <d> e_f `g` h\\i"),
+            "a \\*b\\* \\[c\\] \\<d\\> e\\_f \\`g\\` h\\\\i"
+        );
         assert_eq!(md_esc("# not a heading"), "\\# not a heading");
         assert_eq!(md_esc("1999. A year"), "\\1999. A year");
         assert_eq!(md_esc("- not a list"), "\\- not a list");
@@ -226,11 +317,25 @@ mod tests {
 
     #[test]
     fn text_and_markdown() {
-        let segs = vec![segment(vec![word("Hello", 0.0, 0.4), word("there.", 0.4, 0.9)]), segment(vec![word("# Two", 61.5, 62.0)])];
-        let t = Transcript { name: "a_b.mp3", duration: 63.0, model: Some("parakeet-tdt-0.6b-v2"), segments: &segs };
+        let segs = vec![
+            segment(vec![word("Hello", 0.0, 0.4), word("there.", 0.4, 0.9)]),
+            segment(vec![word("# Two", 61.5, 62.0)]),
+        ];
+        let t = Transcript {
+            name: "a_b.mp3",
+            duration: 63.0,
+            model: Some("parakeet-tdt-0.6b-v2"),
+            segments: &segs,
+        };
         assert_eq!(text(&t, "txt", false).unwrap(), "Hello there.\n# Two\n");
-        assert_eq!(text(&t, "txt", true).unwrap(), "00:00:00.00  Hello there.\n00:01:01.50  # Two\n");
-        assert_eq!(text(&t, "md", true).unwrap(), "# a\\_b.mp3\n\n`00:00:00.00` Hello there.\n\n`00:01:01.50` \\# Two\n");
+        assert_eq!(
+            text(&t, "txt", true).unwrap(),
+            "00:00:00.00  Hello there.\n00:01:01.50  # Two\n"
+        );
+        assert_eq!(
+            text(&t, "md", true).unwrap(),
+            "# a\\_b.mp3\n\n`00:00:00.00` Hello there.\n\n`00:01:01.50` \\# Two\n"
+        );
         assert!(text(&t, "doc", false).is_err());
     }
 }

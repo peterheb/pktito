@@ -86,7 +86,10 @@ impl Job {
     /// Run the download on a thread, telling `tell` each change of state
     /// (progress at most ten times a second); `done` gets the checked file.
     pub fn start(
-        self: &std::sync::Arc<Job>, e: &'static Entry, dir: PathBuf, tell: impl Fn(&State) + Send + 'static,
+        self: &std::sync::Arc<Job>,
+        e: &'static Entry,
+        dir: PathBuf,
+        tell: impl Fn(&State) + Send + 'static,
         done: impl FnOnce(PathBuf) + Send + 'static,
     ) {
         self.alive.store(true, Ordering::Release);
@@ -128,7 +131,11 @@ impl Job {
                     // a rate over a second or more, smoothed over a few
                     if dt >= 1.0 {
                         let rate = got.saturating_sub(b0) as f64 / dt;
-                        s.speed = if s.speed > 0.0 { 0.7 * s.speed + 0.3 * rate } else { rate };
+                        s.speed = if s.speed > 0.0 {
+                            0.7 * s.speed + 0.3 * rate
+                        } else {
+                            rate
+                        };
                     }
                 });
                 if dt >= 1.0 {
@@ -159,7 +166,8 @@ impl Job {
                 Err(Stop::Hard(p)) => {
                     let got = model::partial(dir, e);
                     self.set(|s| {
-                        (s.step, s.got, s.speed, s.retry, s.trying) = ("failed", got, 0.0, false, false);
+                        (s.step, s.got, s.speed, s.retry, s.trying) =
+                            ("failed", got, 0.0, false, false);
                         s.problem = Some(p);
                     });
                     return None;
@@ -171,7 +179,8 @@ impl Job {
                         wait = Duration::from_secs(2);
                     }
                     self.set(|s| {
-                        (s.step, s.got, s.speed, s.retry, s.trying) = ("failed", got, 0.0, true, false);
+                        (s.step, s.got, s.speed, s.retry, s.trying) =
+                            ("failed", got, 0.0, true, false);
                         s.problem = Some(p);
                     });
                     tell(&self.state());

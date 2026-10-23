@@ -34,7 +34,9 @@ pub fn peaks(x: &[f32], n: usize) -> Vec<u8> {
         })
         .collect();
     let top = db.iter().cloned().fold(f64::MIN, f64::max);
-    db.iter().map(|&d| (((d - (top - 48.0)) / 48.0).clamp(0.0, 1.0) * 255.0).round() as u8).collect()
+    db.iter()
+        .map(|&d| (((d - (top - 48.0)) / 48.0).clamp(0.0, 1.0) * 255.0).round() as u8)
+        .collect()
 }
 
 /// Where the cache keeps a transcript's audio.

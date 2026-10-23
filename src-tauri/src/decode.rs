@@ -61,11 +61,16 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
     if !path.is_file() {
         return Err(DecodeError::Unreadable("decode.not_found", String::new()));
     }
-    let forced = env::var("PKTITO_DECODER").unwrap_or_default().to_lowercase();
+    let forced = env::var("PKTITO_DECODER")
+        .unwrap_or_default()
+        .to_lowercase();
     if forced == "ffmpeg" || !cfg!(any(target_os = "macos", target_os = "windows")) {
         return match ffmpeg() {
             Some(ff) => decode_ffmpeg(&ff, path),
-            None => Err(DecodeError::Unreadable("decode.needs_ffmpeg", String::new())),
+            None => Err(DecodeError::Unreadable(
+                "decode.needs_ffmpeg",
+                String::new(),
+            )),
         };
     }
     match decode_os(path) {
@@ -73,7 +78,10 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
         Err(DecodeError::NoAudio) => Err(DecodeError::NoAudio),
         Err(DecodeError::Unreadable(why, detail)) => match (forced.as_str(), ffmpeg()) {
             ("os", _) => Err(DecodeError::Unreadable(why, detail)),
-            (_, None) if why == UNREADABLE => Err(DecodeError::Unreadable("decode.unreadable_try_ffmpeg", detail)),
+            (_, None) if why == UNREADABLE => Err(DecodeError::Unreadable(
+                "decode.unreadable_try_ffmpeg",
+                detail,
+            )),
             (_, None) => Err(DecodeError::Unreadable(why, detail)),
             (_, Some(ff)) => decode_ffmpeg(&ff, path),
         },
@@ -95,7 +103,11 @@ fn out_of_memory() -> DecodeError {
 
 /// A malloc'd signal from C, into a Vec, and freed.
 fn take_c(y: *mut f32, n: usize) -> Vec<f32> {
-    let x = if n > 0 { unsafe { std::slice::from_raw_parts(y, n) }.to_vec() } else { Vec::new() };
+    let x = if n > 0 {
+        unsafe { std::slice::from_raw_parts(y, n) }.to_vec()
+    } else {
+        Vec::new()
+    };
     unsafe { free(y as *mut c_void) };
     x
 }
@@ -116,7 +128,10 @@ struct Mix {
 
 impl Mix {
     fn new(f: &WavFormat) -> Result<Mix, DecodeError> {
-        let m = Mix { m: unsafe { pkapp_mix_new(RATE as c_uint) }, ch: f.ch as usize };
+        let m = Mix {
+            m: unsafe { pkapp_mix_new(RATE as c_uint) },
+            ch: f.ch as usize,
+        };
         if m.m.is_null() || unsafe { pkapp_mix_format_wave(m.m, f.rate, f.ch, f.mask) } != 0 {
             return Err(DecodeError::Unreadable(
                 "decode.cant_convert",
@@ -153,7 +168,11 @@ impl Drop for Mix {
 /// An MP4, M4A or QuickTime file, the containers with edit lists that
 /// Media Foundation reads (and the only ones whose frame rate it reads right).
 fn mp4_family(path: &Path) -> bool {
-    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
     ["mp4", "m4a", "m4v", "mov", "3gp"].contains(&ext.as_str())
 }
 
@@ -174,10 +193,20 @@ fn edited(path: &Path, x: Vec<f32>) -> Vec<f32> {
 /// put it: an app started from the Start menu has the environment Explorer
 /// started with, which a terminal's PATH may have outgrown.
 fn ffmpeg() -> Option<PathBuf> {
-    let name = if cfg!(windows) { "ffmpeg.exe" } else { "ffmpeg" };
-    let mut dirs: Vec<PathBuf> = env::var_os("PATH").map(|p| env::split_paths(&p).collect()).unwrap_or_default();
+    let name = if cfg!(windows) {
+        "ffmpeg.exe"
+    } else {
+        "ffmpeg"
+    };
+    let mut dirs: Vec<PathBuf> = env::var_os("PATH")
+        .map(|p| env::split_paths(&p).collect())
+        .unwrap_or_default();
     if cfg!(windows) {
-        for (var, sub) in [("LOCALAPPDATA", r"Microsoft\WinGet\Links"), ("USERPROFILE", r"scoop\shims"), ("ProgramData", r"chocolatey\bin")] {
+        for (var, sub) in [
+            ("LOCALAPPDATA", r"Microsoft\WinGet\Links"),
+            ("USERPROFILE", r"scoop\shims"),
+            ("ProgramData", r"chocolatey\bin"),
+        ] {
             if let Some(base) = env::var_os(var) {
                 dirs.push(PathBuf::from(base).join(sub));
             }
@@ -206,7 +235,16 @@ fn decode_ffmpeg(ffmpeg: &Path, path: &Path) -> Result<Vec<f32>, DecodeError> {
         .arg(path)
         // the first audio stream as it is, every channel at its own rate, in
         // a WAV that says which; the mix takes it from there
-        .args(["-map", "0:a:0", "-vn", "-c:a", "pcm_f32le", "-f", "wav", "-"])
+        .args([
+            "-map",
+            "0:a:0",
+            "-vn",
+            "-c:a",
+            "pcm_f32le",
+            "-f",
+            "wav",
+            "-",
+        ])
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -223,7 +261,9 @@ fn decode_ffmpeg(ffmpeg: &Path, path: &Path) -> Result<Vec<f32>, DecodeError> {
     let mut out = child.stdout.take().unwrap();
     let read = wav_format(&mut out).map(|f| read_samples(&mut out, &f));
     drop(out);
-    let status = child.wait().map_err(|e| DecodeError::Unreadable(UNREADABLE, e.to_string()))?;
+    let status = child
+        .wait()
+        .map_err(|e| DecodeError::Unreadable(UNREADABLE, e.to_string()))?;
     let stderr = said.join().unwrap_or_default();
     if !status.success() {
         if stderr.contains("matches no streams") || stderr.contains("does not contain any stream") {
@@ -233,14 +273,25 @@ fn decode_ffmpeg(ffmpeg: &Path, path: &Path) -> Result<Vec<f32>, DecodeError> {
         // .mp3, ffmpeg 7 says "Error opening input files: Invalid data found
         // when processing input" (the Mac), and the Windows test's
         // "C:\pktito-test\fake.mp3: Invalid argument".
-        let why = stderr.lines().last().unwrap_or("ffmpeg could not read it").trim().trim_end_matches('.');
-        let opening = stderr.contains("Error opening input") || why.starts_with(&format!("{}: ", path.display()));
+        let why = stderr
+            .lines()
+            .last()
+            .unwrap_or("ffmpeg could not read it")
+            .trim()
+            .trim_end_matches('.');
+        let opening = stderr.contains("Error opening input")
+            || why.starts_with(&format!("{}: ", path.display()));
         if opening && (why.contains("Invalid data") || why.ends_with("Invalid argument")) {
             return Err(DecodeError::Unreadable(NOT_MEDIA, String::new()));
         }
         return Err(DecodeError::Unreadable(UNREADABLE, why.into()));
     }
-    read.unwrap_or_else(|| Err(DecodeError::Unreadable(UNREADABLE, "ffmpeg returned no audio".into())))
+    read.unwrap_or_else(|| {
+        Err(DecodeError::Unreadable(
+            UNREADABLE,
+            "ffmpeg returned no audio".into(),
+        ))
+    })
 }
 
 /// The format of the float WAV ffmpeg writes, read up to its samples. A
@@ -273,7 +324,11 @@ fn wav_format(r: &mut impl Read) -> Option<WavFormat> {
                 if u16_at(14) != 32 || u16_at(2) == 0 {
                     return None;
                 }
-                format = Some(WavFormat { rate: u32_at(4), ch: u16_at(2) as u32, mask });
+                format = Some(WavFormat {
+                    rate: u32_at(4),
+                    ch: u16_at(2) as u32,
+                    mask,
+                });
             }
             b"fmt " => return None,
             _ => {
@@ -295,12 +350,21 @@ fn read_samples(r: &mut impl Read, f: &WavFormat) -> Result<Vec<f32>, DecodeErro
             Ok(0) => break,
             Ok(got) => got,
             Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
-            Err(e) => return Err(DecodeError::Unreadable(UNREADABLE, format!("ffmpeg's output: {e}"))),
+            Err(e) => {
+                return Err(DecodeError::Unreadable(
+                    UNREADABLE,
+                    format!("ffmpeg's output: {e}"),
+                ))
+            }
         };
         have += got;
         let whole = have / frame * frame;
         x.clear();
-        x.extend(bytes[..whole].chunks_exact(4).map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]])));
+        x.extend(
+            bytes[..whole]
+                .chunks_exact(4)
+                .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]])),
+        );
         mix.push(&x)?;
         bytes.copy_within(whole..have, 0);
         have -= whole;
@@ -316,7 +380,11 @@ fn read_samples(r: &mut impl Read, f: &WavFormat) -> Result<Vec<f32>, DecodeErro
 /// ffmpeg was right on all of them (the Windows check, 2026-10-22).
 pub fn frame_rate(path: &Path) -> Option<f64> {
     let os = if mp4_family(path) { rate_os(path) } else { 0.0 };
-    let r = if os > 0.0 { Some(os) } else { ffmpeg().and_then(|ff| rate_ffmpeg(&ff, path)) };
+    let r = if os > 0.0 {
+        Some(os)
+    } else {
+        ffmpeg().and_then(|ff| rate_ffmpeg(&ff, path))
+    };
     r.filter(|r| r.is_finite() && (1.0..=1000.0).contains(r))
 }
 
@@ -331,7 +399,9 @@ fn rate_ffmpeg(ffmpeg: &Path, path: &Path) -> Option<f64> {
         .output()
         .ok()?;
     let said = String::from_utf8_lossy(&out.stderr);
-    let line = said.lines().find(|l| l.contains("Stream #") && l.contains(": Video:"))?;
+    let line = said
+        .lines()
+        .find(|l| l.contains("Stream #") && l.contains(": Video:"))?;
     let at = line.find(" fps")?;
     line[..at].rsplit([' ', ',']).next()?.parse().ok()
 }
@@ -357,13 +427,30 @@ fn rate_os(_path: &Path) -> f64 {
 fn decode_os(path: &Path) -> Result<Vec<f32>, DecodeError> {
     use std::ffi::{c_char, CStr, CString};
     extern "C" {
-        fn pkapp_decode_os(path: *const c_char, rate: c_int, out: *mut *mut f32, n: *mut usize, err: *mut c_char, errlen: usize) -> c_int;
+        fn pkapp_decode_os(
+            path: *const c_char,
+            rate: c_int,
+            out: *mut *mut f32,
+            n: *mut usize,
+            err: *mut c_char,
+            errlen: usize,
+        ) -> c_int;
     }
-    let c = CString::new(path.to_string_lossy().as_bytes()).map_err(|_| DecodeError::Unreadable(UNREADABLE, "bad file name".into()))?;
+    let c = CString::new(path.to_string_lossy().as_bytes())
+        .map_err(|_| DecodeError::Unreadable(UNREADABLE, "bad file name".into()))?;
     let mut out: *mut f32 = std::ptr::null_mut();
     let mut n: usize = 0;
     let mut err = [0 as c_char; 512];
-    let rc = unsafe { pkapp_decode_os(c.as_ptr(), RATE as c_int, &mut out, &mut n, err.as_mut_ptr(), err.len()) };
+    let rc = unsafe {
+        pkapp_decode_os(
+            c.as_ptr(),
+            RATE as c_int,
+            &mut out,
+            &mut n,
+            err.as_mut_ptr(),
+            err.len(),
+        )
+    };
     match rc {
         0 => {
             let x = take_c(out, n);
@@ -373,11 +460,19 @@ fn decode_os(path: &Path) -> Result<Vec<f32>, DecodeError> {
             Ok(x)
         }
         -1 => Err(DecodeError::NoAudio),
-        _ => Err(DecodeError::Unreadable(UNREADABLE, unsafe { CStr::from_ptr(err.as_ptr()) }.to_string_lossy().into_owned())),
+        _ => Err(DecodeError::Unreadable(
+            UNREADABLE,
+            unsafe { CStr::from_ptr(err.as_ptr()) }
+                .to_string_lossy()
+                .into_owned(),
+        )),
     }
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn decode_os(_path: &Path) -> Result<Vec<f32>, DecodeError> {
-    Err(DecodeError::Unreadable(UNREADABLE, "no media library to use here".into()))
+    Err(DecodeError::Unreadable(
+        UNREADABLE,
+        "no media library to use here".into(),
+    ))
 }

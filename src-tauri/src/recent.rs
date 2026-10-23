@@ -47,11 +47,18 @@ fn dir(data: &Path) -> PathBuf {
 /// A name for a new transcript and its audio: the time it started, in
 /// milliseconds, so the names sort as the work was done.
 pub fn new_id() -> String {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0).to_string()
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0)
+        .to_string()
 }
 
 pub fn now() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
 }
 
 /// An id as new_id makes them, and nothing that could name another file.
@@ -67,7 +74,11 @@ pub fn list(data: &Path) -> Vec<Item> {
 }
 
 fn write_list(data: &Path, items: &[Item]) -> Result<(), String> {
-    fs::write(dir(data).join("index.json"), serde_json::to_vec(items).unwrap()).map_err(|e| e.to_string())
+    fs::write(
+        dir(data).join("index.json"),
+        serde_json::to_vec(items).unwrap(),
+    )
+    .map_err(|e| e.to_string())
 }
 
 /// Keep t at the top of the list, in place of any earlier transcript of the
@@ -75,7 +86,11 @@ fn write_list(data: &Path, items: &[Item]) -> Result<(), String> {
 pub fn add(data: &Path, t: &Transcript) -> Result<Vec<String>, String> {
     let d = dir(data);
     fs::create_dir_all(&d).map_err(|e| e.to_string())?;
-    fs::write(d.join(format!("{}.json", t.item.id)), serde_json::to_vec(t).unwrap()).map_err(|e| e.to_string())?;
+    fs::write(
+        d.join(format!("{}.json", t.item.id)),
+        serde_json::to_vec(t).unwrap(),
+    )
+    .map_err(|e| e.to_string())?;
     let mut items = list(data);
     let mut gone: Vec<String> = Vec::new();
     items.retain(|i| {
@@ -98,7 +113,8 @@ pub fn load(data: &Path, id: &str) -> Result<Transcript, Problem> {
     if !valid(id) {
         return Err("no such transcript".into());
     }
-    let b = fs::read(dir(data).join(format!("{id}.json"))).map_err(|_| Problem::new("recent.gone"))?;
+    let b =
+        fs::read(dir(data).join(format!("{id}.json"))).map_err(|_| Problem::new("recent.gone"))?;
     serde_json::from_slice(&b).map_err(|e| Problem::new("recent.unreadable").detail(e))
 }
 

@@ -59,7 +59,10 @@ pub struct Problem {
 
 impl Problem {
     pub fn new(key: &'static str) -> Problem {
-        Problem { key, ..Default::default() }
+        Problem {
+            key,
+            ..Default::default()
+        }
     }
 
     pub fn with(mut self, name: &'static str, value: impl Into<String>) -> Problem {
@@ -114,8 +117,15 @@ mod tests {
     /// How a key is named, up to its opening quote: the page's data-t
     /// attributes and t calls, and Rust's t, tf, Problem::new and Unreadable.
     const NAMED: &[&str] = &[
-        "data-t=\"", "data-t-html=\"", "data-t-aria-label=\"", "data-t-title=\"", "data-t-placeholder=\"",
-        "t(\"", "tf(\"", "Problem::new(\"", "Unreadable(\"",
+        "data-t=\"",
+        "data-t-html=\"",
+        "data-t-aria-label=\"",
+        "data-t-title=\"",
+        "data-t-placeholder=\"",
+        "t(\"",
+        "tf(\"",
+        "Problem::new(\"",
+        "Unreadable(\"",
     ];
 
     /// The keys named in text: after each of NAMED, not inside a longer name
@@ -131,7 +141,12 @@ mod tests {
                 if text[..begin].chars().next_back().is_some_and(word) {
                     continue;
                 }
-                let key: String = text[start..].chars().take_while(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == '_' || *c == '.').collect();
+                let key: String = text[start..]
+                    .chars()
+                    .take_while(|c| {
+                        c.is_ascii_lowercase() || c.is_ascii_digit() || *c == '_' || *c == '.'
+                    })
+                    .collect();
                 if !key.is_empty() && text[start + key.len()..].starts_with('"') {
                     out.push(key);
                 }
@@ -146,21 +161,36 @@ mod tests {
     fn all_keys_are_in_the_catalog() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
         let mut files = vec![root.join("ui/index.html"), root.join("ui/app.js")];
-        for e in std::fs::read_dir(root.join("src-tauri/src")).unwrap().flatten() {
+        for e in std::fs::read_dir(root.join("src-tauri/src"))
+            .unwrap()
+            .flatten()
+        {
             if e.path().extension().is_some_and(|x| x == "rs") {
                 files.push(e.path());
             }
         }
-        let texts: Vec<String> = files.iter().map(|f| std::fs::read_to_string(f).unwrap()).collect();
+        let texts: Vec<String> = files
+            .iter()
+            .map(|f| std::fs::read_to_string(f).unwrap())
+            .collect();
         let used: BTreeSet<String> = texts.iter().flat_map(|t| named(t)).collect();
         let have: BTreeSet<String> = catalog().keys().cloned().collect();
         let missing: Vec<_> = used.difference(&have).collect();
-        assert!(missing.is_empty(), "named but not in ui/locales/en.json: {missing:?}");
+        assert!(
+            missing.is_empty(),
+            "named but not in ui/locales/en.json: {missing:?}"
+        );
         // a key chosen among others (t(on ? "a" : "b"), a match's arms) is
         // named only as its quoted self
         let quoted = |k: &str| texts.iter().any(|t| t.contains(&format!("\"{k}\"")));
-        let unused: Vec<_> = have.iter().filter(|k| !quoted(k) && !MADE.iter().any(|m| k.starts_with(m))).collect();
-        assert!(unused.is_empty(), "in ui/locales/en.json but named nowhere: {unused:?}");
+        let unused: Vec<_> = have
+            .iter()
+            .filter(|k| !quoted(k) && !MADE.iter().any(|m| k.starts_with(m)))
+            .collect();
+        assert!(
+            unused.is_empty(),
+            "in ui/locales/en.json but named nowhere: {unused:?}"
+        );
     }
 
     #[test]

@@ -15,8 +15,20 @@ use std::env;
 use std::path::PathBuf;
 
 const CORE: &[&str] = &[
-    "model.c", "os.c", "pool.c", "mel.c", "encoder.c", "decoder.c", "tokens.c", "asr.c", "vad.c",
-    "segment.c", "wav.c", "resample.c", "captions.c", "language.c",
+    "model.c",
+    "os.c",
+    "pool.c",
+    "mel.c",
+    "encoder.c",
+    "decoder.c",
+    "tokens.c",
+    "asr.c",
+    "vad.c",
+    "segment.c",
+    "wav.c",
+    "resample.c",
+    "captions.c",
+    "language.c",
 ];
 
 fn base(os: &str, root: &PathBuf) -> cc::Build {
@@ -39,10 +51,12 @@ fn base(os: &str, root: &PathBuf) -> cc::Build {
             b.define("_DARWIN_C_SOURCE", None);
         }
         "windows" => {
-            b.define("_WIN32_WINNT", "0x0A00").define("__USE_MINGW_ANSI_STDIO", "1");
+            b.define("_WIN32_WINNT", "0x0A00")
+                .define("__USE_MINGW_ANSI_STDIO", "1");
         }
         _ => {
-            b.define("_DEFAULT_SOURCE", None).define("_POSIX_C_SOURCE", "200809L");
+            b.define("_DEFAULT_SOURCE", None)
+                .define("_POSIX_C_SOURCE", "200809L");
         }
     }
     b
@@ -58,12 +72,22 @@ fn main() {
 
     let family: Vec<(&str, Vec<&str>)> = match arch.as_str() {
         "aarch64" => vec![
-            ("neon-dp", if os == "macos" { vec!["-mcpu=apple-m1"] } else { vec!["-march=armv8.2-a+dotprod"] }),
+            (
+                "neon-dp",
+                if os == "macos" {
+                    vec!["-mcpu=apple-m1"]
+                } else {
+                    vec!["-march=armv8.2-a+dotprod"]
+                },
+            ),
             ("neon", vec!["-march=armv8-a"]),
         ],
         "x86_64" => vec![
             ("avx2-vnni", vec!["-mavx2", "-mfma", "-mavxvnni"]),
-            ("avx512-vnni", vec!["-mavx2", "-mfma", "-mavx512vnni", "-mavx512vl"]),
+            (
+                "avx512-vnni",
+                vec!["-mavx2", "-mfma", "-mavx512vnni", "-mavx512vl"],
+            ),
             ("avx2", vec!["-mavx2", "-mfma"]),
         ],
         _ => vec![],
@@ -74,7 +98,10 @@ fn main() {
     let mut built = Vec::new();
     for (name, flags) in &family {
         let mut b = base(&os, &root);
-        if flags.iter().all(|f| b.is_flag_supported(f).unwrap_or(false)) {
+        if flags
+            .iter()
+            .all(|f| b.is_flag_supported(f).unwrap_or(false))
+        {
             for f in flags {
                 b.flag(f);
             }
@@ -87,7 +114,11 @@ fn main() {
     }
 
     // the mix every decoder's samples go through, ffmpeg's too
-    objects.extend(base(&os, &root).file(manifest.join("native/mix.c")).compile_intermediates());
+    objects.extend(
+        base(&os, &root)
+            .file(manifest.join("native/mix.c"))
+            .compile_intermediates(),
+    );
     match os.as_str() {
         "macos" => objects.extend(
             cc::Build::new()
@@ -96,9 +127,11 @@ fn main() {
                 .opt_level(2)
                 .compile_intermediates(),
         ),
-        "windows" => {
-            objects.extend(base(&os, &root).file(manifest.join("native/decode_windows.c")).compile_intermediates())
-        }
+        "windows" => objects.extend(
+            base(&os, &root)
+                .file(manifest.join("native/decode_windows.c"))
+                .compile_intermediates(),
+        ),
         _ => {}
     }
 
@@ -106,7 +139,8 @@ fn main() {
     for f in CORE {
         core.file(root.join("core").join(f));
     }
-    core.file(root.join("backend/ref/kernels.c")).file(root.join("backend/kernels.c"));
+    core.file(root.join("backend/ref/kernels.c"))
+        .file(root.join("backend/kernels.c"));
     for name in &built {
         core.define(&format!("PK_HAVE_{}", name.replace('-', "_")), None);
     }
@@ -117,7 +151,12 @@ fn main() {
 
     // after the archive, for the same reason
     let system: &[&str] = match os.as_str() {
-        "macos" => &["framework=AVFoundation", "framework=AudioToolbox", "framework=CoreMedia", "framework=Foundation"],
+        "macos" => &[
+            "framework=AVFoundation",
+            "framework=AudioToolbox",
+            "framework=CoreMedia",
+            "framework=Foundation",
+        ],
         "windows" => &["mfplat", "mfreadwrite", "mfuuid", "ole32", "uuid"],
         _ => &["pthread", "m"],
     };

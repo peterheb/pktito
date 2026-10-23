@@ -222,6 +222,9 @@ cargo tauri dev             # run it
 cargo tauri build           # the installer: .dmg, .msi/.exe, .deb/.AppImage
 ```
 
+The Rust is rustfmt's, with its defaults: `cargo fmt` in `src-tauri` before
+a commit (`cargo fmt --check` says whether it is due).
+
 Windows on Arm builds on x64 Windows, cross-compiled: rustup's
 `stable-x86_64-pc-windows-gnullvm` toolchain with the
 `aarch64-pc-windows-gnullvm` target, and [llvm-mingw](https://github.com/mstorsjo/llvm-mingw)'s

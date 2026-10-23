@@ -15,7 +15,10 @@ const MAX_SEGMENT_S: f64 = 20.0;
 /// PKTITO_THREADS, for finding out what a machine does on fewer threads (the
 /// engine CLI's -t); unset, 0: one a core, and pktito's choice among them.
 pub fn threads_wanted() -> i32 {
-    std::env::var("PKTITO_THREADS").ok().and_then(|t| t.trim().parse().ok()).unwrap_or(0)
+    std::env::var("PKTITO_THREADS")
+        .ok()
+        .and_then(|t| t.trim().parse().ok())
+        .unwrap_or(0)
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -37,7 +40,11 @@ pub struct Segment {
 /// just finished) after each chunk; stop() before each says whether to stop
 /// there. The segments, and whether they are all of it.
 pub fn run(
-    model: &Model, asr: &mut Asr, x: &[f32], mut progress: impl FnMut(f64, &[Segment]), stop: impl Fn() -> bool,
+    model: &Model,
+    asr: &mut Asr,
+    x: &[f32],
+    mut progress: impl FnMut(f64, &[Segment]),
+    stop: impl Fn() -> bool,
 ) -> Result<(Vec<Segment>, bool), String> {
     let rate = model.rate() as f64;
     let frame = model.frame_seconds();
@@ -70,10 +77,19 @@ fn sentences(model: &Model, toks: &[Tok], offset: f64, frame: f64) -> Vec<Segmen
         let end = offset + w.end as f64 * frame;
         let last = i + 1 == words.len();
         let cut = last || word.ends_with(['.', '?', '!']) || end - start >= MAX_SEGMENT_S;
-        timed.push(Word { start: offset + w.start as f64 * frame, end, text: word });
+        timed.push(Word {
+            start: offset + w.start as f64 * frame,
+            end,
+            text: word,
+        });
         if cut {
             let (a, b) = span(first);
-            out.push(Segment { start, end, text: model.text(&toks[a..b]), words: std::mem::take(&mut timed) });
+            out.push(Segment {
+                start,
+                end,
+                text: model.text(&toks[a..b]),
+                words: std::mem::take(&mut timed),
+            });
             first = i + 1;
         }
     }

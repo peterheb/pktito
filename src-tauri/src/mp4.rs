@@ -94,7 +94,10 @@ fn boxes(mut b: &[u8]) -> Option<Vec<([u8; 4], &[u8])>> {
 }
 
 fn child<'a>(b: &'a [u8], kind: &[u8; 4]) -> Option<&'a [u8]> {
-    boxes(b)?.into_iter().find(|(k, _)| k == kind).map(|(_, c)| c)
+    boxes(b)?
+        .into_iter()
+        .find(|(k, _)| k == kind)
+        .map(|(_, c)| c)
 }
 
 fn u32_at(b: &[u8], i: usize) -> Option<u32> {
@@ -126,7 +129,11 @@ fn from_moov(moov: &[u8]) -> Option<Edit> {
         // the first audio track decides, edit or none
         let media = timescale(child(mdia, b"mdhd")?)? as f64;
         let Some(elst) = child(trak, b"edts").and_then(|e| child(e, b"elst")) else {
-            return smpb(moov, trak).map(|(delay, len)| Edit { lead: 0.0, skip: delay / media, keep: Some(len / media) });
+            return smpb(moov, trak).map(|(delay, len)| Edit {
+                lead: 0.0,
+                skip: delay / media,
+                keep: Some(len / media),
+            });
         };
         let v1 = *elst.first()? == 1;
         let (n, size) = (u32_at(elst, 4)? as usize, if v1 { 20 } else { 12 });
@@ -140,14 +147,18 @@ fn from_moov(moov: &[u8]) -> Option<Edit> {
                 (u32_at(elst, e)? as f64, u32_at(elst, e + 4)? as i32 as i64)
             };
             match (time, found) {
-                (-1, None) => lead += dur / movie,   // an empty edit: nothing plays for dur
+                (-1, None) => lead += dur / movie, // an empty edit: nothing plays for dur
                 (t, None) if t >= 0 => found = Some((t as f64 / media, dur / movie)),
-                _ => return None,                    // more than one segment: left as it is
+                _ => return None, // more than one segment: left as it is
             }
         }
         let (skip, keep) = found?;
         let ok = |s: f64| s.is_finite() && (0.0..=86400.0).contains(&s);
-        return (ok(lead) && ok(skip) && ok(keep)).then_some(Edit { lead, skip, keep: (keep > 0.0).then_some(keep) });
+        return (ok(lead) && ok(skip) && ok(keep)).then_some(Edit {
+            lead,
+            skip,
+            keep: (keep > 0.0).then_some(keep),
+        });
     }
     None
 }
@@ -168,12 +179,18 @@ fn smpb(moov: &[u8], trak: &[u8]) -> Option<(f64, f64)> {
             continue;
         };
         for (kind, item) in boxes(ilst)? {
-            if &kind != b"----" || child(item, b"name").and_then(|n| n.get(4..)) != Some(&b"iTunSMPB"[..]) {
+            if &kind != b"----"
+                || child(item, b"name").and_then(|n| n.get(4..)) != Some(&b"iTunSMPB"[..])
+            {
                 continue;
             }
             // data: a type and a locale, then the text
             let text = std::str::from_utf8(child(item, b"data")?.get(8..)?).ok()?;
-            let f: Vec<u64> = text.split_whitespace().take(4).map(|h| u64::from_str_radix(h, 16).ok()).collect::<Option<_>>()?;
+            let f: Vec<u64> = text
+                .split_whitespace()
+                .take(4)
+                .map(|h| u64::from_str_radix(h, 16).ok())
+                .collect::<Option<_>>()?;
             return (f.len() == 4 && f[3] > 0).then(|| (f[1] as f64, f[3] as f64));
         }
     }
@@ -184,7 +201,9 @@ fn smpb(moov: &[u8], trak: &[u8]) -> Option<(f64, f64)> {
 pub fn apply(x: Vec<f32>, e: &Edit, rate: f64) -> Vec<f32> {
     let skip = ((e.skip * rate).round() as usize).min(x.len());
     let rest = &x[skip..];
-    let keep = e.keep.map_or(rest.len(), |k| ((k * rate).round() as usize).min(rest.len()));
+    let keep = e.keep.map_or(rest.len(), |k| {
+        ((k * rate).round() as usize).min(rest.len())
+    });
     let mut y = vec![0.0f32; (e.lead * rate).round() as usize];
     y.extend_from_slice(&rest[..keep]);
     y
@@ -225,7 +244,14 @@ mod tests {
     fn priming_and_padding() {
         // ffmpeg's: 1024 samples of priming, 60 s of sound
         let e = from_moov(&moov(&[(60000, 1024)], b"soun")).unwrap();
-        assert_eq!(e, Edit { lead: 0.0, skip: 0.064, keep: Some(60.0) });
+        assert_eq!(
+            e,
+            Edit {
+                lead: 0.0,
+                skip: 0.064,
+                keep: Some(60.0)
+            }
+        );
         let x: Vec<f32> = (0..961_536).map(|i| i as f32).collect();
         let y = apply(x, &e, 16000.0);
         assert_eq!((y.len(), y[0]), (960_000, 1024.0));
@@ -234,7 +260,14 @@ mod tests {
     #[test]
     fn empty_edit_then_sound() {
         let e = from_moov(&moov(&[(500, -1), (2000, 0)], b"soun")).unwrap();
-        assert_eq!(e, Edit { lead: 0.5, skip: 0.0, keep: Some(2.0) });
+        assert_eq!(
+            e,
+            Edit {
+                lead: 0.5,
+                skip: 0.0,
+                keep: Some(2.0)
+            }
+        );
         let y = apply(vec![1.0; 48000], &e, 16000.0);
         assert_eq!((y.len(), y[7999], y[8000]), (40000, 0.0, 1.0));
     }
@@ -254,23 +287,35 @@ mod tests {
         let text = b" 00000000 00000840 000002C0 000000000015F900 00000000";
         let mut data = vec![0u8; 8];
         data.extend_from_slice(text);
-        let item = [bx(b"mean", b"\0\0\0\0com.apple.iTunes"), bx(b"name", b"\0\0\0\0iTunSMPB"), bx(b"data", &data)].concat();
+        let item = [
+            bx(b"mean", b"\0\0\0\0com.apple.iTunes"),
+            bx(b"name", b"\0\0\0\0iTunSMPB"),
+            bx(b"data", &data),
+        ]
+        .concat();
         let meta = [vec![0u8; 4], bx(b"ilst", &bx(b"----", &item))].concat();
         m.extend_from_slice(&bx(b"udta", &bx(b"meta", &meta)));
         m.extend_from_slice(&trak);
         let e = from_moov(&m).unwrap();
-        assert_eq!(e, Edit { lead: 0.0, skip: 2112.0 / 16000.0, keep: Some(1_440_000.0 / 16000.0) });
+        assert_eq!(
+            e,
+            Edit {
+                lead: 0.0,
+                skip: 2112.0 / 16000.0,
+                keep: Some(1_440_000.0 / 16000.0)
+            }
+        );
     }
 
     #[test]
     fn none_for_what_it_does_not_know() {
         assert_eq!(from_moov(&moov(&[(1000, 0), (1000, 2000)], b"soun")), None); // two segments
-        assert_eq!(from_moov(&moov(&[(1000, 0)], b"vide")), None);               // no audio track
-        assert_eq!(from_moov(&moov(&[], b"soun")), None);                        // no edit
+        assert_eq!(from_moov(&moov(&[(1000, 0)], b"vide")), None); // no audio track
+        assert_eq!(from_moov(&moov(&[], b"soun")), None); // no edit
         let mut bad = moov(&[(60000, 1024)], b"soun");
         bad.truncate(bad.len() - 5);
-        assert_eq!(from_moov(&bad), None);                                       // cut short
-        assert_eq!(from_moov(&[0, 0, 0, 1, b'm', b'v', b'h', b'd']), None);       // a size it cannot have
+        assert_eq!(from_moov(&bad), None); // cut short
+        assert_eq!(from_moov(&[0, 0, 0, 1, b'm', b'v', b'h', b'd']), None); // a size it cannot have
     }
 }
 
@@ -280,7 +325,11 @@ mod files {
     #[test]
     #[ignore]
     fn probe_files() {
-        for p in std::env::var("PKAPP_MP4_FILES").unwrap_or_default().split(':').filter(|s| !s.is_empty()) {
+        for p in std::env::var("PKAPP_MP4_FILES")
+            .unwrap_or_default()
+            .split(':')
+            .filter(|s| !s.is_empty())
+        {
             println!("{p}: {:?}", super::audio_edit(std::path::Path::new(p)));
         }
     }

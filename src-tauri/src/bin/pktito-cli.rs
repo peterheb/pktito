@@ -66,12 +66,25 @@ fn run(args: &[String]) -> Result<i32, String> {
             return Ok(0);
         }
         Some("models") => return models(),
-        Some("download") => return fetch(args.get(1).ok_or("download needs a model name (pktito-cli models shows the list)")?),
+        Some("download") => {
+            return fetch(
+                args.get(1)
+                    .ok_or("download needs a model name (pktito-cli models shows the list)")?,
+            )
+        }
         _ => {}
     }
     let bench = args[0] == "bench";
     let args = if bench { &args[1..] } else { args };
-    let mut o = Opts { files: vec![], model: None, ext: "txt".into(), times: false, output: None, threads: transcribe::threads_wanted(), quiet: false };
+    let mut o = Opts {
+        files: vec![],
+        model: None,
+        ext: "txt".into(),
+        times: false,
+        output: None,
+        threads: transcribe::threads_wanted(),
+        quiet: false,
+    };
     let mut it = args.iter();
     while let Some(a) = it.next() {
         let mut value = |flag: &str| it.next().cloned().ok_or(format!("{flag} needs a value"));
@@ -81,7 +94,11 @@ fn run(args: &[String]) -> Result<i32, String> {
             "--txt" | "--md" | "--srt" | "--vtt" | "--json" => o.ext = a[2..].into(),
             "--times" => o.times = true,
             "-o" | "--output" => o.output = Some(PathBuf::from(value(a)?)),
-            "-t" | "--threads" => o.threads = value(a)?.parse().map_err(|_| format!("{a} needs a number"))?,
+            "-t" | "--threads" => {
+                o.threads = value(a)?
+                    .parse()
+                    .map_err(|_| format!("{a} needs a number"))?
+            }
             "-q" | "--quiet" => o.quiet = true,
             "-" => return Err("reads files, not standard input".into()),
             f if f.starts_with('-') => return Err(format!("no option {f}\n{USAGE}")),
@@ -111,7 +128,10 @@ fn transcribe_all(o: &Opts) -> Result<i32, String> {
     let mut failed = 0;
     for f in &o.files {
         let file = Path::new(f);
-        let label = file.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| f.clone());
+        let label = file
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| f.clone());
         let done = (|| -> Result<Option<PathBuf>, String> {
             if show {
                 status(&format!("{label}: reading the audio"));
@@ -128,7 +148,12 @@ fn transcribe_all(o: &Opts) -> Result<i32, String> {
                 },
                 || false,
             )?;
-            let t = format::Transcript { name: &label, duration: x.len() as f64 / decode::RATE as f64, model: Some(name.as_str()), segments: &segs };
+            let t = format::Transcript {
+                name: &label,
+                duration: x.len() as f64 / decode::RATE as f64,
+                model: Some(name.as_str()),
+                segments: &segs,
+            };
             let text = format::text(&t, &o.ext, o.times)?;
             let to = destination(o, file);
             if show {
@@ -137,9 +162,12 @@ fn transcribe_all(o: &Opts) -> Result<i32, String> {
             match &to {
                 None => {
                     let mut out = std::io::stdout().lock();
-                    out.write_all(text.as_bytes()).and_then(|_| out.flush()).map_err(|e| e.to_string())?;
+                    out.write_all(text.as_bytes())
+                        .and_then(|_| out.flush())
+                        .map_err(|e| e.to_string())?;
                 }
-                Some(p) => fs::write(p, &text).map_err(|e| format!("couldn't write {}: {e}", p.display()))?,
+                Some(p) => fs::write(p, &text)
+                    .map_err(|e| format!("couldn't write {}: {e}", p.display()))?,
             }
             Ok(to)
         })();
@@ -171,7 +199,11 @@ fn bench_files(paths: &[String]) -> Result<Vec<PathBuf>, String> {
             .map_err(|e| format!("couldn't read {}: {e}", p.display()))?
             .filter_map(|e| e.ok().map(|e| e.path()))
             .filter(|f| f.is_file())
-            .filter(|f| f.extension().is_some_and(|x| decode::MEDIA.contains(&x.to_string_lossy().to_lowercase().as_str())))
+            .filter(|f| {
+                f.extension().is_some_and(|x| {
+                    decode::MEDIA.contains(&x.to_string_lossy().to_lowercase().as_str())
+                })
+            })
             .collect();
         if here.is_empty() {
             return Err(format!("no audio or video in {}", p.display()));
@@ -195,13 +227,21 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
     let mut asr = pktito::Asr::new(&model, o.threads)?;
     let json = o.ext == "json";
     let show = !o.quiet && std::io::stderr().is_terminal();
-    let (version, name, backend, threads) = (env!("CARGO_PKG_VERSION"), model.name(), pktito::backend(), asr.threads());
+    let (version, name, backend, threads) = (
+        env!("CARGO_PKG_VERSION"),
+        model.name(),
+        pktito::backend(),
+        asr.threads(),
+    );
     if !json {
         println!("pktito-cli {version}\nmodel    {name}\nbackend  {backend}\nthreads  {threads}");
     }
     let (mut audio, mut took, mut failed, mut results) = (0.0, 0.0, 0, Vec::new());
     for file in &files {
-        let label = file.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let label = file
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
         let done = (|| -> Result<(f64, f64, String), String> {
             if show {
                 status(&format!("{label}: reading the audio"));
@@ -221,7 +261,11 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
             )?;
             let secs = start.elapsed().as_secs_f64();
             let words = serde_json::to_string(&segs).map_err(|e| e.to_string())?;
-            Ok((x.len() as f64 / decode::RATE as f64, secs, sha256_hex(words.as_bytes())))
+            Ok((
+                x.len() as f64 / decode::RATE as f64,
+                secs,
+                sha256_hex(words.as_bytes()),
+            ))
         })();
         if show {
             status("");
@@ -249,10 +293,19 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
             "pktito_cli": version, "model": name, "backend": backend, "threads": threads,
             "files": results, "audio_s": audio, "seconds": took, "x_real_time": audio / took,
         });
-        println!("{}", serde_json::to_string_pretty(&all).map_err(|e| e.to_string())?);
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&all).map_err(|e| e.to_string())?
+        );
     } else {
         let n = results.len();
-        println!("{:>9}  {:>9.2} s  {:>7.1}x  all {n} file{}", clock(audio), took, audio / took, if n == 1 { "" } else { "s" });
+        println!(
+            "{:>9}  {:>9.2} s  {:>7.1}x  all {n} file{}",
+            clock(audio),
+            took,
+            audio / took,
+            if n == 1 { "" } else { "s" }
+        );
     }
     Ok(if failed > 0 { 1 } else { 0 })
 }
@@ -268,7 +321,10 @@ fn clock(s: f64) -> String {
 
 fn sha256_hex(b: &[u8]) -> String {
     use sha2::{Digest, Sha256};
-    Sha256::digest(b).iter().map(|x| format!("{x:02x}")).collect()
+    Sha256::digest(b)
+        .iter()
+        .map(|x| format!("{x:02x}"))
+        .collect()
 }
 
 /// A line of progress on stderr, written over the last: padded with spaces
@@ -291,8 +347,14 @@ fn destination(o: &Opts, file: &Path) -> Option<PathBuf> {
     let stem = format::stem_of(file);
     match &o.output {
         None if one => None,
-        None => Some(format::free_path(file.parent().unwrap_or(Path::new("")), &stem, &o.ext)),
-        Some(p) if one && !p.is_dir() && !p.to_string_lossy().ends_with(['/', '\\']) => Some(p.clone()),
+        None => Some(format::free_path(
+            file.parent().unwrap_or(Path::new("")),
+            &stem,
+            &o.ext,
+        )),
+        Some(p) if one && !p.is_dir() && !p.to_string_lossy().ends_with(['/', '\\']) => {
+            Some(p.clone())
+        }
         Some(dir) => {
             let _ = fs::create_dir_all(dir);
             Some(format::free_path(dir, &stem, &o.ext))
@@ -305,8 +367,10 @@ fn destination(o: &Opts, file: &Path) -> Option<PathBuf> {
 fn model_path(arg: Option<&str>) -> Result<PathBuf, String> {
     let data = model::data_dir().ok_or("no data folder for the app on this system")?;
     let Some(m) = arg else {
-        return model::usable(&data, &model::load_settings(&data))
-            .ok_or_else(|| "no model yet: choose one in the app, or pktito-cli download parakeet-tdt-0.6b-v2".into());
+        return model::usable(&data, &model::load_settings(&data)).ok_or_else(|| {
+            "no model yet: choose one in the app, or pktito-cli download parakeet-tdt-0.6b-v2"
+                .into()
+        });
     };
     if Path::new(m).is_file() {
         return Ok(PathBuf::from(m));
@@ -314,7 +378,10 @@ fn model_path(arg: Option<&str>) -> Result<PathBuf, String> {
     let e = entry(m)?;
     let dir = data.join("models");
     if !model::have(&dir, e) {
-        return Err(format!("{} isn't downloaded: pktito-cli download {}", e.name, e.name));
+        return Err(format!(
+            "{} isn't downloaded: pktito-cli download {}",
+            e.name, e.name
+        ));
     }
     Ok(model::file_in(&dir, e))
 }
@@ -324,7 +391,9 @@ fn model_path(arg: Option<&str>) -> Result<PathBuf, String> {
 fn entry(m: &str) -> Result<&'static model::Entry, String> {
     model::CATALOG
         .iter()
-        .find(|e| e.name == m || e.label.eq_ignore_ascii_case(m) || e.name.rsplit('-').next() == Some(m))
+        .find(|e| {
+            e.name == m || e.label.eq_ignore_ascii_case(m) || e.name.rsplit('-').next() == Some(m)
+        })
         .ok_or_else(|| format!("no model {m} (pktito-cli models shows the list)"))
 }
 
@@ -336,8 +405,20 @@ fn models() -> Result<i32, String> {
     let dir = data.join("models");
     for e in model::CATALOG {
         let here = model::have(&dir, e);
-        let state = if !here { "not downloaded" } else if using.as_deref() == Some(model::file_in(&dir, e).as_path()) { "in use" } else { "downloaded" };
-        println!("{:<22}{:<14}{:<24}{:>4} MB  {state}", e.name, e.label, e.about, (e.bytes as f64 / 1e6).round());
+        let state = if !here {
+            "not downloaded"
+        } else if using.as_deref() == Some(model::file_in(&dir, e).as_path()) {
+            "in use"
+        } else {
+            "downloaded"
+        };
+        println!(
+            "{:<22}{:<14}{:<24}{:>4} MB  {state}",
+            e.name,
+            e.label,
+            e.about,
+            (e.bytes as f64 / 1e6).round()
+        );
     }
     if let Some(own) = s.model_file.as_ref().filter(|p| p.is_file()) {
         println!("{:<22}{}  in use", "your own file", own.display());
@@ -366,9 +447,19 @@ fn fetch(m: &str) -> Result<i32, String> {
         move |s| match s.step {
             "failed" => {
                 status("");
-                eprintln!("{}{}", s.problem.as_ref().map(|p| p.line()).unwrap_or_default(), if s.retry { " (trying again)" } else { "" })
+                eprintln!(
+                    "{}{}",
+                    s.problem.as_ref().map(|p| p.line()).unwrap_or_default(),
+                    if s.retry { " (trying again)" } else { "" }
+                )
             }
-            _ if show => status(&format!("{} {}: {} of {} MB", s.step, s.name, s.got / 1_000_000, s.total / 1_000_000)),
+            _ if show => status(&format!(
+                "{} {}: {} of {} MB",
+                s.step,
+                s.name,
+                s.got / 1_000_000,
+                s.total / 1_000_000
+            )),
             _ => {}
         },
         move |p| {
@@ -381,7 +472,9 @@ fn fetch(m: &str) -> Result<i32, String> {
     if show {
         status("");
     }
-    let path = rx.try_recv().map_err(|_| job.state().problem.map(|p| p.line()).unwrap_or_default())?;
+    let path = rx
+        .try_recv()
+        .map_err(|_| job.state().problem.map(|p| p.line()).unwrap_or_default())?;
     let mut s = model::load_settings(&data);
     if s.model.is_none() && s.model_file.is_none() {
         s.model = Some(e.name.to_string());

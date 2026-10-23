@@ -96,13 +96,29 @@ extern "C" {
     fn pk_vad_probs(v: *mut RawVad, x: *const f32, n: usize, probs: *mut f32);
     fn pk_seg_defaults(p: *mut SegParams);
     fn pk_segments(
-        probs: *const f32, n: usize, rate: c_int, n_samples: i64, p: *const SegParams, out: *mut Span,
+        probs: *const f32,
+        n: usize,
+        rate: c_int,
+        n_samples: i64,
+        p: *const SegParams,
+        out: *mut Span,
         cap: usize,
     ) -> usize;
     fn pk_chunks(
-        x: *const f32, speech: *const Span, n_speech: usize, total: i64, max_len: i64, out: *mut Span,
+        x: *const f32,
+        speech: *const Span,
+        n_speech: usize,
+        total: i64,
+        max_len: i64,
+        out: *mut Span,
     ) -> usize;
-    fn pk_captions(w: *const CapWord, n: usize, english: c_int, media_end: i64, out: *mut Cue) -> c_long;
+    fn pk_captions(
+        w: *const CapWord,
+        n: usize,
+        english: c_int,
+        media_end: i64,
+        out: *mut Cue,
+    ) -> c_long;
 }
 
 /// The cues of a subtitle track for words and their times in milliseconds,
@@ -110,16 +126,35 @@ extern "C" {
 /// english 1, punctuation and pauses alone for 0, and for -1 English's if
 /// the words are English by their commonest (core/language.c), as the
 /// multilingual model's may be.
-pub fn captions(words: &[(String, i64, i64)], english: i32, media_end: i64) -> Result<Vec<Cue>, String> {
+pub fn captions(
+    words: &[(String, i64, i64)],
+    english: i32,
+    media_end: i64,
+) -> Result<Vec<Cue>, String> {
     // a NUL inside a word would end it early: none comes from pk_text
-    let texts: Vec<CString> = words.iter().map(|w| CString::new(w.0.replace('\0', "")).unwrap()).collect();
+    let texts: Vec<CString> = words
+        .iter()
+        .map(|w| CString::new(w.0.replace('\0', "")).unwrap())
+        .collect();
     let raw: Vec<CapWord> = words
         .iter()
         .zip(&texts)
-        .map(|(w, t)| CapWord { text: t.as_ptr(), start: w.1, end: w.2 })
+        .map(|(w, t)| CapWord {
+            text: t.as_ptr(),
+            start: w.1,
+            end: w.2,
+        })
         .collect();
     let mut out = vec![Cue::default(); words.len().max(1)];
-    let n = unsafe { pk_captions(raw.as_ptr(), raw.len(), english as c_int, media_end, out.as_mut_ptr()) };
+    let n = unsafe {
+        pk_captions(
+            raw.as_ptr(),
+            raw.len(),
+            english as c_int,
+            media_end,
+            out.as_mut_ptr(),
+        )
+    };
     if n < 0 {
         return Err("Not enough memory".into());
     }
@@ -129,7 +164,9 @@ pub fn captions(words: &[(String, i64, i64)], english: i32, media_end: i64) -> R
 
 /// The name of the backend the CPU picked, e.g. "neon-dp (ARMv8.2 NEON: SDOT int8, fp32)".
 pub fn backend() -> String {
-    unsafe { CStr::from_ptr(pk_backend()) }.to_string_lossy().into_owned()
+    unsafe { CStr::from_ptr(pk_backend()) }
+        .to_string_lossy()
+        .into_owned()
 }
 
 /// A loaded .pkf: read-only, shareable across threads.
@@ -142,17 +179,22 @@ unsafe impl Sync for Model {}
 
 impl Model {
     pub fn load(path: &Path) -> Result<Model, String> {
-        let c = CString::new(path.to_string_lossy().as_bytes()).map_err(|_| "bad path".to_string())?;
+        let c =
+            CString::new(path.to_string_lossy().as_bytes()).map_err(|_| "bad path".to_string())?;
         let mut err = [0 as c_char; 512];
         let raw = unsafe { pk_model_load(c.as_ptr(), err.as_mut_ptr(), err.len()) };
         if raw.is_null() {
-            return Err(unsafe { CStr::from_ptr(err.as_ptr()) }.to_string_lossy().into_owned());
+            return Err(unsafe { CStr::from_ptr(err.as_ptr()) }
+                .to_string_lossy()
+                .into_owned());
         }
         Ok(Model { raw })
     }
 
     pub fn name(&self) -> String {
-        unsafe { CStr::from_ptr(pk_model_name(self.raw)) }.to_string_lossy().into_owned()
+        unsafe { CStr::from_ptr(pk_model_name(self.raw)) }
+            .to_string_lossy()
+            .into_owned()
     }
 
     pub fn rate(&self) -> usize {
@@ -171,7 +213,15 @@ impl Model {
         let mut cap = 64 + toks.len() * 16;
         loop {
             let mut buf = vec![0u8; cap];
-            let len = unsafe { pk_text(self.raw, toks.as_ptr(), toks.len(), buf.as_mut_ptr() as *mut c_char, cap) };
+            let len = unsafe {
+                pk_text(
+                    self.raw,
+                    toks.as_ptr(),
+                    toks.len(),
+                    buf.as_mut_ptr() as *mut c_char,
+                    cap,
+                )
+            };
             if len < cap {
                 buf.truncate(len);
                 return String::from_utf8_lossy(&buf).into_owned();
@@ -218,9 +268,28 @@ impl Model {
         sp.max_speech_s = max_chunk - 2.0 * sp.speech_pad_ms / 1000.0 - 0.1;
         let cap = 2 * frames + 1;
         let mut seg = vec![Span::default(); cap];
-        let ns = unsafe { pk_segments(probs.as_ptr(), frames, rate as c_int, x.len() as i64, &sp, seg.as_mut_ptr(), cap) };
+        let ns = unsafe {
+            pk_segments(
+                probs.as_ptr(),
+                frames,
+                rate as c_int,
+                x.len() as i64,
+                &sp,
+                seg.as_mut_ptr(),
+                cap,
+            )
+        };
         let mut out = vec![Span::default(); 2 * ns + 2 + x.len() / max_len as usize];
-        let nc = unsafe { pk_chunks(x.as_ptr(), seg.as_ptr(), ns, x.len() as i64, max_len, out.as_mut_ptr()) };
+        let nc = unsafe {
+            pk_chunks(
+                x.as_ptr(),
+                seg.as_ptr(),
+                ns,
+                x.len() as i64,
+                max_len,
+                out.as_mut_ptr(),
+            )
+        };
         out.truncate(nc);
         Ok(out)
     }

@@ -54,8 +54,8 @@ pub const CATALOG: &[Entry] = &[
         label: "Multilingual",
         about: "25 European languages",
         languages: &[
-            "bg", "cs", "da", "de", "el", "en", "es", "et", "fi", "fr", "hr", "hu", "it", "lt", "lv", "mt", "nl", "pl",
-            "pt", "ro", "ru", "sk", "sl", "sv", "uk",
+            "bg", "cs", "da", "de", "el", "en", "es", "et", "fi", "fr", "hr", "hu", "it", "lt",
+            "lv", "mt", "nl", "pl", "pt", "ro", "ru", "sk", "sl", "sv", "uk",
         ],
         // the model card's table of each language's word error rate
         accuracy: "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3#multilingual-asr",
@@ -141,7 +141,15 @@ pub struct Prefs {
 
 impl Default for Prefs {
     fn default() -> Prefs {
-        Prefs { next_to_original: true, times: false, captions: false, frames: false, fps: 24.0, video_rate: true, speed: 1.0 }
+        Prefs {
+            next_to_original: true,
+            times: false,
+            captions: false,
+            frames: false,
+            fps: 24.0,
+            video_rate: true,
+            speed: 1.0,
+        }
     }
 }
 
@@ -174,12 +182,16 @@ pub fn part_in(dir: &Path, e: &Entry) -> PathBuf {
 /// Whether e is downloaded into dir. A download is renamed into place only
 /// after its SHA-256 checks, so the size is enough to tell.
 pub fn have(dir: &Path, e: &Entry) -> bool {
-    fs::metadata(file_in(dir, e)).map(|m| m.len() == e.bytes).unwrap_or(false)
+    fs::metadata(file_in(dir, e))
+        .map(|m| m.len() == e.bytes)
+        .unwrap_or(false)
 }
 
 /// The bytes of e a download that stopped has kept.
 pub fn partial(dir: &Path, e: &Entry) -> u64 {
-    fs::metadata(part_in(dir, e)).map(|m| m.len().min(e.bytes)).unwrap_or(0)
+    fs::metadata(part_in(dir, e))
+        .map(|m| m.len().min(e.bytes))
+        .unwrap_or(0)
 }
 
 /// A file's address names its contents: under the first twelve digits of its
@@ -188,7 +200,11 @@ pub fn partial(dir: &Path, e: &Entry) -> u64 {
 /// cached copy of the old one that fails the check.
 pub fn download_url(e: &Entry) -> String {
     let base = std::env::var("PKTITO_MODEL_BASE").unwrap_or_else(|_| DEFAULT_BASE.to_string());
-    let base = if base.ends_with('/') { base } else { base + "/" };
+    let base = if base.ends_with('/') {
+        base
+    } else {
+        base + "/"
+    };
     format!("{base}{}/{}.pkf", &e.sha256[..12], e.name)
 }
 
@@ -220,11 +236,22 @@ pub enum Stop {
 /// reporting (bytes so far, whether they are all there and being checked)
 /// as it goes; the finished file's path, once its size and SHA-256 are the
 /// published ones.
-pub fn download(e: &Entry, dir: &Path, ctl: &Ctl, mut progress: impl FnMut(u64, bool)) -> Result<PathBuf, Stop> {
+pub fn download(
+    e: &Entry,
+    dir: &Path,
+    ctl: &Ctl,
+    mut progress: impl FnMut(u64, bool),
+) -> Result<PathBuf, Stop> {
     let part = part_in(dir, e);
     let write_err = |err: io::Error| written(&part, err);
     fs::create_dir_all(dir).map_err(write_err)?;
-    let mut file = OpenOptions::new().create(true).truncate(false).read(true).write(true).open(&part).map_err(write_err)?;
+    let mut file = OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(&part)
+        .map_err(write_err)?;
     let mut got = file.metadata().map_err(write_err)?.len();
     if got > e.bytes {
         got = 0;
@@ -248,7 +275,10 @@ pub fn download(e: &Entry, dir: &Path, ctl: &Ctl, mut progress: impl FnMut(u64, 
     drop(file);
     if digest != e.sha256 {
         let _ = fs::remove_file(&part);
-        return Err(Stop::Hard(Problem::new("download.damaged").detail(format!("SHA-256 {digest}\nexpected {}", e.sha256))));
+        return Err(Stop::Hard(
+            Problem::new("download.damaged")
+                .detail(format!("SHA-256 {digest}\nexpected {}", e.sha256)),
+        ));
     }
     let dst = file_in(dir, e);
     fs::rename(&part, &dst).map_err(|err| written(&dst, err))?;
@@ -258,7 +288,12 @@ pub fn download(e: &Entry, dir: &Path, ctl: &Ctl, mut progress: impl FnMut(u64, 
 /// The rest of e into file, which holds its first `got` bytes; how many it
 /// holds once the server has sent them all.
 fn fetch(
-    e: &Entry, part: &Path, file: &mut File, mut got: u64, ctl: &Ctl, progress: &mut impl FnMut(u64, bool),
+    e: &Entry,
+    part: &Path,
+    file: &mut File,
+    mut got: u64,
+    ctl: &Ctl,
+    progress: &mut impl FnMut(u64, bool),
 ) -> Result<u64, Stop> {
     let url = download_url(e);
     let host = host(&url).to_string();
@@ -270,7 +305,11 @@ fn fetch(
         .build();
     let asked = got;
     let request = |what: &str| {
-        let range = if asked > 0 { format!("\nRange: bytes={asked}-") } else { String::new() };
+        let range = if asked > 0 {
+            format!("\nRange: bytes={asked}-")
+        } else {
+            String::new()
+        };
         format!("{what}\nGET {url}{range}")
     };
     let mut req = agent.get(&url);
@@ -287,7 +326,11 @@ fn fetch(
         Err(ureq::Error::Status(code, r)) => {
             let what = format!("{code} {}", r.status_text());
             return Err(if code >= 500 || code == 429 {
-                Stop::Net(Problem::new("download.not_answering").with("host", host.clone()).detail(request(&what)))
+                Stop::Net(
+                    Problem::new("download.not_answering")
+                        .with("host", host.clone())
+                        .detail(request(&what)),
+                )
             } else {
                 Stop::Hard(Problem::new("download.not_found").detail(request(&what)))
             });
@@ -302,17 +345,25 @@ fn fetch(
             if let Some(s) = std::error::Error::source(&t) {
                 what += &format!(": {s}");
             }
-            return Err(Stop::Net(Problem::new("download.cant_reach").with("host", host.clone()).detail(request(&what))));
+            return Err(Stop::Net(
+                Problem::new("download.cant_reach")
+                    .with("host", host.clone())
+                    .detail(request(&what)),
+            ));
         }
     };
     // a server that ignores the range sends the whole file: take it whole
     let resumed = resp.status() == 206
-        && resp.header("Content-Range").map(|r| r.starts_with(&format!("bytes {got}-"))).unwrap_or(false);
+        && resp
+            .header("Content-Range")
+            .map(|r| r.starts_with(&format!("bytes {got}-")))
+            .unwrap_or(false);
     if !resumed {
         got = 0;
     }
     file.set_len(got).map_err(|err| written(part, err))?;
-    file.seek(SeekFrom::Start(got)).map_err(|err| written(part, err))?;
+    file.seek(SeekFrom::Start(got))
+        .map_err(|err| written(part, err))?;
     let mut body = resp.into_reader();
     let mut buf = vec![0u8; 256 << 10];
     loop {
@@ -326,7 +377,9 @@ fn fetch(
             Ok(k) => k,
             Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
             Err(err) => {
-                return Err(Stop::Net(Problem::new("download.connection_lost").detail(request(&err.to_string()))))
+                return Err(Stop::Net(
+                    Problem::new("download.connection_lost").detail(request(&err.to_string())),
+                ))
             }
         };
         if k == 0 {
@@ -335,14 +388,21 @@ fn fetch(
         if got + k as u64 > e.bytes {
             // a server that sends more than the file would fill the disk
             file.set_len(0).map_err(|err| written(part, err))?;
-            return Err(Stop::Hard(Problem::new("download.too_much").with("host", host.clone()).detail(request(&format!("more than {} bytes", e.bytes)))));
+            return Err(Stop::Hard(
+                Problem::new("download.too_much")
+                    .with("host", host.clone())
+                    .detail(request(&format!("more than {} bytes", e.bytes))),
+            ));
         }
-        file.write_all(&buf[..k]).map_err(|err| written(part, err))?;
+        file.write_all(&buf[..k])
+            .map_err(|err| written(part, err))?;
         got += k as u64;
         progress(got, false);
     }
     if got < e.bytes {
-        return Err(Stop::Net(Problem::new("download.connection_lost").detail(request(&format!("it ended at {got} of {} bytes", e.bytes)))));
+        return Err(Stop::Net(Problem::new("download.connection_lost").detail(
+            request(&format!("it ended at {got} of {} bytes", e.bytes)),
+        )));
     }
     Ok(got)
 }
@@ -381,7 +441,8 @@ mod tests {
 
     /// A data folder of its own under the system's temporary one
     fn scratch(name: &str) -> PathBuf {
-        let d = std::env::temp_dir().join(format!("pktito-model-test-{name}-{}", std::process::id()));
+        let d =
+            std::env::temp_dir().join(format!("pktito-model-test-{name}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&d);
         fs::create_dir_all(&d).unwrap();
         d
@@ -404,7 +465,14 @@ mod tests {
         let models = data.join("models");
         fs::create_dir_all(&models).unwrap();
         fs::write(file_in(&models, e), b"its bytes").unwrap();
-        choose_file(&data, &models.join("..").join("models").join(format!("{}.pkf", e.name))).unwrap();
+        choose_file(
+            &data,
+            &models
+                .join("..")
+                .join("models")
+                .join(format!("{}.pkf", e.name)),
+        )
+        .unwrap();
         let s = load_settings(&data);
         assert_eq!((s.model.as_deref(), s.model_file), (Some(e.name), None));
         let _ = fs::remove_dir_all(&data);
