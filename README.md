@@ -193,6 +193,15 @@ DLLs and the Arm64 `WebView2Loader.dll` beside it.
 cargo +stable-x86_64-pc-windows-gnullvm build --release --target aarch64-pc-windows-gnullvm
 ```
 
+Its installer names the DLL as a resource: tauri-bundler 2.10.4 adds
+`WebView2Loader.dll` only for targets ending in `-gnu`, and without it the
+installed app does not start.
+
+```sh
+cargo tauri build --target aarch64-pc-windows-gnullvm --bundles nsis --config \
+  '{"bundle":{"resources":{"target/aarch64-pc-windows-gnullvm/release/WebView2Loader.dll":"WebView2Loader.dll"}}}'
+```
+
 pktito's sources are copied into `vendor/pktito` by
 `scripts/vendor-pktito.sh` (`vendor/pktito/VENDORED` says which commit); the
 build compiles every SIMD backend of the target's family, and the CPU picks
