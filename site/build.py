@@ -115,7 +115,7 @@ def footer():
     return f"""<footer class="site-foot">
   <div class="wrap">
     <a class="pk-wordmark" href="{page("")}" aria-label="pktito, home">pktito</a>
-    <p class="legal">MIT. The models are NVIDIA's Parakeet-TDT, under CC-BY-4.0; pktito is not affiliated with NVIDIA. This site sets no cookies, and counts installer downloads and nothing else.</p>
+    <p class="legal">MIT. The models are NVIDIA's Parakeet-TDT, under CC-BY-4.0; pktito is not affiliated with NVIDIA. This site sets no cookies, and counts installer downloads and nothing else. <a href="{page("privacy")}">Privacy</a></p>
   </div>
 </footer>"""
 
@@ -433,7 +433,7 @@ about = f"""<main class="wrap">
 
 <section class="part">
   <h2 class="lead">Privacy</h2>
-  <p class="measure">The app sends nothing anywhere. It downloads the model you choose from models.pktito.net, once; there is no account and no telemetry. This site sets no cookies. It counts how many times each installer is downloaded, a day at a time, and keeps nothing else: no addresses, nothing that tells one visitor from another.</p>
+  <p class="measure">The app sends nothing anywhere. It downloads the model you choose from models.pktito.net, once; there is no account and no telemetry. This site sets no cookies. It counts how many times each installer is downloaded, a day at a time, and keeps nothing else: no addresses, nothing that tells one visitor from another. {arrow("The privacy policy", page("privacy"))}</p>
 </section>
 
 <section class="part">
@@ -453,6 +453,47 @@ about = f"""<main class="wrap">
 write("about", "About pktito",
       "What pktito is, what it sends where (nothing, past a model download), and the licenses of its code, models and typefaces.",
       about)
+
+# --------------------------------------------------------------- privacy --
+# the app's About > Privacy (ui/index.html) says the same of the app; the two
+# change together, and keep the date
+privacy = f"""<main class="wrap">
+<section class="page-head">
+  <h1 class="display">Privacy</h1>
+  <p class="measure">pktito turns speech into text on your computer. Your recordings, transcripts and settings stay there. The app doesn't send them anywhere, and it has no accounts, ads or tracking. This page says what does reach the internet, and what happens to it.</p>
+  <p class="measure legal-date">Last updated October 23, 2026</p>
+</section>
+
+<section class="part">
+  <h2 class="lead">Downloading a model</h2>
+  <p class="measure">The app downloads its speech model from models.pktito.net, which bunny.net, a content delivery network, serves. As with any website, the server receives your IP address, the time, the file requested and a standard user-agent string. The app sends nothing else: no name, account or device ID, and nothing from your files.</p>
+  <p class="measure">The server logs these requests to keep the service secure and working. We use the logs only to count downloads in aggregate. We don't use them to identify you, combine them with other data, or sell or share them. To skip the download, use a model file you already have: choose “Open a model file…” in the app.</p>
+</section>
+
+<section class="part">
+  <h2 class="lead">This website</h2>
+  <p class="measure">pktito.net sets no cookies and runs no analytics. Cloudflare serves it, and like any web host it handles your IP address and browser details to deliver the pages and protect the site from abuse. When an installer download starts, the site adds one to that file’s count for the day. It keeps nothing else: no addresses, nothing that tells one visitor from another.</p>
+</section>
+
+<section class="part">
+  <h2 class="lead">Links</h2>
+  <p class="measure">Links in the app and on this site go to other sites, such as GitHub and Hugging Face. Their own privacy policies apply there.</p>
+</section>
+
+<section class="part">
+  <h2 class="lead">Your data</h2>
+  <p class="measure">Everything the app keeps is on your computer, in its data folder: your settings, the models and the recent transcripts. Clearing the recent list deletes its transcripts. Uninstalling the app removes the app, and the data folder stays until you delete it. We hold nothing about you to look up, correct or delete.</p>
+</section>
+
+<section class="part">
+  <h2 class="lead">Changes and questions</h2>
+  <p class="measure">If this policy changes, this page changes with it, under a new date, and the app’s copy comes with its next update. Ask questions {arrow("on GitHub", GITHUB + "/issues")}</p>
+</section>
+</main>"""
+
+write("privacy", "pktito: privacy",
+      "What pktito sends where: the app transcribes on your computer, and a model download and this site are the only things that reach the internet.",
+      privacy)
 
 # ------------------------------------------------------------------- 404 --
 if not ARTIFACT:

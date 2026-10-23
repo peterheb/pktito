@@ -147,3 +147,4 @@ code { overflow-wrap: anywhere; }
 .copy { font: 500 13px/1 var(--font-sans); color: var(--ink); background: var(--sunk); border: 0; border-radius: var(--radius-0);
   padding: 6px 10px; margin-left: var(--space-2); cursor: pointer; vertical-align: 1px; }
 .copy:hover { box-shadow: inset 0 0 0 1px var(--ink-muted); }
+.legal-date { font-size: 13px; color: var(--ink-muted); }
