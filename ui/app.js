@@ -1291,9 +1291,16 @@ const speed = () => (SPEEDS.includes(prefs.speed) ? prefs.speed : 1);
 
 function showSpeed() {
   const s = speed();
-  // the default too, which a new file's load sets the speed back to
-  player.defaultPlaybackRate = player.playbackRate = s;
-  player.preservesPitch = true;
+  // 1× is played as 1.0001: at exactly 1 AVFoundation leaves out its
+  // time-stretcher, and taking it out or putting it back resets the audio
+  // queue, a gap in the sound; between other speeds there is none (the Mac,
+  // 2026-10-23: resets at 1.5→1, 1→1.25 and 1→1.0001, none at 1.25→1.5,
+  // 1.25→1.0001 or 1.0001→0.75). The default too, which a new file's load
+  // sets the speed back to; each only when it differs, and the pitch left
+  // as the web view has it, since every one set reconfigures the item.
+  const rate = s === 1 ? 1.0001 : s;
+  if (player.defaultPlaybackRate !== rate) player.defaultPlaybackRate = rate;
+  if (player.playbackRate !== rate) player.playbackRate = rate;
   $("speed").textContent = `${s}×`;
   $("speed").classList.toggle("is-on", s !== 1);
   $("speed").setAttribute("aria-label", `Playback speed, ${s} times`);
