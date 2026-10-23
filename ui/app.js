@@ -1355,13 +1355,31 @@ function togglePlay() {
   if (!f || modeOf(f) !== "review" || !playable(f) || playId !== f.id) return;
   if (!player.paused) return pausePlayback();
   if (f.pos >= f.duration - 0.05) f.pos = 0;
-  player.currentTime = f.pos;
-  player.play().catch((e) => toast("Can't play", { err: true, detail: e.message }));
+  playFrom(f.pos);
+}
+
+/* Play from t, once the player is there. Asked to seek and play at once,
+   WebKit on macOS 27 starts the player at its old place and seeks it while
+   it plays; with the old place's bytes still on their way, its GPU process
+   deadlocked and the window hung (the Mac, 2026-10-23: a seek to 1187 s,
+   then play). The seek finishes first, then the play. */
+let playAfterSeek = false;
+function playFrom(t) {
+  const start = () => player.play().catch((e) => toast("Can't play", { err: true, detail: e.message }));
+  if (Math.abs(player.currentTime - t) < 0.01 && !player.seeking) return start();
+  player.currentTime = t;
+  if (playAfterSeek) return;
+  playAfterSeek = true;
+  player.addEventListener("seeked", () => {
+    if (playAfterSeek) start();
+    playAfterSeek = false;
+  }, { once: true });
 }
 
 /* The player stops and its file keeps its place, at once: the pause event
    comes later, maybe after another file has taken the player. */
 function pausePlayback() {
+  playAfterSeek = false;
   if (player.paused) return;
   const f = files.find((x) => x.id === playId);
   if (f) f.pos = player.currentTime;
@@ -1374,9 +1392,9 @@ function seek(t, play) {
   const f = current();
   if (!f || !playable(f)) return;
   f.pos = Math.max(0, Math.min(f.duration, t));
-  player.currentTime = f.pos;
   showTime(f.pos, true);
-  if (play && player.paused) player.play().catch((e) => toast("Can't play", { err: true, detail: e.message }));
+  if (play && player.paused) playFrom(f.pos);
+  else player.currentTime = f.pos;
 }
 
 player.addEventListener("play", () => {
