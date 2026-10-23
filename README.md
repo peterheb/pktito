@@ -68,7 +68,13 @@ lost connection it tries again by itself, 2 s later and then twice as long
 each time, 30 s at most. The model is checked against the size and SHA-256
 built into the app (src-tauri/src/model.rs) before it is used. The model
 menu on the start screen changes it later, and a `.pkf` already on the
-computer can be used instead.
+computer can be used instead: from that menu, or double-clicked, which
+opens the app, or goes to the one already open, on the start screen with
+it in use. A file pktito cannot load leaves the model in use as it was and
+says why. Model files are a type of their own, with their icon, on every
+system: the Windows installer registers it (src-tauri/windows/hooks.nsh),
+the app's Info.plist on macOS, and on Linux the package's MIME type and
+desktop file (src-tauri/linux).
 
 Each file lives under the first twelve digits of its SHA-256, as
 `https://models.pktito.net/8bfa6750b83c/parakeet-tdt-0.6b-v2.pkf`, so an

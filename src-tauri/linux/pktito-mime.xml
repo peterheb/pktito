@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- pktito's model files, .pkf, as a type of their own for the desktop's
+     file manager, with their icon in the icon theme (icons/model,
+     scripts/model-icon.py). The package's desktop file names pktito as their
+     program (linux/pktito.desktop), and one double-clicked is the model it
+     uses (main.rs, hand_over). shared-mime-info's dpkg trigger reads this
+     file when the package is installed. -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-pktito-model">
+    <comment>pktito model</comment>
+    <glob pattern="*.pkf"/>
+    <icon name="application-x-pktito-model"/>
+  </mime-type>
+</mime-info>

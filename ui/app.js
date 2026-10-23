@@ -2243,7 +2243,34 @@ async function start() {
   }
   render();
   const given = await invoke("initial_files");
-  if (given.length) addPaths(given);
+  if (given.length) await openPaths(given);
+}
+
+/* Files the system opens with the app, at start or while it runs (main.rs,
+   hand_over): a .pkf, double-clicked, the model in use, the last if more
+   than one; the media queued, as dropped */
+async function openPaths(paths) {
+  const models = paths.filter((p) => extOf(p) === "pkf"), media = paths.filter((p) => extOf(p) !== "pkf");
+  if (models.length) await openModel(models[models.length - 1]);
+  if (media.length) addPaths(media);
+}
+listen("open", (e) => openPaths(e.payload));
+
+/* A model file opened from outside the window, checked by loading it, as
+   Open a model file does, then in use and the start screen showing it. One
+   pktito cannot load leaves the model in use as it was, and the toast says
+   why (main.rs, use_file). */
+async function openModel(path) {
+  try {
+    const name = await invoke("open_model", { path });
+    if (dl) await invoke("cancel_download");
+    await refresh();
+    closeAbout();
+    goHome();
+    toast(`Using ${name}`);
+  } catch (e) {
+    toastErr(e);
+  }
 }
 
 start().catch((e) => {

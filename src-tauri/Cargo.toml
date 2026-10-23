@@ -32,6 +32,11 @@ lto = true
 codegen-units = 1
 strip = true
 
+# a .pkf double-clicked while the window is open goes to it, not to a
+# second one (main.rs, hand_over); macOS sends open events instead
+[target.'cfg(any(windows, target_os = "linux"))'.dependencies]
+tauri-plugin-single-instance = "2"
+
 # WebView2's own context menu and accelerator keys, which Tauri does not
 # reach (main.rs, tame_webview): wry's versions of the two, so nothing more
 # is built

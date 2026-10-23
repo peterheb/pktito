@@ -74,6 +74,18 @@ pub fn data_dir() -> Option<PathBuf> {
     dirs::data_dir().map(|d| d.join(IDENTIFIER))
 }
 
+/// path, a model file the engine has loaded, the one in use: the catalog
+/// model whose own file it is, else a file of the user's
+pub fn choose_file(data: &Path, path: &Path) -> Result<(), String> {
+    let mut s = load_settings(data);
+    let dir = data.join("models");
+    match CATALOG.iter().find(|e| file_in(&dir, e) == path) {
+        Some(e) => (s.model, s.model_file) = (Some(e.name.to_string()), None),
+        None => s.model_file = Some(path.to_path_buf()),
+    }
+    save_settings(data, &s)
+}
+
 /// The model file to transcribe with: the user's own, else the catalog
 /// model in use, if it is on this computer.
 pub fn usable(data: &Path, s: &Settings) -> Option<PathBuf> {
@@ -359,5 +371,46 @@ fn written(path: &Path, err: io::Error) -> Stop {
         Stop::Hard { why: "Not enough disk space".into(), detail }
     } else {
         Stop::Hard { why: "Couldn't save the model".into(), detail }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A data folder of its own under the system's temporary one
+    fn scratch(name: &str) -> PathBuf {
+        let d = std::env::temp_dir().join(format!("pktito-model-test-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&d);
+        fs::create_dir_all(&d).unwrap();
+        d
+    }
+
+    #[test]
+    fn a_catalog_models_own_file_is_that_model() {
+        let data = scratch("catalog");
+        let e = &CATALOG[1];
+        choose_file(&data, &file_in(&data.join("models"), e)).unwrap();
+        let s = load_settings(&data);
+        assert_eq!((s.model.as_deref(), s.model_file), (Some(e.name), None));
+        let _ = fs::remove_dir_all(&data);
+    }
+
+    #[test]
+    fn any_other_file_is_the_users_own() {
+        let data = scratch("own");
+        let own = data.join("elsewhere").join("tuned.pkf");
+        choose_file(&data, &own).unwrap();
+        assert_eq!(load_settings(&data).model_file, Some(own));
+        let _ = fs::remove_dir_all(&data);
+    }
+
+    #[test]
+    fn a_file_that_is_no_model_is_refused() {
+        let data = scratch("junk");
+        let junk = data.join("not-a-model.pkf");
+        fs::write(&junk, b"just some bytes, not a pktito model").unwrap();
+        assert!(crate::pktito::Model::load(&junk).is_err());
+        let _ = fs::remove_dir_all(&data);
     }
 }

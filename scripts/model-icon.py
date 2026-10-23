@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""src-tauri/icons/model.ico and model.icns: the icon of pktito's model files
-(.pkf), which the installer gives them on Windows (src-tauri/windows/hooks.nsh)
-and the app's Info.plist on macOS.
+"""src-tauri/icons/model.ico, model.icns and model/*.png: the icon of pktito's
+model files (.pkf), which the installer gives them on Windows
+(src-tauri/windows/hooks.nsh), the app's Info.plist on macOS, and the Linux
+package in the icon theme's sizes (src-tauri/tauri.linux.conf.json).
 
     python3 scripts/model-icon.py      # on macOS, after design/model-icon*.svg change
 
@@ -25,6 +26,8 @@ SOURCE = {16: "model-icon-16.svg", 20: "model-icon-24.svg", 24: "model-icon-24.s
           64: "model-icon-64.svg", 128: "model-icon.svg", 256: "model-icon.svg",
           512: "model-icon.svg", 1024: "model-icon.svg"}
 ICO = [16, 20, 24, 32, 40, 48, 64, 256]
+# the hicolor theme's sizes the Linux package puts it in
+HICOLOR = [16, 24, 32, 48, 64, 128, 256]
 # the .iconset's names: each size at 1x, and twice it at 2x
 ICNS = [(16, 16, ""), (16, 32, "@2x"), (32, 32, ""), (32, 64, "@2x"), (128, 128, ""), (128, 256, "@2x"),
         (256, 256, ""), (256, 512, "@2x"), (512, 512, ""), (512, 1024, "@2x")]
@@ -65,7 +68,11 @@ def main():
             with open(os.path.join(iconset, f"icon_{s}x{s}{at}.png"), "wb") as f:
                 f.write(png[px])
         subprocess.run(["iconutil", "-c", "icns", iconset, "-o", os.path.join(ICONS, "model.icns")], check=True)
-    print("wrote src-tauri/icons/model.ico and model.icns")
+    os.makedirs(os.path.join(ICONS, "model"), exist_ok=True)
+    for s in HICOLOR:
+        with open(os.path.join(ICONS, "model", f"{s}x{s}.png"), "wb") as f:
+            f.write(png[s])
+    print("wrote src-tauri/icons/model.ico, model.icns and model/*.png")
 
 
 if __name__ == "__main__":

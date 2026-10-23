@@ -10,7 +10,7 @@ use pktito_app::{audio, decode, download, format, model, pktito, recent, transcr
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -30,6 +30,11 @@ struct AppState {
     download: Mutex<Option<Arc<download::Job>>>,
     /// The transcription asked to stop, by id; 0 for none.
     stop: AtomicU32,
+    /// Files the system asked the app to open (a .pkf double-clicked) before
+    /// the page was there to take them (hand_over), and whether it is now;
+    /// the lock is held for both, so that none falls between.
+    opened: Mutex<Vec<String>>,
+    page_ready: AtomicBool,
 }
 
 const MEDIA: &[&str] = &[
@@ -233,16 +238,27 @@ async fn use_model_file(app: AppHandle, state: State<'_, AppState>) -> Result<bo
     let Some(file) = file_dialog(&app).add_filter("pktito model", &["pkf"]).blocking_pick_file() else {
         return Ok(false);
     };
-    let path = file.into_path().map_err(|e| e.to_string())?;
+    use_file(&app, &state, &file.into_path().map_err(|e| e.to_string())?)?;
+    Ok(true)
+}
+
+/// A .pkf opened from outside the window, double-clicked or given on the
+/// command line, as Open a model file uses one: its name, to say so.
+#[tauri::command]
+async fn open_model(app: AppHandle, state: State<'_, AppState>, path: String) -> Result<String, String> {
+    let path = PathBuf::from(path);
+    use_file(&app, &state, &path)?;
+    Ok(path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default())
+}
+
+/// path the model in use once the engine has loaded it (model::choose_file):
+/// one pktito cannot load leaves the one in use as it was.
+fn use_file(app: &AppHandle, state: &AppState, path: &Path) -> Result<(), String> {
     {
         let mut slot = state.engine.lock().unwrap();
-        ensure_engine(&mut slot, &path).map_err(|why| format!("Not a pktito model: {why}"))?;
+        ensure_engine(&mut slot, path).map_err(|why| format!("Not a pktito model: {why}"))?;
     }
-    let data = data_dir(&app)?;
-    let mut settings = model::load_settings(&data);
-    settings.model_file = Some(path);
-    model::save_settings(&data, &settings)?;
-    Ok(true)
+    model::choose_file(&data_dir(app)?, path)
 }
 
 /// Of these paths, the files that are there: the window queues no others.
@@ -254,14 +270,46 @@ fn existing(paths: Vec<String>) -> Vec<String> {
     paths.into_iter().filter(|p| Path::new(p).is_file()).collect()
 }
 
-/// Files named on the command line (`pktito-app a.mp4 b.mp3`), to queue at start.
+/// Files named on the command line (`pktito-app a.mp4 b.mp3`, or a .pkf
+/// Explorer opens with it), to queue or use at start, and any the system
+/// handed over before the page was there (hand_over). From here on they go
+/// to the page as they come.
 #[tauri::command]
-fn initial_files() -> Vec<String> {
-    std::env::args()
-        .skip(1)
-        .filter(|a| !a.starts_with('-') && Path::new(a).is_file())
-        .map(|a| fs::canonicalize(&a).map(|p| p.to_string_lossy().into_owned()).unwrap_or(a))
+fn initial_files(state: State<'_, AppState>) -> Vec<String> {
+    let mut files = files_in(std::env::args().skip(1), Path::new(""));
+    let mut opened = state.opened.lock().unwrap();
+    files.append(&mut opened);
+    state.page_ready.store(true, Ordering::Release);
+    files
+}
+
+/// The files among a program's arguments, whole paths, relative to cwd
+fn files_in(args: impl Iterator<Item = String>, cwd: &Path) -> Vec<String> {
+    args.filter(|a| !a.starts_with('-'))
+        .map(|a| cwd.join(a))
+        .filter(|p| p.is_file())
+        .map(|p| fs::canonicalize(&p).unwrap_or(p).to_string_lossy().into_owned())
         .collect()
+}
+
+/// Files the system hands the app while it runs: macOS's open events, and
+/// on Windows and Linux a second start's arguments (the single-instance
+/// plugin's), its window brought forward. To the page if it is there, else
+/// kept for it (initial_files).
+fn hand_over(app: &AppHandle, files: Vec<String>) {
+    let state = app.state::<AppState>();
+    let mut opened = state.opened.lock().unwrap();
+    if !state.page_ready.load(Ordering::Acquire) {
+        opened.extend(files);
+        return;
+    }
+    if !files.is_empty() {
+        let _ = app.emit("open", files);
+    }
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.unminimize();
+        let _ = w.set_focus();
+    }
 }
 
 #[tauri::command]
@@ -1185,7 +1233,14 @@ fn main() {
         }
         return;
     }
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    // a second start, a .pkf double-clicked while the window is open, hands
+    // its files to the first and ends (macOS sends them as open events)
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
+        hand_over(app, files_in(argv.into_iter().skip(1), Path::new(&cwd)));
+    }));
+    let app = builder
         .plugin(tauri_plugin_dialog::init())
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Resized(_) = event {
@@ -1219,6 +1274,7 @@ fn main() {
             pause_download,
             cancel_download,
             use_model_file,
+            open_model,
             initial_files,
             existing,
             pick_files,
@@ -1240,8 +1296,18 @@ fn main() {
             reveal_model,
             window_menu
         ])
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .expect("pktito could not start");
+    app.run(|app, event| match event {
+        // a .pkf double-clicked in Finder or dropped on the Dock's icon
+        #[cfg(target_os = "macos")]
+        tauri::RunEvent::Opened { urls } => {
+            hand_over(app, urls.iter().filter_map(|u| u.to_file_path().ok()).map(|p| p.to_string_lossy().into_owned()).collect())
+        }
+        _ => {
+            let _ = app;
+        }
+    });
 }
 
 #[cfg(test)]

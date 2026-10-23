@@ -3,7 +3,8 @@
 <!-- Merged over the Info.plist Tauri writes. pktito's model files, .pkf, as
      a type of their own, with their icon (icons/model.icns,
      scripts/model-icon.py), which Finder shows once the app is on the Mac.
-     They open with nothing, as a model is chosen in the app. -->
+     One double-clicked opens the app, which uses it as its model (main.rs,
+     hand_over and use_file): a viewer of them, so not their editor. -->
 <plist version="1.0">
 <dict>
 	<key>UTExportedTypeDeclarations</key>
@@ -34,7 +35,7 @@
 			<key>CFBundleTypeName</key>
 			<string>pktito model</string>
 			<key>CFBundleTypeRole</key>
-			<string>None</string>
+			<string>Viewer</string>
 			<key>LSHandlerRank</key>
 			<string>Owner</string>
 			<key>LSItemContentTypes</key>
