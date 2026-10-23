@@ -283,12 +283,15 @@ fn initial_files(state: State<'_, AppState>) -> Vec<String> {
     files
 }
 
-/// The files among a program's arguments, whole paths, relative to cwd
+/// The files among a program's arguments, whole paths, relative to cwd.
+/// Made whole as written (std::path::absolute): fs::canonicalize's begin
+/// \\?\ on Windows, which the window would show (the Windows test,
+/// 2026-10-23).
 fn files_in(args: impl Iterator<Item = String>, cwd: &Path) -> Vec<String> {
     args.filter(|a| !a.starts_with('-'))
         .map(|a| cwd.join(a))
         .filter(|p| p.is_file())
-        .map(|p| fs::canonicalize(&p).unwrap_or(p).to_string_lossy().into_owned())
+        .map(|p| std::path::absolute(&p).unwrap_or(p).to_string_lossy().into_owned())
         .collect()
 }
 
@@ -1321,6 +1324,16 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn files_named_are_whole_paths_as_written() {
+        // the package's folder is the tests' working directory
+        let args = ["Cargo.toml", "--flag", "no-such-file"].map(String::from);
+        let got = files_in(args.into_iter(), Path::new(""));
+        assert_eq!(got.len(), 1, "{got:?}");
+        assert!(Path::new(&got[0]).is_absolute() && got[0].ends_with("Cargo.toml"), "{got:?}");
+        assert!(!got[0].starts_with(r"\\?\"), "{got:?}");
+    }
 
     #[test]
     fn shorter_not_narrower() {

@@ -75,15 +75,22 @@ pub fn data_dir() -> Option<PathBuf> {
 }
 
 /// path, a model file the engine has loaded, the one in use: the catalog
-/// model whose own file it is, else a file of the user's
+/// model whose own file it is, however the path to it is written, else a
+/// file of the user's
 pub fn choose_file(data: &Path, path: &Path) -> Result<(), String> {
     let mut s = load_settings(data);
     let dir = data.join("models");
-    match CATALOG.iter().find(|e| file_in(&dir, e) == path) {
+    match CATALOG.iter().find(|e| same_file(&file_in(&dir, e), path)) {
         Some(e) => (s.model, s.model_file) = (Some(e.name.to_string()), None),
         None => s.model_file = Some(path.to_path_buf()),
     }
     save_settings(data, &s)
+}
+
+/// Whether a and b are one file: the same path, or the same once each is
+/// canonical (through links and .., and on Windows in its \\?\ form)
+fn same_file(a: &Path, b: &Path) -> bool {
+    a == b || matches!((fs::canonicalize(a), fs::canonicalize(b)), (Ok(x), Ok(y)) if x == y)
 }
 
 /// The model file to transcribe with: the user's own, else the catalog
@@ -391,6 +398,19 @@ mod tests {
         let data = scratch("catalog");
         let e = &CATALOG[1];
         choose_file(&data, &file_in(&data.join("models"), e)).unwrap();
+        let s = load_settings(&data);
+        assert_eq!((s.model.as_deref(), s.model_file), (Some(e.name), None));
+        let _ = fs::remove_dir_all(&data);
+    }
+
+    #[test]
+    fn a_catalog_models_file_by_another_path_is_that_model() {
+        let data = scratch("another-path");
+        let e = &CATALOG[0];
+        let models = data.join("models");
+        fs::create_dir_all(&models).unwrap();
+        fs::write(file_in(&models, e), b"its bytes").unwrap();
+        choose_file(&data, &models.join("..").join("models").join(format!("{}.pkf", e.name))).unwrap();
         let s = load_settings(&data);
         assert_eq!((s.model.as_deref(), s.model_file), (Some(e.name), None));
         let _ = fs::remove_dir_all(&data);
