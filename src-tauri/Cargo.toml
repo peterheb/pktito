@@ -1,6 +1,6 @@
 [package]
 name = "pktito-app"
-version = "0.8.3"
+version = "0.8.4"
 description = "pktito: drop an audio or video file, read its transcript. On this computer."
 license = "MIT"
 edition = "2021"
