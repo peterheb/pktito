@@ -1233,6 +1233,14 @@ fn main() {
         }
         return;
     }
+    // WebKitGTK's DMA-BUF renderer draws the window as stripes on a Pi 5
+    // under Raspberry Pi OS 13 (WebKitGTK 2.54, Mesa 26.2's V3D, labwc); with
+    // it off the window is right (the pi5a test, 2026-10-23). A value
+    // already set is the user's.
+    #[cfg(target_os = "linux")]
+    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
     let builder = tauri::Builder::default();
     // a second start, a .pkf double-clicked while the window is open, hands
     // its files to the first and ends (macOS sends them as open events)
