@@ -8,8 +8,9 @@
 "use strict";
 
 /* The mascot on canvas, which fills stage: { show, hide }, or null where
-   there is no WebGL 2. */
-function drawMascot(stage, canvas) {
+   there is no WebGL 2. yaw turns its resting pose, in degrees: 0, as the
+   app shows it; the site's About turns it toward its words. */
+function drawMascot(stage, canvas, { yaw: homeYaw = 0 } = {}) {
   const gl = canvas.getContext("webgl2", {
     antialias: true,
     alpha: true,
@@ -439,7 +440,7 @@ function drawMascot(stage, canvas) {
       halfW = RXZ * 1.07;
     const dist = Math.max(halfH, halfW / aspect) / Math.tan(FOV / 2);
     const P = persp(FOV, aspect, dist * 0.35, dist * 2.4);
-    const yaw = S.intro + S.yawDrag + S.gx;
+    const yaw = S.intro + S.yawDrag + S.gx + rad(homeYaw);
     const pitch = clamp(HOME_PITCH + S.pitchDrag + S.gy, PITCH_MIN, PITCH_MAX);
     const MV = mul(
       trans(0, -2, -dist),
