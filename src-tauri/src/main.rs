@@ -758,20 +758,21 @@ fn open_in_browser(url: &str) -> Result<(), String> {
 }
 
 /// xdg-open, which xdg-utils brings and the .deb recommends. Where it is
-/// missing (WSL, a system with no desktop) the spawn's error is "No such file
-/// or directory", which reads as if the file were missing; this says "no
-/// xdg-open" instead.
+/// missing (WSL, a system with no desktop) the spawn's error, "No such file
+/// or directory", reads as if the file were missing, so `missing` says what
+/// is, with no ": " in it: the toast shows only what comes before one, and
+/// the rest as its tooltip. Any other error is `failed: why`.
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-fn xdg_open(arg: impl AsRef<std::ffi::OsStr>, failed: &str) -> Result<(), String> {
+fn xdg_open(arg: impl AsRef<std::ffi::OsStr>, missing: &str, failed: &str) -> Result<(), String> {
     std::process::Command::new("xdg-open").arg(arg).spawn().map(|_| ()).map_err(|e| match e.kind() {
-        std::io::ErrorKind::NotFound => format!("{failed}: no xdg-open"),
+        std::io::ErrorKind::NotFound => missing.to_string(),
         _ => format!("{failed}: {e}"),
     })
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn open_in_browser(url: &str) -> Result<(), String> {
-    xdg_open(url, "Couldn't open it")
+    xdg_open(url, "Opening links needs xdg-utils", "Couldn't open it")
 }
 
 #[cfg(target_os = "macos")]
@@ -842,7 +843,7 @@ fn reveal_in_folder(path: &Path) -> Result<(), String> {
     if shown {
         return Ok(());
     }
-    xdg_open(path.parent().unwrap_or(Path::new("/")), "Couldn't show it")
+    xdg_open(path.parent().unwrap_or(Path::new("/")), "Show in folder needs xdg-utils", "Couldn't show it")
 }
 
 /// `pktito-app --transcribe FILE [--model PKF] [--json]`: the window's
