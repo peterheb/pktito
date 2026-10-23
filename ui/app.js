@@ -1336,6 +1336,7 @@ function loadAudio(f) {
   setPlayIcon();
   if (playId === f.id && player.getAttribute("src")) return;
   playId = f.id;
+  playToken++;   // a play waiting on the last file's seek stays there
   if (f.audio) player.src = T.core.convertFileSrc(f.audio);
   else player.removeAttribute("src");
 }
@@ -1363,23 +1364,24 @@ function togglePlay() {
    it plays; with the old place's bytes still on their way, its GPU process
    deadlocked and the window hung (the Mac, 2026-10-23: a seek to 1187 s,
    then play). The seek finishes first, then the play. */
-let playAfterSeek = false;
+let playToken = 0;   // the latest play asked for; a pause, or a newer one, cancels the rest
 function playFrom(t) {
   const start = () => player.play().catch((e) => toast("Can't play", { err: true, detail: e.message }));
+  const mine = ++playToken;
   if (Math.abs(player.currentTime - t) < 0.01 && !player.seeking) return start();
   player.currentTime = t;
-  if (playAfterSeek) return;
-  playAfterSeek = true;
-  player.addEventListener("seeked", () => {
-    if (playAfterSeek) start();
-    playAfterSeek = false;
-  }, { once: true });
+  const go = () => {
+    if (mine === playToken && player.seeking) return;   // a later seek's seeked comes next
+    player.removeEventListener("seeked", go);
+    if (mine === playToken) start();
+  };
+  player.addEventListener("seeked", go);
 }
 
 /* The player stops and its file keeps its place, at once: the pause event
    comes later, maybe after another file has taken the player. */
 function pausePlayback() {
-  playAfterSeek = false;
+  playToken++;
   if (player.paused) return;
   const f = files.find((x) => x.id === playId);
   if (f) f.pos = player.currentTime;
