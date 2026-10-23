@@ -1,100 +1,155 @@
-pktito is an open-source speech-to-text engine: a small C11 port of NVIDIA's Parakeet-TDT models. It has two faces that share this system. The site, pktito.net, shows that it works and sends the reader to the source or the download. The desktop app, built with Tauri for macOS and Windows, does one thing: you pick mp3 or mp4 files, it pulls the audio out with the operating system's own media libraries (AVFoundation on macOS, Media Foundation on Windows), and it transcribes them on your machine.
+pktito turns speech into text on your computer. It is a C11 library of NVIDIA's Parakeet-TDT speech models, and a desktop app for macOS, Windows and Linux built on it with Tauri. This system serves both of pktito's faces: the app, and the site, pktito.net, which shows the app and sends the reader to the download or the source.
 
-The idea: **the transcript is the picture.** The site's hero is a transcript panel filling in word by word over the waveform it came from, on a plume-blue stage. The app is the same thing at working size: the waveform strip over the transcript, and in playback the word being spoken underlined. Neither describes the product when it can show a real fragment of it.
+The idea: **the transcript is the picture.** The app is a waveform strip over a transcript, and the site shows that app, with a real transcript in it, rather than describing it.
 
-pktito is the sibling of pinfer and shares its type (Archivo and Commit Mono) and its plain, measured voice. The colors are its own.
+pktito is the sibling of pinfer and shares its type (Archivo and Commit Mono). The colors are its own.
 
 ## Voice
 
-Plain, exact and checkable, as a good README is.
+pktito is a free tool, written by people who use it. Write the way a knowledgeable friend would describe it: plain, specific, and finished when the point is made.
 
-- **Say what happens to the file.** "pktito pulls the audio out of the mp4 and transcribes it on this computer." Name the formats (mp3, mp4), the platforms (macOS, Windows) and the model exactly as published (parakeet-tdt-0.6b-v2).
-- **Credit the model plainly.** "A C11 port of NVIDIA's Parakeet-TDT models." Never use NVIDIA's logo, its green, or language that suggests endorsement.
-- **Numbers only when measured.** A speed or accuracy figure carries its machine, model, file and date, or it is not shown. No "real-time", "fast" or "accurate" without a number beside it.
-- **Describe the code as it stands.** No roadmap promises; a thing not yet done says so.
-- **App copy is short and states what happens.** Buttons are verbs ("Add files", "Copy text", "Save as .txt"). Status says the step: "Extracting audio", "Transcribing 42%", "Done". Errors say what went wrong and what to try: "No audio track in this file. Try the original recording."
-- American spelling. Sentence case everywhere. No exclamation marks, no emoji, no superlatives.
-- Lowercase **pktito** in running text and in the wordmark.
+1. **Say it once.** If the picture, the heading or the sentence before already says it, cut it. Don't caption what the reader can see. A section answers its question and stops.
+2. **People act; things don't.** pktito can be the subject of what it literally does: transcribes, saves, opens. Files, servers, operating systems and toasts don't speak, try or decide. Write "The download was damaged", not "the file didn't match its checksum"; "Retrying automatically", not "Retries by itself". Use the passive voice or a state when nobody is acting.
+3. **Show, then stop.** Let the screenshot and the measured numbers do the persuading. No superlatives and no hype words (powerful, seamless, effortless, blazing), no urgency ("Get started now"), no exclamation marks, no emoji. Confident, not loud: pktito is described, not sold.
+4. **Numbers have a source, in one short line.** A speed figure names its benchmark and the pktito version. The machines and the method live where that line links, not in a paragraph under the chart.
+5. **No disclaimers in running copy.** Legal terms live in one place, the privacy page and the footer. Hedge ("may", "in most cases") only what is uncertain, and then say what it depends on.
+6. **Errors say what happened and what to do.** The headline is the fact ("File not found") or the fix ("Install ffmpeg to read audio and video here"). Add a remedy only when the reader can act on it ("Close other apps and try again"). The system's own words (an error code, a server's answer) go in the details, never the headline.
+7. **Use the reader's words.** Files, recordings, videos and transcripts; not decoders, chunks or VAD. Name formats, platforms and models exactly as published: MP3, Windows on Arm, parakeet-tdt-0.6b-v2.
 
-Lines to model copy on:
+Mechanics:
 
-> Drop a file. Read it.
-> Nothing leaves your computer.
-> The audio comes out through the media libraries your OS already has.
+- Sentence case everywhere but the macOS menu bar, where Apple's Title Case applies ("Add Files…", "Save as Text").
+- Lowercase **pktito**, at the start of a sentence too.
+- Buttons are verbs ("Download", "Save as", "Try again"). An ellipsis marks one that opens a dialog ("Choose files…", "Open a model file…").
+- A status names the step: "Reading the audio", "Transcribing 42%", "Done".
+- Contractions are fine ("Can't", "isn't"). American spelling.
+- Punctuation as a careful writer uses it: curly quotes, em dashes where a sentence turns. Other symbols only where they are the convention: × for times real time, → after a link, · between items in a status line, … in a button that opens a dialog.
+
+Before and after, from the app and the privacy page:
+
+| Before | After |
+| --- | --- |
+| pktito pulls the audio out of an mp3 or mp4 and transcribes it. | pktito transcribes audio and video on your computer. |
+| Uninstalling pktito removes the app. Its data folder … stays until you delete it. | Uninstalling pktito leaves its data folder … for you to delete. |
+| If it changes, this copy changes with the next update of pktito. | *(cut)* |
+| Couldn't open it: Windows said 42 | Couldn't open the link |
+| File changed since | Can't play: the original file has changed since it was transcribed |
+
+Every word the app shows is in `ui/locales/en.json`, by key; write and review copy there.
 
 ## Color
 
-One ground, one ink, one accent, one mark. Every color is a token with a light and a dark value; components use tokens, never literals.
+One ground, one ink, one accent, one mark. Every color is a token with a light and a dark value, and components use tokens. The exceptions are the Windows caption buttons, which use Windows' own colors (close is #c42b1c), and a few color mixes for search highlights.
 
-- `ground` is the page and the app window; `surface` and `sunk` are one and two tone steps off it. The app's model cards and the sentence being played sit on `surface`; code blocks, the resting drop zone and empty progress tracks on `sunk`. Separate areas by that step, never by a rule or a shadow.
-- `ink` (night navy, never black) sets all running and transcript text. `ink-muted` is for timestamps, durations, file sizes and legal text only.
-- `plume` is the accent: the primary button, the site's stage, progress fill and the played part of a waveform. On the app's light theme a progress bar fills with `wave`: plume is 1.5:1 against the light track, and a state's cue needs 3:1 (WCAG 1.4.11). Text on it is `on-plume`, never white. It is never text on the ground.
-- `beak` is a mark, not a color for areas: the square in the wordmark, the playhead, the token being decoded. Blue and orange stay distinct for color-blind readers because they also differ in lightness.
-- `term` is the dark field of the stage's transcript panel and the waveform strip in both themes; `term-ink`, `term-dim`, `wave` and `wave-played` sit on it.
-- `ok` and `err` mark a finished or failed file and always sit beside a word.
-- A two-way switch (Sentences | Captions) raises the chosen one to `ground` with a 1px `ink-muted` edge inside it: the tone step alone is 1.2:1 against the track.
-- The one button that destroys something, Clear in the question before the recent list is emptied, sets its word in `err` on `sunk`. Cancel beside it is the default, in `plume`, so that Enter and Esc both leave things as they were.
-- Keyboard focus is `focus`, 2px solid: ink in light, plume in dark.
-- Hover and press are one rule for every control, the wordmark included: `tint`, then `tint-press`, laid over whatever the control sits on or is filled with (ground, surface, sunk, plume), so it darkens in light and lightens in dark; on `term`, the strip and the toast, `tint-term` and `tint-term-press`. Links in running text thicken their underline instead.
+- **Grounds.** `ground` is the page, the app window, menus, sheets and dialogs. `surface` is one tone step off it: the model cards, the sentence being played, a sheet's header, About's mascot stage, the site's footer and tiles. `sunk` is two steps off: buttons at rest, the Find field, the switch's track, empty progress tracks, key caps, Details boxes.
+- **Ink.** `ink` (night navy, never black) sets text and figures. It also fills the site's Download buttons and marks a chosen card (a 2 px ring) or the current search hit. `ink-muted` is for secondary text: timestamps, sizes, status lines, descriptions, credits, unselected labels, legal text. Never for the transcript itself.
+- **Plume**, the accent. It colors the primary button, the site's stage, the played part of a waveform, search ticks and highlights. Text on it is `on-plume`, never white, and plume is never text on the ground. In light, progress fills with `wave`, since plume is 1.5:1 against the light track and a state's cue needs 3:1. `plume-press` fills the drop overlay.
+- **Beak**, a mark, not an area. It colors the wordmark's square, the playhead, the square after the playing row's time and the playing word's underline.
+- **Term**, the dark field in both themes: the waveform strip and the toast. On it go `term-ink`, `term-dim`, `wave` and `wave-played`. `term-line` is a quiet fill there: the play button and the idle bars.
+- **State.** `ok` and `err` always sit beside a word: "Done", "Downloaded", or the failure. `err` also sets the word on the one destructive button.
+- **Scrim.** `scrim` lies behind a sheet or the ask dialog.
+- **Focus.** `focus` draws a 2 px solid ring: ink in light, plume in dark, and plume on `term` in both. The offset is 2 px in the app and 3 px on the site.
+- **Hover and press.** One rule for every control on both surfaces: `tint`, then `tint-press`, laid over whatever the control sits on or is filled with, so it darkens in light and lightens in dark. On `term`, and on an ink fill, use `tint-term` and `tint-term-press`. Links in running text thicken their underline instead.
+
+Areas are told apart by tone, not by lines. Outlines mark only a state: a chosen card's ring, the chosen switch segment's 1 px `ink-muted` edge, the drop overlay's dashed edge, a menu's ring. A menu separates its groups with a divider: 1 px of `sunk`, inset to the items' text. Shadows only on what floats: `shadow-float` for menus, sheets, dialogs and the toast.
 
 ## Type
 
-Two families, the same files as pinfer.
+Two families, shipped as files (`ui/fonts`, and the site's `fonts/`) with their SIL Open Font License texts beside them. Never load a face from a CDN: the app works offline, and so do the site's pages.
 
-- **Archivo** (400, 500, 700) for everything that is not code or a timestamp. Site: `display` for the hero, `figure` for the one number a section is about, `lead` for section headings, `body` for running text, `small` for nav and legal. App: `ui` (14px/500) for controls and file names, `transcript` (17px at 1.6) for the text people read, `figure` at 64px for a file's length on its detail view, `small` for status lines.
-- **Commit Mono** (400, 700) only for what is literally code or time: commands, file names, flags, and every timestamp (`stamp`, always `hh:mm:ss` or `hh:mm:ss.cc`; or, with frames chosen from the strip's time, SMPTE's `hh:mm:ss:ff`, `hh:mm:ss;ff` at the drop-frame 29.97 and 59.94).
-- Tabular figures (`tabular-nums`) wherever numbers line up: durations, percentages, timestamps.
+- **Archivo**, at 400, 500 and 700 only. Use no other weight, since a weight without a file is faked. It sets everything that is not code, a timestamp or a measurement.
+  - Site: `display` for the hero, `lead` for section headings, `body` for running text, `small` for nav and legal text.
+  - App: `ui` (14 px/500) for controls and file names, `transcript` (17 px at 1.6) for the text people read, `lead` for a screen's heading, `figure` at 64 px for the download's percentage, `small` for status lines.
+- **Commit Mono**, at 400 and 700, sets what is literally code, time or a measurement:
+  - commands and file paths
+  - every timestamp: `hh:mm:ss`, `hh:mm:ss.cc`, or SMPTE `hh:mm:ss:ff` and drop-frame `hh:mm:ss;ff` when frames are chosen
+  - playback speed, frame rates, download sizes and match counts
+- Tabular figures (`tabular-nums`) wherever numbers line up.
 - Headings use `text-wrap: balance`. Running text stays near `measure`.
-- The fonts ship as files (`fonts/`), on the site and inside the app bundle. Never load a face from a CDN: the app must work offline, and so should the site's pages.
-- Both faces are under the SIL Open Font License 1.1; keep the license texts (`Licenses`) beside the font files wherever they go.
+- The floor is 12 px, for secondary detail only (stats, chips, license texts). Running text is 13 px or more.
 
 ## Layout
 
-**Site.** One 12-column grid, outer margins `margin-page` (40px, 20px on a phone), sections `space-8` apart. Corners are square (`radius-0`); `radius-ui` appears only inside a `data-ui` fragment, which is a real piece of the app shown at true size.
+**Site.** The page runs to `page-max` with `margin-page` outer margins (40 px; 20 px on a phone, with the safe-area insets). The hero sits on a 12-column grid; sections below use 3 or 4 columns that stack on a phone. Sections stand `space-7` apart. They are told apart by tone, alternating `ground`, `surface` and the `term` field for one dark band. Corners are square (`radius-0`).
 
-**App.** One window, one screen at a time: the start; one file's transcript; or a batch, the files dropped together, each with its progress, a row opening its transcript and one Save all for all of them. Minimum width `window-min` (480px). Each screen's header row is the title bar, as in the apps of 2026: on macOS the system's own traffic lights sit at its left end, the window drawing no title bar; on Windows the app draws minimize, maximize and close at its right to Windows 11's measure (46 × 32, Segoe Fluent Icons, close red), as Chrome, Terminal and Notepad do; Linux keeps its desktop's title bar. The header's empty space drags the window. Never draw traffic lights. Controls use `radius-ui` so they sit with the OS's own. No toolbar icons without labels, but for copying, whose icon everyone reads: its words are its tooltip.
+**App.** One window and one screen at a time:
 
-**The one ornament** is the `frame`: one 8px step for 80 ms of audio, the encoder's frame. The site's waveform bars sit a frame apart, and the duration blocks under a transcript are a whole number of frames wide, because TDT predicts each token with its duration. Use it on timelines only, never as decoration elsewhere. The app's waveform strip is the exception: it is a tool for finding a place in a recording, so it draws its bars as finely as the screen shows them, 2px wide and 1px apart.
+- setup: choose a model, its download, or the download stopped
+- start: an idle strip, "Drop audio or video here", Choose files…, and the recent list
+- one file's transcript
+- a batch: the files dropped together, each row with its progress, opening its transcript, and Save all
 
-No eyebrow labels, no 01 / 02 / 03, no thin dividers, no gradients, no glass, no shadows at rest (`shadow-float` is for menus, dialogs and the app window shown on the site). The one divider is a menu's, between its groups, as the platforms' own menus draw it: 1px of `sunk`, inset to the items' text.
+About lies over whichever screen opened it, and the Privacy and license sheets over About. The ask dialog, the drop overlay, menus and the toast come and go over any screen.
+
+- **Size.** The window opens at 680 × 800 (portrait, about 65 characters of transcript a line and 20 lines) and is at least `window-min` (480 px) each way.
+- **Title bar.** Each screen's header row is the title bar, and its empty space drags the window:
+  - macOS: the system's traffic lights at its left end, with no title bar drawn and no lights in full screen.
+  - Windows: the app draws minimize, maximize and close at its right to Windows 11's measure (46 × 32, Segoe Fluent Icons, close red, dimmed while the window is inactive), with the system menu on Alt+Space.
+  - Linux: the desktop's own title bar.
+- **Corners.** Controls and containers use `radius-ui` (8 px), as the OSs' own controls do. Items inside a container use `radius-sm` (6 px): switch segments, menu items, chips, a row's remove button.
+- **Icon-only buttons.** Allowed only for actions everyone reads: back, close, copy, play and pause, remove, previous and next match. Each has a tooltip and an accessible name, with its shortcut where there is one.
 
 ## Imagery
 
-pktito's pictures are its own interface, built in HTML at true size and marked `data-ui`: the transcript panel, a waveform strip, the app window, a command and its output. Show real transcripts of audio you have the right to publish, and say what the audio is. Never put the app inside a laptop mock-up, never shrink it until unreadable. No stock microphones, headphones or AI brains.
+pktito's pictures are screenshots of the app itself, taken by script so they can be retaken whenever the window changes. The standard one is chapter 1 of LibriVox's *Alice's Adventures in Wonderland*:
 
-The one exception is the mascot on the app's About, its one kitschy corner: a voxel budgie beside a speech bubble, whose waveform moves when it talks, and a transcript card, made by `scripts/mascot.py`. It is an easter egg for whoever opens About, not a picture of the product. Neither the mascot nor its animation goes anywhere else, in the app or on the site.
+- transcribed by the multilingual model
+- the window at its first size
+- scrolled past the LibriVox notice
+- in light and dark, on each system
+
+`scripts/screenshots-mac.sh` takes the Mac's two, and `site/README.md` says how the rest are taken and which a visitor sees.
+
+- Show real transcripts of audio that may be published. Never put the app in a device mock-up, or shrink it until it's unreadable.
+- No stock microphones, headphones or AI brains.
+- The one exception is the mascot: a voxel budgie beside a speech bubble whose waveform moves when it talks, and a transcript card, drawn in WebGL (`ui/mascot.js`, from `scripts/mascot.py`). It belongs to the About pages, the app's and the site's, and nowhere else.
 
 ## Motion
 
-- The signature move: the stage's transcript fills in a token at a time while the playhead (`beak`) moves along the waveform, and each token's duration block lights from `wave` to `wave-played`. That is the one loud moment on the site.
-- In the app, progress moves along the waveform and the transcript appears as segments finish; in playback the playhead moves and the underline follows the speech. Nothing else animates.
-- Section parts on the site enter once, from a visible resting state, 60–90ms apart.
-- Every control answers hover, press and focus, with transform and opacity only.
-- With `prefers-reduced-motion`, the transcript shows whole, the playhead sits at the end, and progress jumps instead of sliding.
+Motion in pktito follows the audio or answers a hand. Nothing moves to decorate.
+
+- In the app:
+  - Progress moves along the waveform, and the transcript appears as each part finishes.
+  - In playback the playhead moves, the playing word is underlined, and the transcript scrolls to keep the playing sentence in view.
+  - A spinner beside the file's name marks a file at work.
+  - The mascot turns and hops when it's dragged or clicked.
+- Controls answer hover and press with the tint (see Color), and press moves a button 1 px.
+- The site has no animation beyond that: a link's arrow moves 3 px on hover.
+- With `prefers-reduced-motion`, transitions are off, the spinner stays still, playback's scroll jumps instead of gliding, and the mascot stays put.
 
 ## Iconography
 
-Few, and always with a label.
+Line icons after Feather (MIT): a 24 px grid and 2 px round strokes, drawn in `currentColor`, 16 px in the app.
 
-- The `Icons` group holds line icons after Feather (MIT): music (an audio file), film (a video file), file-text (a transcript), folder, copy, check, download, x, external-link (a page that opens in the browser, at 12px after its link's word). 24px grid, 2px round strokes, drawn in `ink`; inline, use `currentColor`. Show them at 16px in the app and 20px on the site.
-- Arrows in running text are the `→` glyph. No emoji, no icons in tinted squares.
+- **The set:**
+  - files: music (an audio file), film (a video file), file-text (a transcript), folder
+  - actions: copy, check, download, plus, x, back, search
+  - choosers: chevron down and up
+  - alert, for an error toast
+  - external-link: 12 px, after an outbound link's last word, held to it so it never starts a line
+  - zap: 12 px, marks a caption that asks more than 20 characters a second of its reader
+- **Play and pause** are filled, at 20 px.
+- **On the site**, an outbound link ends in the → glyph. No emoji, and no icons in tinted squares.
 
 ## Logo
 
-There is no pictorial mark. The name is the logo: the **Wordmark** sets "pktito" in Archivo 700 followed by a `beak` square the size of the x-height, like a playhead at the end of a line.
+There is no pictorial mark. The name is the logo: the **Wordmark** sets "pktito" in Archivo 700, lowercase, followed by a `beak` square half an em wide on the baseline, like a playhead at the end of a line. In the app it is the button to About.
 
-The app icon (`Logos/app-icon.svg`) is a `plume` rounded square with four `ink` waveform bars ending in the `beak` square. Its 230/1024 corner suits macOS; generate the Windows .ico and the rest of the Tauri icon set from the same SVG. Never recolor it, add a gradient, or set it on `plume`.
+The app icon (`design/app-icon.svg`) is a `plume` rounded square with four `ink` waveform bars ending in the `beak` square. Its 230/1024 corner suits macOS; the Windows .ico and the rest of the Tauri icon set are made from the same SVG, and it is the site's favicon. Never recolor it, add a gradient, or set it on `plume`.
 
-The model icon (`model-icon.svg`) marks pktito's model files, .pkf, in Explorer and Finder: a white sheet in the window's proportion, 1 by √2, its corner folded, with the app icon's four bars cut into steps, as int8 weights are, and the beak at their end, one step. Below 128 px each size has its own drawing on whole pixels (`model-icon-64.svg` for 48 and 64, then `-32`, `-24` and `-16`, the last two with three whole bars and the beak); `scripts/model-icon.py` makes the .ico and .icns from them.
+The model icon (`design/model-icon.svg`) marks pktito's model files, .pkf, in Explorer and Finder: a white sheet in the window's proportion, 1 by √2, its corner folded, with the app icon's four bars cut into steps, as int8 weights are, and the beak at their end. Below 128 px each size has its own drawing on whole pixels (`model-icon-64.svg` for 48 and 64, then `-32`, `-24` and `-16`, the last two with three bars); `scripts/model-icon.py` makes the .ico and .icns from them.
 
 ## Components
 
-- **Button**: square on the site, `radius-ui` in the app; primary in `plume`.
-- **Wordmark**: the name and the beak square.
-- **Stage**: the site's hero, a transcript panel filling in over its waveform.
-- **DropZone**: where files enter the app.
-- **FileQueue**: each file's step and progress.
-- **Transcript**: timestamped segments, the thing people read and copy.
-- **AppWindow**: the queue beside the transcript, once there are several files.
+The site's components are plain HTML and CSS in `design/bundle.css` (classes `pk-*`): Button, Link, Wordmark and Stage. The app has its own stylesheet, `ui/app.css`, on the same tokens. Its patterns are documented here, so that a picture of the app or a new screen matches it:
 
-Components are plain HTML and CSS in `components/bundle.css` (classes `pk-*`); there is no script bundle. The Stage preview carries the few lines of script it needs.
+- **Strip:** the waveform on `term` with play, speed and the time (seconds or frames) beside it, and search ticks under it.
+- **Transcript:** rows of a start time in `stamp` and a sentence in `transcript` type. The playing row sits on `surface`, with the beak square after its time and the playing word underlined. Clicking a time plays from it. Sentences | Captions switches the view.
+- **Row:** a file on the start screen's recent list or in a batch: its icon, name, length and step, with a progress bar while it works and a remove × on hover.
+- **Menu:** `ground`, `radius-ui`, `shadow-float` and a 1 px `sunk` ring. Its items are 14 px/500 with an optional second line, a check for the chosen one, key caps, rows of chips (speeds, frame rates), and dividers between groups.
+- **Toast:** a few words on `term` at the bottom of the window, a check or an alert icon, and an optional Show in Finder (or File Explorer, or folder). It stays 3.5 s, or 6 s with an error or a file to show. An error's details are its tooltip.
+- **Sheet:** a box on `ground` over the `scrim`, its header on `surface` with a close ×, for Privacy and the licenses.
+- **Ask:** the question before something is destroyed: the destructive word in `err` on `sunk`, and Cancel in `plume` as the default, in the platform's order (Cancel first on macOS).
+- **Drop overlay:** the whole window in `plume-press` while files are dragged over it, inset by a 2 px dashed `on-plume` edge, saying how many it will transcribe and listing their names.
+- **Progress:** a 4 px track of `sunk` on `radius-dot`, filled with `wave` in light and `plume` in dark, and with `ink-muted` while paused.
+- **Switch:** two segments on a `sunk` track; the chosen one is raised to `ground` with a 1 px `ink-muted` edge, since the tone step alone is 1.2:1.
