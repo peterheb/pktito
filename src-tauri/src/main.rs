@@ -37,10 +37,6 @@ struct AppState {
     page_ready: AtomicBool,
 }
 
-const MEDIA: &[&str] = &[
-    "mp3", "mp4", "m4a", "m4v", "mov", "wav", "aac", "aif", "aiff", "caf", "flac", "ogg", "opus",
-    "webm", "mkv", "wma", "wmv", "avi", "3gp", "amr",
-];
 const VIDEO: &[&str] = &["mp4", "m4v", "mov", "webm", "mkv", "wmv", "avi", "3gp"];
 
 /// A video's frame rate, for times in frames; 0 for audio, and for a video
@@ -139,7 +135,7 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, String> 
         version: env!("CARGO_PKG_VERSION"),
         backend: pktito::backend(),
         platform: std::env::consts::OS,
-        media: MEDIA,
+        media: decode::MEDIA,
         video: VIDEO,
     })
 }
@@ -317,7 +313,7 @@ fn hand_over(app: &AppHandle, files: Vec<String>) {
 
 #[tauri::command]
 async fn pick_files(app: AppHandle) -> Result<Vec<String>, String> {
-    let files = file_dialog(&app).add_filter("Audio or video", MEDIA).blocking_pick_files();
+    let files = file_dialog(&app).add_filter("Audio or video", decode::MEDIA).blocking_pick_files();
     Ok(files
         .unwrap_or_default()
         .into_iter()

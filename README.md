@@ -170,6 +170,24 @@ nothing, the app menu's Install Command Line Tool links it into
 `/usr/local/bin`, asking for an administrator's password where that folder
 is the system's.
 
+### How fast: bench and AliceBench
+
+`pktito-cli bench PATH...` times the transcription of each file named, or
+of a folder's audio and video, and gives the whole as times real time: the
+audio's length over the time it took, from its samples to its sentences.
+Reading the file is left out, being the OS's decoder or ffmpeg rather than
+pktito. `--json` adds each transcript's SHA-256.
+
+AliceBench is the one number to compare computers by:
+`scripts/alicebench.sh` (`alicebench.ps1` on Windows) downloads LibriVox's
+*Alice's Adventures in Wonderland*, twelve chapters and 2:58:51 as 16 kHz
+FLAC (200 MB, once), benches it with the English model, and checks every
+chapter's transcript against the one pktito gives on every machine. FLAC
+rather than LibriVox's MP3s, because each OS decodes an MP3 to other
+samples and so to a slightly different transcript, where a FLAC is the
+same samples through all of them. The M4 Pro, in use: 101.8x real time
+(2026-10-23).
+
 ## Building
 
 Rust, the Tauri CLI (`cargo install tauri-cli --version "^2" --locked`) and

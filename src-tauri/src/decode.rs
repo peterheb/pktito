@@ -17,6 +17,12 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 pub const RATE: usize = 16000;
+/// The extensions of the files the app offers to open, and pktito-cli bench
+/// takes from a folder.
+pub const MEDIA: &[&str] = &[
+    "mp3", "mp4", "m4a", "m4v", "mov", "wav", "aac", "aif", "aiff", "caf", "flac", "ogg", "opus",
+    "webm", "mkv", "wma", "wmv", "avi", "3gp", "amr",
+];
 
 #[derive(Debug)]
 pub enum DecodeError {

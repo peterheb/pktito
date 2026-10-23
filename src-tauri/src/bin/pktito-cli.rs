@@ -10,7 +10,7 @@ use std::fs;
 use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 const USAGE: &str = "\
 usage: pktito-cli [options] FILE...    transcribe audio or video: one file's
@@ -18,6 +18,9 @@ usage: pktito-cli [options] FILE...    transcribe audio or video: one file's
                                       each beside its file
        pktito-cli models               the models, which are here, which is in use
        pktito-cli download MODEL       a model, for the app and pktito-cli both
+       pktito-cli bench PATH...        how fast this computer transcribes: each
+                                      file, or a folder's audio and video,
+                                      timed, and the whole as times real time
   -m, --model MODEL    a model's name (pktito-cli models lists them) or a .pkf
                        file (default: the one the app uses)
   -f, --format F       txt, md, srt, vtt or json (default txt); or --txt, --md,
@@ -27,6 +30,8 @@ usage: pktito-cli [options] FILE...    transcribe audio or video: one file's
                        folder PATH
   -t, --threads N      threads (default: one a core)
   -q, --quiet          no progress
+bench takes -m, -t, -q and --json (its results as JSON, each file's with a
+SHA-256 of its transcript).
 ";
 
 fn main() {
@@ -64,6 +69,8 @@ fn run(args: &[String]) -> Result<i32, String> {
         Some("download") => return fetch(args.get(1).ok_or("download MODEL: which model?")?),
         _ => {}
     }
+    let bench = args[0] == "bench";
+    let args = if bench { &args[1..] } else { args };
     let mut o = Opts { files: vec![], model: None, ext: "txt".into(), times: false, output: None, threads: transcribe::threads_wanted(), quiet: false };
     let mut it = args.iter();
     while let Some(a) = it.next() {
@@ -86,6 +93,9 @@ fn run(args: &[String]) -> Result<i32, String> {
     }
     if o.files.is_empty() {
         return Err(format!("which files?\n{USAGE}"));
+    }
+    if bench {
+        return bench_all(&o);
     }
     transcribe_all(&o)
 }
@@ -146,6 +156,119 @@ fn transcribe_all(o: &Opts) -> Result<i32, String> {
         }
     }
     Ok(if failed > 0 { 1 } else { 0 })
+}
+
+/// The files bench times: each one named, and a folder's audio and video
+/// (decode::MEDIA), by name; not the folders inside it.
+fn bench_files(paths: &[String]) -> Result<Vec<PathBuf>, String> {
+    let mut files = Vec::new();
+    for p in paths.iter().map(PathBuf::from) {
+        if !p.is_dir() {
+            files.push(p);
+            continue;
+        }
+        let mut here: Vec<PathBuf> = fs::read_dir(&p)
+            .map_err(|e| format!("couldn't read {}: {e}", p.display()))?
+            .filter_map(|e| e.ok().map(|e| e.path()))
+            .filter(|f| f.is_file())
+            .filter(|f| f.extension().is_some_and(|x| decode::MEDIA.contains(&x.to_string_lossy().to_lowercase().as_str())))
+            .collect();
+        if here.is_empty() {
+            return Err(format!("no audio or video in {}", p.display()));
+        }
+        here.sort();
+        files.extend(here);
+    }
+    Ok(files)
+}
+
+/// How fast this computer transcribes: each file's transcription timed, from
+/// its samples to its segments (the chunking, the model and the sentences,
+/// as the window runs them), and the whole as the audio's length over the
+/// time it took. Reading the file is left out of the time: its decoder is
+/// the OS's or ffmpeg's, not pktito, and it is a small part. A file that
+/// can't be read is said and left out; 1 if any was.
+fn bench_all(o: &Opts) -> Result<i32, String> {
+    let files = bench_files(&o.files)?;
+    let path = model_path(o.model.as_deref())?;
+    let model = pktito::Model::load(&path)?;
+    let mut asr = pktito::Asr::new(&model, o.threads)?;
+    let json = o.ext == "json";
+    let show = !o.quiet && std::io::stderr().is_terminal();
+    let (version, name, backend, threads) = (env!("CARGO_PKG_VERSION"), model.name(), pktito::backend(), asr.threads());
+    if !json {
+        println!("pktito-cli {version}\nmodel    {name}\nbackend  {backend}\nthreads  {threads}");
+    }
+    let (mut audio, mut took, mut failed, mut results) = (0.0, 0.0, 0, Vec::new());
+    for file in &files {
+        let label = file.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let done = (|| -> Result<(f64, f64, String), String> {
+            if show {
+                status(&format!("{label}: reading the audio"));
+            }
+            let x = decode::decode(file).map_err(|e| e.message())?;
+            let start = Instant::now();
+            let (segs, _) = transcribe::run(
+                &model,
+                &mut asr,
+                &x,
+                |done, _| {
+                    if show {
+                        status(&format!("{label}: transcribing {:.0}%", done * 100.0));
+                    }
+                },
+                || false,
+            )?;
+            let secs = start.elapsed().as_secs_f64();
+            let words = serde_json::to_string(&segs).map_err(|e| e.to_string())?;
+            Ok((x.len() as f64 / decode::RATE as f64, secs, sha256_hex(words.as_bytes())))
+        })();
+        if show {
+            status("");
+        }
+        match done {
+            Ok((a, t, sha)) => {
+                if !json {
+                    println!("{:>9}  {:>9.2} s  {:>7.1}x  {label}", clock(a), t, a / t);
+                }
+                results.push(serde_json::json!({ "file": label, "audio_s": a, "seconds": t, "x_real_time": a / t, "transcript_sha256": sha }));
+                audio += a;
+                took += t;
+            }
+            Err(why) => {
+                eprintln!("pktito-cli: {label}: {why}");
+                failed += 1;
+            }
+        }
+    }
+    if results.is_empty() {
+        return Ok(1);
+    }
+    if json {
+        let all = serde_json::json!({
+            "pktito_cli": version, "model": name, "backend": backend, "threads": threads,
+            "files": results, "audio_s": audio, "seconds": took, "x_real_time": audio / took,
+        });
+        println!("{}", serde_json::to_string_pretty(&all).map_err(|e| e.to_string())?);
+    } else {
+        let n = results.len();
+        println!("{:>9}  {:>9.2} s  {:>7.1}x  all {n} file{}", clock(audio), took, audio / took, if n == 1 { "" } else { "s" });
+    }
+    Ok(if failed > 0 { 1 } else { 0 })
+}
+
+/// Seconds as h:mm:ss, or m:ss under an hour
+fn clock(s: f64) -> String {
+    let s = s.round() as u64;
+    match s / 3600 {
+        0 => format!("{}:{:02}", s / 60, s % 60),
+        h => format!("{h}:{:02}:{:02}", s / 60 % 60, s % 60),
+    }
+}
+
+fn sha256_hex(b: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    Sha256::digest(b).iter().map(|x| format!("{x:02x}")).collect()
 }
 
 /// A line of progress on stderr, written over the last: padded with spaces
