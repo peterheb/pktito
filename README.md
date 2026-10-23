@@ -185,7 +185,7 @@ FLAC (200 MB, once), benches it with the English model, and checks every
 chapter's transcript against the one pktito gives on every machine. FLAC
 rather than LibriVox's MP3s, because each OS decodes an MP3 to other
 samples and so to a slightly different transcript, where a FLAC is the
-same samples through all of them. The M4 Pro, in use: 101.8x real time
+same samples through all of them. The M4 Pro, in use: 106.1x real time
 (2026-10-23).
 
 ## Building
