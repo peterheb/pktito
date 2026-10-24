@@ -1320,6 +1320,7 @@ html[data-chrome="win"] .pk-head {
 .pk-about-links {
   display: flex;
   flex-wrap: wrap;
+  align-items: baseline;
   gap: 4px 20px;
   margin-top: 6px;
 }
