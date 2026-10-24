@@ -91,6 +91,7 @@ extern "C" {
     fn pk_text(m: *const RawModel, t: *const Tok, n: usize, out: *mut c_char, cap: usize) -> usize;
     fn pk_words(m: *const RawModel, t: *const Tok, n: usize, out: *mut Word) -> usize;
     fn pk_backend() -> *const c_char;
+    fn pk_compiler() -> *const c_char;
     fn pk_vad_new(m: *const RawModel) -> *mut RawVad;
     fn pk_vad_free(v: *mut RawVad);
     fn pk_vad_probs(v: *mut RawVad, x: *const f32, n: usize, probs: *mut f32);
@@ -165,6 +166,14 @@ pub fn captions(
 /// The name of the backend the CPU picked, e.g. "neon-dp (ARMv8.2 NEON: SDOT int8, fp32)".
 pub fn backend() -> String {
     unsafe { CStr::from_ptr(pk_backend()) }
+        .to_string_lossy()
+        .into_owned()
+}
+
+/// The compiler that built the engine, e.g. "gcc 11.4.0": a transcript is the
+/// same from any, its speed not.
+pub fn compiler() -> String {
+    unsafe { CStr::from_ptr(pk_compiler()) }
         .to_string_lossy()
         .into_owned()
 }

@@ -90,9 +90,10 @@ echo "$chapters" | awk '
                printf "%7.1fx  %s%s\n", x, file, ok; got++; file = "" }
     /^  "backend":/ { backend = val($0) } /^  "model":/ { model = val($0) }
     /^  "pktito_cli":/ { version = val($0) } /^  "threads":/ { threads = val($0) }
+    /^  "compiler":/ { compiler = val($0) }
     /^  "x_real_time":/ { total = val($0) }
     END {
-        printf "AliceBench v1: %.1fx real time (pktito-cli %s, %s, %s, %s threads)\n", total, version, model, backend, threads
+        printf "AliceBench v1: %.1fx real time (pktito-cli %s, %s, %s, %s threads%s)\n", total, version, model, backend, threads, compiler != "" ? ", " compiler : ""
         if (got != 12) { print "  only " got " of the 12 chapters were timed"; exit 1 }
         if (differ) { print "  " differ " of the 12 transcripts differ from the reference: not what pktito should compute"; exit 1 }
         print "  all 12 transcripts are the reference'"'"'s"

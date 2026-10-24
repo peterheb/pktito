@@ -227,14 +227,17 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
     let mut asr = pktito::Asr::new(&model, o.threads)?;
     let json = o.ext == "json";
     let show = !o.quiet && std::io::stderr().is_terminal();
-    let (version, name, backend, threads) = (
+    let (version, name, backend, compiler, threads) = (
         env!("CARGO_PKG_VERSION"),
         model.name(),
         pktito::backend(),
+        pktito::compiler(),
         asr.threads(),
     );
     if !json {
-        println!("pktito-cli {version}\nmodel    {name}\nbackend  {backend}\nthreads  {threads}");
+        println!(
+            "pktito-cli {version}\nmodel    {name}\nbackend  {backend}\ncompiler {compiler}\nthreads  {threads}"
+        );
     }
     let (mut audio, mut took, mut failed, mut results) = (0.0, 0.0, 0, Vec::new());
     for file in &files {
@@ -290,7 +293,8 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
     }
     if json {
         let all = serde_json::json!({
-            "pktito_cli": version, "model": name, "backend": backend, "threads": threads,
+            "pktito_cli": version, "model": name, "backend": backend, "compiler": compiler,
+            "threads": threads,
             "files": results, "audio_s": audio, "seconds": took, "x_real_time": audio / took,
         });
         println!(
