@@ -93,6 +93,40 @@ static inline __m256 v_tanh(__m256 x) {
 
 static inline __m256 v_silu(__m256 x) { return _mm256_mul_ps(x, v_sigmoid(x)); }
 
+#ifdef __AVX512F__
+/* The AVX-512 builds (avx512-vnni, amx-int8) take the float kernels - the
+ * float product, the quantizer, the layer norm, SiLU - in zmm too, a zmm
+ * doing what two ymm do lane for lane in the same order, so ref's bits
+ * (tests/kcheck): +7 to 11% at one and two threads on a c7i and a c8i, +9%
+ * at one on the 9950X, +2% at 16 (backend/avx2/CLIMB.md, the float kernels
+ * in zmm). */
+static inline __m256 z_lo(__m512 a) { return _mm512_castps512_ps256(a); }
+static inline __m256 z_hi(__m512 a) { return _mm256_castpd_ps(_mm512_extractf64x4_pd(_mm512_castps_pd(a), 1)); }
+
+static inline __m512 z_exp(__m512 x) {
+    x = _mm512_min_ps(_mm512_max_ps(x, _mm512_set1_ps(PK_EXP_LO)), _mm512_set1_ps(PK_EXP_HI));
+    __m512 n = _mm512_roundscale_ps(_mm512_mul_ps(x, _mm512_set1_ps(PK_LOG2E)),
+                                    _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+    __m512 r = _mm512_fmadd_ps(n, _mm512_set1_ps(-PK_LN2_HI), x);
+    r = _mm512_fmadd_ps(n, _mm512_set1_ps(-PK_LN2_LO), r);
+    __m512 p = _mm512_set1_ps(PK_EXP_C6);
+    p = _mm512_fmadd_ps(p, r, _mm512_set1_ps(PK_EXP_C5));
+    p = _mm512_fmadd_ps(p, r, _mm512_set1_ps(PK_EXP_C4));
+    p = _mm512_fmadd_ps(p, r, _mm512_set1_ps(PK_EXP_C3));
+    p = _mm512_fmadd_ps(p, r, _mm512_set1_ps(PK_EXP_C2));
+    p = _mm512_fmadd_ps(p, r, _mm512_set1_ps(1.0f));
+    p = _mm512_fmadd_ps(p, r, _mm512_set1_ps(1.0f));
+    __m512i e = _mm512_slli_epi32(_mm512_add_epi32(_mm512_cvtps_epi32(n), _mm512_set1_epi32(127)), 23);
+    return _mm512_mul_ps(p, _mm512_castsi512_ps(e));
+}
+
+static inline __m512 z_silu(__m512 x) {
+    const __m512 one = _mm512_set1_ps(1.0f);
+    __m512 nx = _mm512_castsi512_ps(_mm512_xor_si512(_mm512_castps_si512(x), _mm512_set1_epi32((int)0x80000000)));
+    return _mm512_mul_ps(x, _mm512_div_ps(one, _mm512_add_ps(one, z_exp(nx))));
+}
+#endif
+
 /* PK_LANES' reduction: sixteen lanes in two vectors, combined as ref's
  * acc[i] += acc[i + h] for h = 8, 4, 2, 1 */
 static inline float lanes_sum(__m256 a0, __m256 a1) {
@@ -120,6 +154,37 @@ static inline int32_t load32(const int8_t *p) {
 
 static void k_quantize(pk_act *a, const float *x, size_t xs) {
     const uint32_t nb = a->n / a->qb;
+#ifdef __AVX512F__
+    {   /* a block's 32 floats as two zmm, its bytes by VPMOVSDB */
+        const __m512i absm = _mm512_set1_epi32(0x7fffffff);
+        for (uint32_t t = 0; t < a->T; t++)
+            for (uint32_t b = 0; b < nb; b++) {
+                const float *v = x + t * xs + (size_t)b * a->qb;
+                int8_t *q = a->q + (size_t)t * a->n + (size_t)b * a->qb;
+                __m512 m = _mm512_setzero_ps();
+                __mmask16 bad = 0;
+                for (uint32_t i = 0; i < a->qb; i += 16) {
+                    __m512 z = _mm512_loadu_ps(v + i);
+                    bad |= _mm512_cmp_ps_mask(z, z, _CMP_UNORD_Q);
+                    m = _mm512_max_ps(_mm512_castsi512_ps(_mm512_and_si512(_mm512_castps_si512(z), absm)), m);
+                }
+                float amax = hmax(_mm256_max_ps(z_lo(m), z_hi(m)));
+                if (bad || !isfinite(amax)) {
+                    a->d[(size_t)t * nb + b] = 0;
+                    memset(q, 0, a->qb);
+                    continue;
+                }
+                a->d[(size_t)t * nb + b] = amax / 127.0f;
+                const __m512 id = _mm512_set1_ps(amax > 0 ? 127.0f / amax : 0.0f);
+                for (uint32_t i = 0; i < a->qb; i += 16) {
+                    __m512i qi = _mm512_cvt_roundps_epi32(_mm512_mul_ps(_mm512_loadu_ps(v + i), id),
+                                                          _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+                    _mm_storeu_si128((__m128i *)(void *)(q + i), _mm512_cvtsepi32_epi8(qi));
+                }
+            }
+        return;
+    }
+#endif
     const __m256 sign = _mm256_set1_ps(-0.0f);
     for (uint32_t t = 0; t < a->T; t++)
         for (uint32_t b = 0; b < nb; b++) {
@@ -352,11 +417,20 @@ static void q8_zmm(float *out, size_t os, const int8_t *w, const float *ws, cons
  * 16 rows), A is 16 columns' 32 bytes of the block, n apart, and C the 16
  * columns by the panel's 16 rows. Signed by signed, so no offset. Each
  * block's C goes to L1 and comes back a column at a time into that
- * column's float chain, as the zmm tile's sums do, while the next block's
- * TDPBSSD runs in the other C tile. Four C tiles in turn, to wait out
- * more of TDPBSSD's latency, ran 1.5% slower on a c7i, and panels outer
- * no faster (CLIMB.md, 2026-10-24). Columns past the last whole 16, and
- * products of fewer, take the zmm tile. */
+ * column's float chain, as the zmm tile's sums do.
+ *
+ * The blocks are a software pipeline. A TDPBSSD takes 16 cycles at K = 32
+ * as at 64, a TILESTORED 17 and 19 uops on port 5, and beside them every
+ * zmm convert and FMA goes to port 0: a block's 32 of them are its floor.
+ * A store issued right after its own product waits that product out, and
+ * the next block's tile loads wait behind the store; so step b loads and
+ * multiplies block b (tiles 0 1 into 2 for b even, 4 5 into 3 for b odd),
+ * stores block b-1's C, multiplied a step before, and runs the chains of
+ * block b-3, from a ring of four buffers: 57.5 cycles a block became 45.7
+ * in a loop of it alone, and a c7i.large's `pktito bench` 25.8x became
+ * 28.9x (CLIMB.md, 2026-10-24, AMX's pipelined loop). A last group short
+ * of 16 columns is padded to 16 (k_gemm_q8); blocks no multiple of 4 (none
+ * of the model's) take the zmm tile. */
 static void amx_config(void) {
     static _Thread_local int ready;
     if (ready)
@@ -368,70 +442,143 @@ static void amx_config(void) {
     } cfg;
     memset(&cfg, 0, sizeof cfg);
     cfg.palette = 1;
-    cfg.colsb[0] = 32, cfg.rows[0] = 16;                         /* A */
-    cfg.colsb[1] = 64, cfg.rows[1] = 8;                          /* B */
+    cfg.colsb[0] = 32, cfg.rows[0] = 16;                         /* A, even blocks */
+    cfg.colsb[1] = 64, cfg.rows[1] = 8;                          /* B, even blocks */
     cfg.colsb[2] = 64, cfg.rows[2] = 16;                         /* C, even blocks */
     cfg.colsb[3] = 64, cfg.rows[3] = 16;                         /* C, odd blocks */
+    cfg.colsb[4] = 32, cfg.rows[4] = 16;                         /* A, odd blocks */
+    cfg.colsb[5] = 64, cfg.rows[5] = 8;                          /* B, odd blocks */
     _tile_loadconfig(&cfg);
     ready = 1;
 }
 
-/* one block's 16 columns' sums, in c, into their float chains */
+/* One panel by 16 columns, the blocks in the pipeline above: block b's
+ * tiles go to 0 1 and 2 for b even, 4 5 and 3 for b odd, and its sums to
+ * buffer b % 4, from which step b + 3 takes them. The steady state is four
+ * steps a turn so that every tile and buffer is a constant; nb is a
+ * multiple of 4, and a constant where the caller can make it one (the
+ * encoder's 32 and 128), so that the scales' offsets m nb are too: with nb
+ * a variable the 16 offsets take as many registers, and the c7i.large ran
+ * 26.8x against 28.6x (CLIMB.md, as above). */
+#define AMX_TILES(A, B, C, bl)                                                                 \
+    do {                                                                                       \
+        _tile_loadd(A, x + (size_t)(bl) * 32, n);                                              \
+        _tile_loadd(B, wp + (size_t)(bl) * 512, 64);                                           \
+        _tile_zero(C);                                                                         \
+        _tile_dpbssd(C, A, B);                                                                 \
+    } while (0)
+/* the chains are 16 named variables, not an array: gcc 15 kept an array of
+ * them on the stack, a load and a store more a column a block, 15 to 20%
+ * slower on a c7i than gcc 13's registers (q8bench in slices) */
+#define AMX_CHAIN(m)                                                                           \
+    f##m = _mm512_fmadd_ps(_mm512_cvtepi32_ps(_mm512_load_si512((const void *)(c + 16 * (m)))), \
+                           _mm512_set1_ps(db[(size_t)(m) * nb]), f##m)
+/* block bl's sums, in buffer k, into the 16 columns' chains */
+#define AMX_CHAINS(k, bl)                                                                      \
+    do {                                                                                       \
+        const int32_t *c = cbuf[k];                                                            \
+        const float *db = d + (bl);                                                            \
+        AMX_CHAIN(0); AMX_CHAIN(1); AMX_CHAIN(2); AMX_CHAIN(3);                                \
+        AMX_CHAIN(4); AMX_CHAIN(5); AMX_CHAIN(6); AMX_CHAIN(7);                                \
+        AMX_CHAIN(8); AMX_CHAIN(9); AMX_CHAIN(10); AMX_CHAIN(11);                              \
+        AMX_CHAIN(12); AMX_CHAIN(13); AMX_CHAIN(14); AMX_CHAIN(15);                            \
+    } while (0)
+#define AMX_OUT(m)                                                                             \
+    do {                                                                                       \
+        float *o = out + (size_t)(m) * os;                                                     \
+        __m512 v = _mm512_mul_ps(f##m, sc);                                                    \
+        if (bias) v = _mm512_add_ps(v, _mm512_loadu_ps(bias));                                 \
+        if (add) v = _mm512_add_ps(_mm512_loadu_ps(o), v);                                     \
+        _mm512_storeu_ps(o, v);                                                                \
+    } while (0)
+
 static inline __attribute__((always_inline))
-void amx_chains(__m512 f[16], const int32_t *c, const float *d, uint32_t nb) {
-    for (int m = 0; m < 16; m++)
-        f[m] = _mm512_fmadd_ps(_mm512_cvtepi32_ps(_mm512_load_si512((const void *)(c + 16 * m))),
-                               _mm512_set1_ps(d[(size_t)m * nb]), f[m]);
+void amx_panel(float *out, size_t os, const int8_t *x, uint32_t n, const int8_t *wp, const float *d,
+               uint32_t nb, const float *ws, const float *bias, int add, int32_t cbuf[4][256]) {
+    __m512 f0 = _mm512_setzero_ps(), f1 = f0, f2 = f0, f3 = f0, f4 = f0, f5 = f0, f6 = f0, f7 = f0;
+    __m512 f8 = f0, f9 = f0, f10 = f0, f11 = f0, f12 = f0, f13 = f0, f14 = f0, f15 = f0;
+    AMX_TILES(0, 1, 2, 0);
+    AMX_TILES(4, 5, 3, 1); _tile_stored(2, cbuf[0], 64);
+    AMX_TILES(0, 1, 2, 2); _tile_stored(3, cbuf[1], 64);
+    AMX_TILES(4, 5, 3, 3); _tile_stored(2, cbuf[2], 64); AMX_CHAINS(0, 0);
+    for (uint32_t b = 4; b < nb; b += 4) {
+        AMX_TILES(0, 1, 2, b);     _tile_stored(3, cbuf[3], 64); AMX_CHAINS(1, b - 3);
+        AMX_TILES(4, 5, 3, b + 1); _tile_stored(2, cbuf[0], 64); AMX_CHAINS(2, b - 2);
+        AMX_TILES(0, 1, 2, b + 2); _tile_stored(3, cbuf[1], 64); AMX_CHAINS(3, b - 1);
+        AMX_TILES(4, 5, 3, b + 3); _tile_stored(2, cbuf[2], 64); AMX_CHAINS(0, b);
+    }
+    _tile_stored(3, cbuf[3], 64); AMX_CHAINS(1, nb - 3);
+    AMX_CHAINS(2, nb - 2);
+    AMX_CHAINS(3, nb - 1);
+    const __m512 sc = _mm512_loadu_ps(ws);
+    AMX_OUT(0); AMX_OUT(1); AMX_OUT(2); AMX_OUT(3); AMX_OUT(4); AMX_OUT(5); AMX_OUT(6); AMX_OUT(7);
+    AMX_OUT(8); AMX_OUT(9); AMX_OUT(10); AMX_OUT(11); AMX_OUT(12); AMX_OUT(13); AMX_OUT(14); AMX_OUT(15);
 }
+#undef AMX_TILES
+#undef AMX_CHAIN
+#undef AMX_CHAINS
+#undef AMX_OUT
+
+/* The last group, when it is short of 16 columns, goes through AMX as a
+ * whole one: its columns copied into buffers 16 wide, the scales past them
+ * zero (their chains stay 0, and no convert or FMA meets a denormal), and
+ * only its own columns written out. The zmm tile took the 10 columns of a
+ * 250-frame chunk near 15% of the product's time; padded, test.wav's
+ * chunks ran 30.5x against 29.8x on a c7i.large (CLIMB.md, 2026-10-24, a
+ * short group padded to 16). For n up to AMX_SHORT_N, the model's largest;
+ * past it the zmm tile takes them. */
+#define AMX_SHORT_N 4096
 
 static void k_gemm_q8(float *out, size_t os, const int8_t *w, const float *ws, const float *bias,
                       uint32_t rows, const pk_act *a, int add) {
-    const uint32_t n = a->n, qb = a->qb, nb = n / qb, T16 = a->T & ~15u;
-    if (qb != 32 || T16 == 0) {
+    const uint32_t n = a->n, qb = a->qb, nb = n / qb, T = a->T;
+    const uint32_t Tamx = n <= AMX_SHORT_N ? T : T & ~15u;      /* the columns AMX takes */
+    if (qb != 32 || nb % 4 || Tamx == 0) {
         q8_zmm(out, os, w, ws, bias, rows, a, add);
         return;
     }
     amx_config();
-    _Alignas(64) int32_t cbuf[2][256];
-    for (uint32_t t = 0; t < T16; t += 16) {
+    _Alignas(64) int32_t cbuf[4][256];
+    static _Thread_local _Alignas(64) int8_t xshort[16 * AMX_SHORT_N];
+    static _Thread_local _Alignas(64) float dshort[16 * (AMX_SHORT_N / 32)];
+    _Alignas(64) float oshort[16 * 16];
+    for (uint32_t t = 0; t < Tamx; t += 16) {
+        const uint32_t nt = T - t < 16 ? T - t : 16;
         const int8_t *x = a->q + (size_t)t * n;
         const float *d = a->d + (size_t)t * nb;
+        if (nt < 16) {
+            memcpy(xshort, x, (size_t)nt * n);
+            memcpy(dshort, d, (size_t)nt * nb * sizeof *d);
+            memset(dshort + (size_t)nt * nb, 0, (size_t)(16 - nt) * nb * sizeof *d);
+            memset(oshort, 0, sizeof oshort);
+            x = xshort;
+            d = dshort;
+        }
         for (uint32_t r = 0; r < rows; r += 16) {
+            float *o = out + (size_t)t * os + r;
             const int8_t *wp = w + (size_t)r * n;
-            __m512 f[16];
-            for (int m = 0; m < 16; m++) f[m] = _mm512_setzero_ps();
-            /* block b's product runs in tile 2 or 3 while block b-1's sums
-             * go into the chains */
-            for (uint32_t b = 0; b < nb; b++) {
-                _tile_loadd(0, x + (size_t)b * 32, n);
-                _tile_loadd(1, wp + (size_t)b * 512, 64);
-                if (b & 1) {
-                    _tile_zero(3);
-                    _tile_dpbssd(3, 0, 1);
-                    amx_chains(f, cbuf[0], d + b - 1, nb);
-                    _tile_stored(3, cbuf[1], 64);
-                } else {
-                    _tile_zero(2);
-                    _tile_dpbssd(2, 0, 1);
-                    if (b)
-                        amx_chains(f, cbuf[1], d + b - 1, nb);
-                    _tile_stored(2, cbuf[0], 64);
-                }
+            const float *b = bias ? bias + r : NULL;
+            float *po = o;
+            size_t pos = os;
+            if (nt < 16) {
+                if (add)
+                    for (uint32_t m = 0; m < nt; m++) memcpy(oshort + 16 * m, o + (size_t)m * os, 64);
+                po = oshort;
+                pos = 16;
             }
-            amx_chains(f, cbuf[(nb - 1) & 1], d + nb - 1, nb);
-            const __m512 sc = _mm512_loadu_ps(ws + r);
-            for (int m = 0; m < 16; m++) {
-                float *o = out + (size_t)(t + m) * os + r;
-                __m512 v = _mm512_mul_ps(f[m], sc);
-                if (bias) v = _mm512_add_ps(v, _mm512_loadu_ps(bias + r));
-                if (add) v = _mm512_add_ps(_mm512_loadu_ps(o), v);
-                _mm512_storeu_ps(o, v);
-            }
+            if (nb == 32)
+                amx_panel(po, pos, x, n, wp, d, 32, ws + r, b, add, cbuf);
+            else if (nb == 128)
+                amx_panel(po, pos, x, n, wp, d, 128, ws + r, b, add, cbuf);
+            else
+                amx_panel(po, pos, x, n, wp, d, nb, ws + r, b, add, cbuf);
+            if (nt < 16)
+                for (uint32_t m = 0; m < nt; m++) memcpy(o + (size_t)m * os, oshort + 16 * m, 64);
         }
     }
-    if (T16 < a->T) {
-        const pk_act rest = { a->q + (size_t)T16 * n, a->d + (size_t)T16 * nb, n, qb, a->T - T16 };
-        q8_zmm(out + (size_t)T16 * os, os, w, ws, bias, rows, &rest, add);
+    if (Tamx < T) {
+        const pk_act rest = { a->q + (size_t)Tamx * n, a->d + (size_t)Tamx * nb, n, qb, T - Tamx };
+        q8_zmm(out + (size_t)Tamx * os, os, w, ws, bias, rows, &rest, add);
     }
 }
 #else
@@ -721,6 +868,52 @@ void f32_tile(float *out, size_t os, const float *w, uint32_t ld, uint32_t n,
         }
 }
 
+#ifdef __AVX512F__
+/* MP panels of 16 rows, one zmm a panel a k, by NC columns: two by eight,
+ * 16 chains in the 32 registers, where the ymm tile below is one by four.
+ * Two by four and one by eight, 8 chains as the ymm tile has, ran the
+ * c7i.large's attention stage in 280-284 ms against 237-259 (CLIMB.md). */
+static inline __attribute__((always_inline))
+void f32_tile_z(float *out, size_t os, const float *w, uint32_t ld, uint32_t n,
+                const float *x, size_t xs, const float *bias, size_t bs, int relu,
+                const int MP, const int NC) {
+    __m512 acc[2][8];
+    for (int c = 0; c < NC; c++)
+        for (int m = 0; m < MP; m++) acc[m][c] = _mm512_setzero_ps();
+    for (uint32_t k = 0; k < n; k++) {
+        __m512 wv[2];
+        for (int m = 0; m < MP; m++)
+            wv[m] = _mm512_loadu_ps(w + (size_t)m * ld * 16 + 16 * (size_t)k);
+        for (int c = 0; c < NC; c++) {
+            __m512 xv = _mm512_set1_ps(x[c * xs + k]);
+            for (int m = 0; m < MP; m++) acc[m][c] = _mm512_fmadd_ps(wv[m], xv, acc[m][c]);
+        }
+    }
+    const __m512 zero = _mm512_setzero_ps();
+    for (int c = 0; c < NC; c++)
+        for (int m = 0; m < MP; m++) {
+            __m512 v = _mm512_add_ps(acc[m][c], bias ? _mm512_loadu_ps(bias + c * bs + 16 * m) : zero);
+            _mm512_storeu_ps(out + c * os + 16 * m, relu ? _mm512_max_ps(v, zero) : v);
+        }
+}
+
+#define F32Z_COLS(MP)                                                                         \
+    for (uint32_t t = 0; t < T; t += 8) {                                              \
+        float *o = out + t * os + r;                                                           \
+        const float *xt = x + t * xs, *bt = bias ? bias + t * bs + r : NULL;                   \
+        switch (T - t < 8 ? T - t : 8) {                                       \
+        case 8: f32_tile_z(o, os, wp, ld, n, xt, xs, bt, bs, relu, MP, 8); break;              \
+        case 7: f32_tile_z(o, os, wp, ld, n, xt, xs, bt, bs, relu, MP, 7); break;              \
+        case 6: f32_tile_z(o, os, wp, ld, n, xt, xs, bt, bs, relu, MP, 6); break;              \
+        case 5: f32_tile_z(o, os, wp, ld, n, xt, xs, bt, bs, relu, MP, 5); break;              \
+        case 4: f32_tile_z(o, os, wp, ld, n, xt, xs, bt, bs, relu, MP, 4); break;              \
+        case 3: f32_tile_z(o, os, wp, ld, n, xt, xs, bt, bs, relu, MP, 3); break;              \
+        case 2: f32_tile_z(o, os, wp, ld, n, xt, xs, bt, bs, relu, MP, 2); break;              \
+        default: f32_tile_z(o, os, wp, ld, n, xt, xs, bt, bs, relu, MP, 1); break;             \
+        }                                                                                      \
+    }
+#endif
+
 static void k_gemm_f32(float *out, size_t os, const float *w, uint32_t ld, uint32_t rows, uint32_t n,
                        const float *x, size_t xs, uint32_t T,
                        const float *bias, size_t bs, int relu) {
@@ -730,6 +923,20 @@ static void k_gemm_f32(float *out, size_t os, const float *w, uint32_t ld, uint3
                      relu, 8, 1);
         return;
     }
+#ifdef __AVX512F__
+    {
+        uint32_t r = 0;
+        for (; r + 32 <= rows; r += 32) {
+            const float *wp = w + (size_t)r * ld;
+            F32Z_COLS(2)
+        }
+        for (; r < rows; r += 16) {
+            const float *wp = w + (size_t)r * ld;
+            F32Z_COLS(1)
+        }
+        return;
+    }
+#endif
     for (uint32_t r = 0; r < rows; r += 16) {
         const float *wp = w + (size_t)r * ld;
         for (uint32_t t = 0; t < T; t += 4) {
@@ -749,6 +956,31 @@ static void k_gemm_f32(float *out, size_t os, const float *w, uint32_t ld, uint3
 
 static void k_layernorm(float *out, size_t os, const float *x, size_t xs, uint32_t T, uint32_t n,
                         const float *w, const float *b, float eps) {
+#ifdef __AVX512F__
+    if (n % 16 == 0) {
+        for (uint32_t t = 0; t < T; t++) {
+            const float *v = x + t * xs;
+            float *o = out + t * os;
+            __m512 a = _mm512_setzero_ps();
+            for (uint32_t i = 0; i < n; i += 16) a = _mm512_add_ps(a, _mm512_loadu_ps(v + i));
+            float mean = lanes_sum(z_lo(a), z_hi(a)) / (float)n;
+            __m512 mv = _mm512_set1_ps(mean);
+            a = _mm512_setzero_ps();
+            for (uint32_t i = 0; i < n; i += 16) {
+                __m512 c = _mm512_sub_ps(_mm512_loadu_ps(v + i), mv);
+                a = _mm512_add_ps(a, _mm512_mul_ps(c, c));
+            }
+            float var = lanes_sum(z_lo(a), z_hi(a)) / (float)n;
+            __m512 rv = _mm512_set1_ps(1.0f / sqrtf(var + eps));
+            for (uint32_t i = 0; i < n; i += 16) {
+                __m512 y = _mm512_mul_ps(_mm512_mul_ps(_mm512_sub_ps(_mm512_loadu_ps(v + i), mv), rv),
+                                         _mm512_loadu_ps(w + i));
+                _mm512_storeu_ps(o + i, _mm512_add_ps(y, _mm512_loadu_ps(b + i)));
+            }
+        }
+        return;
+    }
+#endif
     for (uint32_t t = 0; t < T; t++) {
         const float *v = x + t * xs;
         float *o = out + t * os;
@@ -813,6 +1045,9 @@ static void k_softmax(float *x, uint32_t n, float scale) {
 
 static void k_silu(float *x, size_t n) {
     size_t i = 0;
+#ifdef __AVX512F__
+    for (; i + 16 <= n; i += 16) _mm512_storeu_ps(x + i, z_silu(_mm512_loadu_ps(x + i)));
+#endif
     for (; i + 8 <= n; i += 8) _mm256_storeu_ps(x + i, v_silu(_mm256_loadu_ps(x + i)));
     for (; i < n; i++) x[i] = x[i] * pk_sigmoidf(x[i]);
 }
