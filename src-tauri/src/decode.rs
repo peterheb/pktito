@@ -135,8 +135,10 @@ extern "C" {
 /// OS's reader or ffmpeg as before. The reader names no speaker layout,
 /// which is the usual one up to two channels; more than two go to the other
 /// reader, which has the file's own, when there is one (`other`). A file
-/// cut short gives what it has, as ffmpeg's does. On Windows a name the
-/// reader's fopen cannot spell opens nothing, and goes to Media Foundation.
+/// cut short gives what it has, as ffmpeg's does. On Windows the reader's
+/// fopen takes the UTF-8 name through the manifest's code page (build.rs);
+/// before Windows 10 1903, which ignores it, a name past ASCII opens
+/// nothing here and goes to Media Foundation.
 fn decode_wav(path: &Path, other: impl FnOnce() -> bool) -> Option<Result<Vec<f32>, DecodeError>> {
     let c_path = CString::new(path.as_os_str().as_encoded_bytes()).ok()?;
     let mut info = PkWavInfo {

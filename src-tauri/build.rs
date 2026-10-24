@@ -188,5 +188,13 @@ fn main() {
         println!("cargo:rustc-link-lib=static:-bundle=pthread");
     }
 
-    tauri_build::build();
+    // Tauri's own manifest, and the process's code page UTF-8 (Windows 10
+    // 1903 and later): the engine opens the model, and its reader a WAV,
+    // with CreateFileA and fopen on the UTF-8 path Rust hands it, which in
+    // the old code page names another file, or none, past ASCII - a
+    // %APPDATA% under C:\Users\José
+    let windows =
+        tauri_build::WindowsAttributes::new().app_manifest(include_str!("windows/app.manifest"));
+    tauri_build::try_build(tauri_build::Attributes::new().windows_attributes(windows))
+        .expect("tauri-build");
 }
