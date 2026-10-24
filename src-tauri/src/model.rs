@@ -35,7 +35,7 @@ pub struct Entry {
 }
 
 /// The models models.pktito.net serves: pktito-tools' conversions of NVIDIA's
-/// checkpoints (CC-BY-4.0), as pktito e5cc94e writes them. What each one
+/// checkpoints (CC-BY-4.0), as pktito 22fa0b1 writes them. What each one
 /// does is from NVIDIA's model cards.
 pub const CATALOG: &[Entry] = &[
     Entry {
