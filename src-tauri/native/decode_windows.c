@@ -29,7 +29,7 @@ static struct {
     HRESULT(WINAPI *shutdown)(void);
     HRESULT(WINAPI *create_media_type)(IMFMediaType **);
     HRESULT(WINAPI *create_source_reader_from_url)(LPCWSTR, IMFAttributes *, IMFSourceReader **);
-} mf;
+} mfapi;
 static INIT_ONCE mf_once = INIT_ONCE_STATIC_INIT;
 
 static BOOL CALLBACK mf_load(PINIT_ONCE once, PVOID param, PVOID *ctx) {
@@ -39,14 +39,14 @@ static BOOL CALLBACK mf_load(PINIT_ONCE once, PVOID param, PVOID *ctx) {
     HMODULE plat = LoadLibraryExW(L"mfplat.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
     HMODULE rw = plat ? LoadLibraryExW(L"mfreadwrite.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32) : NULL;
     if (rw) {
-        mf.startup = (HRESULT(WINAPI *)(ULONG, DWORD))(fn)GetProcAddress(plat, "MFStartup");
-        mf.shutdown = (HRESULT(WINAPI *)(void))(fn)GetProcAddress(plat, "MFShutdown");
-        mf.create_media_type = (HRESULT(WINAPI *)(IMFMediaType **))(fn)GetProcAddress(plat, "MFCreateMediaType");
-        mf.create_source_reader_from_url = (HRESULT(WINAPI *)(LPCWSTR, IMFAttributes *, IMFSourceReader **))(fn)
+        mfapi.startup = (HRESULT(WINAPI *)(ULONG, DWORD))(fn)GetProcAddress(plat, "MFStartup");
+        mfapi.shutdown = (HRESULT(WINAPI *)(void))(fn)GetProcAddress(plat, "MFShutdown");
+        mfapi.create_media_type = (HRESULT(WINAPI *)(IMFMediaType **))(fn)GetProcAddress(plat, "MFCreateMediaType");
+        mfapi.create_source_reader_from_url = (HRESULT(WINAPI *)(LPCWSTR, IMFAttributes *, IMFSourceReader **))(fn)
             GetProcAddress(rw, "MFCreateSourceReaderFromURL");
     }
-    if (!mf.startup || !mf.shutdown || !mf.create_media_type || !mf.create_source_reader_from_url)
-        memset(&mf, 0, sizeof mf);
+    if (!mfapi.startup || !mfapi.shutdown || !mfapi.create_media_type || !mfapi.create_source_reader_from_url)
+        memset(&mfapi, 0, sizeof mfapi);
     return TRUE;
 }
 
@@ -54,13 +54,14 @@ static BOOL CALLBACK mf_load(PINIT_ONCE once, PVOID param, PVOID *ctx) {
  * handing it a WAV of more than two channels), else 0. */
 int pkapp_os_decoder(void) {
     InitOnceExecuteOnce(&mf_once, mf_load, NULL, NULL);
-    return mf.startup != NULL;
+    return mfapi.startup != NULL;
 }
 
-#define MFStartup mf.startup
-#define MFShutdown mf.shutdown
-#define MFCreateMediaType mf.create_media_type
-#define MFCreateSourceReaderFromURL mf.create_source_reader_from_url
+/* mfapi, not mf: the functions below name MFStartup's result mf */
+#define MFStartup mfapi.startup
+#define MFShutdown mfapi.shutdown
+#define MFCreateMediaType mfapi.create_media_type
+#define MFCreateSourceReaderFromURL mfapi.create_source_reader_from_url
 
 static int fail(char *err, size_t errlen, const char *what, HRESULT hr) {
     snprintf(err, errlen, "%s (0x%08lx)", what, (unsigned long)hr);
