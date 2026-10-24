@@ -1,12 +1,13 @@
 //! A media file's audio as 16 kHz mono float samples.
 //!
-//! macOS and Windows use the media libraries the OS already has
-//! (AVFoundation, Media Foundation: native/decode_*.{m,c}); when the OS
-//! cannot read a file and ffmpeg is on the PATH, ffmpeg tries it. Linux has
-//! no one media library: there pktito's own WAV reader (vendor/pktito,
-//! core/wav.h) reads WAV, so a server or a sandbox needs nothing more for
-//! it, and ffmpeg everything else. PKTITO_DECODER=ffmpeg uses ffmpeg
-//! everywhere; PKTITO_DECODER=os the OS alone.
+//! pktito's own WAV reader (vendor/pktito, core/wav.h) reads WAV on every
+//! platform, so a server, a sandbox or a Windows without Media Foundation
+//! (Server, the N editions) needs nothing more for it. Everything else goes
+//! to the media libraries macOS and Windows already have (AVFoundation,
+//! Media Foundation: native/decode_*.{m,c}), and when the OS cannot read a
+//! file and ffmpeg is on the PATH, ffmpeg tries it; Linux has no one media
+//! library, so there ffmpeg reads everything but WAV. PKTITO_DECODER=ffmpeg
+//! uses ffmpeg alone; PKTITO_DECODER=os the OS alone.
 //!
 //! Each decoder hands over its samples at their own rate, and the same mix
 //! (native/mix.h) brings them to one channel and 16 kHz, so a file reads the
@@ -66,14 +67,20 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
     let forced = env::var("PKTITO_DECODER")
         .unwrap_or_default()
         .to_lowercase();
-    if forced == "ffmpeg" || !cfg!(any(target_os = "macos", target_os = "windows")) {
-        let ff = ffmpeg();
-        if forced != "ffmpeg" {
-            if let Some(read) = decode_wav(path, ff.is_some()) {
-                return read;
-            }
+    if forced != "ffmpeg" && forced != "os" {
+        // more than two channels go to a reader that knows their speakers:
+        // the OS's, where it has one, else ffmpeg, if it is there
+        let other = if cfg!(any(target_os = "macos", target_os = "windows")) {
+            os_decoder()
+        } else {
+            ffmpeg().is_some()
+        };
+        if let Some(read) = decode_wav(path, other) {
+            return read;
         }
-        return match ff {
+    }
+    if forced == "ffmpeg" || !cfg!(any(target_os = "macos", target_os = "windows")) {
+        return match ffmpeg() {
             Some(ff) => decode_ffmpeg(&ff, path),
             None => Err(DecodeError::Unreadable(
                 "decode.needs_ffmpeg",
@@ -121,11 +128,13 @@ extern "C" {
 /// A WAV, by pktito's reader: every format a recording comes in (PCM,
 /// float, A-law and mu-law, extensible, RF64), held to the library's
 /// docs/MEMORY_SAFETY.md, and through the same mix as every other decoder's
-/// samples. None for a file the reader does not open, which goes to ffmpeg
-/// as before. The reader names no speaker layout, which is the usual one up
-/// to two channels; more than two go to ffmpeg, which has the file's own,
-/// when it is there. A file cut short gives what it has, as ffmpeg's does.
-fn decode_wav(path: &Path, have_ffmpeg: bool) -> Option<Result<Vec<f32>, DecodeError>> {
+/// samples. None for a file the reader does not open, which goes to the
+/// OS's reader or ffmpeg as before. The reader names no speaker layout,
+/// which is the usual one up to two channels; more than two go to the other
+/// reader, which has the file's own, when there is one (`other`). A file
+/// cut short gives what it has, as ffmpeg's does. On Windows a name the
+/// reader's fopen cannot spell opens nothing, and goes to Media Foundation.
+fn decode_wav(path: &Path, other: bool) -> Option<Result<Vec<f32>, DecodeError>> {
     let c_path = CString::new(path.as_os_str().as_encoded_bytes()).ok()?;
     let mut info = PkWavInfo {
         rate: 0,
@@ -146,7 +155,7 @@ fn decode_wav(path: &Path, have_ffmpeg: bool) -> Option<Result<Vec<f32>, DecodeE
         }
     }
     let w = Close(w);
-    if info.channels > 2 && have_ffmpeg {
+    if info.channels > 2 && other {
         return None;
     }
     let f = WavFormat {
@@ -552,6 +561,10 @@ fn decode_os(path: &Path) -> Result<Vec<f32>, DecodeError> {
             Ok(x)
         }
         -1 => Err(DecodeError::NoAudio),
+        -3 => Err(DecodeError::Unreadable(
+            "decode.needs_media_foundation",
+            String::new(),
+        )),
         _ => Err(DecodeError::Unreadable(
             UNREADABLE,
             unsafe { CStr::from_ptr(err.as_ptr()) }
@@ -559,6 +572,22 @@ fn decode_os(path: &Path) -> Result<Vec<f32>, DecodeError> {
                 .into_owned(),
         )),
     }
+}
+
+/// Whether the OS's media library is there to read a file: macOS's always
+/// is; Windows Server and the N editions have no Media Foundation until the
+/// Media Feature Pack adds it (native/decode_windows.c).
+#[cfg(target_os = "windows")]
+fn os_decoder() -> bool {
+    extern "C" {
+        fn pkapp_os_decoder() -> c_int;
+    }
+    unsafe { pkapp_os_decoder() != 0 }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn os_decoder() -> bool {
+    cfg!(target_os = "macos")
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]

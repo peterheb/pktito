@@ -58,6 +58,7 @@
   "decode.no_audio": "No audio track",
   "decode.not_found": "File not found",
   "decode.needs_ffmpeg": "Install ffmpeg to read audio and video here",
+  "decode.needs_media_foundation": "This Windows has no Media Foundation. Install the Media Feature Pack, or ffmpeg, to read files other than WAV.",
   "decode.cant_convert": "Can't convert this audio",
   "decode.cant_start_ffmpeg": "Couldn't start ffmpeg",
 

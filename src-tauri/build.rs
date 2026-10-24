@@ -169,7 +169,10 @@ fn main() {
             "framework=CoreMedia",
             "framework=Foundation",
         ],
-        "windows" => &["mfplat", "mfreadwrite", "mfuuid", "ole32", "uuid"],
+        // Media Foundation's DLLs are loaded when a file needs them
+        // (native/decode_windows.c), so the exe starts on a Windows without
+        // them; mfuuid is its GUIDs, a static library
+        "windows" => &["mfuuid", "ole32", "uuid"],
         _ => &["pthread", "m"],
     };
     for lib in system {

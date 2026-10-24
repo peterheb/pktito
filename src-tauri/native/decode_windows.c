@@ -5,7 +5,7 @@
  *
  * 0 on success, with *out malloc'd (the caller frees it) holding *n
  * samples; -1 if the file has no audio stream; -2 if Windows cannot read
- * it, the reason in err. */
+ * it, the reason in err; -3 if this Windows has no Media Foundation. */
 #define COBJMACROS
 #include <windows.h>
 #include <mfapi.h>
@@ -14,8 +14,53 @@
 #include <mfreadwrite.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "mix.h"
+
+/* Media Foundation, loaded the first time a file needs it rather than
+ * linked: Windows Server and the N editions ship without it until the
+ * Media Feature Pack adds it, and an exe that imports it does not start
+ * there at all, where pktito still reads WAV itself (decode.rs). These four
+ * are every one of its functions this file calls. */
+typedef void (*fn)(void);
+static struct {
+    HRESULT(WINAPI *startup)(ULONG, DWORD);
+    HRESULT(WINAPI *shutdown)(void);
+    HRESULT(WINAPI *create_media_type)(IMFMediaType **);
+    HRESULT(WINAPI *create_source_reader_from_url)(LPCWSTR, IMFAttributes *, IMFSourceReader **);
+} mf;
+static INIT_ONCE mf_once = INIT_ONCE_STATIC_INIT;
+
+static BOOL CALLBACK mf_load(PINIT_ONCE once, PVOID param, PVOID *ctx) {
+    (void)once;
+    (void)param;
+    (void)ctx;
+    HMODULE plat = LoadLibraryExW(L"mfplat.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    HMODULE rw = plat ? LoadLibraryExW(L"mfreadwrite.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32) : NULL;
+    if (rw) {
+        mf.startup = (HRESULT(WINAPI *)(ULONG, DWORD))(fn)GetProcAddress(plat, "MFStartup");
+        mf.shutdown = (HRESULT(WINAPI *)(void))(fn)GetProcAddress(plat, "MFShutdown");
+        mf.create_media_type = (HRESULT(WINAPI *)(IMFMediaType **))(fn)GetProcAddress(plat, "MFCreateMediaType");
+        mf.create_source_reader_from_url = (HRESULT(WINAPI *)(LPCWSTR, IMFAttributes *, IMFSourceReader **))(fn)
+            GetProcAddress(rw, "MFCreateSourceReaderFromURL");
+    }
+    if (!mf.startup || !mf.shutdown || !mf.create_media_type || !mf.create_source_reader_from_url)
+        memset(&mf, 0, sizeof mf);
+    return TRUE;
+}
+
+/* 1 if Media Foundation is there to read a file (decode.rs asks before
+ * handing it a WAV of more than two channels), else 0. */
+int pkapp_os_decoder(void) {
+    InitOnceExecuteOnce(&mf_once, mf_load, NULL, NULL);
+    return mf.startup != NULL;
+}
+
+#define MFStartup mf.startup
+#define MFShutdown mf.shutdown
+#define MFCreateMediaType mf.create_media_type
+#define MFCreateSourceReaderFromURL mf.create_source_reader_from_url
 
 static int fail(char *err, size_t errlen, const char *what, HRESULT hr) {
     snprintf(err, errlen, "%s (0x%08lx)", what, (unsigned long)hr);
@@ -111,6 +156,8 @@ static int take_format(IMFSourceReader *rd, DWORD stream, pkapp_mix *mix, UINT32
 int pkapp_decode_os(const char *path, int rate, float **out, size_t *n, char *err, size_t errlen) {
     *out = NULL;
     *n = 0;
+    if (!pkapp_os_decoder())
+        return -3;
     int wlen = MultiByteToWideChar(CP_UTF8, 0, path, -1, NULL, 0);
     wchar_t *wpath = wlen > 0 ? malloc((size_t)wlen * sizeof *wpath) : NULL;
     if (!wpath)
@@ -211,6 +258,8 @@ done:
  * bits); 0 for a file with none, or one it cannot read. For the window's
  * times in frames (ui/app.js). */
 double pkapp_video_rate_os(const char *path) {
+    if (!pkapp_os_decoder())
+        return 0;
     int wlen = MultiByteToWideChar(CP_UTF8, 0, path, -1, NULL, 0);
     wchar_t *wpath = wlen > 0 ? malloc((size_t)wlen * sizeof *wpath) : NULL;
     if (!wpath)

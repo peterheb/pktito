@@ -8,12 +8,16 @@ computer by [libpktito](https://github.com/peterheb/libpktito), a C11 port of NV
 Parakeet-TDT models. Nothing leaves the computer, and the one thing the app
 fetches is its model, once.
 
+On every system pktito's own reader takes WAV (PCM, float, A-law and
+mu-law, RF64; up to two channels, and more where no other reader knows the
+speakers), so a server needs nothing more for it. Everything else:
+
 - **macOS 12 and later**: AVFoundation reads the file.
-- **Windows 10 and later**: Media Foundation reads it. (The N editions of
-  Windows have no Media Foundation without the Media Feature Pack.)
-- **Linux**: there is no one media library. pktito's own reader takes WAV
-  (PCM, float, A-law and mu-law, RF64), so a server needs nothing more for
-  it; everything else goes to ffmpeg, which the .deb depends on.
+- **Windows 10 and later**: Media Foundation reads it. Windows Server and
+  the N editions have no Media Foundation without the Media Feature Pack;
+  pktito still starts and reads WAV there.
+- **Linux**: there is no one media library, so ffmpeg, which the .deb
+  depends on.
 
 On macOS and Windows, a file the OS cannot read is handed to ffmpeg when
 ffmpeg is on the PATH. `PKTITO_DECODER=ffmpeg` uses ffmpeg for everything;
