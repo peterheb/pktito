@@ -4,10 +4,9 @@
 ; and opens pktito; an older or newer pktito already there is installed
 ; over, never uninstalled first, so its PATH entry, .pkf type and the
 ; user's models and settings stay as they are. No desktop shortcut, only
-; the Start menu's. The one question left is Tauri's own, when pktito is
-; running: whether to close it. The uninstaller asks nothing either (the
-; Settings app has asked already) and leaves the data folder, as the
-; privacy sheet says.
+; the Start menu's. It asks nothing, not even before closing a pktito that
+; is open. The uninstaller asks nothing either (the Settings app has asked
+; already) and leaves the data folder, as the privacy sheet says.
 ;
 ; Every change is marked "pktito:". /P, /S, /R, /NS and /UPDATE still mean
 ; what Tauri's updater and its docs say they do.
@@ -85,6 +84,7 @@ ManifestDPIAwareness PerMonitorV2
 !define STARTMENUFOLDER "{{start_menu_folder}}"
 
 Var PassiveMode
+Var PassiveModeKept ; pktito: $PassiveMode, while the running-app check sees it set
 Var UpdateMode
 Var NoShortcutMode
 Var OldMainBinaryName
@@ -399,7 +399,13 @@ Section Install
     !insertmacro NSIS_HOOK_PREINSTALL
   !endif
 
+  ; pktito: a pktito that is open is closed without asking, in every mode.
+  ; Tauri's macro asks unless passive, so it runs as passive here. Nothing
+  ; is lost: a transcription cut short is the same transcript run again.
+  StrCpy $PassiveModeKept $PassiveMode
+  StrCpy $PassiveMode 1
   !insertmacro CheckIfAppIsRunning "$INSTDIR\${MAINBINARYNAME}.exe" "${PRODUCTNAME}"
+  StrCpy $PassiveMode $PassiveModeKept
 
   ; Copy main executable
   File "${MAINBINARYSRCPATH}"
@@ -536,7 +542,13 @@ Section Uninstall
     !insertmacro NSIS_HOOK_PREUNINSTALL
   !endif
 
+  ; pktito: a pktito that is open is closed without asking, in every mode.
+  ; Tauri's macro asks unless passive, so it runs as passive here. Nothing
+  ; is lost: a transcription cut short is the same transcript run again.
+  StrCpy $PassiveModeKept $PassiveMode
+  StrCpy $PassiveMode 1
   !insertmacro CheckIfAppIsRunning "$INSTDIR\${MAINBINARYNAME}.exe" "${PRODUCTNAME}"
+  StrCpy $PassiveMode $PassiveModeKept
 
   ; Delete the app directory and its content from disk
   ; Copy main executable

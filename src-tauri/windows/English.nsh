@@ -1,6 +1,7 @@
 ; pktito's English for the installer: tauri-bundler 2.10.4's
-; languages/English.nsh with the three messages about a running pktito
-; reworded (Tauri's say "Click OK to kill it"). Tauri reads this file in
+; languages/English.nsh with its two messages for a pktito that could not
+; be closed reworded (the installer closes an open pktito without asking,
+; so appRunningOkKill's question is never shown). Tauri reads this file in
 ; place of its own (tauri.windows.conf.json, customLanguageFiles), so it
 ; holds every string, the ones installer.nsi no longer shows included.
 ; {{product_name}} is left for the installer to fill in as it runs.
@@ -9,7 +10,7 @@ LangString addOrReinstall ${LANG_ENGLISH} "Add/Reinstall components"
 LangString alreadyInstalled ${LANG_ENGLISH} "Already Installed"
 LangString alreadyInstalledLong ${LANG_ENGLISH} "${PRODUCTNAME} ${VERSION} is already installed. Select the operation you want to perform and click Next to continue."
 LangString appRunning ${LANG_ENGLISH} "{{product_name}} is open and could not be closed. Close it, then run the installer again."
-LangString appRunningOkKill ${LANG_ENGLISH} "{{product_name}} is open. Close it and continue installing?$\n$\nA transcription in progress will stop."
+LangString appRunningOkKill ${LANG_ENGLISH} "{{product_name}} is running!$\nClick OK to kill it"
 LangString chooseMaintenanceOption ${LANG_ENGLISH} "Choose the maintenance option to perform."
 LangString chooseHowToInstall ${LANG_ENGLISH} "Choose how you want to install ${PRODUCTNAME}."
 LangString createDesktop ${LANG_ENGLISH} "Create desktop shortcut"
