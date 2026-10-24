@@ -9,6 +9,7 @@ use pktito_app::{decode, download, format, model, pktito, transcribe};
 use std::fs;
 use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -445,26 +446,53 @@ fn fetch(m: &str) -> Result<i32, String> {
     let job = Arc::new(download::Job::new(e, &dir));
     let (tx, rx) = std::sync::mpsc::channel();
     let show = std::io::stderr().is_terminal();
+    // The window tries again for as long as it is open, where a person sees
+    // it and can stop it; a command line in a script could wait forever (a
+    // sandbox's TLS that failed the same way every try ran it until killed,
+    // 2026-10-24). So after TRIES failures in a row with no bytes between
+    // them, about a minute of waits (2, 4, 8, 16 s), it stops, keeping what
+    // it has for the next `download` to go on from.
+    const TRIES: u32 = 5;
+    let failed = Arc::new(AtomicU32::new(0));
+    let (fails, stop) = (failed.clone(), job.clone());
     job.start(
         e,
         dir.clone(),
         move |s| match s.step {
-            "failed" => {
+            // each failure once, not again as its next try starts
+            "failed" if !s.trying => {
+                let n = if s.retry {
+                    fails.fetch_add(1, Ordering::Relaxed) + 1
+                } else {
+                    0
+                };
+                let again = s.retry && n < TRIES;
+                if s.retry && !again {
+                    stop.ctl.pause.store(true, Ordering::Relaxed);
+                }
                 status("");
                 eprintln!(
                     "{}{}",
                     s.problem.as_ref().map(|p| p.line()).unwrap_or_default(),
-                    if s.retry { " (trying again)" } else { "" }
+                    if again { " (trying again)" } else { "" }
                 )
             }
-            _ if show => status(&format!(
-                "{} {}: {} of {} MB",
-                s.step,
-                s.name,
-                s.got / 1_000_000,
-                s.total / 1_000_000
-            )),
-            _ => {}
+            "failed" => {}
+            step => {
+                // bytes came: the count starts again
+                if step == "downloading" || step == "checking" {
+                    fails.store(0, Ordering::Relaxed);
+                }
+                if show {
+                    status(&format!(
+                        "{} {}: {} of {} MB",
+                        s.step,
+                        s.name,
+                        s.got / 1_000_000,
+                        s.total / 1_000_000
+                    ));
+                }
+            }
         },
         move |p| {
             let _ = tx.send(p);
@@ -476,9 +504,18 @@ fn fetch(m: &str) -> Result<i32, String> {
     if show {
         status("");
     }
-    let path = rx
-        .try_recv()
-        .map_err(|_| job.state().problem.map(|p| p.line()).unwrap_or_default())?;
+    let path = rx.try_recv().map_err(|_| {
+        let line = job.state().problem.map(|p| p.line()).unwrap_or_default();
+        if failed.load(Ordering::Relaxed) >= TRIES {
+            format!(
+                "{line}\n{TRIES} tries in a row failed; `pktito-cli download {}` again \
+                 goes on from where this stopped",
+                e.name
+            )
+        } else {
+            line
+        }
+    })?;
     let mut s = model::load_settings(&data);
     if s.model.is_none() && s.model_file.is_none() {
         s.model = Some(e.name.to_string());

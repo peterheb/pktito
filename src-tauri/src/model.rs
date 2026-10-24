@@ -214,6 +214,41 @@ pub fn host(url: &str) -> &str {
     rest.split('/').next().unwrap_or(rest)
 }
 
+/// The proxy the environment names for url, read as curl reads it:
+/// HTTPS_PROXY (HTTP_PROXY for an http address), else ALL_PROXY, in either
+/// case, and none for a host NO_PROXY lists. ureq reads the environment
+/// only when asked, ALL_PROXY first and NO_PROXY never; unasked, a sandbox
+/// whose only way out is its proxy saw every try at models.pktito.net fail
+/// in TLS at an address that was not the server, while curl got the file
+/// through the proxy (2026-10-24). A SOCKS ALL_PROXY needs ureq's
+/// socks-proxy feature (Cargo.toml).
+fn proxy_for(url: &str) -> Option<ureq::Proxy> {
+    let var = |name: &str| {
+        [name.to_string(), name.to_lowercase()]
+            .iter()
+            .find_map(|n| std::env::var(n).ok().filter(|v| !v.trim().is_empty()))
+    };
+    let first = if url.starts_with("http://") {
+        "HTTP_PROXY"
+    } else {
+        "HTTPS_PROXY"
+    };
+    let p = var(first).or_else(|| var("ALL_PROXY"))?;
+    let name = host(url)
+        .rsplit_once(':')
+        .map_or(host(url), |(h, _)| h)
+        .to_lowercase();
+    let skip = var("NO_PROXY").is_some_and(|list| {
+        list.split(',')
+            .map(|s| s.trim().trim_start_matches('.').to_lowercase())
+            .any(|s| s == "*" || (!s.is_empty() && (name == s || name.ends_with(&format!(".{s}")))))
+    });
+    if skip {
+        return None;
+    }
+    ureq::Proxy::new(p.trim()).ok()
+}
+
 /// What a download is told while it runs, from another thread.
 #[derive(Default)]
 pub struct Ctl {
@@ -299,10 +334,13 @@ fn fetch(
     let host = host(&url).to_string();
     // a connection that goes quiet is a connection lost: without a read
     // timeout, a network that goes away mid-download leaves it waiting
-    let agent = ureq::AgentBuilder::new()
+    let mut agent = ureq::AgentBuilder::new()
         .timeout_connect(Duration::from_secs(15))
-        .timeout_read(Duration::from_secs(30))
-        .build();
+        .timeout_read(Duration::from_secs(30));
+    if let Some(p) = proxy_for(&url) {
+        agent = agent.proxy(p);
+    }
+    let agent = agent.build();
     let asked = got;
     let request = |what: &str| {
         let range = if asked > 0 {
