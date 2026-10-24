@@ -1,3 +1,17 @@
+; pktito's installer: Tauri's template (tauri-bundler 2.10.4's installer.nsi,
+; the commit before this file's first change) with its questions taken out.
+; Double-clicked, it shows one window, a progress bar that closes itself,
+; and opens pktito; an older or newer pktito already there is installed
+; over, never uninstalled first, so its PATH entry, .pkf type and the
+; user's models and settings stay as they are. No desktop shortcut, only
+; the Start menu's. The one question left is Tauri's own, when pktito is
+; running: whether to close it. The uninstaller asks nothing either (the
+; Settings app has asked already) and leaves the data folder, as the
+; privacy sheet says.
+;
+; Every change is marked "pktito:". /P, /S, /R, /NS and /UPDATE still mean
+; what Tauri's updater and its docs say they do.
+
 Unicode true
 ManifestDPIAware true
 ; Add in `dpiAwareness` `PerMonitorV2` to manifest for Windows 10 1607+ (note this should not affect lower versions since they should be able to ignore this and pick up `dpiAware` `true` set by `ManifestDPIAware true`)
@@ -29,8 +43,7 @@ ManifestDPIAwareness PerMonitorV2
 !include "Win\Propkey.nsh"
 !include "Win\RestartManager.nsh"
 !include "StrFunc.nsh"
-${StrCase}
-${StrLoc}
+; pktito: StrFunc's StrCase and StrLoc went with the WiX lookup they served
 
 {{#if installer_hooks}}
 !include "{{installer_hooks}}"
@@ -74,7 +87,6 @@ ${StrLoc}
 Var PassiveMode
 Var UpdateMode
 Var NoShortcutMode
-Var WixMode
 Var OldMainBinaryName
 
 Name "${PRODUCTNAME}"
@@ -165,330 +177,36 @@ VIAddVersionKey "ProductVersion" "${VERSION}"
 !define MUI_LANGDLL_REGISTRY_KEY "${MANUPRODUCTKEY}"
 !define MUI_LANGDLL_REGISTRY_VALUENAME "Installer Language"
 
-; Installer pages, must be ordered as they appear
-; 1. Welcome Page
-!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
-!insertmacro MUI_PAGE_WELCOME
+; pktito: the installer's one page, its progress bar, which closes itself
+; when done (Section Install). Tauri's welcome, license, install mode,
+; reinstall, folder and finish pages are gone: pktito installs for this
+; user, always to the same folder, has no license to accept, and installs
+; over a pktito already there. Tauri's reinstall page offered, as its
+; default, to uninstall an older version first; installing over keeps the
+; PATH entry and the .pkf type as they are (path.ps1 adds the folder once
+; however often it runs) and skips the old uninstaller's own two pages.
+ShowInstDetails nevershow
+ShowUninstDetails nevershow
 
-; 2. License Page (if defined)
-!if "${LICENSE}" != ""
-  !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
-  !insertmacro MUI_PAGE_LICENSE "${LICENSE}"
-!endif
-
-; 3. Install mode (if it is set to `both`)
-!if "${INSTALLMODE}" == "both"
-  !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
-  !insertmacro MULTIUSER_PAGE_INSTALLMODE
-!endif
-
-; 4. Custom page to ask user if he wants to reinstall/uninstall
-;    only if a previous installation was detected
-Var ReinstallPageCheck
-Page custom PageReinstall PageLeaveReinstall
-
-; Find a previous WiX installation and set $R6 to its uninstall registry key, or to "" if none.
-;
-; A WiX installer stores the installation info in registry
-; using a UUID and so we have to loop through all keys under
-; `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall`
-; and check if `DisplayName` and `Publisher` keys match ${PRODUCTNAME} and ${MANUFACTURER}
-;
-; This has a potential issue that there maybe another installation that matches
-; our ${PRODUCTNAME} and ${MANUFACTURER} but wasn't installed by our WiX installer,
-; however, this should be fine since the user will have to confirm the uninstallation
-; and they can chose to abort it if doesn't make sense.
-Function FindWixInstall
-  StrCpy $R6 ""
-  StrCpy $0 0
-  wix_loop:
-    EnumRegKey $1 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" $0
-    StrCmp $1 "" wix_loop_done ; Exit loop if there is no more keys to loop on
-    IntOp $0 $0 + 1
-    ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$1" "DisplayName"
-    ReadRegStr $R1 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$1" "Publisher"
-    StrCmp "$R0$R1" "${PRODUCTNAME}${MANUFACTURER}" 0 wix_loop
-    ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$1" "UninstallString"
-    ${StrCase} $R1 $R0 "L"
-    ${StrLoc} $R0 $R1 "msiexec" ">"
-    StrCmp $R0 0 0 wix_loop_done
-    StrCpy $R6 "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$1"
-  wix_loop_done:
-FunctionEnd
-
-Function PageReinstall
-  ; Uninstall previous WiX installation if exists.
-  Call FindWixInstall
-  ${If} $R6 != ""
-    StrCpy $WixMode 1
-    Goto compare_version
-  ${EndIf}
-
-  ; Check if there is an existing installation, if not, abort the reinstall page
-  ReadRegStr $R0 SHCTX "${UNINSTKEY}" ""
-  ReadRegStr $R1 SHCTX "${UNINSTKEY}" "UninstallString"
-  ${IfThen} "$R0$R1" == "" ${|} Abort ${|}
-
-  ; Compare this installar version with the existing installation
-  ; and modify the messages presented to the user accordingly
-  compare_version:
-  StrCpy $R4 "$(older)"
-  ${If} $WixMode = 1
-    ReadRegStr $R0 HKLM "$R6" "DisplayVersion"
-  ${Else}
-    ReadRegStr $R0 SHCTX "${UNINSTKEY}" "DisplayVersion"
-  ${EndIf}
-  ${IfThen} $R0 == "" ${|} StrCpy $R4 "$(unknown)" ${|}
-
-  nsis_tauri_utils::SemverCompare "${VERSION}" $R0
-  Pop $R0
-
-  ; Read the install choice header through $R5 so a custom language file that only
-  ; defines the misspelled `choowHowToInstall` still shows its own text
-  ; TODO: remove the `choowHowToInstall` fallback in a future major version
-  StrCpy $R5 "$(chooseHowToInstall)"
-  ${IfThen} $R5 == "" ${|} StrCpy $R5 "$(choowHowToInstall)" ${|}
-
-  ; Reinstalling the same version
-  ${If} $R0 = 0
-    StrCpy $R1 "$(alreadyInstalledLong)"
-    StrCpy $R2 "$(addOrReinstall)"
-    StrCpy $R3 "$(uninstallApp)"
-    !insertmacro MUI_HEADER_TEXT "$(alreadyInstalled)" "$(chooseMaintenanceOption)"
-  ; Upgrading
-  ${ElseIf} $R0 = 1
-    StrCpy $R1 "$(olderOrUnknownVersionInstalled)"
-    StrCpy $R2 "$(uninstallBeforeInstalling)"
-    StrCpy $R3 "$(dontUninstall)"
-    !insertmacro MUI_HEADER_TEXT "$(alreadyInstalled)" "$R5"
-  ; Downgrading
-  ${ElseIf} $R0 = -1
-    StrCpy $R1 "$(newerVersionInstalled)"
-    StrCpy $R2 "$(uninstallBeforeInstalling)"
-    !if "${ALLOWDOWNGRADES}" == "true"
-      StrCpy $R3 "$(dontUninstall)"
-    !else
-      StrCpy $R3 "$(dontUninstallDowngrade)"
-    !endif
-    !insertmacro MUI_HEADER_TEXT "$(alreadyInstalled)" "$R5"
-  ${Else}
-    Abort
-  ${EndIf}
-
-  ; Skip showing the page if passive
-  ;
-  ; Note that we don't call this earlier at the beginning
-  ; of this function because we need to populate some variables
-  ; related to current installed version if detected and whether
-  ; we are downgrading or not.
-  ${If} $PassiveMode = 1
-    Call PageLeaveReinstall
-  ${Else}
-    nsDialogs::Create 1018
-    Pop $R4
-    ${IfThen} $(^RTL) = 1 ${|} nsDialogs::SetRTL $(^RTL) ${|}
-
-    ${NSD_CreateLabel} 0 0 100% 24u $R1
-    Pop $R1
-
-    ${NSD_CreateRadioButton} 30u 50u -30u 8u $R2
-    Pop $R2
-    ${NSD_OnClick} $R2 PageReinstallUpdateSelection
-
-    ${NSD_CreateRadioButton} 30u 70u -30u 8u $R3
-    Pop $R3
-    ; Disable this radio button if downgrading and downgrades are disabled
-    !if "${ALLOWDOWNGRADES}" == "false"
-      ${IfThen} $R0 = -1 ${|} EnableWindow $R3 0 ${|}
-    !endif
-    ${NSD_OnClick} $R3 PageReinstallUpdateSelection
-
-    ; Check the first radio button if this the first time
-    ; we enter this page or if the second button wasn't
-    ; selected the last time we were on this page
-    ${If} $ReinstallPageCheck <> 2
-      SendMessage $R2 ${BM_SETCHECK} ${BST_CHECKED} 0
-    ${Else}
-      SendMessage $R3 ${BM_SETCHECK} ${BST_CHECKED} 0
-    ${EndIf}
-
-    ${NSD_SetFocus} $R2
-    nsDialogs::Show
-  ${EndIf}
-FunctionEnd
-Function PageReinstallUpdateSelection
-  ${NSD_GetState} $R2 $R1
-  ${If} $R1 == ${BST_CHECKED}
-    StrCpy $ReinstallPageCheck 1
-  ${Else}
-    StrCpy $ReinstallPageCheck 2
-  ${EndIf}
-FunctionEnd
-Function PageLeaveReinstall
-  ${NSD_GetState} $R2 $R1
-
-  ; If migrating from Wix, always uninstall
-  ${If} $WixMode = 1
-    Goto reinst_uninstall
-  ${EndIf}
-
-  ; In update mode, always proceeds without uninstalling
-  ${If} $UpdateMode = 1
-    Goto reinst_done
-  ${EndIf}
-
-  ; $R0 holds whether same(0)/upgrading(1)/downgrading(-1) version
-  ; $R1 holds the radio buttons state:
-  ;   1 => first choice was selected
-  ;   0 => second choice was selected
-  ${If} $R0 = 0 ; Same version, proceed
-    ${If} $R1 = 1              ; User chose to add/reinstall
-      Goto reinst_done
-    ${Else}                    ; User chose to uninstall
-      Goto reinst_uninstall
-    ${EndIf}
-  ${ElseIf} $R0 = 1 ; Upgrading
-    ${If} $R1 = 1              ; User chose to uninstall
-      Goto reinst_uninstall
-    ${Else}
-      Goto reinst_done         ; User chose NOT to uninstall
-    ${EndIf}
-  ${ElseIf} $R0 = -1 ; Downgrading
-    ${If} $R1 = 1              ; User chose to uninstall
-      Goto reinst_uninstall
-    ${Else}
-      Goto reinst_done         ; User chose NOT to uninstall
-    ${EndIf}
-  ${EndIf}
-
-  reinst_uninstall:
-    HideWindow
-    ClearErrors
-
-    ${If} $WixMode = 1
-      ReadRegStr $R1 HKLM "$R6" "UninstallString"
-      ExecWait '$R1' $0
-    ${Else}
-      ReadRegStr $4 SHCTX "${MANUPRODUCTKEY}" ""
-      ReadRegStr $R1 SHCTX "${UNINSTKEY}" "UninstallString"
-      ${IfThen} $UpdateMode = 1 ${|} StrCpy $R1 "$R1 /UPDATE" ${|} ; append /UPDATE
-      ${IfThen} $PassiveMode = 1 ${|} StrCpy $R1 "$R1 /P" ${|} ; append /P
-      StrCpy $R1 "$R1 _?=$4" ; append uninstall directory
-      ExecWait '$R1' $0
-    ${EndIf}
-
-    BringToFront
-
-    ${IfThen} ${Errors} ${|} StrCpy $0 2 ${|} ; ExecWait failed, set fake exit code
-
-    ${If} $0 <> 0
-    ${OrIf} ${FileExists} "$INSTDIR\${MAINBINARYNAME}.exe"
-      ; User cancelled wix uninstaller? return to select un/reinstall page
-      ${If} $WixMode = 1
-      ${AndIf} $0 = 1602
-        Abort
-      ${EndIf}
-
-      ; User cancelled NSIS uninstaller? return to select un/reinstall page
-      ${If} $0 = 1
-        Abort
-      ${EndIf}
-
-      ; Other errors? show generic error message and return to select un/reinstall page
-      MessageBox MB_ICONEXCLAMATION "$(unableToUninstall)"
-      Abort
-    ${EndIf}
-
-    ; The NSIS uninstaller was run in place (`_?=`), so it cannot delete itself
-    ; and the install directory, clean them up here once the uninstall succeeded
-    ; https://nsis.sourceforge.io/Docs/Chapter3.html#:~:text=path%20contains%20spaces.-,3.2.3%20Examples,-installer.exe%20/NCRC
-    ${If} $WixMode = 0
-    ${AndIf} $4 != ""
-      Delete "$4\uninstall.exe"
-      RMDir "$4"
-    ${EndIf}
-  reinst_done:
-FunctionEnd
-
-; 5. Choose install directory page
-!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
-!insertmacro MUI_PAGE_DIRECTORY
-
-; 6. Start menu shortcut page
+; The Start menu folder page stays, always skipped, for the
+; $AppStartMenuFolder the shortcut code reads.
 Var AppStartMenuFolder
 !if "${STARTMENUFOLDER}" != ""
-  !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
   !define MUI_STARTMENUPAGE_DEFAULTFOLDER "${STARTMENUFOLDER}"
-!else
-  !define MUI_PAGE_CUSTOMFUNCTION_PRE Skip
 !endif
+!define MUI_PAGE_CUSTOMFUNCTION_PRE Skip
 !insertmacro MUI_PAGE_STARTMENU Application $AppStartMenuFolder
 
-; 7. Installation page
 !insertmacro MUI_PAGE_INSTFILES
-
-; 8. Finish page
-;
-; Don't auto jump to finish page after installation page,
-; because the installation page has useful info that can be used debug any issues with the installer.
-!define MUI_FINISHPAGE_NOAUTOCLOSE
-; Use show readme button in the finish page as a button create a desktop shortcut
-!define MUI_FINISHPAGE_SHOWREADME
-!define MUI_FINISHPAGE_SHOWREADME_TEXT "$(createDesktop)"
-!define MUI_FINISHPAGE_SHOWREADME_FUNCTION CreateOrUpdateDesktopShortcut
-; Show run app after installation.
-!define MUI_FINISHPAGE_RUN
-!define MUI_FINISHPAGE_RUN_FUNCTION RunMainBinary
-!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
-!insertmacro MUI_PAGE_FINISH
 
 Function RunMainBinary
   nsis_tauri_utils::RunAsUser "$INSTDIR\${MAINBINARYNAME}.exe" ""
 FunctionEnd
 
-; Uninstaller Pages
-; 1. Confirm uninstall page
-Var DeleteAppDataCheckbox
-Var DeleteAppDataCheckboxState
-!define /ifndef WS_EX_LAYOUTRTL         0x00400000
-!define MUI_PAGE_CUSTOMFUNCTION_SHOW un.ConfirmShow
-Function un.ConfirmShow ; Add add a `Delete app data` check box
-  ; $1 inner dialog HWND
-  ; $2 window DPI
-  ; $3 style
-  ; $4 x
-  ; $5 y
-  ; $6 width
-  ; $7 height
-  FindWindow $1 "#32770" "" $HWNDPARENT ; Find inner dialog
-  System::Call "user32::GetDpiForWindow(p r1) i .r2"
-  ${If} $(^RTL) = 1
-    StrCpy $3 "${__NSD_CheckBox_EXSTYLE} | ${WS_EX_LAYOUTRTL}"
-    IntOp $4 50 * $2
-  ${Else}
-    StrCpy $3 "${__NSD_CheckBox_EXSTYLE}"
-    IntOp $4 0 * $2
-  ${EndIf}
-  IntOp $5 100 * $2
-  IntOp $6 400 * $2
-  IntOp $7 25 * $2
-  IntOp $4 $4 / 96
-  IntOp $5 $5 / 96
-  IntOp $6 $6 / 96
-  IntOp $7 $7 / 96
-  System::Call 'user32::CreateWindowEx(i r3, w "${__NSD_CheckBox_CLASS}", w "$(deleteAppData)", i ${__NSD_CheckBox_STYLE}, i r4, i r5, i r6, i r7, p r1, i0, i0, i0) i .s'
-  Pop $DeleteAppDataCheckbox
-  SendMessage $HWNDPARENT ${WM_GETFONT} 0 0 $1
-  SendMessage $DeleteAppDataCheckbox ${WM_SETFONT} $1 1
-FunctionEnd
-!define MUI_PAGE_CUSTOMFUNCTION_LEAVE un.ConfirmLeave
-Function un.ConfirmLeave
-  SendMessage $DeleteAppDataCheckbox ${BM_GETCHECK} 0 0 $DeleteAppDataCheckboxState
-FunctionEnd
-!define MUI_PAGE_CUSTOMFUNCTION_PRE un.SkipIfPassive
-!insertmacro MUI_UNPAGE_CONFIRM
-
-; 2. Uninstalling Page
+; pktito: the uninstaller's one page, its progress, closed when done
+; (Section Uninstall). No confirmation page: Windows' Settings asks before
+; it runs the uninstaller. No "delete app data" box: the models and
+; settings stay for the user to delete, as the privacy sheet says.
 !insertmacro MUI_UNPAGE_INSTFILES
 
 ;Languages
@@ -555,19 +273,13 @@ Function .onInit
     !insertmacro MULTIUSER_INIT
   !endif
 
-  ; Abort downgrades if they are disabled, in the modes that skip the reinstall page choice:
-  ; silent, passive and update
+  ; Abort downgrades if they are disabled. pktito: in every mode, since none
+  ; has the reinstall page's choice now; and no WiX install to look for, as
+  ; pktito never shipped one. pktito leaves downgrades allowed (Tauri's
+  ; default), so this is compiled out.
   !if "${ALLOWDOWNGRADES}" == "false"
-  ${If} ${Silent}
-  ${OrIf} $PassiveMode = 1
-  ${OrIf} $UpdateMode = 1
-    ; Compare with the same installation the reinstall page would: a WiX one first
-    Call FindWixInstall
-    ${If} $R6 != ""
-      ReadRegStr $R0 HKLM "$R6" "DisplayVersion"
-    ${Else}
-      ReadRegStr $R0 SHCTX "${UNINSTKEY}" "DisplayVersion"
-    ${EndIf}
+  ${If} 1 = 1
+    ReadRegStr $R0 SHCTX "${UNINSTKEY}" "DisplayVersion"
     nsis_tauri_utils::SemverCompare "${VERSION}" $R0
     Pop $R0
     ; If downgrading
@@ -768,21 +480,17 @@ Section Install
     Call CreateOrUpdateStartMenuShortcut
   !insertmacro MUI_STARTMENU_WRITE_END
 
-  ; Create desktop shortcut for silent and passive installers
-  ; because finish page will be skipped
-  ${If} $PassiveMode = 1
-  ${OrIf} ${Silent}
-    Call CreateOrUpdateDesktopShortcut
-  ${EndIf}
+  ; pktito: no desktop shortcut, in any mode; the Start menu's is the one.
+  ; One a Tauri installer made before stays until the uninstaller takes it.
 
   !ifmacrodef NSIS_HOOK_POSTINSTALL
     !insertmacro NSIS_HOOK_POSTINSTALL
   !endif
 
-  ; Auto close this page for passive mode
-  ${If} $PassiveMode = 1
-    SetAutoClose true
-  ${EndIf}
+  ; pktito: the progress page closes itself in every mode, there being no
+  ; finish page to go on to. Were the install to fail, the Abort that
+  ; stops it leaves the page open with its message.
+  SetAutoClose true
 SectionEnd
 
 Function .onInstSuccess
@@ -795,6 +503,10 @@ Function .onInstSuccess
       ${GetOptions} $CMDLINE "/ARGS" $R0
       nsis_tauri_utils::RunAsUser "$INSTDIR\${MAINBINARYNAME}.exe" "$R0"
     ${EndIf}
+  ${Else}
+    ; pktito: double-clicked, it opens what it installed, in place of the
+    ; finish page's "Run pktito" box, which was ticked
+    Call RunMainBinary
   ${EndIf}
 FunctionEnd
 
@@ -910,33 +622,17 @@ Section Uninstall
     DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${PRODUCTNAME}"
   ${EndIf}
 
-  ; Delete app data if the checkbox is selected
-  ; and if not updating
-  ${If} $DeleteAppDataCheckboxState = 1
-  ${AndIf} $UpdateMode <> 1
-    ; Clear the install location $INSTDIR from registry
-    DeleteRegKey SHCTX "${MANUPRODUCTKEY}"
-    DeleteRegKey /ifempty SHCTX "${MANUKEY}"
-
-    ; Clear the install language from registry
-    DeleteRegValue HKCU "${MANUPRODUCTKEY}" "Installer Language"
-    DeleteRegKey /ifempty HKCU "${MANUPRODUCTKEY}"
-    DeleteRegKey /ifempty HKCU "${MANUKEY}"
-
-    SetShellVarContext current
-    RmDir /r "$APPDATA\${BUNDLEID}"
-    RmDir /r "$LOCALAPPDATA\${BUNDLEID}"
-  ${EndIf}
+  ; pktito: the app data stays, so Tauri's "delete app data" step, with its
+  ; box, is gone: the models and settings in $APPDATA\${BUNDLEID} are the
+  ; user's to delete. So are the install location and installer language
+  ; Tauri's step cleared from the registry, which a later install reads.
 
   !ifmacrodef NSIS_HOOK_POSTUNINSTALL
     !insertmacro NSIS_HOOK_POSTUNINSTALL
   !endif
 
-  ; Auto close if passive mode or updating
-  ${If} $PassiveMode = 1
-  ${OrIf} $UpdateMode = 1
-    SetAutoClose true
-  ${EndIf}
+  ; pktito: closes itself in every mode, as the installer does
+  SetAutoClose true
 SectionEnd
 
 Function RestorePreviousInstallLocation
@@ -949,12 +645,6 @@ Function Skip
   Abort
 FunctionEnd
 
-Function SkipIfPassive
-  ${IfThen} $PassiveMode = 1  ${|} Abort ${|}
-FunctionEnd
-Function un.SkipIfPassive
-  ${IfThen} $PassiveMode = 1  ${|} Abort ${|}
-FunctionEnd
 
 Function CreateOrUpdateStartMenuShortcut
   ; We used to use product name as MAINBINARYNAME
@@ -980,12 +670,10 @@ Function CreateOrUpdateStartMenuShortcut
   ${EndIf}
 
   ; Skip creating shortcut if in update mode or no shortcut mode
-  ; but always create if migrating from wix
-  ${If} $WixMode = 0
-    ${If} $UpdateMode = 1
-    ${OrIf} $NoShortcutMode = 1
-      Return
-    ${EndIf}
+  ; (pktito: there being no WiX install to migrate from)
+  ${If} $UpdateMode = 1
+  ${OrIf} $NoShortcutMode = 1
+    Return
   ${EndIf}
 
   !if "${STARTMENUFOLDER}" != ""
@@ -996,27 +684,4 @@ Function CreateOrUpdateStartMenuShortcut
     CreateShortcut "$SMPROGRAMS\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
     !insertmacro SetLnkAppUserModelId "$SMPROGRAMS\${PRODUCTNAME}.lnk"
   !endif
-FunctionEnd
-
-Function CreateOrUpdateDesktopShortcut
-  ; We used to use product name as MAINBINARYNAME
-  ; migrate old shortcuts to target the new MAINBINARYNAME
-  !insertmacro IsShortcutTarget "$DESKTOP\${PRODUCTNAME}.lnk" "$INSTDIR\$OldMainBinaryName"
-  Pop $0
-  ${If} $0 = 1
-    !insertmacro SetShortcutTarget "$DESKTOP\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
-    Return
-  ${EndIf}
-
-  ; Skip creating shortcut if in update mode or no shortcut mode
-  ; but always create if migrating from wix
-  ${If} $WixMode = 0
-    ${If} $UpdateMode = 1
-    ${OrIf} $NoShortcutMode = 1
-      Return
-    ${EndIf}
-  ${EndIf}
-
-  CreateShortcut "$DESKTOP\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
-  !insertmacro SetLnkAppUserModelId "$DESKTOP\${PRODUCTNAME}.lnk"
 FunctionEnd
