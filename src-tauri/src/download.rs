@@ -95,10 +95,20 @@ impl Job {
         self.alive.store(true, Ordering::Release);
         self.ctl.pause.store(false, Ordering::Relaxed);
         let job = self.clone();
+        // Over when the thread is: after done has the file, so a waiter that
+        // sees alive() false finds it, and on a panic in tell or done too
+        // (an eprintln! to a closed stderr), where a waiter would otherwise
+        // wait forever.
+        struct Over(std::sync::Arc<Job>);
+        impl Drop for Over {
+            fn drop(&mut self) {
+                self.0.alive.store(false, Ordering::Release);
+            }
+        }
         thread::spawn(move || {
-            let file = job.run(e, &dir, &tell);
-            job.alive.store(false, Ordering::Release);
-            if let Some(p) = file {
+            let over = Over(job);
+            let job = &over.0;
+            if let Some(p) = job.run(e, &dir, &tell) {
                 done(p);
             }
             tell(&job.state());

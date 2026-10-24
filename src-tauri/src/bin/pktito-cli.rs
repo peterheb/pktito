@@ -470,12 +470,16 @@ fn fetch(m: &str) -> Result<i32, String> {
                 if s.retry && !again {
                     stop.ctl.pause.store(true, Ordering::Relaxed);
                 }
-                status("");
-                eprintln!(
-                    "{}{}",
-                    s.problem.as_ref().map(|p| p.line()).unwrap_or_default(),
-                    if again { " (trying again)" } else { "" }
-                )
+                // the last failure is the error fetch returns, said once
+                if again {
+                    if show {
+                        status("");
+                    }
+                    eprintln!(
+                        "{} (trying again)",
+                        s.problem.as_ref().map(|p| p.line()).unwrap_or_default()
+                    )
+                }
             }
             "failed" => {}
             step => {
