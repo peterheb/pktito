@@ -1,10 +1,10 @@
-# pktito, the desktop app
+# pktito
 
 Drop audio or video files and read their transcripts as they fill in; then
 play one back with the word being spoken underlined, search it, and save it
 as text, subtitles, Markdown or JSON. The audio comes out through the media
 libraries the operating system already has, and it is transcribed on this
-computer by [pktito](https://pktito.net), a C11 port of NVIDIA's
+computer by [libpktito](https://github.com/peterheb/libpktito), a C11 port of NVIDIA's
 Parakeet-TDT models. Nothing leaves the computer, and the one thing the app
 fetches is its model, once.
 

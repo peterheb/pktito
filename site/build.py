@@ -19,8 +19,8 @@ APP = SITE.parent
 ARTIFACT = "--artifact" in sys.argv
 OUT = pathlib.Path(sys.argv[sys.argv.index("--artifact") + 1]) if ARTIFACT else SITE / "public"
 OUT.mkdir(parents=True, exist_ok=True)
-GITHUB = "https://github.com/peterheb/pktito-app"  # the app, and this site
-LIBRARY = "https://github.com/peterheb/pktito"     # the C library under it
+GITHUB = "https://github.com/peterheb/pktito"  # the app, and this site
+LIBRARY = "https://github.com/peterheb/libpktito"     # the C library under it
 e = html.escape
 
 
@@ -315,7 +315,7 @@ home = f"""<main>
   <div>
     <h2>Open source</h2>
     <p>MIT licensed. The engine is a C11 library for anything with a C compiler, a Raspberry Pi included.</p>
-    <p>{arrow("github.com/peterheb/pktito", LIBRARY)}</p>
+    <p>{arrow("github.com/peterheb/libpktito", LIBRARY)}</p>
   </div>
 </section>
 </main>"""

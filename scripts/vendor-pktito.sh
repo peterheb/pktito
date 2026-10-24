@@ -5,12 +5,12 @@
 #
 #   scripts/vendor-pktito.sh [PKTITO_CHECKOUT]
 #
-# The checkout defaults to ../pktito, then ../pkito.
+# The checkout defaults to ../libpktito, then ../pkito.
 set -eu
 here=$(cd "$(dirname "$0")/.." && pwd)
 src=${1:-}
 if [ -z "$src" ]; then
-  for d in "$here/../pktito" "$here/../pkito"; do
+  for d in "$here/../libpktito" "$here/../pkito"; do
     [ -f "$d/core/pktito.h" ] && src=$d && break
   done
 fi

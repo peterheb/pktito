@@ -250,7 +250,7 @@
   "about.tagline_html": "A compact Parakeet implementation <i>(pronounced “pick-a-tito”)</i><br>Speech to text on this computer.",
   "about.version": "Version {version} · {backend}",
   "about.version_store": "Version {version} · Microsoft Store · {backend}",
-  "about.copyright_html": "Copyright (c) 2026 Peter Hebert, under the <a href=\"https://github.com/peterheb/pktito-app/blob/main/LICENSE\">MIT license</a>",
+  "about.copyright_html": "Copyright (c) 2026 Peter Hebert, under the <a href=\"https://github.com/peterheb/pktito/blob/main/LICENSE\">MIT license</a>",
   "about.docs": "Documentation",
   "about.privacy": "Privacy",
   "about.models_html": "NVIDIA's <a href=\"https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2\">parakeet-tdt-0.6b-v2</a> and <a href=\"https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3\">-v3</a>, under <a href=\"https://creativecommons.org/licenses/by/4.0/\">CC&nbsp;BY&nbsp;4.0</a>, modified by pktito (partly quantized to int8). Provided as is, without warranties. pktito is not affiliated with or endorsed by NVIDIA.",
@@ -271,7 +271,7 @@
   "privacy.choice_uninstall": "Uninstalling pktito leaves its data folder (settings, models and recent transcripts) for you to delete.",
   "privacy.choice_uninstall_store": "pktito from the Microsoft Store keeps its settings, models and recent transcripts with the app; uninstalling it deletes them.",
   "privacy.questions": "Questions",
-  "privacy.ask_html": "Ask on <a href=\"https://github.com/peterheb/pktito-app/issues\">GitHub</a>. The full policy is at <a href=\"https://pktito.net/privacy\">pktito.net/privacy</a>.",
+  "privacy.ask_html": "Ask on <a href=\"https://github.com/peterheb/pktito/issues\">GitHub</a>. The full policy is at <a href=\"https://pktito.net/privacy\">pktito.net/privacy</a>.",
   "privacy.updated": "Last updated October 23, 2026",
 
   "notices.title": "Open source licenses",
