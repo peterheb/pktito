@@ -1316,6 +1316,13 @@ html[data-chrome="win"] .pk-head {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
+/* Documentation, Privacy and GitHub on one line, under the copyright */
+.pk-about-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin-top: 6px;
+}
 @media (max-width: 879px) {
   .pk-about-text {
     padding: 28px 24px;

@@ -250,7 +250,7 @@
   "about.tagline_html": "A compact Parakeet implementation <i>(pronounced “pick-a-tito”)</i><br>Speech to text on this computer.",
   "about.version": "Version {version} · {backend}",
   "about.copyright_html": "Copyright (c) 2026 Peter Hebert, under the <a href=\"https://github.com/peterheb/pktito-app/blob/main/LICENSE\">MIT license</a>",
-  "about.github_html": "GitHub: <a href=\"https://github.com/peterheb/pktito-app\">app</a> and <a href=\"https://github.com/peterheb/pktito\">library/CLI</a>",
+  "about.docs": "Documentation",
   "about.privacy": "Privacy",
   "about.models_html": "NVIDIA's <a href=\"https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2\">parakeet-tdt-0.6b-v2</a> and <a href=\"https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3\">-v3</a>, under <a href=\"https://creativecommons.org/licenses/by/4.0/\">CC&nbsp;BY&nbsp;4.0</a>, modified by pktito (partly quantized to int8). Provided as is, without warranties. pktito is not affiliated with or endorsed by NVIDIA.",
   "about.silero_html": "Voice activity detection, <a href=\"https://github.com/snakers4/silero-vad/blob/master/LICENSE\">MIT</a>",
