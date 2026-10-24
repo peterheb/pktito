@@ -1,12 +1,14 @@
 //! A media file's audio as 16 kHz mono float samples.
 //!
-//! pktito's own WAV reader (vendor/pktito, core/wav.h) reads WAV on every
-//! platform, so a server, a sandbox or a Windows without Media Foundation
-//! (Server, the N editions) needs nothing more for it. Everything else goes
-//! to the media libraries macOS and Windows already have (AVFoundation,
-//! Media Foundation: native/decode_*.{m,c}), and when the OS cannot read a
-//! file and ffmpeg is on the PATH, ffmpeg tries it; Linux has no one media
-//! library, so there ffmpeg reads everything but WAV. PKTITO_DECODER=ffmpeg
+//! pktito's own reader (vendor/pktito, core/wav.h) reads WAV and AIFF on
+//! every platform, so a server, a sandbox or a Windows without Media
+//! Foundation (Server, the N editions) needs nothing more for them, and
+//! Windows, whose Media Foundation has no AIFF reader, reads a Mac's AIFF.
+//! Everything else goes to the media libraries macOS and Windows already
+//! have (AVFoundation, Media Foundation: native/decode_*.{m,c}), and when
+//! the OS cannot read a file and ffmpeg is on the PATH, ffmpeg tries it;
+//! Linux has no one media library, so there ffmpeg reads everything but
+//! WAV and AIFF. PKTITO_DECODER=ffmpeg
 //! uses ffmpeg alone; PKTITO_DECODER=os the OS alone.
 //!
 //! Each decoder hands over its samples at their own rate, and the same mix
@@ -128,8 +130,9 @@ extern "C" {
     fn pk_wav_close(w: *mut c_void);
 }
 
-/// A WAV, by pktito's reader: every format a recording comes in (PCM,
-/// float, A-law and mu-law, extensible, RF64), held to the library's
+/// A WAV or an AIFF, by pktito's reader: every format a recording comes in
+/// (PCM, float, A-law and mu-law; WAV's extensible and RF64, AIFF-C's
+/// uncompressed kinds), held to the library's
 /// docs/MEMORY_SAFETY.md, and through the same mix as every other decoder's
 /// samples. None for a file the reader does not open, which goes to the
 /// OS's reader or ffmpeg as before. The reader names no speaker layout,

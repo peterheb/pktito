@@ -40,7 +40,11 @@ typedef struct pk_model pk_model;
 /* A .pkf file, mapped and checked before anything in it is used. NULL on
  * failure, with the reason in err (which may be NULL): a file that cannot
  * be read or is not a sound model, or a PKTITO_KERNELS in the environment
- * that names a backend the build lacks or the CPU cannot run. */
+ * that names a backend the build lacks or the CPU cannot run. The path is
+ * UTF-8 on every system: on Windows it is opened as UTF-16, so a model in
+ * a user folder whose name is past ASCII loads whatever the process's
+ * code page, and bytes that are not UTF-8 are refused, never read in the
+ * code page instead. */
 pk_model *pk_model_load(const char *path, char *err, size_t errlen);
 
 /* The same from a copy the caller holds - a file embedded in a binary, or
@@ -57,7 +61,7 @@ const char *pk_model_meta(const pk_model *m, const char *key);
 /* The i-th metadata pair, for listing: 0, or -1 past the last. */
 int pk_model_meta_at(const pk_model *m, int i, const char **key, const char **value);
 
-/* The architecture's numbers, for printing (`pktito info`). */
+/* The architecture's numbers, for printing (`pktito-c info`). */
 typedef struct {
     size_t   file_bytes;
     uint32_t sample_rate, n_mels, n_layers, d_model, n_heads, ff_dim;

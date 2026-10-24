@@ -8,9 +8,11 @@ computer by [libpktito](https://github.com/peterheb/libpktito), a C11 port of NV
 Parakeet-TDT models. Nothing leaves the computer, and the one thing the app
 fetches is its model, once.
 
-On every system pktito's own reader takes WAV (PCM, float, A-law and
-mu-law, RF64; up to two channels, and more where no other reader knows the
-speakers), so a server needs nothing more for it. Everything else:
+On every system pktito's own reader takes WAV and AIFF (PCM, float,
+A-law and mu-law; RF64, and AIFF-C's uncompressed kinds; up to two
+channels, and more where no other reader knows the speakers), so a server
+needs nothing more for them, and Windows, whose Media Foundation has no
+AIFF reader, reads a Mac's AIFF. Everything else:
 
 - **macOS 12 and later**: AVFoundation reads the file.
 - **Windows 10 and later**: Media Foundation reads it. Windows Server and

@@ -227,13 +227,14 @@ void pk_k_resample(float *y, const float *x, uint32_t nb, uint32_t orig, uint32_
  * Every function above is a call through the table of the backend in use.
  * A backend's file defines its kernels as its own and exports the table:
  * pk_kernels_ref, pk_kernels_neon and _neon_dp (backend/neon, without and
- * with PK_NEON_DOTPROD), pk_kernels_avx2, _avx2_vnni and _avx512_vnni
- * (backend/avx2, without PK_AVX_VNNI, and with it in AVX-VNNI's encoding or
- * AVX512-VNNI's), each compiled with its own instruction set, the rest of
- * the tree with the family's baseline. */
+ * with PK_NEON_DOTPROD), pk_kernels_avx2, _avx2_vnni, _avx512_vnni and
+ * _amx_int8 (backend/avx2, without PK_AVX_VNNI, and with it in AVX-VNNI's
+ * encoding, AVX512-VNNI's, or AVX512-VNNI's with AMX), each compiled with
+ * its own instruction set, the rest of the tree with the family's
+ * baseline. */
 typedef struct {
     const char *id;                 /* "avx2-vnni", as PKTITO_KERNELS names it */
-    const char *name;               /* and what it is built for, for `pktito bench` */
+    const char *name;               /* and what it is built for, for `pktito-c bench` */
     const char *const *needs;       /* the CPU features its code uses, NULL-ended:
                                        "avx2", "fma", "avxvnni", "avx512vnni",
                                        "avx512vl", "asimddp" (ARMv8.2's dot product) */
@@ -273,7 +274,7 @@ extern const pk_kernels *const pk_kernels_built[];
  * PKTITO_KERNELS names one the build lacks or the CPU cannot run. */
 const pk_kernels *pk_kernels_pick(char *why, size_t whylen);
 
-/* The name of the backend in use, for `pktito bench`. */
+/* The name of the backend in use, for `pktito-c bench`. */
 const char *pk_k_name(void);
 
 #endif /* PK_KERNELS_H */

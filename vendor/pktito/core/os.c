@@ -3,6 +3,8 @@
  *
  * The cores: the physical cores of every kind, from Linux's sysfs topology,
  * macOS's sysctl or Windows' processor records (pk_os_cores says why).
+ * The paths: UTF-8, and on Windows widened to UTF-16 in one place
+ * (widen) for every file the library opens.
  */
 #include "os.h"
 
@@ -13,12 +15,15 @@
 #include <string.h>
 #include <time.h>
 
-#if !defined(PK_NO_MMAP) && defined(_WIN32)
-#define PK_WINDOWS 1
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <fcntl.h>
 #include <io.h>
+#include <wchar.h>
+#endif
+#if !defined(PK_NO_MMAP) && defined(_WIN32)
+#define PK_WINDOWS 1
 #elif !defined(PK_NO_MMAP) && (defined(__unix__) || defined(__APPLE__))
 #define PK_POSIX 1
 #include <fcntl.h>
@@ -29,6 +34,61 @@
 #include <sys/sysctl.h>
 #endif
 #endif
+
+/* --------------------------------------------------------------- paths --- */
+
+#ifdef _WIN32
+
+/* Windows' longest path in UTF-16 units with its NUL: 32767 behind "\\?\",
+ * the W functions' own limit. */
+#define PK_OS_PATH_MAX 32768
+
+/* UTF-8 to the UTF-16 that Windows' W functions take, in *out for the
+ * caller to free: 0, or EILSEQ for bytes that are not UTF-8 (never the
+ * code page's guess at them), ENAMETOOLONG or ENOMEM. The buffer is the
+ * input's length at most, and never past PK_OS_PATH_MAX. */
+static int widen(const char *s, wchar_t **out) {
+    *out = NULL;
+    int n = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, s, -1, NULL, 0);
+    if (n <= 0)
+        return GetLastError() == ERROR_NO_UNICODE_TRANSLATION ? EILSEQ : EINVAL;
+    if (n > PK_OS_PATH_MAX)
+        return ENAMETOOLONG;
+    wchar_t *w = malloc((size_t)n * sizeof *w);
+    if (!w)
+        return ENOMEM;
+    if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, s, -1, w, n) != n) {
+        free(w);
+        return EILSEQ;
+    }
+    *out = w;
+    return 0;
+}
+
+FILE *pk_os_fopen(const char *path, const char *mode) {
+    wchar_t *wpath, *wmode;
+    int e = widen(path, &wpath);
+    if (!e && (e = widen(mode, &wmode)) != 0)
+        free(wpath);
+    if (e) {
+        errno = e;
+        return NULL;
+    }
+    FILE *f = _wfopen(wpath, wmode);
+    e = errno;
+    free(wpath);
+    free(wmode);
+    errno = e;
+    return f;
+}
+
+#else /* a path is the bytes the system takes, and those are the UTF-8 */
+
+FILE *pk_os_fopen(const char *path, const char *mode) { return fopen(path, mode); }
+
+#endif
+
+/* ------------------------------------------------------ files and cores --- */
 
 #ifdef PK_POSIX
 
@@ -80,7 +140,7 @@ static long sysfs_long(long cpu, const char *what) {
  * pool starts; a transcriber then times whether the fast kind alone runs
  * the encoder faster (pk_os_fast_cores, and encoder.c's layers), as on a
  * GB10, whose ten X925s beat its twenty cores by a third. The
- * minute whole (`pktito bench --max-chunk 60`), 2026-10-20: an Intel Core 3
+ * minute whole (`pktito-c bench --max-chunk 60`), 2026-10-20: an Intel Core 3
  * 304 (1 P + 4 E) 5.02 s on its P-core, 1.39 s on all five; an i9-12900HK
  * (6 P + 8 E) 0.960 s on its P-cores, 0.906 s on all 14, though 8, 16 and
  * 18 threads take 1.10 to 1.15 s there; an M4 Pro (8 + 4) 0.498 s on its
@@ -172,8 +232,15 @@ void pk_os_stdio(void) {}
 
 /* A view keeps its file open by itself, so both handles close here. */
 const unsigned char *pk_map_file(const char *path, size_t *size, char *why, size_t whylen) {
-    HANDLE f = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
+    wchar_t *wpath;
+    int bad = widen(path, &wpath);
+    if (bad) {
+        snprintf(why, whylen, "%s", bad == EILSEQ ? "not a UTF-8 path" : strerror(bad));
+        return NULL;
+    }
+    HANDLE f = CreateFileW(wpath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
                            FILE_ATTRIBUTE_NORMAL, NULL);
+    free(wpath);
     if (f == INVALID_HANDLE_VALUE) {
         DWORD e = GetLastError();
         snprintf(why, whylen, "%s", e == ERROR_FILE_NOT_FOUND || e == ERROR_PATH_NOT_FOUND
@@ -186,7 +253,7 @@ const unsigned char *pk_map_file(const char *path, size_t *size, char *why, size
         snprintf(why, whylen, "%s", "empty file or cannot tell its size");
         return NULL;
     }
-    HANDLE m = CreateFileMappingA(f, NULL, PAGE_READONLY, 0, 0, NULL);
+    HANDLE m = CreateFileMappingW(f, NULL, PAGE_READONLY, 0, 0, NULL);
     void *p = m ? MapViewOfFile(m, FILE_MAP_READ, 0, 0, 0) : NULL;
     DWORD e = GetLastError();
     if (m)
@@ -253,17 +320,25 @@ double pk_os_now(void) {
 /* The bytes as written: no \r added before each \n on a pipe or a file,
  * where the C runtime's text mode would add one and a transcript compared
  * with tests/data's would differ; and UTF-8 to the console, which shows
- * v3's accents and Cyrillic in place of the code page's guesses. */
+ * v3's accents and Cyrillic in place of the code page's guesses. The
+ * console keeps its code page past the process, so the one it had comes
+ * back at exit, for the programs run in it next. */
+static UINT console_cp;
+
+static void console_restore(void) { SetConsoleOutputCP(console_cp); }
+
 void pk_os_stdio(void) {
     _setmode(_fileno(stdout), _O_BINARY);
     _setmode(_fileno(stdin), _O_BINARY);
-    SetConsoleOutputCP(CP_UTF8);
+    console_cp = GetConsoleOutputCP();          /* 0 with no console */
+    if (console_cp && console_cp != CP_UTF8 && SetConsoleOutputCP(CP_UTF8))
+        atexit(console_restore);
 }
 
 #else /* the plain-C fallback: read the file, one core, the C11 clock */
 
 const unsigned char *pk_map_file(const char *path, size_t *size, char *why, size_t whylen) {
-    FILE *f = fopen(path, "rb");
+    FILE *f = pk_os_fopen(path, "rb");
     if (!f) {
         snprintf(why, whylen, "%s", strerror(errno));
         return NULL;
@@ -335,6 +410,9 @@ static int amx_permitted(void) {
     return answer;
 }
 #else
+/* elsewhere XCR0's tile bits are the answer: Windows Server 2022 and 2025
+ * hand a thread the tile data on its first use, unasked, and ran amx-int8
+ * to ref's bits on a Sapphire Rapids (backend/avx2/CLIMB.md, 2026-10-24) */
 static int amx_permitted(void) { return 1; }
 #endif
 
