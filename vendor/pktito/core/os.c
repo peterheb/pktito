@@ -320,10 +320,31 @@ void pk_os_stdio(void) {}
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
 #include <cpuid.h>
 
+#if defined(__linux__) && defined(__x86_64__)
+#include <sys/syscall.h>
+#include <unistd.h>
+
+/* Linux keeps AMX's tile data off until a process asks for it
+ * (ARCH_REQ_XCOMP_PERM for XFEATURE_XTILEDATA, 18), once, for all its
+ * threads; asked before the pool starts, by the backend's choice. A
+ * refusal is a no, and the next backend runs. */
+static int amx_permitted(void) {
+    static int answer = -1;
+    if (answer < 0)
+        answer = syscall(SYS_arch_prctl, 0x1023, 18) == 0;
+    return answer;
+}
+#else
+static int amx_permitted(void) { return 1; }
+#endif
+
 /* CPUID's bits for each feature, and the register state the operating
  * system must have switched on (XCR0) for its instructions to run: YMM's
  * for AVX2's, and the mask and ZMM registers too for any EVEX instruction,
- * the 256-bit ones included. */
+ * the 256-bit ones included, and the tile state for AMX's. A name not here
+ * is a feature this file cannot vouch for, so the answer is no: the backend
+ * that needs it is passed over for the next, where a yes would let it die
+ * on its first instruction. */
 static int cpu_has(const char *f) {
     unsigned a, b, c, d, xcr0 = 0;
     if (!__get_cpuid(1, &a, &b, &c, &d))
@@ -335,10 +356,12 @@ static int cpu_has(const char *f) {
         xcr0 = lo;
     }
     const int ymm = (xcr0 & 0x6) == 0x6, zmm = (xcr0 & 0xe6) == 0xe6;
-    unsigned b7 = 0, c7 = 0, a71 = 0;
+    const int tiles = (xcr0 & 0x60000) == 0x60000;
+    unsigned b7 = 0, c7 = 0, d7 = 0, a71 = 0;
     if (__get_cpuid_count(7, 0, &a, &b, &c, &d)) {
         b7 = b;
         c7 = c;
+        d7 = d;
         if (a >= 1 && __get_cpuid_count(7, 1, &a, &b, &c, &d))
             a71 = a;
     }
@@ -348,11 +371,17 @@ static int cpu_has(const char *f) {
         return ((b7 >> 5) & 1) && ymm;
     if (!strcmp(f, "avxvnni"))
         return ((a71 >> 4) & 1) && ymm;
+    if (!strcmp(f, "avx512f"))
+        return ((b7 >> 16) & 1) && zmm;
     if (!strcmp(f, "avx512vnni"))
         return ((c7 >> 11) & 1) && zmm;
     if (!strcmp(f, "avx512vl"))
         return ((b7 >> 31) & 1) && zmm;
-    return 1;
+    if (!strcmp(f, "amx_tile"))
+        return ((d7 >> 24) & 1) && tiles && amx_permitted();
+    if (!strcmp(f, "amx_int8"))
+        return ((d7 >> 25) & 1) && tiles && amx_permitted();
+    return 0;
 }
 
 #elif defined(__aarch64__) && defined(__linux__)
@@ -364,7 +393,7 @@ static int cpu_has(const char *f) {
 static int cpu_has(const char *f) {
     if (!strcmp(f, "asimddp"))
         return (getauxval(AT_HWCAP) & HWCAP_ASIMDDP) != 0;
-    return 1;
+    return 0;
 }
 
 #elif (defined(__aarch64__) || defined(_M_ARM64)) && defined(PK_WINDOWS)
@@ -375,14 +404,19 @@ static int cpu_has(const char *f) {
 static int cpu_has(const char *f) {
     if (!strcmp(f, "asimddp"))
         return IsProcessorFeaturePresent(PF_ARM_V82_DP_INSTRUCTIONS_AVAILABLE) != 0;
-    return 1;
+    return 0;
 }
 
-#else /* macOS on Apple silicon, whose every core has the dot product, and the rest */
+#else /* macOS on Apple silicon, whose every core has the dot product; elsewhere
+         no feature can be asked for, and ref and neon need none */
 
 static int cpu_has(const char *f) {
+#if defined(__aarch64__) && defined(__APPLE__)
+    return !strcmp(f, "asimddp");
+#else
     (void)f;
-    return 1;
+    return 0;
+#endif
 }
 
 #endif

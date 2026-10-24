@@ -83,11 +83,23 @@ fn main() {
             ("neon", vec!["-march=armv8-a"]),
         ],
         "x86_64" => vec![
-            ("avx2-vnni", vec!["-mavx2", "-mfma", "-mavxvnni"]),
+            (
+                "amx-int8",
+                vec![
+                    "-mavx2",
+                    "-mfma",
+                    "-mavx512f",
+                    "-mavx512vnni",
+                    "-mavx512vl",
+                    "-mamx-tile",
+                    "-mamx-int8",
+                ],
+            ),
             (
                 "avx512-vnni",
-                vec!["-mavx2", "-mfma", "-mavx512vnni", "-mavx512vl"],
+                vec!["-mavx2", "-mfma", "-mavx512f", "-mavx512vnni", "-mavx512vl"],
             ),
+            ("avx2-vnni", vec!["-mavx2", "-mfma", "-mavxvnni"]),
             ("avx2", vec!["-mavx2", "-mfma"]),
         ],
         _ => vec![],
