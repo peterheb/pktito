@@ -11,8 +11,9 @@ fetches is its model, once.
 - **macOS 12 and later**: AVFoundation reads the file.
 - **Windows 10 and later**: Media Foundation reads it. (The N editions of
   Windows have no Media Foundation without the Media Feature Pack.)
-- **Linux**: there is no one media library, so ffmpeg is required: install
-  it with your package manager.
+- **Linux**: there is no one media library. pktito's own reader takes WAV
+  (PCM, float, A-law and mu-law, RF64), so a server needs nothing more for
+  it; everything else goes to ffmpeg, which the .deb depends on.
 
 On macOS and Windows, a file the OS cannot read is handed to ffmpeg when
 ffmpeg is on the PATH. `PKTITO_DECODER=ffmpeg` uses ffmpeg for everything;
@@ -181,7 +182,8 @@ pktito. `--json` adds each transcript's SHA-256.
 AliceBench is the one number to compare computers by:
 `scripts/alicebench.sh` (`alicebench.ps1` on Windows) downloads LibriVox's
 _Alice's Adventures in Wonderland_, twelve chapters and 2:58:51 as 16 kHz
-FLAC (200 MB, once), benches it with the English model, and checks every
+FLAC (200 MB, once; on Linux the same samples as 330 MB of WAV, which
+needs no ffmpeg), benches it with the English model, and checks every
 chapter's transcript against the one pktito gives on every machine. FLAC
 rather than LibriVox's MP3s, because each OS decodes an MP3 to other
 samples and so to a slightly different transcript, where a FLAC is the

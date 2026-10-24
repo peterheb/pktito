@@ -3,8 +3,10 @@
 //! macOS and Windows use the media libraries the OS already has
 //! (AVFoundation, Media Foundation: native/decode_*.{m,c}); when the OS
 //! cannot read a file and ffmpeg is on the PATH, ffmpeg tries it. Linux has
-//! no one media library, so there ffmpeg is required. PKTITO_DECODER=ffmpeg
-//! uses ffmpeg everywhere; PKTITO_DECODER=os the OS alone.
+//! no one media library: there pktito's own WAV reader (vendor/pktito,
+//! core/wav.h) reads WAV, so a server or a sandbox needs nothing more for
+//! it, and ffmpeg everything else. PKTITO_DECODER=ffmpeg uses ffmpeg
+//! everywhere; PKTITO_DECODER=os the OS alone.
 //!
 //! Each decoder hands over its samples at their own rate, and the same mix
 //! (native/mix.h) brings them to one channel and 16 kHz, so a file reads the
@@ -12,7 +14,7 @@
 
 use crate::strings::Problem;
 use std::env;
-use std::ffi::{c_int, c_uint, c_void};
+use std::ffi::{c_char, c_int, c_uint, c_void, CStr, CString};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -65,7 +67,13 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
         .unwrap_or_default()
         .to_lowercase();
     if forced == "ffmpeg" || !cfg!(any(target_os = "macos", target_os = "windows")) {
-        return match ffmpeg() {
+        let ff = ffmpeg();
+        if forced != "ffmpeg" {
+            if let Some(read) = decode_wav(path, ff.is_some()) {
+                return read;
+            }
+        }
+        return match ff {
             Some(ff) => decode_ffmpeg(&ff, path),
             None => Err(DecodeError::Unreadable(
                 "decode.needs_ffmpeg",
@@ -86,6 +94,90 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
             (_, Some(ff)) => decode_ffmpeg(&ff, path),
         },
     }
+}
+
+/// pktito's WAV reader's account of a file (core/wav.h).
+#[repr(C)]
+struct PkWavInfo {
+    rate: u32,
+    channels: u32,
+    format: u32,
+    bytes: u32,
+    frames: u64,
+}
+
+extern "C" {
+    fn pk_wav_open(
+        path: *const c_char,
+        info: *mut PkWavInfo,
+        err: *mut c_char,
+        len: usize,
+    ) -> *mut c_void;
+    fn pk_wav_read_frames(w: *mut c_void, out: *mut f32, n: usize) -> usize;
+    fn pk_wav_status(w: *const c_void, err: *mut c_char, len: usize) -> c_int;
+    fn pk_wav_close(w: *mut c_void);
+}
+
+/// A WAV, by pktito's reader: every format a recording comes in (PCM,
+/// float, A-law and mu-law, extensible, RF64), held to the library's
+/// docs/MEMORY_SAFETY.md, and through the same mix as every other decoder's
+/// samples. None for a file the reader does not open, which goes to ffmpeg
+/// as before. The reader names no speaker layout, which is the usual one up
+/// to two channels; more than two go to ffmpeg, which has the file's own,
+/// when it is there. A file cut short gives what it has, as ffmpeg's does.
+fn decode_wav(path: &Path, have_ffmpeg: bool) -> Option<Result<Vec<f32>, DecodeError>> {
+    let c_path = CString::new(path.as_os_str().as_encoded_bytes()).ok()?;
+    let mut info = PkWavInfo {
+        rate: 0,
+        channels: 0,
+        format: 0,
+        bytes: 0,
+        frames: 0,
+    };
+    let mut err = [0 as c_char; 256];
+    let w = unsafe { pk_wav_open(c_path.as_ptr(), &mut info, err.as_mut_ptr(), err.len()) };
+    if w.is_null() {
+        return None;
+    }
+    struct Close(*mut c_void);
+    impl Drop for Close {
+        fn drop(&mut self) {
+            unsafe { pk_wav_close(self.0) };
+        }
+    }
+    let w = Close(w);
+    if info.channels > 2 && have_ffmpeg {
+        return None;
+    }
+    let f = WavFormat {
+        rate: info.rate,
+        ch: info.channels,
+        mask: 0,
+    };
+    Some((|| {
+        let mut mix = Mix::new(&f)?;
+        let frames = 4096;
+        let mut x = vec![0f32; frames * f.ch as usize];
+        let mut total = 0;
+        loop {
+            let n = unsafe { pk_wav_read_frames(w.0, x.as_mut_ptr(), frames) };
+            mix.push(&x[..n * f.ch as usize])?;
+            total += n;
+            if n < frames {
+                break;
+            }
+        }
+        if total == 0 {
+            if unsafe { pk_wav_status(w.0, err.as_mut_ptr(), err.len()) } != 0 {
+                let why = unsafe { CStr::from_ptr(err.as_ptr()) }
+                    .to_string_lossy()
+                    .into_owned();
+                return Err(DecodeError::Unreadable(UNREADABLE, why));
+            }
+            return Err(DecodeError::NoAudio);
+        }
+        mix.take()
+    })())
 }
 
 extern "C" {
