@@ -69,11 +69,14 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
         .to_lowercase();
     if forced != "ffmpeg" && forced != "os" {
         // more than two channels go to a reader that knows their speakers:
-        // the OS's, where it has one, else ffmpeg, if it is there
-        let other = if cfg!(any(target_os = "macos", target_os = "windows")) {
-            os_decoder()
-        } else {
-            ffmpeg().is_some()
+        // the OS's, where it has one, else ffmpeg, if it is there; asked
+        // only then, since asking Windows loads Media Foundation
+        let other = || {
+            if cfg!(any(target_os = "macos", target_os = "windows")) {
+                os_decoder()
+            } else {
+                ffmpeg().is_some()
+            }
         };
         if let Some(read) = decode_wav(path, other) {
             return read;
@@ -134,7 +137,7 @@ extern "C" {
 /// reader, which has the file's own, when there is one (`other`). A file
 /// cut short gives what it has, as ffmpeg's does. On Windows a name the
 /// reader's fopen cannot spell opens nothing, and goes to Media Foundation.
-fn decode_wav(path: &Path, other: bool) -> Option<Result<Vec<f32>, DecodeError>> {
+fn decode_wav(path: &Path, other: impl FnOnce() -> bool) -> Option<Result<Vec<f32>, DecodeError>> {
     let c_path = CString::new(path.as_os_str().as_encoded_bytes()).ok()?;
     let mut info = PkWavInfo {
         rate: 0,
@@ -155,7 +158,7 @@ fn decode_wav(path: &Path, other: bool) -> Option<Result<Vec<f32>, DecodeError>>
         }
     }
     let w = Close(w);
-    if info.channels > 2 && other {
+    if info.channels > 2 && other() {
         return None;
     }
     let f = WavFormat {
