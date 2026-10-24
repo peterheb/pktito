@@ -410,7 +410,8 @@ function modelMenu(anchor, keys) {
         `<span>${esc(baseName(st.model_file))}</span><small title="${esc(st.model_file)}">${esc(st.model_file)}</small>${ICON.check}</button>`,
     );
   }
-  // where the models are: about 620 MB each, and the files the CLI takes with -m
+  // where the models are: about 620 MB each, and the files the CLI takes
+  // with -m; the Store edition's are in its package, which Explorer can't show
   const show = esc(revealLabel());
   const file = st.model_file
     ? baseName(st.model_file)
@@ -420,7 +421,9 @@ function modelMenu(anchor, keys) {
   items.push(
     `<div class="pk-menu-sep" aria-hidden="true"></div>` +
       `<button class="pk-mi" type="button" role="menuitem" data-own="1"><span>${esc(t("models.open_file"))}</span></button>` +
-      `<button class="pk-mi" type="button" role="menuitem" data-reveal="1"${file ? ` title="${esc(file)}"` : ""}><span>${show}</span></button>`,
+      (st.store
+        ? ""
+        : `<button class="pk-mi" type="button" role="menuitem" data-reveal="1"${file ? ` title="${esc(file)}"` : ""}><span>${show}</span></button>`),
   );
   openMenu(anchor, keys, items.join(""), "down right", (m) => {
     m.onclick = async (e) => {
@@ -2573,10 +2576,13 @@ async function openAbout() {
   aboutFrom = document.activeElement;
   about = true;
   // the engine's code for this processor by its name; all of "neon-dp (ARMv8.2: SDOT)" in the tooltip
-  $("about-version").textContent = t("about.version", {
-    version: st.version,
-    backend: st.backend.split(" (")[0],
-  });
+  $("about-version").textContent = t(
+    st.store ? "about.version_store" : "about.version",
+    {
+      version: st.version,
+      backend: st.backend.split(" (")[0],
+    },
+  );
   $("about-version").title = st.backend;
   document.body.classList.add("is-about");
   $("about").hidden = false;
@@ -2692,7 +2698,12 @@ function closeSheet() {
 }
 
 $("notices-open").onclick = () => openNotices();
-$("privacy-open").onclick = () => openSheet("privacy");
+$("privacy-open").onclick = () => {
+  // the Store edition's data is in its package, which uninstalling deletes
+  if (st?.store)
+    $("privacy-uninstall").textContent = t("privacy.choice_uninstall_store");
+  openSheet("privacy");
+};
 for (const id of ["notices", "privacy"]) {
   $(`${id}-close`).onclick = () => closeSheet();
   $(id).addEventListener("click", (e) => {

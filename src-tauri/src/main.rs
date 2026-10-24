@@ -58,6 +58,31 @@ fn data_dir(app: &AppHandle) -> Result<PathBuf, String> {
     app.path().app_data_dir().map_err(|e| e.to_string())
 }
 
+/// The Microsoft Store edition: the same exes as the setup program's,
+/// wrapped in an MSIX package, so they ask Windows whether they run from
+/// one. In a package, AppData is redirected into the package's own storage,
+/// which Explorer outside it does not show and uninstalling deletes: the
+/// page hides the model's Show in File Explorer and says so in Privacy.
+/// Asked with no buffer, the call answers ERROR_INSUFFICIENT_BUFFER in a
+/// package and APPMODEL_ERROR_NO_PACKAGE outside one (appmodel.h).
+#[cfg(target_os = "windows")]
+fn store_edition() -> bool {
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetCurrentPackageFullName(len: *mut u32, name: *mut u16) -> i32;
+    }
+    const APPMODEL_ERROR_NO_PACKAGE: i32 = 15700;
+    let mut len = 0u32;
+    unsafe {
+        GetCurrentPackageFullName(&mut len, std::ptr::null_mut()) != APPMODEL_ERROR_NO_PACKAGE
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn store_edition() -> bool {
+    false
+}
+
 /// Where the recent list's audio is kept: the webview may read this folder
 /// and nothing else (tauri.conf.json, assetProtocol).
 fn audio_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -93,6 +118,8 @@ struct Status {
     version: &'static str,
     backend: String,
     platform: &'static str,
+    /// Running from the Microsoft Store's package (store_edition).
+    store: bool,
     media: &'static [&'static str],
     video: &'static [&'static str],
 }
@@ -160,6 +187,7 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, Problem>
         version: env!("CARGO_PKG_VERSION"),
         backend: pktito::backend(),
         platform: std::env::consts::OS,
+        store: store_edition(),
         media: decode::MEDIA,
         video: VIDEO,
     })
