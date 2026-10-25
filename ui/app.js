@@ -1862,7 +1862,14 @@ function playFrom(pos) {
       .play()
       .catch((e) => toast(t("play.cant"), { err: true, detail: e.message }));
   const mine = ++playToken;
-  if (Math.abs(player.currentTime - pos) < 0.01 && !player.seeking)
+  // on Linux always the seek, which flushes the player: WebKitGTK's played a
+  // few seconds from about a minute in (2 MiB of the WAV) before the start,
+  // from a blob, when asked to play where it already was (the Omarchy test)
+  if (
+    !isLinux() &&
+    Math.abs(player.currentTime - pos) < 0.01 &&
+    !player.seeking
+  )
     return start();
   player.currentTime = pos;
   const go = () => {
