@@ -26,8 +26,9 @@
 # It needs this terminal to have Screen Recording (the capture) and
 # Accessibility (the scroll) in System Settings → Privacy & Security. It
 # quits pktito, sets its settings for the shot (the model, no saved window
-# size) and puts them back after, and puts the system's appearance back as
-# it was. The cursor is moved over the window to scroll it and back after.
+# size, and playback, the view and the times at their defaults: 1x, full
+# volume, sentences, seconds) and puts them back after, and puts the
+# system's appearance back as it was. The cursor is moved over the window to scroll it and back after.
 set -euo pipefail
 here=$(cd "$(dirname "$0")/.." && pwd)
 out=${1:-$here/site/screenshots}
@@ -98,6 +99,7 @@ import json, sys
 p = sys.argv[1]
 s = json.load(open(p))
 s.update(model="parakeet-tdt-0.6b-v3", model_file=None)
+s.setdefault("prefs", {}).update(speed=1.0, volume=1.0, captions=False, frames=False)
 s.pop("window", None)
 json.dump(s, open(p, "w"), indent=2)
 PY

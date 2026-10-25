@@ -41,7 +41,8 @@ the other two), 2026-10-21:
 | MPEG-TS (H.264, AAC), MPEG-PS (MPEG-2, MP2)                               |   ✓   |     ✓      |     ✓      |
 | AVI: MJPEG with PCM                                                       |   ✓   |     ✓      |     ✓      |
 | AC-3 5.1, alone or in M2TS                                                |   ✓   |     –      |     ✓      |
-| AIFF; CAF with ALAC                                                       |   ✓   |     –      |     ✓      |
+| AIFF                                                                      |   ✓   |     ✓      |     ✓      |
+| CAF with ALAC                                                             |   ✓   |     –      |     ✓      |
 | Ogg Opus and Vorbis, .opus voice messages                                 |   ✓   |     –      |     ✓      |
 | WebM: Opus or Vorbis, with VP8, VP9 or AV1                                |   –   |     ✓      |     ✓      |
 | Matroska with AAC                                                         |   –   |     ✓      |     ✓      |
@@ -51,6 +52,10 @@ the other two), 2026-10-21:
 | FLV; Ogg Theora                                                           |   –   |     –      |     ✓      |
 | An MP3 named .m4a                                                         |   –   |     ✓      |     ✓      |
 | An M4A cut off halfway                                                    |   –   | first half | first half |
+
+AIFF on Windows is pktito's own reader's, since 0.9.1: the 9950X's smoke
+test of 0.9.1 transcribed one there (2026-10-24); the rest of the table is
+the run above.
 
 With ffmpeg on the PATH, every file reads on every system. A file with
 several audio tracks gives its first, as all three decoders take it.
