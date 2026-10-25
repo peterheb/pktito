@@ -8,6 +8,7 @@ pub mod decode;
 pub mod download;
 pub mod format;
 pub mod model;
+pub mod mp3;
 pub mod mp4;
 pub mod pktito;
 pub mod recent;

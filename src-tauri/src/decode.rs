@@ -13,7 +13,9 @@
 //!
 //! Each decoder hands over its samples at their own rate, and the same mix
 //! (native/mix.h) brings them to one channel and 16 kHz, so a file reads the
-//! same whichever decoder read it.
+//! same whichever decoder read it. Where the decoders start a file's sound
+//! in different places, its samples are cut to one start: an MP4's by its
+//! edit list (mp4.rs), an MP3's by its LAME tag (mp3.rs).
 
 use crate::strings::Problem;
 use std::env;
@@ -94,7 +96,7 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
         };
     }
     match decode_os(path) {
-        Ok(x) => Ok(edited(path, x)),
+        Ok(x) => Ok(mp3_cut(path, edited(path, x), OS_READER)),
         Err(DecodeError::NoAudio) => Err(DecodeError::NoAudio),
         Err(DecodeError::Unreadable(why, detail)) => match (forced.as_str(), ffmpeg()) {
             ("os", _) => Err(DecodeError::Unreadable(why, detail)),
@@ -298,6 +300,22 @@ fn edited(path: &Path, x: Vec<f32>) -> Vec<f32> {
     }
 }
 
+/// The OS's decoder, for mp3.rs: AVFoundation, or Media Foundation.
+const OS_READER: crate::mp3::Reader = if cfg!(target_os = "windows") {
+    crate::mp3::Reader::MediaFoundation
+} else {
+    crate::mp3::Reader::AvFoundation
+};
+
+/// An MP3's samples from `by` cut to where its sound starts (mp3.rs), the
+/// same place whichever decoder read it.
+fn mp3_cut(path: &Path, x: Vec<f32>, by: crate::mp3::Reader) -> Vec<f32> {
+    match crate::mp3::edit(path, by) {
+        Some(e) => crate::mp4::apply(x, &e, RATE as f64),
+        None => x,
+    }
+}
+
 /// ffmpeg, from the PATH, or on Windows where WinGet, Scoop and Chocolatey
 /// put it: an app started from the Start menu has the environment Explorer
 /// started with, which a terminal's PATH may have outgrown.
@@ -401,6 +419,7 @@ fn decode_ffmpeg(ffmpeg: &Path, path: &Path) -> Result<Vec<f32>, DecodeError> {
             "ffmpeg returned no audio".into(),
         ))
     })
+    .map(|x| mp3_cut(path, x, crate::mp3::Reader::Ffmpeg))
 }
 
 /// The format of the float WAV ffmpeg writes, read up to its samples. A
