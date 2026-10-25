@@ -104,8 +104,12 @@ nearest (Android the Windows one, iPhone the Mac's), Linux the Linux one.
 Why the multilingual model and the MP3: the English model runs the notice,
 the title and "Chapter one" together as one row, so no row is the title;
 and the first 16 rows of the MP3 are the same through macOS's decoder and
-ffmpeg, Linux's (2026-10-23, 0.8.5). Windows' Media Foundation is still to
-be compared.
+ffmpeg, Linux's (2026-10-23, 0.8.5). Through Windows' Media Foundation
+the shot's rows have the same words, their times 0.02-0.03 s later and
+the title's 0.10 s (00:00:10.26, against 10.16; 0.9.2, the Windows
+laptop, 2026-10-25): most likely one MP3 frame, 1152 samples or 26 ms,
+of encoder delay that AVFoundation trims and Media Foundation keeps, and
+the model's 80 ms frames on the title. Not looked into further.
 
 The Mac's script quits pktito, sets its settings for the shot and puts them
 back, opens the chapter (downloaded once and checked), scrolls three rows
