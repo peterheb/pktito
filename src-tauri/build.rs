@@ -173,6 +173,8 @@ fn main() {
         // (native/decode_windows.c), so the exe starts on a Windows without
         // them; mfuuid is its GUIDs, a static library
         "windows" => &["mfuuid", "ole32", "uuid"],
+        // bionic holds pthreads itself, and has no libpthread to link
+        "android" => &["m"],
         _ => &["pthread", "m"],
     };
     for lib in system {
@@ -192,7 +194,10 @@ fn main() {
     // 1903 and later): the engine opens the model, and its reader a WAV,
     // with CreateFileA and fopen on the UTF-8 path Rust hands it, which in
     // the old code page names another file, or none, past ASCII - a
-    // %APPDATA% under C:\Users\José
+    // %APPDATA% under C:\Users\José. Android has no Tauri (Cargo.toml)
+    if os == "android" {
+        return;
+    }
     let windows =
         tauri_build::WindowsAttributes::new().app_manifest(include_str!("windows/app.manifest"));
     tauri_build::try_build(tauri_build::Attributes::new().windows_attributes(windows))

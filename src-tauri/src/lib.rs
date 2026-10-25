@@ -3,8 +3,10 @@
 //! engine, transcribing, the recent list's transcripts, the formats a
 //! transcript is saved in, and the window's words; and, the window's alone,
 //! the server its player gets the audio from on Linux. None of it knows of
-//! the window.
+//! the window. The Android app (android/) takes it through android.rs.
 
+#[cfg(target_os = "android")]
+pub mod android;
 pub mod audio;
 pub mod decode;
 pub mod download;

@@ -132,6 +132,15 @@ extern "C" {
     fn pk_wav_close(w: *mut c_void);
 }
 
+/// An open pk_wav, closed when dropped.
+struct Close(*mut c_void);
+
+impl Drop for Close {
+    fn drop(&mut self) {
+        unsafe { pk_wav_close(self.0) };
+    }
+}
+
 /// A WAV or an AIFF, by pktito's reader: every format a recording comes in
 /// (PCM, float, A-law and mu-law; WAV's extensible and RF64, AIFF-C's
 /// uncompressed kinds), held to the library's
@@ -158,45 +167,104 @@ fn decode_wav(path: &Path, other: impl FnOnce() -> bool) -> Option<Result<Vec<f3
     if w.is_null() {
         return None;
     }
-    struct Close(*mut c_void);
-    impl Drop for Close {
-        fn drop(&mut self) {
-            unsafe { pk_wav_close(self.0) };
-        }
-    }
     let w = Close(w);
     if info.channels > 2 && other() {
         return None;
     }
+    Some(read_wav(&w, &info))
+}
+
+/// What pktito's reader opened, to its end, through the mix.
+fn read_wav(w: &Close, info: &PkWavInfo) -> Result<Vec<f32>, DecodeError> {
     let f = WavFormat {
         rate: info.rate,
         ch: info.channels,
         mask: 0,
     };
-    Some((|| {
-        let mut mix = Mix::new(&f)?;
-        let frames = 4096;
-        let mut x = vec![0f32; frames * f.ch as usize];
-        let mut total = 0;
-        loop {
-            let n = unsafe { pk_wav_read_frames(w.0, x.as_mut_ptr(), frames) };
-            mix.push(&x[..n * f.ch as usize])?;
-            total += n;
-            if n < frames {
-                break;
-            }
+    let mut mix = Mix::new(&f)?;
+    let frames = 4096;
+    let mut x = vec![0f32; frames * f.ch as usize];
+    let mut total = 0;
+    loop {
+        let n = unsafe { pk_wav_read_frames(w.0, x.as_mut_ptr(), frames) };
+        mix.push(&x[..n * f.ch as usize])?;
+        total += n;
+        if n < frames {
+            break;
         }
-        if total == 0 {
-            if unsafe { pk_wav_status(w.0, err.as_mut_ptr(), err.len()) } != 0 {
-                let why = unsafe { CStr::from_ptr(err.as_ptr()) }
-                    .to_string_lossy()
-                    .into_owned();
-                return Err(DecodeError::Unreadable(UNREADABLE, why));
-            }
-            return Err(DecodeError::NoAudio);
+    }
+    if total == 0 {
+        let mut err = [0 as c_char; 256];
+        if unsafe { pk_wav_status(w.0, err.as_mut_ptr(), err.len()) } != 0 {
+            let why = unsafe { CStr::from_ptr(err.as_ptr()) }
+                .to_string_lossy()
+                .into_owned();
+            return Err(DecodeError::Unreadable(UNREADABLE, why));
         }
-        mix.take()
-    })())
+        return Err(DecodeError::NoAudio);
+    }
+    mix.take()
+}
+
+/// The WAV or AIFF open at fd, by pktito's reader from where the file
+/// stands: Android's document picker hands over a descriptor that the app
+/// may read but not open again by a name (android.rs). The reader reads a
+/// copy of it, so fd stays the caller's to close; name says which file a
+/// failure was. Other formats wait for Android's own decoder.
+#[cfg(target_os = "android")]
+pub fn decode_fd(fd: c_int, name: &str) -> Result<Vec<f32>, DecodeError> {
+    extern "C" {
+        fn dup(fd: c_int) -> c_int;
+        fn close(fd: c_int) -> c_int;
+        fn fdopen(fd: c_int, mode: *const c_char) -> *mut c_void;
+        fn fclose(f: *mut c_void) -> c_int;
+        fn pk_wav_open_file(
+            f: *mut c_void,
+            name: *const c_char,
+            info: *mut PkWavInfo,
+            err: *mut c_char,
+            len: usize,
+        ) -> *mut c_void;
+    }
+    struct Fclose(*mut c_void);
+    impl Drop for Fclose {
+        fn drop(&mut self) {
+            unsafe { fclose(self.0) };
+        }
+    }
+    let copy = unsafe { dup(fd) };
+    let f = if copy < 0 {
+        std::ptr::null_mut()
+    } else {
+        unsafe { fdopen(copy, c"rb".as_ptr()) }
+    };
+    if f.is_null() {
+        let why = io::Error::last_os_error().to_string();
+        if copy >= 0 {
+            unsafe { close(copy) };
+        }
+        return Err(DecodeError::Unreadable(UNREADABLE, why));
+    }
+    let f = Fclose(f);
+    let c_name = CString::new(name).unwrap_or_default();
+    let mut info = PkWavInfo {
+        rate: 0,
+        channels: 0,
+        format: 0,
+        bytes: 0,
+        frames: 0,
+    };
+    let mut err = [0 as c_char; 256];
+    let w = unsafe { pk_wav_open_file(f.0, c_name.as_ptr(), &mut info, err.as_mut_ptr(), err.len()) };
+    if w.is_null() {
+        let why = unsafe { CStr::from_ptr(err.as_ptr()) }
+            .to_string_lossy()
+            .into_owned();
+        return Err(DecodeError::Unreadable(UNREADABLE, why));
+    }
+    // closed before the FILE it reads: dropped in the reverse of this order
+    let w = Close(w);
+    read_wav(&w, &info)
 }
 
 extern "C" {
