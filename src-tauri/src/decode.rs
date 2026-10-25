@@ -96,7 +96,7 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
         };
     }
     match decode_os(path) {
-        Ok(x) => Ok(mp3_cut(path, edited(path, x), OS_READER)),
+        Ok(x) => Ok(flac_cut(path, mp3_cut(path, edited(path, x), OS_READER))),
         Err(DecodeError::NoAudio) => Err(DecodeError::NoAudio),
         Err(DecodeError::Unreadable(why, detail)) => match (forced.as_str(), ffmpeg()) {
             ("os", _) => Err(DecodeError::Unreadable(why, detail)),
@@ -314,6 +314,37 @@ fn mp3_cut(path: &Path, x: Vec<f32>, by: crate::mp3::Reader) -> Vec<f32> {
         Some(e) => crate::mp4::apply(x, &e, RATE as f64),
         None => x,
     }
+}
+
+/// A FLAC's samples cut to the length its STREAMINFO names. macOS 26's
+/// decoder fills the last block out to the stream's block size with
+/// silence (120 samples more on AliceBench's chapter 1, Mac mini M4, macOS
+/// 26.4.1), which moved the last words of six of its twelve chapters;
+/// macOS 27 and ffmpeg end where the file does, and are left as they are.
+fn flac_cut(path: &Path, mut x: Vec<f32>) -> Vec<f32> {
+    let mut b = [0u8; 26];
+    let read = std::fs::File::open(path).and_then(|mut f| f.read_exact(&mut b));
+    if let Some((rate, total)) = read.ok().and_then(|_| flac_length(&b)) {
+        // at 16 kHz, the samples themselves; at another rate, the mix's
+        // count of them, to the nearest
+        let n = ((total as u128 * RATE as u128 + rate as u128 / 2) / rate as u128) as usize;
+        x.truncate(n);
+    }
+    x
+}
+
+/// A FLAC's sample rate and length in samples, from its STREAMINFO, the
+/// block the format puts first: "fLaC", the block's header (type 0, 34
+/// bytes), the block and frame sizes, then 20 bits of rate, 3 of channels,
+/// 5 of sample size and 36 of samples. None for anything else, and for a
+/// stream that gives no length (0).
+fn flac_length(b: &[u8]) -> Option<(u32, u64)> {
+    if b.len() < 26 || &b[..4] != b"fLaC" || b[4] & 0x7f != 0 || b[5..8] != [0, 0, 34] {
+        return None;
+    }
+    let rate = (b[18] as u32) << 12 | (b[19] as u32) << 4 | (b[20] as u32) >> 4;
+    let total = b[21..26].iter().fold(0u64, |t, &v| t << 8 | v as u64) & 0xf_ffff_ffff;
+    (rate > 0 && total > 0).then_some((rate, total))
 }
 
 /// ffmpeg, from the PATH, or on Windows where WinGet, Scoop and Chocolatey
@@ -623,4 +654,36 @@ fn decode_os(_path: &Path) -> Result<Vec<f32>, DecodeError> {
         UNREADABLE,
         "no media library to use here".into(),
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn flac_length_from_streaminfo() {
+        // AliceBench's chapter 1: 16 kHz, 10,248,072 samples
+        let ch1 = [
+            0x66, 0x4c, 0x61, 0x43, 0x00, 0x00, 0x00, 0x22, 0x10, 0x00, 0x10, 0x00, 0x00, 0x07,
+            0xae, 0x00, 0x19, 0x8a, 0x03, 0xe8, 0x00, 0xf0, 0x00, 0x9c, 0x5f, 0x88,
+        ];
+        assert_eq!(flac_length(&ch1), Some((16000, 10_248_072)));
+        // a last block of STREAMINFO (0x80) is STREAMINFO still
+        let mut last = ch1;
+        last[4] = 0x80;
+        assert_eq!(flac_length(&last), Some((16000, 10_248_072)));
+        // no length given, another block first, not FLAC, too short
+        let mut unknown = ch1;
+        unknown[21] &= 0xf0;
+        unknown[22..26].fill(0);
+        assert_eq!(flac_length(&unknown), None);
+        let mut padding = ch1;
+        padding[4] = 1;
+        assert_eq!(flac_length(&padding), None);
+        assert_eq!(
+            flac_length(b"RIFF\0\0\0\0WAVEfmt \x10\0\0\0\x01\0\x01\0\x80>\0\0"),
+            None
+        );
+        assert_eq!(flac_length(&ch1[..20]), None);
+    }
 }
