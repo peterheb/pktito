@@ -17,6 +17,9 @@
 //! in different places, its samples are cut to one start: an MP4's by its
 //! edit list (mp4.rs), an MP3's by its LAME tag (mp3.rs).
 
+// Android reads every file through decode_fd, and none of the desktop's decoders
+#![cfg_attr(target_os = "android", allow(dead_code))]
+
 use crate::strings::Problem;
 use std::env;
 use std::ffi::{c_char, c_int, c_uint, c_void, CStr, CString};
@@ -62,6 +65,7 @@ impl DecodeError {
     }
 }
 
+#[cfg(not(target_os = "android"))]
 pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
     // the window queues only files that are there, so this is one moved
     // while it waited; Windows' own words for it are "(0x80070002)"
@@ -206,16 +210,57 @@ fn read_wav(w: &Close, info: &PkWavInfo) -> Result<Vec<f32>, DecodeError> {
     mix.take()
 }
 
-/// The WAV or AIFF open at fd, by pktito's reader from where the file
-/// stands: Android's document picker hands over a descriptor that the app
-/// may read but not open again by a name (android.rs). The reader reads a
-/// copy of it, so fd stays the caller's to close; name says which file a
-/// failure was. Other formats wait for Android's own decoder.
+/// Android: a recording as the command line names it, opened, and read as
+/// the app reads the one the document picker hands over (decode_fd).
+#[cfg(target_os = "android")]
+pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
+    use std::os::fd::AsRawFd;
+    if !path.is_file() {
+        return Err(DecodeError::Unreadable("decode.not_found", String::new()));
+    }
+    let f = std::fs::File::open(path).map_err(|e| DecodeError::Unreadable(UNREADABLE, e.to_string()))?;
+    decode_fd(f.as_raw_fd(), &path.to_string_lossy())
+}
+
+/// The recording open at fd, which Android's document picker hands over
+/// with no name the app may open it by again (android.rs): a WAV or AIFF
+/// by pktito's reader, anything else by Android's own decoder
+/// (native/decode_android.c), cut to the file's sound as every other
+/// decoder's samples are. Each reads from the start of a copy of fd, which
+/// stays the caller's to close; name says which file a failure was.
 #[cfg(target_os = "android")]
 pub fn decode_fd(fd: c_int, name: &str) -> Result<Vec<f32>, DecodeError> {
+    if let Some(read) = wav_fd(fd, name) {
+        return read;
+    }
+    let (x, codec) = decode_android(fd)?;
+    let mut file = copy_of(fd)?;
+    Ok(android_cut(&mut file, &codec, x))
+}
+
+/// A File of its own on fd's file, at its start.
+#[cfg(target_os = "android")]
+fn copy_of(fd: c_int) -> Result<std::fs::File, DecodeError> {
+    use std::io::{Seek, SeekFrom};
+    use std::os::fd::BorrowedFd;
+    if fd < 0 {
+        return Err(DecodeError::Unreadable(UNREADABLE, "no file".into()));
+    }
+    let copy = unsafe { BorrowedFd::borrow_raw(fd) }
+        .try_clone_to_owned()
+        .map_err(|e| DecodeError::Unreadable(UNREADABLE, e.to_string()))?;
+    let mut f = std::fs::File::from(copy);
+    // a pipe has no start to go back to, and is read from where it is
+    let _ = f.seek(SeekFrom::Start(0));
+    Ok(f)
+}
+
+/// The WAV or AIFF open at fd, by pktito's reader; None for a file it does
+/// not open, which goes to Android's decoder, as on the desktop to the OS's.
+#[cfg(target_os = "android")]
+fn wav_fd(fd: c_int, name: &str) -> Option<Result<Vec<f32>, DecodeError>> {
+    use std::os::fd::{FromRawFd, IntoRawFd, OwnedFd};
     extern "C" {
-        fn dup(fd: c_int) -> c_int;
-        fn close(fd: c_int) -> c_int;
         fn fdopen(fd: c_int, mode: *const c_char) -> *mut c_void;
         fn fclose(f: *mut c_void) -> c_int;
         fn pk_wav_open_file(
@@ -232,18 +277,15 @@ pub fn decode_fd(fd: c_int, name: &str) -> Result<Vec<f32>, DecodeError> {
             unsafe { fclose(self.0) };
         }
     }
-    let copy = unsafe { dup(fd) };
-    let f = if copy < 0 {
-        std::ptr::null_mut()
-    } else {
-        unsafe { fdopen(copy, c"rb".as_ptr()) }
+    let copy = match copy_of(fd) {
+        Ok(f) => f.into_raw_fd(),
+        Err(e) => return Some(Err(e)),
     };
+    let f = unsafe { fdopen(copy, c"rb".as_ptr()) };
     if f.is_null() {
         let why = io::Error::last_os_error().to_string();
-        if copy >= 0 {
-            unsafe { close(copy) };
-        }
-        return Err(DecodeError::Unreadable(UNREADABLE, why));
+        drop(unsafe { OwnedFd::from_raw_fd(copy) });
+        return Some(Err(DecodeError::Unreadable(UNREADABLE, why)));
     }
     let f = Fclose(f);
     let c_name = CString::new(name).unwrap_or_default();
@@ -257,14 +299,63 @@ pub fn decode_fd(fd: c_int, name: &str) -> Result<Vec<f32>, DecodeError> {
     let mut err = [0 as c_char; 256];
     let w = unsafe { pk_wav_open_file(f.0, c_name.as_ptr(), &mut info, err.as_mut_ptr(), err.len()) };
     if w.is_null() {
-        let why = unsafe { CStr::from_ptr(err.as_ptr()) }
-            .to_string_lossy()
-            .into_owned();
-        return Err(DecodeError::Unreadable(UNREADABLE, why));
+        return None;
     }
     // closed before the FILE it reads: dropped in the reverse of this order
     let w = Close(w);
-    read_wav(&w, &info)
+    Some(read_wav(&w, &info))
+}
+
+/// Android's decoder's samples at 16 kHz, and the decoder's name.
+#[cfg(target_os = "android")]
+fn decode_android(fd: c_int) -> Result<(Vec<f32>, String), DecodeError> {
+    extern "C" {
+        fn pkapp_decode_fd(
+            fd: c_int,
+            rate: c_uint,
+            out: *mut *mut f32,
+            n: *mut usize,
+            codec: *mut c_char,
+            codeclen: usize,
+            err: *mut c_char,
+            errlen: usize,
+        ) -> c_int;
+    }
+    let mut out: *mut f32 = std::ptr::null_mut();
+    let mut n = 0usize;
+    let mut codec = [0 as c_char; 128];
+    let mut err = [0 as c_char; 512];
+    let rc = unsafe {
+        pkapp_decode_fd(
+            fd,
+            RATE as c_uint,
+            &mut out,
+            &mut n,
+            codec.as_mut_ptr(),
+            codec.len(),
+            err.as_mut_ptr(),
+            err.len(),
+        )
+    };
+    let text = |b: &[c_char]| unsafe { CStr::from_ptr(b.as_ptr()) }.to_string_lossy().into_owned();
+    match rc {
+        0 => {
+            let x = take_c(out, n);
+            if x.is_empty() {
+                return Err(DecodeError::NoAudio);
+            }
+            Ok((x, text(&codec)))
+        }
+        -1 => Err(DecodeError::NoAudio),
+        _ => Err(DecodeError::Unreadable(UNREADABLE, text(&err))),
+    }
+}
+
+/// Android's decoder's samples cut to the file's sound: so far the FLAC
+/// length every decoder is held to.
+#[cfg(target_os = "android")]
+fn android_cut(file: &mut std::fs::File, _codec: &str, x: Vec<f32>) -> Vec<f32> {
+    flac_cut_in(file, x)
 }
 
 extern "C" {
@@ -389,9 +480,18 @@ fn mp3_cut(path: &Path, x: Vec<f32>, by: crate::mp3::Reader) -> Vec<f32> {
 /// silence (120 samples more on AliceBench's chapter 1, Mac mini M4, macOS
 /// 26.4.1), which moved the last words of six of its twelve chapters;
 /// macOS 27 and ffmpeg end where the file does, and are left as they are.
-fn flac_cut(path: &Path, mut x: Vec<f32>) -> Vec<f32> {
+fn flac_cut(path: &Path, x: Vec<f32>) -> Vec<f32> {
+    match std::fs::File::open(path) {
+        Ok(mut f) => flac_cut_in(&mut f, x),
+        Err(_) => x,
+    }
+}
+
+/// The same of a file already open, from its start.
+fn flac_cut_in(f: &mut std::fs::File, mut x: Vec<f32>) -> Vec<f32> {
+    use std::io::{Seek, SeekFrom};
     let mut b = [0u8; 26];
-    let read = std::fs::File::open(path).and_then(|mut f| f.read_exact(&mut b));
+    let read = f.seek(SeekFrom::Start(0)).and_then(|_| f.read_exact(&mut b));
     if let Some((rate, total)) = read.ok().and_then(|_| flac_length(&b)) {
         // at 16 kHz, the samples themselves; at another rate, the mix's
         // count of them, to the nearest; a count past usize cuts nothing

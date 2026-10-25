@@ -144,6 +144,11 @@ fn main() {
                 .file(manifest.join("native/decode_windows.c"))
                 .compile_intermediates(),
         ),
+        "android" => objects.extend(
+            base(&os, &root)
+                .file(manifest.join("native/decode_android.c"))
+                .compile_intermediates(),
+        ),
         _ => {}
     }
 
@@ -173,8 +178,9 @@ fn main() {
         // (native/decode_windows.c), so the exe starts on a Windows without
         // them; mfuuid is its GUIDs, a static library
         "windows" => &["mfuuid", "ole32", "uuid"],
-        // bionic holds pthreads itself, and has no libpthread to link
-        "android" => &["m"],
+        // bionic holds pthreads itself, and has no libpthread to link;
+        // mediandk is the NDK's media framework (native/decode_android.c)
+        "android" => &["m", "mediandk"],
         _ => &["pthread", "m"],
     };
     for lib in system {

@@ -12,7 +12,7 @@ set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 NDK=${NDK:-${ANDROID_NDK_HOME:-}}
 [ -n "$NDK" ] || { echo "native.sh: NDK=/path/to/android-ndk" >&2; exit 1; }
-API=26                                  # the app's minSdk (app/build.gradle.kts)
+API=29                                  # the app's minSdk (app/build.gradle.kts)
 bin=$(echo "$NDK"/toolchains/llvm/prebuilt/*/bin)
 profile=${1:-release}
 for abi in arm64-v8a x86_64; do

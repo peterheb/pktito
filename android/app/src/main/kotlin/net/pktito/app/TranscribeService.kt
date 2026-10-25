@@ -115,11 +115,9 @@ class TranscribeService : Service() {
     }
 
     /** The manifest's two types: mediaProcessing where Android has it (15), dataSync before. */
-    private fun type(): Int = when {
-        Build.VERSION.SDK_INT >= 35 -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROCESSING
-        Build.VERSION.SDK_INT >= 29 -> ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-        else -> 0
-    }
+    private fun type(): Int =
+        if (Build.VERSION.SDK_INT >= 35) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROCESSING
+        else ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
 
     private companion object {
         const val TAG = "pktito"

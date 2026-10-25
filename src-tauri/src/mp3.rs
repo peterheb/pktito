@@ -104,7 +104,11 @@ pub fn cut(f: &First, by: Reader) -> Option<Edit> {
 
 /// The first frame of the file, if it is MPEG audio Layer III.
 pub fn first(path: &Path) -> Option<First> {
-    let mut file = File::open(path).ok()?;
+    first_in(&mut File::open(path).ok()?)
+}
+
+/// The same of a file already open, as Android hands one over (decode.rs).
+pub fn first_in(file: &mut File) -> Option<First> {
     let end = file.metadata().ok()?.len();
     // ID3v2 tags: "ID3", version, flags, a 28-bit size in four 7-bit bytes,
     // and a 10-byte footer when flagged
