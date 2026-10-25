@@ -273,6 +273,7 @@ const WORDMARK = () =>
 
 const isMac = () => st.platform === "macos";
 const isWin = () => st.platform === "windows";
+const isLinux = () => st.platform === "linux";
 const kbd = (k, shift = false) =>
   isMac()
     ? `${shift ? "⇧" : ""}⌘${k}`
@@ -1791,11 +1792,39 @@ function speedMenu(anchor, keys) {
 
 function loadAudio(f) {
   setPlayIcon();
-  if (playId === f.id && player.getAttribute("src")) return;
+  if (playId === f.id && (player.getAttribute("src") || coming === f.id))
+    return;
   playId = f.id;
   playToken++; // a play waiting on the last file's seek stays there
-  if (f.audio) player.src = T.core.convertFileSrc(f.audio);
-  else player.removeAttribute("src");
+  audioSrc(f);
+}
+
+/* The player's source: the cached audio's file by the asset protocol, or on
+   Linux its bytes over IPC as a blob. WebKitGTK's player can't read media by
+   the asset protocol ("Loading failed, error: FormatError", while GStreamer
+   played the file: the Omarchy test, 2026-10-25). */
+let blobUrl = null,
+  coming = null; // the file whose bytes are on their way
+function audioSrc(f) {
+  if (blobUrl) URL.revokeObjectURL(blobUrl);
+  blobUrl = null;
+  if (!f.audio) return player.removeAttribute("src");
+  if (!isLinux()) return (player.src = T.core.convertFileSrc(f.audio));
+  const id = f.id;
+  coming = id;
+  invoke("audio_bytes", { path: f.audio }).then(
+    (bytes) => {
+      if (coming === id) coming = null;
+      if (playId !== id) return;
+      blobUrl = URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
+      player.src = blobUrl;
+    },
+    (e) => {
+      if (coming === id) coming = null;
+      f.audioWhy = words(e);
+      if (current() === f) setPlayIcon();
+    },
+  );
 }
 
 /* The play button for the file shown; when it cannot play, its tooltip

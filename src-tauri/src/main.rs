@@ -658,6 +658,20 @@ fn open_recent(app: AppHandle, id: String) -> Result<Opened, Problem> {
     })
 }
 
+/// A cached transcript's audio, its bytes, for the window on Linux, whose
+/// WebKitGTK player can't read media by the asset protocol (app.js,
+/// audioSrc). Only a WAV in the audio cache.
+#[tauri::command]
+fn audio_bytes(app: AppHandle, path: String) -> Result<tauri::ipc::Response, Problem> {
+    let p = PathBuf::from(&path);
+    let dir = audio_dir(&app)?;
+    if p.parent() != Some(dir.as_path()) || p.extension().map_or(true, |e| e != "wav") {
+        return Err(Problem::new("play.cant"));
+    }
+    let bytes = std::fs::read(&p).map_err(|e| Problem::new("play.cant").detail(e))?;
+    Ok(tauri::ipc::Response::new(bytes))
+}
+
 /// A recent transcript's audio, read again from its original once the cache
 /// has let it go.
 #[tauri::command]
@@ -1708,6 +1722,7 @@ fn main() {
             recent_list,
             open_recent,
             reload_audio,
+            audio_bytes,
             clear_recent,
             save_text,
             save_many,
