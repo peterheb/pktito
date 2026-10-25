@@ -56,7 +56,9 @@ foreach ($f in $r.files) {
     $ok = if ($f.transcript_sha256 -eq $ref) { '' } else { $differ++; '  transcript differs' }
     '{0,7:F1}x  {1}{2}' -f $f.x_real_time, $f.file, $ok
 }
-'AliceBench v1: {0:F1}x real time (pktito-cli {1}, {2}, {3}, {4} threads)' -f $r.x_real_time, $r.pktito_cli, $r.model, $r.backend, $r.threads
+# the compiler, as alicebench.sh gives it, when pktito-cli names one
+$compiler = if ($r.compiler) { ", $($r.compiler)" } else { '' }
+'AliceBench v1: {0:F1}x real time (pktito-cli {1}, {2}, {3}, {4} threads{5})' -f $r.x_real_time, $r.pktito_cli, $r.model, $r.backend, $r.threads, $compiler
 if (@($r.files).Count -ne 12) { "  only $(@($r.files).Count) of the 12 chapters were timed"; exit 1 }
 if ($differ) { "  $differ of the 12 transcripts differ from the reference: not what pktito should compute"; exit 1 }
 '  all 12 transcripts are the reference''s'
