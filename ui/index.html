@@ -41,23 +41,17 @@
             aria-expanded="false"
           ></button>
         </div>
-        <div class="pk-strip pk-strip-idle" aria-hidden="true">
-          <div class="pk-lane">
-            <span class="pk-wave is-idle" id="idle-wave"></span>
-            <div class="pk-times">
-              <span class="pk-tstamp pk-tdim">00:00:00</span>
-            </div>
+        <div class="pk-ready-drop">
+          <div class="pk-ready-text">
+            <h1 class="pk-lead" data-t="ready.drop"></h1>
           </div>
-        </div>
-        <div class="pk-ready-text">
-          <h1 class="pk-lead" data-t="ready.drop"></h1>
-        </div>
-        <div class="pk-ready-act">
-          <button
-            class="pk-btn pk-btn-primary pk-btn-lg"
-            id="choose"
-            type="button"
-          ></button>
+          <div class="pk-ready-act">
+            <button
+              class="pk-btn pk-btn-primary pk-btn-lg"
+              id="choose"
+              type="button"
+            ></button>
+          </div>
         </div>
         <section class="pk-recent" id="recent" hidden>
           <div class="pk-spread">
@@ -116,18 +110,19 @@
             ></button>
           </label>
           <button class="pk-btn pk-btn-ico" id="copy" type="button"></button>
+          <!-- Start again before Save as: the primary at the right end, as on every screen -->
+          <button
+            class="pk-btn"
+            id="again"
+            type="button"
+            data-t="work.again"
+          ></button>
           <button
             class="pk-btn"
             id="save-as"
             type="button"
             aria-haspopup="menu"
             aria-expanded="false"
-          ></button>
-          <button
-            class="pk-btn"
-            id="again"
-            type="button"
-            data-t="work.again"
           ></button>
           <button
             class="pk-btn pk-btn-ghost"
@@ -149,9 +144,9 @@
                 aria-expanded="false"
               ></button>
             </div>
+            <!-- the progress in play's place, so that the waveform keeps its pixels -->
             <div class="pk-prog" id="prog">
-              <span class="pk-pct" id="pct"></span
-              ><span class="pk-small pk-num" id="pace"></span>
+              <span class="pk-pct" id="pct"></span>
             </div>
             <!-- the waveform the strip's width, a tick under it for each match of a search, and the times below -->
             <div class="pk-lane">
@@ -167,7 +162,18 @@
                   aria-haspopup="menu"
                   aria-expanded="false"
                 ></button
-                ><span class="pk-tstamp pk-tdim" id="dur"></span>
+                ><span class="pk-vol" id="vol-box"
+                  ><button class="pk-volbtn" id="mute" type="button"></button
+                  ><input
+                    class="pk-vol-range"
+                    id="vol"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    data-t-aria-label="volume.label" /></span
+                ><span class="pk-tstamp" id="pace"></span
+                ><span class="pk-tstamp" id="dur"></span>
               </div>
             </div>
           </div>
@@ -196,6 +202,10 @@
           ></button>
         </div>
         <p class="pk-msg" id="msg" role="status"></p>
+        <details class="pk-details pk-msg-details" id="msg-details" hidden>
+          <summary class="pk-ui" id="msg-sum"></summary>
+          <p class="pk-stamp" id="msg-detail"></p>
+        </details>
         <div class="pk-transcript" id="transcript"></div>
       </section>
     </div>

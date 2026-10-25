@@ -129,6 +129,15 @@ const ICON = {
     '<polygon points="6 3 20 12 6 21 6 3"/>',
     "pk-ico pk-ico-20 pk-ico-fill",
   ),
+  vol2: svg(
+    '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>',
+  ),
+  vol1: svg(
+    '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>',
+  ),
+  volX: svg(
+    '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>',
+  ),
   pause: svg(
     '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>',
     "pk-ico pk-ico-20 pk-ico-fill",
@@ -594,8 +603,8 @@ function downloadHtml() {
       <div class="pk-bar" id="dl-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="${esc(t("download.bar"))}"><i></i></div>
     </div>
     <div class="pk-foot-row">
-      <button class="pk-btn" id="dl-pause" type="button"></button>
-      <button class="pk-btn pk-btn-ghost" id="dl-cancel" type="button">${esc(t("download.cancel"))}</button>
+      <button class="pk-btn pk-btn-lg" id="dl-pause" type="button"></button>
+      <button class="pk-btn pk-btn-ghost pk-btn-lg" id="dl-cancel" type="button">${esc(t("download.cancel"))}</button>
       <span class="pk-small" id="dl-next"></span>
     </div>`;
 }
@@ -685,7 +694,6 @@ function renderReady() {
   $("ready-model").innerHTML = `${esc(modelLabel(false))}${ICON.down}`;
   $("choose").innerHTML = `${ICON.plus}${esc(t("ready.choose"))}`;
   $("choose").title = tip(t("ready.choose_tip"), "O");
-  drawWave($("idle-wave"), null, 0);
   $("recent").hidden = !recent.length && !files.length;
   $("ready").classList.toggle("has-recent", !$("recent").hidden);
   $("clear-recent").hidden = !recent.length;
@@ -1312,8 +1320,8 @@ function buildMain(f, mode, key) {
   updateHead(f, mode);
   const review = mode === "review";
   $("strip-wrap").hidden = mode === "error";
-  $("transport").hidden = $("time").hidden = !review;
-  $("prog").hidden = review;
+  $("transport").hidden = $("time").hidden = $("vol-box").hidden = !review;
+  $("prog").hidden = $("pace").hidden = review;
   $("dur").textContent = f.duration == null ? "" : lengthOf(f);
   const wave = $("wave");
   if (review) {
@@ -1357,12 +1365,11 @@ function updateHead(f, mode) {
   const review = mode === "review",
     has = f.segments.length > 0;
   $("find-box").hidden = !review || !has;
-  $("copy").hidden = !(review || mode === "running");
+  // one action at a time: at work only Stop, copying once it is finished
+  $("copy").hidden = !review;
   // its icon, which everyone reads, and its words for tooltip and reader
   $("copy").innerHTML = ICON.copy;
-  $("copy").title = t(
-    !review ? "copy.so_far" : prefs.captions ? "copy.captions" : "copy.text",
-  );
+  $("copy").title = t(prefs.captions ? "copy.captions" : "copy.text");
   $("copy").setAttribute("aria-label", $("copy").title);
   $("copy").disabled = !has;
   // at work: from the file's start until its last words, before its first too
@@ -1391,7 +1398,8 @@ function updateHead(f, mode) {
 function updateRunning(f) {
   const going = f.step === "transcribing";
   $("pct").textContent = `${percent(going ? f.done : 0)}%`;
-  // under it the step, and once the first audio is done, the pace so far
+  $("prog").style.setProperty("--done", `${(going ? f.done : 0) * 100}%`);
+  // under the waveform the step, and once the first audio is done, the pace so far
   $("pace").textContent =
     f.step === "reading"
       ? t("status.reading")
@@ -1400,7 +1408,7 @@ function updateRunning(f) {
         : going && f.done > 0 && f.transcribed > 0
           ? realTime(f.done * f.duration, f.transcribed)
           : "";
-  $("pct").title = going && f.eta > 0 ? timeLeft(f.eta) : "";
+  $("prog").title = going && f.eta > 0 ? timeLeft(f.eta) : "";
   $("dur").textContent = f.duration == null ? "" : lengthOf(f);
   const wave = $("wave");
   if (wave._peaks !== f.peaks) drawMainWave();
@@ -1508,10 +1516,18 @@ function renderTranscript(f, mode) {
     msg = t(
       f.step === "stopped" ? "status.no_speech_stopped" : "status.no_speech",
     );
-  $("msg").textContent = msg;
-  $("msg").title = err ? detailOf(f) : "";
+  // stopped partway, the transcript says so over itself: Start again's
+  // tooltip was all that told it from a whole one
+  else if (mode === "review" && f.step === "stopped")
+    msg = t("status.stopped_at", { pct: percent(f.done) });
+  // a failure as a download's is told: the alert before its words, and the
+  // particulars folded away under them
+  $("msg").innerHTML = err ? `${ICON.alert}${esc(msg)}` : esc(msg);
   $("msg").hidden = !msg;
   $("msg").classList.toggle("pk-err", err);
+  const detail = err ? detailOf(f) : "";
+  $("msg-details").hidden = !detail;
+  $("msg-detail").textContent = detail;
 }
 
 /* What a transcript cost, after its last row and quiet: the transcription's
@@ -1660,16 +1676,12 @@ function drawDecor(el) {
   ).join("");
 }
 
-/* Each strip redrawn when its own width changes: the window resized, or
-   its screen shown again. */
-const resized = new ResizeObserver((entries) => {
-  for (const e of entries) {
-    if (e.target.id === "wave" && viewName() === "work") drawMainWave();
-    else if (e.target.id === "idle-wave" && viewName() === "ready")
-      drawWave($("idle-wave"), null, 0);
-  }
+/* The strip redrawn when its width changes: the window resized, or its
+   screen shown again. */
+const resized = new ResizeObserver(() => {
+  if (viewName() === "work") drawMainWave();
 });
-for (const el of [$("wave"), $("idle-wave")]) resized.observe(el);
+resized.observe($("wave"));
 
 /* ------------------------------------------------------------ playback -- */
 
@@ -1713,6 +1725,39 @@ function setSpeed(s) {
   showSpeed();
   setPref("speed", s);
 }
+
+/* Playback's volume, kept between runs (prefs.volume); muting is for now,
+   the slider at 0 while it lasts. Muted, or at 0, the speaker's button
+   brings the sound back: at 0, at full. */
+let muted = false;
+const volume = () =>
+  prefs.volume >= 0 && prefs.volume <= 1 ? prefs.volume : 1;
+
+function showVolume() {
+  const v = muted ? 0 : volume();
+  player.volume = volume();
+  player.muted = muted;
+  $("vol").value = v;
+  $("vol").style.setProperty("--v", `${v * 100}%`);
+  $("mute").innerHTML = v === 0 ? ICON.volX : v < 0.5 ? ICON.vol1 : ICON.vol2;
+  $("mute").title = t(v === 0 ? "volume.unmute" : "volume.mute");
+  $("mute").setAttribute("aria-label", $("mute").title);
+}
+
+$("mute").onclick = () => {
+  if (muted || volume() === 0) {
+    muted = false;
+    if (volume() === 0) setPref("volume", 1);
+  } else muted = true;
+  showVolume();
+};
+// moved, it is heard at once; let go, it is kept
+$("vol").oninput = (e) => {
+  muted = false;
+  prefs.volume = Number(e.target.value);
+  showVolume();
+};
+$("vol").onchange = (e) => setPref("volume", Number(e.target.value));
 
 const stepSpeed = (d) =>
   setSpeed(
@@ -1761,7 +1806,11 @@ function setPlayIcon() {
   $("play").innerHTML = playing ? ICON.pause : ICON.play;
   $("play").setAttribute("aria-label", what);
   $("play").title = (f && f.audioWhy) || keyTip(what, t("key.space"));
-  $("play").disabled = $("speed").disabled = !f || !playable(f);
+  $("play").disabled =
+    $("speed").disabled =
+    $("mute").disabled =
+    $("vol").disabled =
+      !f || !playable(f);
 }
 
 function togglePlay() {
@@ -2907,6 +2956,7 @@ async function start() {
   $("time").title = t("times.tip");
   $("speed").title = t("speed.tip");
   showSpeed();
+  showVolume();
   for (const id of ["notices-close", "privacy-close"]) {
     $(id).innerHTML = ICON.x;
     $(id).title = keyTip(t("sheet.close"), t("key.esc"));
@@ -2914,6 +2964,7 @@ async function start() {
   // the question's buttons where the system's own dialogs put Cancel: first
   // on macOS, last on Windows
   if (isMac()) $("ask-btns").prepend($("ask-no"));
+  $("msg-sum").innerHTML = `${ICON.down}${esc(t("work.details"))}`;
   $("find-box").title = tip(t("find.tip"), "F");
   $("find-prev").innerHTML = ICON.up;
   $("find-prev").title = keyTip(

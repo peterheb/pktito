@@ -45,13 +45,13 @@ One ground, one ink, one accent, one mark. Every color is a token with a light a
 - **Ink.** `ink` (night navy, never black) sets text and figures. It also fills the site's Download buttons and marks a chosen card (a 2 px ring) or the current search hit. `ink-muted` is for secondary text: timestamps, sizes, status lines, descriptions, credits, unselected labels, legal text. Never for the transcript itself.
 - **Plume**, the accent. It colors the primary button, the site's stage, the played part of a waveform, search ticks and highlights. Text on it is `on-plume`, never white, and plume is never text on the ground. In light, progress fills with `wave`, since plume is 1.5:1 against the light track and a state's cue needs 3:1. `plume-press` fills the drop overlay.
 - **Beak**, a mark, not an area. It colors the wordmark's square, the playhead, the square after the playing row's time and the playing word's underline.
-- **Term**, the dark field in both themes: the waveform strip and the toast. On it go `term-ink`, `term-dim`, `wave` and `wave-played`. `term-line` is a quiet fill there: the play button and the idle bars.
+- **Term**, the dark field in both themes: the waveform strip and the toast. On it go `term-ink`, `wave` and `wave-played`. The app's text there is all `term-ink`, 14.3:1, which label leads told by its place rather than a dimmer shade for the rest (`term-dim` is the site's). `term-line` is a quiet fill there: the play button, a speed changed from 1×, and the idle bars. On the dark theme `term` sits a step above the ground, so that the strip's edge shows, and `term-line` as far above it as in light.
 - **State.** `ok` and `err` always sit beside a word: "Done", "Downloaded", or the failure. `err` also sets the word on the one destructive button.
 - **Scrim.** `scrim` lies behind a sheet or the ask dialog.
 - **Focus.** `focus` draws a 2 px solid ring: ink in light, plume in dark, and plume on `term` in both. The offset is 2 px in the app and 3 px on the site.
 - **Hover and press.** One rule for every control on both surfaces: `tint`, then `tint-press`, laid over whatever the control sits on or is filled with, so it darkens in light and lightens in dark. On `term`, and on an ink fill, use `tint-term` and `tint-term-press`. Links in running text thicken their underline instead.
 
-Areas are told apart by tone, not by lines. Outlines mark only a state: a chosen card's ring, the chosen switch segment's 1 px `ink-muted` edge, the drop overlay's dashed edge, a menu's ring. A menu separates its groups with a divider: 1 px of `sunk`, inset to the items' text. Shadows only on what floats: `shadow-float` for menus, sheets, dialogs and the toast.
+Areas are told apart by tone, not by lines. Outlines mark only a state or where a file goes: a chosen card's ring, the chosen switch segment's 1 px `ink-muted` edge, the drop overlay's dashed edge and the start screen's drop zone, dashed as it is, a menu's ring. A menu separates its groups with a divider: 1 px of `sunk`, inset to the items' text. Shadows only on what floats: `shadow-float` for menus, sheets, dialogs and the toast.
 
 ## Type
 
@@ -75,7 +75,7 @@ Two families, shipped as files (`ui/fonts`, and the site's `fonts/`) with their 
 **App.** One window and one screen at a time:
 
 - setup: choose a model, its download, or the download stopped
-- start: an idle strip, "Drop audio or video here", Choose files…, and the recent list
+- start: a drop zone, "Drop audio or video here" and Choose files… on `surface` inside a 2 px dashed `ink-muted` edge, and the recent list
 - one file's transcript
 - a batch: the files dropped together, each row with its progress, opening its transcript, and Save all
 
@@ -143,7 +143,7 @@ The model icon (`design/model-icon.svg`) marks pktito's model files, .pkf, in Ex
 
 The site's components are plain HTML and CSS in `design/bundle.css` (classes `pk-*`): Button, Link, Wordmark and Stage. The app has its own stylesheet, `ui/app.css`, on the same tokens. Its patterns are documented here, so that a picture of the app or a new screen matches it:
 
-- **Strip:** the waveform on `term` with play, speed and the time (seconds or frames) beside it, and search ticks under it.
+- **Strip:** the waveform on `term`, play at its left and the speed under play; under the waveform the time (seconds or frames), the volume (a speaker that mutes, and a slider) and the length, with search ticks between. While a file is transcribed a ring in play's place fills with its progress, the percent inside, and the pace takes the time's place, so that the waveform keeps its pixels when it finishes. Its small buttons, the speed, the time and the speaker, are one box: 25 px tall, 6 px round their words, 14 px apart.
 - **Transcript:** rows of a start time in `stamp` and a sentence in `transcript` type. The playing row sits on `surface`, with the beak square after its time and the playing word underlined. Clicking a time plays from it. Sentences | Captions switches the view.
 - **Row:** a file on the start screen's recent list or in a batch: its icon, name, length and step, with a progress bar while it works and a remove × on hover.
 - **Menu:** `ground`, `radius-ui`, `shadow-float` and a 1 px `sunk` ring. Its items are 14 px/500 with an optional second line, a check for the chosen one, key caps, rows of chips (speeds, frame rates), and dividers between groups.

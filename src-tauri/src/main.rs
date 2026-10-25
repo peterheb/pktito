@@ -1332,10 +1332,10 @@ fn download_alone(args: &[String]) -> Result<PathBuf, String> {
 
 /// Where the traffic lights go: AppKit puts their left edge at x and their
 /// centre 2 px above y (14 px buttons 23 apart, measured on macOS 26), so
-/// they are centred on the header rows, 60 px tall, and end at x = 78
-/// (ui/app.css, html[data-chrome=mac]).
+/// their centre is the header row's buttons', 31 px down, and they end at
+/// x = 78 (ui/app.css, html[data-chrome=mac] and .pk-head).
 #[cfg(target_os = "macos")]
-const LIGHTS: (f64, f64) = (18.0, 32.0);
+const LIGHTS: (f64, f64) = (18.0, 33.0);
 
 /// The window, as tauri.conf.json has it (which leaves it to this), on
 /// macOS and Windows without a title bar of its own: the page runs up to

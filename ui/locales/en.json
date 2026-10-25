@@ -180,6 +180,7 @@
   "batch.stop": "Stop",
 
   "nav.back": "Back",
+  "work.details": "Details",
   "work.again": "Start again",
   "work.stop": "Stop",
   "work.made_by": "{model} · took {time}",
@@ -213,6 +214,9 @@
   "speed.slower": "Slower",
   "speed.faster": "Faster",
   "speed.tip": "Playback speed (< slower, > faster)",
+  "volume.label": "Volume",
+  "volume.mute": "Mute",
+  "volume.unmute": "Unmute",
   "times.tip": "Seconds or frames",
   "times.seconds": "Seconds",
   "times.frames": "Frames",
@@ -221,7 +225,6 @@
   "times.rates": "Frames a second",
   "times.video_rate": "Video · {rate}",
 
-  "copy.so_far": "Copy so far",
   "copy.captions": "Copy captions (SRT)",
   "copy.text": "Copy text",
   "copy.done": "Copied",

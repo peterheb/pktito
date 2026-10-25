@@ -190,7 +190,10 @@ button.pk-wm:focus-visible {
   cursor: default;
   transform: none;
 }
-/* its padding outside it, as the wordmark's, for the hover tint */
+/* A button that reads as a link answers hover as a link does, its underline
+   thicker (design/README.md): tinted, it hovered unlike the links beside it
+   in About. Its padding outside it holds its focus ring; 24 px tall, WCAG
+   2.2's target (2.5.8). */
 .pk-linkbtn {
   border: 0;
   background: none;
@@ -198,11 +201,14 @@ button.pk-wm:focus-visible {
   margin: -2px -4px;
   border-radius: 4px;
   color: var(--ink);
-  font: 500 14px/1.4 var(--font-sans);
+  font: 500 14px/20px var(--font-sans);
   cursor: pointer;
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.2em;
+}
+.pk-linkbtn:hover:not([disabled]) {
+  text-decoration-thickness: 2px;
 }
 .pk-linkbtn-sm {
   font-weight: 400;
@@ -235,7 +241,6 @@ button.pk-wm:focus-visible {
    still filling in, needs no more than its own selector) */
 :where(
     .pk-btn,
-    .pk-linkbtn,
     button.pk-wm,
     .pk-row,
     .pk-x,
@@ -248,13 +253,13 @@ button.pk-wm:focus-visible {
     .pk-view,
     .pk-timebtn,
     .pk-speed,
+    .pk-volbtn,
     .pk-rate
   ):hover:not([disabled]) {
   background-image: linear-gradient(var(--tint), var(--tint));
 }
 :where(
     .pk-btn,
-    .pk-linkbtn,
     button.pk-wm,
     .pk-row,
     .pk-x,
@@ -266,6 +271,7 @@ button.pk-wm:focus-visible {
     .pk-view,
     .pk-timebtn,
     .pk-speed,
+    .pk-volbtn,
     .pk-rate
   ):active:not([disabled]) {
   background-image: linear-gradient(var(--tint-press), var(--tint-press));
@@ -274,7 +280,7 @@ button.pk-wm:focus-visible {
 /* ----------------------------------------------------------- title bar -- */
 /* Where the window has no title bar of its own (macOS: app.js, data-chrome)
    each screen's header row is the title bar. The traffic lights are at its
-   left end, 18 to 78 px across and centred 30 px down, on the rows' centre
+   left end, 18 to 78 px across and centred 31 px down, on the rows' centre
    (src-tauri/src/main.rs, LIGHTS), and what would sit under them moves to
    --lights, the lights' end and a gap; its empty space drags the window
    (index.html, data-tauri-drag-region). Full screen shows no lights. */
@@ -294,7 +300,7 @@ html[data-chrome="mac"]:not([data-fullscreen]) .pk-about > .pk-back {
    below them where it would not. */
 @media (min-width: 744px) {
   html[data-chrome="mac"]:not([data-fullscreen]) .has-recent .pk-ready {
-    padding-top: 14px;
+    padding-top: 15px;
   }
 }
 @media (max-width: 743px) {
@@ -545,6 +551,7 @@ html[data-chrome="win"] .pk-head {
 }
 .pk-langs-note a {
   color: inherit;
+  cursor: pointer;
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.2em;
@@ -656,6 +663,21 @@ html[data-chrome="win"] .pk-head {
 #ready-model {
   margin-right: -12px;
 }
+/* the prompt and its button in a drop zone, dashed as the drop over the
+   whole window is: it says where a file goes, and gives the screen the
+   contrast the empty strip above it once gave, which only looked like a
+   control (Peter, 2026-10-25). Its border 6.2:1 on the surface inside it and
+   6.8 on the ground outside (7.2 and 7.7 on the dark theme's), past the 3:1
+   a boundary needs (WCAG 1.4.11), though the words say it. */
+.pk-ready-drop {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 36px 24px;
+  border: 2px dashed var(--ink-muted);
+  border-radius: var(--radius-ui);
+  background: var(--surface);
+}
 .pk-ready-text {
   display: flex;
   flex-direction: column;
@@ -739,16 +761,17 @@ html[data-chrome="win"] .pk-head {
   min-width: 0;
   min-height: 0;
 }
-/* The work screen's vertical rhythm is one step, --space-3 (16 px): under the
-   header's buttons, between the strip and the views, from the views to the
-   first row's text, and between rows (each row's 8 px padding, twice). The
-   header's top stays 14 px, so that its buttons stay level with the traffic
-   lights' centre, 30 px down (the title bar, above). */
+/* The work screen's vertical rhythm is one step, --space-3 (16 px): between
+   the strip and the views, from the views to the first row, and between
+   rows (each row's 8 px padding, twice). The header's buttons are centred in
+   its 62 px, 15 px above them and below, to the window's top and the
+   strip's, on every system; the traffic lights' centre is theirs, 31 px down
+   (the title bar, above). */
 .pk-head {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 24px var(--space-3);
+  padding: 15px 24px;
   min-height: 62px;
 }
 /* the file's name gives way first, down to nothing, before Find: shrunk in
@@ -796,15 +819,21 @@ html[data-chrome="win"] .pk-head {
 .pk-strip-wrap {
   padding: 0 24px;
 }
-/* the 8 px over the first row a margin, outside the scroll: inside it, a
-   transcript scrolled down ran up against the views (Peter's screenshot,
-   2026-10-22) */
+/* 16 px over the first row, under the views, the strip or the message
+   alike, a margin outside the scroll: inside it, a transcript scrolled down
+   ran up against the views (Peter's screenshot, 2026-10-22); at work the
+   views are hidden, and 8 px left the rows against the strip. 16 px under
+   the last, outside it too, so that the rows stop short of the window's
+   edge as they scroll by. Its rows on the strip's edges, 24 px in, and
+   their times on play's, 16 px further: boxed 12 px past the strip, the
+   playing row stood out beyond it on both sides (Peter's screenshot,
+   2026-10-25). */
 .pk-transcript {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  margin-top: var(--space-2);
-  padding: 0 12px 24px;
+  margin: var(--space-3) 0;
+  padding: 0 24px;
   display: flex;
   flex-direction: column;
 }
@@ -815,7 +844,14 @@ html[data-chrome="win"] .pk-head {
   color: var(--ink-muted);
   overflow-wrap: anywhere;
 }
+.pk-msg-details {
+  margin: 12px 24px 0;
+  max-width: 712px;
+}
 .pk-msg.pk-err {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: var(--err);
 }
 
@@ -835,7 +871,7 @@ html[data-chrome="win"] .pk-head {
   flex-direction: column;
   gap: 16px;
   margin-top: var(--space-2);
-  padding: 0 12px 24px;
+  padding: 0 12px var(--space-3);
 }
 .pk-batch-files {
   display: flex;
@@ -856,8 +892,11 @@ html[data-chrome="win"] .pk-head {
   padding: 4px;
   margin: -4px;
 }
+/* filled, its edge on the rows' icons and the count above them, 24 px in:
+   at the rows' hover edge it stood out past both */
 .pk-batch-add {
   align-self: flex-start;
+  margin-left: 12px;
 }
 
 /* the batch's rows, and the recent list's */
@@ -956,11 +995,15 @@ html[data-chrome="win"] .pk-head {
 }
 /* the file's strip: the play button or the progress beside the waveform's
    top, the waveform the rest of the width, the times under its two ends */
+/* 24 px between play and the waveform: the speed under play is wider than
+   it at 1.25x, and at 14 its box came within 3 px of the time's */
 #strip {
   align-items: flex-start;
+  gap: var(--space-4);
 }
 /* play at the waveform's top, and playback's speed under it on the line of
-   the times: dim at 1x and lit at any other, so that a changed speed shows */
+   the times (a changed speed's ground with the strip's text, after
+   .pk-tstamp) */
 .pk-transport {
   align-self: stretch;
   flex: none;
@@ -970,21 +1013,84 @@ html[data-chrome="win"] .pk-head {
   justify-content: space-between;
   padding-top: 12px;
 }
-.pk-speed {
+/* The strip's small buttons, the speed, the time and the speaker, one box:
+   25 px tall, past WCAG 2.2's 24 px target (2.5.8), 6 px around their words
+   or icon, and corners a step under play's; the text buttons' margins take
+   their padding back, so that the times' line stays 13 px tall. */
+.pk-speed,
+.pk-timebtn,
+.pk-volbtn {
   border: 0;
-  padding: 2px 4px;
-  margin: -2px -4px;
-  border-radius: 4px;
+  padding: 6px;
+  margin: -6px;
+  border-radius: var(--radius-sm);
   background-color: transparent;
-  color: var(--term-dim);
+  color: var(--term-ink);
   cursor: pointer;
 }
-.pk-speed.is-on {
-  color: var(--term-ink);
-}
-.pk-speed:focus-visible {
+.pk-speed:focus-visible,
+.pk-timebtn:focus-visible,
+.pk-volbtn:focus-visible,
+.pk-vol-range:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 1px;
+}
+/* the volume after the time, 14 px between their buttons' boxes, as between
+   the speed's and the time's: a speaker that mutes and a slider, 25 px tall
+   each, in a box the times' 13 px tall, so that their line stays as tall as
+   at work, where they are hidden. The slider's
+   fill is the played waveform's colour, 8.9:1 on the strip (10.1 on the
+   dark theme's), and its knob term-ink; the track under it is the strip's
+   line, the knob's place saying the level. */
+.pk-vol {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  height: 13px;
+  margin-left: 20px;
+}
+.pk-vol[hidden] {
+  display: none;
+}
+/* its 16 px icon on whole pixels, 4 px down in its 25 */
+.pk-volbtn {
+  margin: 0;
+  padding: 4px 6px 5px;
+}
+.pk-vol-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 64px;
+  height: 25px;
+  margin: 0 0 0 8px;
+  background: transparent;
+  cursor: pointer;
+}
+.pk-vol-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background:
+    linear-gradient(var(--wave-played), var(--wave-played)) 0 / var(--v, 100%)
+      100% no-repeat,
+    var(--term-line);
+}
+.pk-vol-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--term-ink);
+}
+/* hovered, a ring of the strip's tint round the knob, as the buttons beside
+   it are tinted */
+.pk-vol-range:hover:not([disabled])::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px var(--tint-term-press);
+}
+.pk-volbtn[disabled],
+.pk-vol-range[disabled] {
+  opacity: 0.45;
+  cursor: default;
 }
 .pk-speed[disabled] {
   opacity: 0.45;
@@ -1003,19 +1109,6 @@ html[data-chrome="win"] .pk-head {
 }
 .pk-times #dur {
   margin-left: auto;
-}
-/* the time, the button for its format, its padding outside it */
-.pk-timebtn {
-  border: 0;
-  padding: 2px 4px;
-  margin: -2px -4px;
-  border-radius: 4px;
-  background-color: transparent;
-  cursor: pointer;
-}
-.pk-timebtn:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
 }
 /* a match's tick, 2 px drawn in a target 9 px wide that reaches down to the
    times: 7 px tall alone was hard to hit (the Windows test, 2026-10-22);
@@ -1116,33 +1209,44 @@ html[data-chrome="win"] .pk-head {
   color: var(--term-ink);
   white-space: nowrap;
 }
-.pk-tdim {
-  color: var(--term-dim);
+/* The strip's text all in term-ink, 14.3:1 on --term (16.3 on the dark
+   theme's), past WCAG AA's 4.5:1 for 13 px text by far: which label leads
+   is said by where it is, not by a dimmer shade for the rest, which read as
+   chosen at random (Peter, 2026-10-25). A speed changed from 1x is a button
+   as play is, its ground and its hover play's, and its text says it too, not
+   its colour alone; at 1x it has only the hover. A disabled speed is dimmer,
+   as WCAG allows an inactive one. */
+.pk-speed.is-on {
+  background-color: var(--term-line);
 }
+/* the progress in play's place and size, so that the waveform keeps its
+   pixels when the transcript finishes: a wider one moved the waveform at
+   the end and drew its bars again at the new width. Its ring fills with the
+   waveform's played colour, 5.9:1 against the track (7.3 on the dark
+   theme), past the 3:1 a state's cue needs (WCAG 1.4.11), and the percent
+   inside says it in words; the pace is in the times. */
 .pk-prog {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 120px;
   flex: none;
-  margin-top: 10px;
+  width: 40px;
+  height: 40px;
+  margin-top: 12px;
+  padding: 3px;
+  border-radius: var(--radius-ui);
+  background: conic-gradient(
+    var(--wave-played) var(--done, 0%),
+    var(--term-line) 0
+  );
 }
 .pk-pct {
-  font: 700 28px/1 var(--font-sans);
+  display: grid;
+  place-items: center;
+  height: 100%;
+  border-radius: calc(var(--radius-ui) - 3px);
+  background: var(--term);
+  font: 700 11px/1 var(--font-sans);
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   color: var(--term-ink);
-}
-.pk-prog .pk-small {
-  color: var(--term-dim);
-}
-.pk-strip-idle {
-  padding: 12px 16px;
-}
-/* (not flex's share of the lane, which was nothing: the playhead a dot) */
-.pk-strip-idle .pk-wave {
-  flex: none;
-  height: 40px;
 }
 
 /* the drop: the whole window, while files are dragged over it */
@@ -1253,7 +1357,7 @@ html[data-chrome="win"] .pk-head {
    button's padding outside it, and 8 px under 600 px wide */
 .pk-about > .pk-back {
   position: absolute;
-  top: 14px;
+  top: 15px;
   left: 16px;
   z-index: 1;
 }
@@ -1505,6 +1609,8 @@ html[data-chrome="win"] .pk-head {
 
 /* -------------------------------------------- sentences or captions -- */
 /* two buttons in a sunk track, the one chosen raised to the ground */
+/* 16 px above, and the transcript's 16 px margin below: the same space
+   either side when its first row is the current one, drawn as a block */
 .pk-views {
   display: flex;
   gap: 2px;
@@ -1520,7 +1626,7 @@ html[data-chrome="win"] .pk-head {
   border-radius: var(--radius-sm);
   background: none;
   color: var(--ink-muted);
-  font: 500 13px/1.2 var(--font-sans);
+  font: 500 13px/16px var(--font-sans);
   cursor: pointer;
 }
 /* the one chosen raised to the ground, with an edge in ink-muted: the tone
@@ -1541,17 +1647,17 @@ html[data-chrome="win"] .pk-head {
 /* A row: its time in a 112 px column, which a fast cue's end time and its
    mark fill to 102 px, then its text, at most --column-narrow wide (560 px,
    about 72 characters a line): rows of 760 px ran to 79 (the window study,
-   2026-10-23). 136 px is the row's padding, the times and their gap. A
+   2026-10-23). 140 px is the row's padding, the times and their gap. A
    batch's file rows are as wide. */
 :root {
-  --row: calc(136px + var(--column-narrow) + 12px);
+  --row: calc(140px + var(--column-narrow) + 16px);
 }
 .pk-seg {
   display: grid;
   grid-template-columns: 112px minmax(0, 1fr);
   column-gap: 12px;
   align-items: baseline;
-  padding: 8px 12px;
+  padding: 8px 16px;
   border-radius: var(--radius-ui);
   max-width: var(--row);
 }
@@ -1561,7 +1667,7 @@ html[data-chrome="win"] .pk-head {
 /* what the transcript cost, after its last row: quiet, under the text column */
 .pk-stats {
   margin: var(--space-3) 0 0;
-  padding: 0 12px 0 136px;
+  padding: 0 16px 0 140px;
   max-width: var(--row);
   font: 400 12px/1.5 var(--font-sans);
   font-variant-numeric: tabular-nums;
@@ -1601,7 +1707,7 @@ html[data-chrome="win"] .pk-head {
   border-radius: var(--radius-sm);
   text-align: left;
   cursor: pointer;
-  font: 400 13px/1.5 var(--font-mono);
+  font: 400 13px/20px var(--font-mono);
   font-variant-numeric: tabular-nums;
   color: var(--ink-muted);
   display: inline-flex;
@@ -1695,7 +1801,7 @@ html[data-chrome="win"] .pk-head {
     padding-right: 20px;
   }
   .pk-head {
-    padding: 14px 16px var(--space-3);
+    padding: 15px 16px;
   }
   .pk-strip-wrap {
     padding: 0 16px;
@@ -1704,9 +1810,13 @@ html[data-chrome="win"] .pk-head {
     margin-left: 16px;
     margin-right: 16px;
   }
-  .pk-msg {
+  .pk-msg,
+  .pk-msg-details {
     margin-left: 16px;
     margin-right: 16px;
+  }
+  .pk-transcript {
+    padding: 0 16px;
   }
   .pk-about-text {
     padding: 24px 20px 28px;
@@ -1752,8 +1862,8 @@ html[data-chrome="win"] .pk-head {
 .pk-find-step {
   display: none;
   flex: none;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   place-items: center;
   border: 0;
   padding: 0;
@@ -1848,8 +1958,10 @@ html[data-chrome="win"] .pk-head {
   grid-row: 1;
   grid-column: 2;
 }
-/* a line of words, not a file name: the model menu's */
+/* a line of words, not a file name: the model menu's, which wraps: cut
+   short, the multilingual model's ended "648 MB downlo…" */
 .pk-mi small.pk-sub {
+  white-space: normal;
   font: 400 13px/1.4 var(--font-sans);
 }
 .pk-have {
@@ -1877,7 +1989,7 @@ html[data-chrome="win"] .pk-head {
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--ink);
-  font: 400 12px/1.2 var(--font-mono);
+  font: 400 12px/16px var(--font-mono);
   font-variant-numeric: tabular-nums;
   cursor: pointer;
 }
