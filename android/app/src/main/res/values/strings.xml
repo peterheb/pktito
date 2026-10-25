@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">pktito</string>
+    <string name="open">Open a recording</string>
+    <string name="stop">Stop</string>
+    <string name="share">Share</string>
+    <string name="channel">Transcribing</string>
+    <string name="reading">Reading the audio</string>
+    <string name="transcribing">Transcribing %1$d%%</string>
+    <string name="stopped">Stopped before the end</string>
+    <string name="no_model">No model in %1$s</string>
+    <string name="hint">Pick a WAV to transcribe, here on this device.</string>
+</resources>

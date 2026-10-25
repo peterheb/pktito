@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- the window behind Compose's, before it draws: Compose sets the rest -->
+    <style name="Theme.Pktito" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
