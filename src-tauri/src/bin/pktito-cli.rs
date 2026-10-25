@@ -439,6 +439,10 @@ fn fetch(m: &str) -> Result<i32, String> {
     let data = model::data_dir().ok_or("no data folder for the app on this system")?;
     let dir = data.join("models");
     if model::have(&dir, e) {
+        // here already, from the window or a copy: in use, too, if none is,
+        // as one just downloaded is (with no settings, the model there was
+        // "no model yet" after a download of it said where it was)
+        use_if_none(&data, e)?;
         println!("{}", model::file_in(&dir, e).display());
         return Ok(0);
     }
@@ -520,11 +524,17 @@ fn fetch(m: &str) -> Result<i32, String> {
             line
         }
     })?;
-    let mut s = model::load_settings(&data);
-    if s.model.is_none() && s.model_file.is_none() {
-        s.model = Some(e.name.to_string());
-        model::save_settings(&data, &s)?;
-    }
+    use_if_none(&data, e)?;
     println!("{}", path.display());
     Ok(0)
+}
+
+/// The app's model from now on, if it has none.
+fn use_if_none(data: &Path, e: &model::Entry) -> Result<(), String> {
+    let mut s = model::load_settings(data);
+    if s.model.is_none() && s.model_file.is_none() {
+        s.model = Some(e.name.to_string());
+        model::save_settings(data, &s)?;
+    }
+    Ok(())
 }
