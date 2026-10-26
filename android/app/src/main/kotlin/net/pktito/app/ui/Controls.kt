@@ -52,6 +52,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -255,12 +256,13 @@ fun Toast(text: String, modifier: Modifier = Modifier) {
 
 /**
  * The desktop's menu: on the ground, its corners the app's, a ring of sunk
- * and the shadow of what floats, its items 6 dp in from its edges, 2 apart
- * (app.css, .pk-menu); items are Item and Check below. Material's menu keeps
- * 8 dp above and below its items, and the items take 2 of each back.
+ * and the shadow of what floats, its items 6 dp in from its sides and 2
+ * apart (app.css, .pk-menu), and Material's 8 above and below them; at
+ * most 420 dp wide, or 480 for the time menu's rates (.pk-menu.is-wide).
+ * Items are Item and Check below.
  */
 @Composable
-fun Menu(expanded: Boolean, onDismiss: () -> Unit, gap: Dp = 6.dp, content: @Composable () -> Unit) {
+fun Menu(expanded: Boolean, onDismiss: () -> Unit, gap: Dp = 6.dp, wide: Boolean = false, content: @Composable () -> Unit) {
     val p = pk
     DropdownMenu(
         expanded = expanded,
@@ -272,7 +274,7 @@ fun Menu(expanded: Boolean, onDismiss: () -> Unit, gap: Dp = 6.dp, content: @Com
         border = BorderStroke(1.dp, p.sunk),
     ) {
         Column(
-            Modifier.bleed(vertical = 2.dp).widthIn(min = 240.dp).padding(horizontal = 6.dp),
+            Modifier.widthIn(min = 240.dp, max = if (wide) 480.dp else 420.dp).padding(horizontal = 6.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) { content() }
     }
@@ -281,14 +283,16 @@ fun Menu(expanded: Boolean, onDismiss: () -> Unit, gap: Dp = 6.dp, content: @Com
 /**
  * A menu's item (app.css, .pk-mi): what it does, under it in mono the file
  * it makes, and 16 dp after its words, on their line, the key that does it
- * too where there are keys (hint: Kbd or KeyCap).
+ * too where there are keys (hint: Kbd or KeyCap), or the check of the one
+ * chosen of a menu's choices (selected, not null for a choice).
  */
 @Composable
-fun Item(text: String, sub: String?, hint: (@Composable () -> Unit)? = null, onClick: () -> Unit) {
+fun Item(text: String, sub: String?, hint: (@Composable () -> Unit)? = null, selected: Boolean? = null, onClick: () -> Unit) {
     val words = Type.ui.copy(lineHeight = 1.35.em)
     Row(
         Modifier
-            .control(CornerSm, onClick = onClick)
+            .control(CornerSm, role = if (selected != null) Role.RadioButton else Role.Button, onClick = onClick)
+            .then(if (selected != null) Modifier.semantics { this.selected = selected } else Modifier)
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,

@@ -42,6 +42,8 @@ object Transcriber {
     var transcript by mutableStateOf<String?>(null)
     /** Its cues, made the first time the Captions view is shown. */
     var cues by mutableStateOf<List<Seg>?>(null)
+    /** A video's frame rate, for times in frames; 0 for audio. */
+    var fps by mutableStateOf(0.0)
 
     val running: Boolean
         get() = step == "loading" || step == "reading" || step == "transcribing"
@@ -65,6 +67,7 @@ object Transcriber {
         transcribed = 0.0
         transcript = null
         cues = null
+        fps = 0.0
     }
 
     /** Back to the start screen, the transcript let go. */

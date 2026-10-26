@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -46,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.roundToInt
 import net.pktito.app.R
@@ -77,9 +79,10 @@ fun stepped(speeds: List<Double>, now: Double, d: Int): Double =
  * speed under it on the times' line, or at work the progress in play's
  * place and size, so that the waveform keeps its width when the transcript
  * finishes; the waveform the rest of the width; under its two ends, the
- * time and the length, and after the time the speaker and its volume. At
- * work the waveform fills to the playhead as the transcript does, and the
- * time's place says the step or the pace.
+ * time, which chooses how times are written, and the length, and after
+ * the time the speaker and its volume. At work the waveform fills to the
+ * playhead as the transcript does, and the time's place says the step or
+ * the pace.
  */
 @Composable
 fun Strip(
@@ -96,6 +99,8 @@ fun Strip(
     onPlay: () -> Unit,
     onSeek: (Double) -> Unit,
     sound: Sound,
+    base: Timebase,
+    onBase: (Timebase) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val p = pk
@@ -146,12 +151,21 @@ fun Strip(
             )
             // the desktop's lane for a search's ticks, 9 dp, which keeps the strip its 116
             Spacer(Modifier.height(9.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(left, style = Tstamp, color = p.termInk, maxLines = 1)
-                if (review) Volume(sound, playable, Modifier.padding(start = 20.dp))
-                Spacer(Modifier.weight(1f))
-                Text(right, style = Tstamp, color = p.termInk, maxLines = 1)
-            }
+            TimesLine(
+                time = {
+                    if (review) Time(left, base, position, onBase)
+                    else Text(left, style = Tstamp, color = p.termInk, maxLines = 1)
+                },
+                speaker = { if (review) Speaker(sound, playable) },
+                slider = {
+                    if (review)
+                        Level(
+                            if (sound.muted) 0.0 else sound.volume, playable, stringResource(R.string.volume_label), sound.setVolume,
+                            Modifier.bleed(vertical = 6.dp).alpha(if (playable) 1f else 0.45f),
+                        )
+                },
+                length = { Text(right, style = Tstamp, color = p.termInk, maxLines = 1) },
+            )
         }
     }
 }
@@ -199,35 +213,126 @@ private fun Speed(sound: Sound, enabled: Boolean) {
 }
 
 /**
- * The speaker and its volume, after the time (app.css, .pk-vol): the
- * speaker mutes, or muted or at none brings the sound back; the slider,
- * moved, is heard at once, and let go, kept. Each 25 dp tall in the times'
- * 13, so that their line stays as tall as at work, where they are hidden.
+ * The time, a button on the times' line as the speed is (app.css,
+ * .pk-timebtn), where the times' format is chosen (app.js, timeMenu):
+ * seconds and hundredths, or frames, each with the time now in it, and
+ * under Frames the rates, a video's own first. A rate picked is a rate to
+ * count in; picked over a video's own, it is the rate for every video.
  */
 @Composable
-private fun Volume(sound: Sound, enabled: Boolean, modifier: Modifier) {
+private fun Time(text: String, base: Timebase, now: Double, onBase: (Timebase) -> Unit) {
+    val p = pk
+    var open by remember { mutableStateOf(false) }
+    val pick = { b: Timebase ->
+        onBase(b)
+        open = false
+    }
+    Box {
+        Text(
+            text,
+            style = Tstamp,
+            color = p.termInk,
+            maxLines = 1,
+            modifier = Modifier
+                .bleed(6.dp, 6.dp)
+                .control(CornerSm, onTerm = true, label = stringResource(R.string.times_tip)) { open = true }
+                .padding(6.dp),
+        )
+        Menu(open, { open = false }, gap = 12.dp, wide = true) {
+            val check = @Composable { Icon(Icons.check, null, tint = p.ink, modifier = Modifier.size(16.dp)) }
+            Item(stringResource(R.string.times_seconds), stamp(now, base.duration), hint = if (!base.frames) check else null, selected = !base.frames) {
+                pick(base.copy(frames = false))
+            }
+            Item(
+                stringResource(R.string.times_frames),
+                stringResource(
+                    if (base.own) R.string.times_frames_at_video else R.string.times_frames_at,
+                    timecode(now, base.rate), rateLabel(base.rate),
+                ),
+                hint = if (base.frames) check else null,
+                selected = base.frames,
+            ) { pick(base.copy(frames = true)) }
+            // the video's own rate, a null among the rates
+            val chips: List<Pair<String, Double?>> =
+                (if (base.video > 0) listOf(stringResource(R.string.times_video_rate, rateLabel(base.video)) to null) else emptyList()) +
+                    RATES.map { rateLabel(it) to it }
+            Rates(
+                chips,
+                { r -> if (r == null) base.own else !base.own && abs(r - base.rate) < 0.001 },
+                stringResource(R.string.times_rates),
+                top = 2.dp,
+            ) { r ->
+                pick(
+                    if (r == null) base.copy(frames = true, videoRate = true)
+                    else base.copy(frames = true, fps = r, videoRate = if (base.video > 0) false else base.videoRate),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The times' line (app.css, .pk-times): the time, the speaker 20 dp after
+ * it and the slider 8 after that, and the length at the end. It keeps what
+ * fits, the times first and 12 dp before the length: the slider gives way
+ * first, as a phone's volume keys stand in for it, then the speaker. At 411
+ * dp a phone had 283 for 292 in frames, and 360 dp or a large font leaves
+ * less; the desktop's window is never under 480.
+ */
+@Composable
+private fun TimesLine(
+    time: @Composable () -> Unit,
+    speaker: @Composable () -> Unit,
+    slider: @Composable () -> Unit,
+    length: @Composable () -> Unit,
+) {
+    // a box each, so that one with nothing in it is there at no size
+    Layout({ Box { time() }; Box { speaker() }; Box { slider() }; Box { length() } }) { m, c ->
+        val (t, s, v, l) = m.map { it.measure(c.copy(minWidth = 0)) }
+        val fits = { w: Int -> w + 12.dp.roundToPx() <= c.maxWidth }
+        val speakerAt = t.width + 20.dp.roundToPx()
+        val sliderAt = speakerAt + s.width + 8.dp.roundToPx()
+        val withSpeaker = s.width > 0 && fits(speakerAt + s.width + l.width)
+        val withSlider = withSpeaker && v.width > 0 && fits(sliderAt + v.width + l.width)
+        val h = maxOf(t.height, s.height, v.height, l.height)
+        layout(c.maxWidth, h) {
+            t.place(0, (h - t.height) / 2)
+            if (withSpeaker) s.place(speakerAt, (h - s.height) / 2)
+            if (withSlider) v.place(sliderAt, (h - v.height) / 2)
+            l.place(c.maxWidth - l.width, (h - l.height) / 2)
+        }
+    }
+}
+
+/**
+ * The speaker, after the time (app.css, .pk-volbtn): it mutes, or muted or
+ * at none brings the sound back. 25 dp tall in the times' 13, as the
+ * slider is, so that their line stays as tall as at work, where they are
+ * hidden.
+ */
+@Composable
+private fun Speaker(sound: Sound, enabled: Boolean) {
     val p = pk
     val v = if (sound.muted) 0.0 else sound.volume
-    Row(modifier.bleed(vertical = 6.dp).alpha(if (enabled) 1f else 0.45f), verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier
-                .control(
-                    CornerSm, onTerm = true, enabled = enabled,
-                    label = stringResource(if (v == 0.0) R.string.volume_unmute else R.string.volume_mute),
-                    onClick = sound.mute,
-                )
-                .padding(start = 6.dp, end = 6.dp, top = 4.dp, bottom = 5.dp),
-        ) {
-            Icon(
-                when {
-                    v == 0.0 -> Icons.volX
-                    v < 0.5 -> Icons.vol1
-                    else -> Icons.vol2
-                },
-                null, tint = p.termInk, modifier = Modifier.size(16.dp),
+    Box(
+        Modifier
+            .bleed(vertical = 6.dp)
+            .alpha(if (enabled) 1f else 0.45f)
+            .control(
+                CornerSm, onTerm = true, enabled = enabled,
+                label = stringResource(if (v == 0.0) R.string.volume_unmute else R.string.volume_mute),
+                onClick = sound.mute,
             )
-        }
-        Level(v, enabled, stringResource(R.string.volume_label), sound.setVolume, Modifier.padding(start = 8.dp))
+            .padding(start = 6.dp, end = 6.dp, top = 4.dp, bottom = 5.dp),
+    ) {
+        Icon(
+            when {
+                v == 0.0 -> Icons.volX
+                v < 0.5 -> Icons.vol1
+                else -> Icons.vol2
+            },
+            null, tint = p.termInk, modifier = Modifier.size(16.dp),
+        )
     }
 }
 

@@ -42,7 +42,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.util.Locale
 import net.pktito.app.R
 import net.pktito.app.Seg
 
@@ -112,6 +111,7 @@ class WorkActions(
     val setCaptions: (Boolean) -> Unit,
     val play: () -> Unit,
     val seek: (seconds: Double, play: Boolean) -> Unit,
+    val setBase: (Timebase) -> Unit,
 )
 
 /** The formats Save as offers, the desktop's, in its order, and the letter that saves one with Ctrl (and Shift). */
@@ -149,9 +149,12 @@ fun Work(
     position: Double,
     list: LazyListState,
     sound: Sound,
+    chosen: Timebase,
     a: WorkActions,
 ) {
     val p = pk
+    // the file's times written with its length's hours
+    val base = chosen.copy(duration = duration)
     val running = step == "loading" || step == "reading" || step == "transcribing"
     val review = step == "done" || step == "stopped"
     Column(Modifier.fillMaxSize()) {
@@ -194,16 +197,18 @@ fun Work(
                 position = position,
                 duration = duration,
                 left = when {
-                    review -> stamp(position)
+                    review -> base.at(position)
                     step == "loading" -> stringResource(R.string.status_loading)
                     step == "reading" -> stringResource(R.string.status_reading)
                     else -> pace ?: ""
                 },
-                right = if (duration > 0) hms(duration) else "",
+                right = if (duration > 0) base.length() else "",
                 playLabel = stringResource(if (playing) R.string.pause else R.string.play),
                 onPlay = a.play,
                 onSeek = { a.seek(it * duration, false) },
                 sound = sound,
+                base = base,
+                onBase = a.setBase,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
         if (review && rows.isNotEmpty())
@@ -227,7 +232,7 @@ fun Work(
                 if (bad) Icon(Icons.alert, null, tint = p.err, modifier = Modifier.size(16.dp))
                 Text(msg, style = Type.body.copy(fontSize = 15.sp), color = if (bad) p.err else p.inkMuted)
             }
-        Rows(rows, review, captions, playing, position, stats, list, a, Modifier.weight(1f))
+        Rows(rows, review, captions, playing, position, stats, base, list, a, Modifier.weight(1f))
     }
 }
 
@@ -277,6 +282,7 @@ private fun Rows(
     playing: Boolean,
     position: Double,
     stats: String?,
+    base: Timebase,
     list: LazyListState,
     a: WorkActions,
     modifier: Modifier,
@@ -290,7 +296,7 @@ private fun Rows(
                 itemsIndexed(rows) { i, s ->
                     val now = i == current
                     val word = if (now && !captions) s.words.indexOfLast { it.start <= position + 1e-3 } else -1
-                    SegRow(s, now, word, wide, captions, review) { a.seek(s.start, true) }
+                    SegRow(s, now, word, wide, captions, review, base) { a.seek(s.start, true) }
                 }
                 if (stats != null)
                     item {
@@ -307,12 +313,12 @@ private fun Rows(
 }
 
 @Composable
-private fun SegRow(s: Seg, now: Boolean, word: Int, wide: Boolean, cue: Boolean, review: Boolean, onTime: () -> Unit) {
+private fun SegRow(s: Seg, now: Boolean, word: Int, wide: Boolean, cue: Boolean, review: Boolean, base: Timebase, onTime: () -> Unit) {
     val p = pk
     val start = @Composable { mod: Modifier ->
         Row(mod) {
             Text(
-                stamp(s.start),
+                base.at(s.start),
                 style = Type.stamp.copy(lineHeight = 20.sp, fontFeatureSettings = "tnum"),
                 color = p.inkMuted,
                 modifier = Modifier
@@ -326,7 +332,7 @@ private fun SegRow(s: Seg, now: Boolean, word: Int, wide: Boolean, cue: Boolean,
         }
     }
     val end = @Composable { mod: Modifier ->
-        Text(stamp(s.end), style = Type.stamp.copy(fontFeatureSettings = "tnum"), color = p.inkMuted, modifier = mod)
+        Text(base.at(s.end), style = Type.stamp.copy(fontFeatureSettings = "tnum"), color = p.inkMuted, modifier = mod)
     }
     // a cue's end under its start, or on a narrow screen beside it
     val time = @Composable { mod: Modifier ->
@@ -392,27 +398,4 @@ private fun wordSpan(s: Seg, word: Int): Pair<Int, Int>? {
         at = k + w.text.trim().length
     }
     return null
-}
-
-// times in ASCII digits whatever the language, as the desktop's are
-private fun two(n: Long) = String.format(Locale.ROOT, "%02d", n)
-
-/** hh:mm:ss.cc, a row's time and the strip's (ui/app.js, stamp). */
-fun stamp(s: Double): String {
-    val cs = Math.round(maxOf(0.0, s) * 100)
-    return hms(cs / 100.0) + "." + two(cs % 100)
-}
-
-/** hh:mm:ss, a length. */
-fun hms(s: Double): String {
-    val t = maxOf(0L, s.toLong())
-    return two(t / 3600) + ":" + two(t / 60 % 60) + ":" + two(t % 60)
-}
-
-/** m:ss, or h:mm:ss from an hour (ui/app.js, clock). */
-fun clock(s: Double): String {
-    val t = maxOf(0L, Math.round(s))
-    val h = t / 3600
-    val m = t / 60 % 60
-    return if (h > 0) "$h:${two(m)}:${two(t % 60)}" else "$m:${two(t % 60)}"
 }

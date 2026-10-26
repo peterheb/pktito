@@ -39,6 +39,13 @@
     <string name="volume_unmute">Unmute</string><!-- volume.unmute -->
     <string name="key_ctrl">Ctrl</string><!-- key.ctrl -->
     <string name="key_shift">Shift</string><!-- key.shift -->
+    <string name="times_tip">Seconds or frames</string><!-- times.tip -->
+    <string name="times_seconds">Seconds</string><!-- times.seconds -->
+    <string name="times_frames">Frames</string><!-- times.frames -->
+    <string name="times_frames_at">%1$s at %2$s fps</string><!-- times.frames_at -->
+    <string name="times_frames_at_video">%1$s at %2$s fps, the video\'s</string><!-- times.frames_at_video -->
+    <string name="times_rates">Frames a second</string><!-- times.rates -->
+    <string name="times_video_rate">Video · %1$s</string><!-- times.video_rate -->
     <string name="status_loading">Loading the model</string>
     <string name="status_reading">Reading the audio</string>
     <string name="status_transcribing">Transcribing %1$d%%</string>

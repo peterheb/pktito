@@ -22,6 +22,7 @@ import java.io.File
 import net.pktito.app.ui.PktitoTheme
 import net.pktito.app.ui.Ready
 import net.pktito.app.ui.Sound
+import net.pktito.app.ui.Timebase
 import net.pktito.app.ui.Work
 import net.pktito.app.ui.WorkActions
 import net.pktito.app.ui.pk
@@ -54,7 +55,7 @@ class Shots {
     private val segments = Transcriber.parse(String(resource("alice-segments.json")))
     private val cues = Transcriber.parseCues(String(resource("alice-cues.json")))
     private val peaks = resource("alice-peaks.bin")
-    private val actions = WorkActions({}, {}, {}, {}, {}, {}, {}, {}, { _, _ -> })
+    private val actions = WorkActions({}, {}, {}, {}, {}, {}, {}, {}, { _, _ -> }, {})
 
     /**
      * The screen, or what act leads to on it (a menu, its own window); with
@@ -62,10 +63,10 @@ class Shots {
      * (its hardKeyboardHidden is the device's, not a resource's).
      */
     private fun shot(
-        name: String, dark: Boolean, wide: Boolean = false, keys: Boolean = false,
+        name: String, dark: Boolean, wide: Boolean = false, keys: Boolean = false, narrow: Boolean = false,
         act: (() -> SemanticsNodeInteraction)? = null, content: @Composable () -> Unit,
     ) {
-        RuntimeEnvironment.setQualifiers(if (wide) "w840dp-h900dp-xhdpi" else "w411dp-h891dp-xxhdpi")
+        RuntimeEnvironment.setQualifiers(if (wide) "w840dp-h900dp-xhdpi" else if (narrow) "w360dp-h780dp-xxhdpi" else "w411dp-h891dp-xxhdpi")
         RuntimeEnvironment.setQualifiers(if (dark) "+night" else "+notnight")
         compose.setContent {
             val c = Configuration(LocalConfiguration.current)
@@ -86,7 +87,7 @@ class Shots {
     @Composable
     private fun work(step: String, done: Double, rows: List<Seg> = segments, captions: Boolean = false,
                      position: Double = 0.0, playing: Boolean = false, error: String? = null,
-                     speed: Double = 1.0, volume: Double = 1.0) =
+                     speed: Double = 1.0, volume: Double = 1.0, base: Timebase = Timebase()) =
         Work(
             name = "wonderland_ch_01.flac", step = step, done = done,
             duration = if (step == "reading" || step == "loading") 0.0 else 640.505,
@@ -96,7 +97,7 @@ class Shots {
             pace = if (step == "transcribing") "57.9x real-time" else null,
             captions = captions, times = false, playable = step == "done", playing = playing,
             position = position, list = rememberLazyListState(),
-            sound = Sound(speed, Player.SPEEDS, volume, false, {}, { _, _ -> }, {}), a = actions,
+            sound = Sound(speed, Player.SPEEDS, volume, false, {}, { _, _ -> }, {}), chosen = base, a = actions,
         )
 
     @Test fun ready() = shot("ready", false) { Ready("English", true) {} }
@@ -127,6 +128,21 @@ class Shots {
     @Test fun saveAsMenuKeys() = shot("save-as", false, keys = true, act = saveAs) { work("done", 1.0) }
     @Test fun saveAsMenuKeysDark() = shot("save-as", true, keys = true, act = saveAs) { work("done", 1.0) }
     @Test fun captions() = shot("captions", false) { work("done", 1.0, cues, captions = true, position = 12.0) }
+    // the time menu as the desktop's stand-in has it (an audio file, 25 fps chosen, at the start),
+    // and a 29.97 video's in frames at its own rate, drop-frame, half a minute in
+    private fun timeMenu(time: String) = {
+        compose.onNodeWithText(time).performClick()
+        compose.onNode(isPopup())
+    }
+    @Test fun timeMenu() = shot("time", false, act = timeMenu("00:00.00")) { work("done", 1.0, base = Timebase(fps = 25.0)) }
+    @Test fun timeMenuDark() = shot("time", true, act = timeMenu("00:00.00")) { work("done", 1.0, base = Timebase(fps = 25.0)) }
+    @Test fun timeMenuVideo() = shot("time-video", false, act = timeMenu("00:00:29;29")) {
+        work("done", 1.0, position = 30.0, base = Timebase(frames = true, video = 29.97))
+    }
+    @Test fun doneFrames() = shot("done-frames", false) { work("done", 1.0, position = 30.0, base = Timebase(frames = true, video = 29.97)) }
+    // a phone at 360 dp: the slider gives way, in seconds and in frames
+    @Test fun doneNarrow() = shot("done-360", false, narrow = true) { work("done", 1.0, position = 30.0) }
+    @Test fun doneNarrowFrames() = shot("done-360-frames", false, narrow = true) { work("done", 1.0, position = 30.0, base = Timebase(frames = true, video = 29.97)) }
     @Test fun error() = shot("error", false) {
         work("error", 0.0, emptyList(), error = "Can't read this file (Android has no decoder for audio/alac)")
     }

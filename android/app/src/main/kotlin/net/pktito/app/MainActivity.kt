@@ -43,6 +43,7 @@ import kotlinx.coroutines.delay
 import net.pktito.app.ui.PktitoTheme
 import net.pktito.app.ui.Ready
 import net.pktito.app.ui.Sound
+import net.pktito.app.ui.Timebase
 import net.pktito.app.ui.Toast
 import net.pktito.app.ui.Work
 import net.pktito.app.ui.WorkActions
@@ -69,6 +70,8 @@ class MainActivity : ComponentActivity() {
     private var times by mutableStateOf(false)
     /** The transcript as its subtitle track's cues, not its sentences. */
     private var captions by mutableStateOf(false)
+    /** The strip's choice of how times are written, the video's own rate aside. */
+    private var base by mutableStateOf(Timebase())
     private var toast by mutableStateOf<String?>(null)
     /** The format being saved while the system's dialog is up. */
     private var saving: String? = null
@@ -78,6 +81,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         times = prefs.getBoolean("times", false)
         captions = prefs.getBoolean("captions", false)
+        base = Timebase(
+            frames = prefs.getBoolean("frames", false),
+            fps = prefs.getFloat("fps", 24f).toDouble(),
+            videoRate = prefs.getBoolean("video_rate", true),
+        )
         Player.restore(prefs.getFloat("speed", 1f).toDouble(), prefs.getFloat("volume", 1f).toDouble())
         saving = savedInstanceState?.getString("saving")
         setContent { PktitoTheme { App() } }
@@ -191,6 +199,7 @@ class MainActivity : ComponentActivity() {
                     playing = Player.playing,
                     position = Player.position,
                     list = list,
+                    chosen = base.copy(video = t.fps),
                     sound = Sound(
                         speed = Player.speed,
                         speeds = Player.SPEEDS,
@@ -223,6 +232,14 @@ class MainActivity : ComponentActivity() {
                         },
                         play = { Player.toggle(this@MainActivity) },
                         seek = { s, play -> Player.seek(this@MainActivity, s, play) },
+                        setBase = {
+                            base = it
+                            prefs.edit()
+                                .putBoolean("frames", it.frames)
+                                .putFloat("fps", it.fps.toFloat())
+                                .putBoolean("video_rate", it.videoRate)
+                                .apply()
+                        },
                     ),
                 )
             toast?.let { Toast(it, Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp)) }
