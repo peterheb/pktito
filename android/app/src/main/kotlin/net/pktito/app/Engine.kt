@@ -4,9 +4,9 @@ package net.pktito.app
  * The engine and the desktop app's Rust core, in libpktito_app.so
  * (native.sh builds it; src-tauri/src/android.rs is this object's other
  * half). A transcript crosses as JSON: its duration, whether it is complete,
- * and its segments, each a sentence with its words and their times; the
- * catalog and a download's state cross as JSON too. What fails comes back
- * as an IOException that says why.
+ * the model that made it, and its segments, each a sentence with its words
+ * and their times; the catalog, a download's state and the recent list
+ * cross as JSON too. What fails comes back as an IOException that says why.
  */
 object Engine {
     init {
@@ -55,10 +55,47 @@ object Engine {
      * json, the desktop's bytes; times puts each sentence's time before it
      * in txt and md.
      */
-    @JvmStatic external fun format(handle: Long, transcript: String, ext: String, name: String, times: Boolean): String
+    @JvmStatic external fun format(transcript: String, ext: String, name: String, times: Boolean): String
 
     /** A transcript's subtitle track, as its .srt has it: JSON, each cue's start and end in ms, and its text. */
-    @JvmStatic external fun captions(handle: Long, transcript: String): String
+    @JvmStatic external fun captions(transcript: String): String
+
+    /**
+     * The recent list in data, the app's no_backup folder, newest first, as
+     * JSON: each transcript's id, the URI it was read from (path), its name,
+     * length (duration), when it finished in seconds since 1970, what it
+     * took, the model and a video's frame rate (the desktop's recent.rs).
+     */
+    @JvmStatic external fun recent(data: String): String
+
+    /**
+     * A finished transcript at the top of the list, in place of an earlier
+     * one of the same file: item, the list's fields, as JSON; transcript,
+     * what transcribe gave; peaks, its loudness. The audio of those let go
+     * goes from audio, the cache's folder, and the rest is held to what the
+     * cache keeps. The list after.
+     */
+    @JvmStatic external fun keep(data: String, audio: String, item: String, transcript: String, peaks: ByteArray): String
+
+    /** A transcript of the list as it is kept: the list's fields, its peaks and its segments, as JSON. */
+    @JvmStatic external fun openRecent(data: String, id: String): String
+
+    /** One transcript off the list, its audio in the cache with it; the file it was made from stays. The list after. */
+    @JvmStatic external fun forget(data: String, audio: String, id: String): String
+
+    /** The list emptied, and its audio. */
+    @JvmStatic external fun clearRecent(data: String, audio: String)
+
+    /** Before anything is transcribed: the audio no transcript on the list needs let go, and the rest held to what the cache keeps. */
+    @JvmStatic external fun prune(data: String, audio: String)
+
+    /**
+     * A transcript's audio read again from its original, open at fd, and
+     * written to wav as transcribe writes it, if its length is still the
+     * transcript's (true); false, and nothing written, where the file has
+     * changed since.
+     */
+    @JvmStatic external fun reread(fd: Int, name: String, wav: String, duration: Double): Boolean
 
     /** The models models.pktito.net serves, as JSON, each as it stands in dir, the app's models folder: downloaded, or the bytes a download kept. */
     @JvmStatic external fun catalog(dir: String): String

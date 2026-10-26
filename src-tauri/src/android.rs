@@ -1,6 +1,7 @@
 //! The Android app's way in (android/, in Kotlin): the models and their
-//! download, the model, a recording's samples, transcribing and the
-//! formats, behind the native methods of net.pktito.app.Engine. Kotlin owns the screen, the files and the service
+//! download, the model, a recording's samples, transcribing, the formats
+//! and the recent list, behind the native methods of
+//! net.pktito.app.Engine. Kotlin owns the screen, the files and the service
 //! that keeps a transcription running; this owns what the desktop's Rust
 //! owns, the same code, so a recording gives the same transcript here as on
 //! every other platform.
@@ -10,11 +11,11 @@
 //! back as an IOException with the reason, and a panic as a
 //! RuntimeException, never across into Java.
 
-use crate::{audio, decode, download, format, model, pktito, transcribe};
+use crate::{audio, decode, download, format, model, pktito, recent, transcribe};
 use jni::errors::ThrowRuntimeExAndDefault;
-use jni::objects::{JClass, JObject, JString, JValue};
+use jni::objects::{JByteArray, JClass, JObject, JString, JValue};
 use jni::strings::JNIString;
-use jni::sys::{jboolean, jint, jlong};
+use jni::sys::{jboolean, jdouble, jint, jlong};
 use jni::{jni_sig, jni_str, Env, EnvUnowned};
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
@@ -31,12 +32,16 @@ struct Loaded {
     model: pktito::Model,
 }
 
-/// A transcript as Kotlin gets it, in JSON, and gives back to format().
+/// A transcript as Kotlin gets it, in JSON, and gives back to format() and
+/// captions(): with the name of the model that made it, whose language its
+/// captions' rules follow (format::cues), as the desktop's window names a
+/// file's own model to its formats; the model loaded since may be another.
 #[derive(Serialize, Deserialize)]
 struct Transcript {
     duration: f64,
     /// false where stop() ended it before the end
     complete: bool,
+    model: String,
     segments: Vec<transcribe::Segment>,
 }
 
@@ -196,6 +201,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
             let t = Transcript {
                 duration,
                 complete,
+                model: l.model.name(),
                 segments,
             };
             let json = serde_json::to_string(&t).unwrap_or_default();
@@ -213,14 +219,13 @@ pub extern "system" fn Java_net_pktito_app_Engine_stop<'a>(
     STOP.store(true, Ordering::Relaxed);
 }
 
-/// Engine.format(handle, transcript, ext, name, times): a Transcript's JSON
-/// as a file of the kind ext names (txt, md, srt, vtt, json), the
-/// desktop's; times puts each sentence's time before it in txt and md.
+/// Engine.format(transcript, ext, name, times): a Transcript's JSON as a
+/// file of the kind ext names (txt, md, srt, vtt, json), the desktop's;
+/// times puts each sentence's time before it in txt and md.
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_net_pktito_app_Engine_format<'a>(
     mut unowned: EnvUnowned<'a>,
     _class: JClass<'a>,
-    handle: jlong,
     transcript: JString<'a>,
     ext: JString<'a>,
     name: JString<'a>,
@@ -228,7 +233,6 @@ pub extern "system" fn Java_net_pktito_app_Engine_format<'a>(
 ) -> JObject<'a> {
     unowned
         .with_env(|env| -> jni::errors::Result<JObject<'a>> {
-            let l = unsafe { &*(handle as *const Loaded) };
             let json = transcript.try_to_string(env)?;
             let ext = ext.try_to_string(env)?;
             let name = name.try_to_string(env)?;
@@ -236,12 +240,11 @@ pub extern "system" fn Java_net_pktito_app_Engine_format<'a>(
                 Ok(t) => t,
                 Err(e) => return throw(env, &e.to_string()).map(|_| JObject::null()),
             };
-            let model = l.model.name();
             let text = format::text(
                 &format::Transcript {
                     name: &name,
                     duration: t.duration,
-                    model: Some(&model),
+                    model: Some(&t.model),
                     segments: &t.segments,
                 },
                 &ext,
@@ -255,30 +258,27 @@ pub extern "system" fn Java_net_pktito_app_Engine_format<'a>(
         .resolve::<ThrowRuntimeExAndDefault>()
 }
 
-/// Engine.captions(handle, transcript): a Transcript's subtitle track, the
-/// cues its .srt and .vtt have (format::cues), as JSON: each cue's start
-/// and end in milliseconds, and its text, a line break where its second
-/// line begins. The Captions view shows them.
+/// Engine.captions(transcript): a Transcript's subtitle track, the cues its
+/// .srt and .vtt have (format::cues), as JSON: each cue's start and end in
+/// milliseconds, and its text, a line break where its second line begins.
+/// The Captions view shows them.
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_net_pktito_app_Engine_captions<'a>(
     mut unowned: EnvUnowned<'a>,
     _class: JClass<'a>,
-    handle: jlong,
     transcript: JString<'a>,
 ) -> JObject<'a> {
     unowned
         .with_env(|env| -> jni::errors::Result<JObject<'a>> {
-            let l = unsafe { &*(handle as *const Loaded) };
             let json = transcript.try_to_string(env)?;
             let t: Transcript = match serde_json::from_str(&json) {
                 Ok(t) => t,
                 Err(e) => return throw(env, &e.to_string()).map(|_| JObject::null()),
             };
-            let model = l.model.name();
             let cues = format::cues(&format::Transcript {
                 name: "",
                 duration: t.duration,
-                model: Some(&model),
+                model: Some(&t.model),
                 segments: &t.segments,
             });
             match cues {
@@ -286,6 +286,219 @@ pub extern "system" fn Java_net_pktito_app_Engine_captions<'a>(
                     .new_string(serde_json::to_string(&c).unwrap_or_default())?
                     .into()),
                 Err(why) => throw(env, &why).map(|_| JObject::null()),
+            }
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// The recent list's ids, newest first, which the audio cache keeps.
+fn kept(data: &Path) -> Vec<String> {
+    recent::list(data).into_iter().map(|i| i.id).collect()
+}
+
+/// The recent list as recent() gives it.
+fn listed<'a>(env: &mut Env<'a>, data: &Path) -> jni::errors::Result<JObject<'a>> {
+    let items = recent::list(data);
+    Ok(env
+        .new_string(serde_json::to_string(&items).unwrap_or_default())?
+        .into())
+}
+
+/// Engine.recent(data): the recent list (recent.rs), newest first, as JSON:
+/// each transcript's id, the content URI it was read from (its path), its
+/// name, length, when it finished, what it took, the model that made it
+/// and a video's frame rate. data is the app's no_backup folder, which
+/// Android leaves out of backups and transfers to a new phone, as it does
+/// the models there.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_recent<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    data: JString<'a>,
+) -> JObject<'a> {
+    unowned
+        .with_env(|env| -> jni::errors::Result<JObject<'a>> {
+            let data = PathBuf::from(data.try_to_string(env)?);
+            listed(env, &data)
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.keep(data, audio, item, transcript, peaks): a finished transcript
+/// at the top of the recent list, in place of an earlier one of the same
+/// file, as the desktop's window keeps each (main.rs, job): item is
+/// recent.rs's Item, as JSON, transcript what transcribe() gave, and peaks
+/// its loudness. The audio of the transcripts let go goes from audio, the
+/// cache's folder, and the rest is held to what the cache keeps
+/// (audio::cap). The list after, as recent() gives it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_keep<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    data: JString<'a>,
+    audio: JString<'a>,
+    item: JString<'a>,
+    transcript: JString<'a>,
+    peaks: JByteArray<'a>,
+) -> JObject<'a> {
+    unowned
+        .with_env(|env| -> jni::errors::Result<JObject<'a>> {
+            let data = PathBuf::from(data.try_to_string(env)?);
+            let dir = PathBuf::from(audio.try_to_string(env)?);
+            let item = item.try_to_string(env)?;
+            let json = transcript.try_to_string(env)?;
+            let peaks = env.convert_byte_array(&peaks)?;
+            let parsed = serde_json::from_str::<recent::Item>(&item)
+                .and_then(|item| Ok((item, serde_json::from_str::<Transcript>(&json)?)));
+            let (item, t) = match parsed {
+                Ok(p) => p,
+                Err(e) => return throw(env, &e.to_string()).map(|_| JObject::null()),
+            };
+            let t = recent::Transcript {
+                item,
+                peaks,
+                segments: t.segments,
+            };
+            match recent::add(&data, &t) {
+                Ok(gone) => {
+                    for g in &gone {
+                        let _ = fs::remove_file(audio::wav_in(&dir, g));
+                    }
+                    audio::cap(&dir, &kept(&data));
+                }
+                Err(why) => return throw(env, &why).map(|_| JObject::null()),
+            }
+            listed(env, &data)
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.openRecent(data, id): a transcript of the recent list as recent.rs
+/// keeps it, in JSON: its Item's fields, its loudness (peaks) and its
+/// segments.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_openRecent<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    data: JString<'a>,
+    id: JString<'a>,
+) -> JObject<'a> {
+    unowned
+        .with_env(|env| -> jni::errors::Result<JObject<'a>> {
+            let data = PathBuf::from(data.try_to_string(env)?);
+            let id = id.try_to_string(env)?;
+            match recent::load(&data, &id) {
+                Ok(t) => Ok(env
+                    .new_string(serde_json::to_string(&t).unwrap_or_default())?
+                    .into()),
+                Err(p) => throw(env, &p.line()).map(|_| JObject::null()),
+            }
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.forget(data, audio, id): one transcript off the recent list, with
+/// its audio in the cache; the file it was made from is not touched. The
+/// list after.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_forget<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    data: JString<'a>,
+    audio: JString<'a>,
+    id: JString<'a>,
+) -> JObject<'a> {
+    unowned
+        .with_env(|env| -> jni::errors::Result<JObject<'a>> {
+            let data = PathBuf::from(data.try_to_string(env)?);
+            let dir = PathBuf::from(audio.try_to_string(env)?);
+            let id = id.try_to_string(env)?;
+            if let Err(why) = recent::remove(&data, &id) {
+                return throw(env, &why).map(|_| JObject::null());
+            }
+            let _ = fs::remove_file(audio::wav_in(&dir, &id));
+            listed(env, &data)
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.clearRecent(data, audio): the recent list emptied, its audio with
+/// it, once the person says so: the screen asks first, as the desktop's
+/// window does.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_clearRecent<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    data: JString<'a>,
+    audio: JString<'a>,
+) {
+    unowned
+        .with_env(|env| -> jni::errors::Result<()> {
+            let data = PathBuf::from(data.try_to_string(env)?);
+            let dir = PathBuf::from(audio.try_to_string(env)?);
+            for id in kept(&data) {
+                let _ = fs::remove_file(audio::wav_in(&dir, &id));
+            }
+            recent::clear(&data);
+            Ok(())
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.prune(data, audio): once a process, before anything is
+/// transcribed, the audio in the cache that no transcript on the list needs
+/// let go, and the rest held to what the cache keeps, as the desktop's
+/// window does before it opens (audio::prune).
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_prune<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    data: JString<'a>,
+    audio: JString<'a>,
+) {
+    unowned
+        .with_env(|env| -> jni::errors::Result<()> {
+            let data = PathBuf::from(data.try_to_string(env)?);
+            let dir = PathBuf::from(audio.try_to_string(env)?);
+            audio::prune(&dir, &kept(&data));
+            Ok(())
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.reread(fd, name, wav, duration): a recent transcript's audio read
+/// again from its original, open at fd, once the cache has let it go (the
+/// desktop's reload_audio), and written to wav as transcribe() writes it,
+/// if it is the recording transcribed: true. false, and nothing written,
+/// where its length is not the transcript's, within 0.1 s, two of an
+/// encoder's frames; a file edited since is longer or shorter by more.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_reread<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    fd: jint,
+    name: JString<'a>,
+    wav: JString<'a>,
+    duration: jdouble,
+) -> jboolean {
+    unowned
+        .with_env(|env| -> jni::errors::Result<jboolean> {
+            let name = name.try_to_string(env)?;
+            let wav = PathBuf::from(wav.try_to_string(env)?);
+            let x = match decode::decode_fd(fd, &name) {
+                Ok(x) => x,
+                Err(e) => return throw(env, &e.message()).map(|_| false),
+            };
+            if (x.len() as f64 / decode::RATE as f64 - duration).abs() > 0.1 {
+                return Ok(false);
+            }
+            let (Some(dir), Some(id)) = (wav.parent(), wav.file_stem().and_then(|s| s.to_str()))
+            else {
+                return throw(env, &format!("{}: not a WAV's path", wav.display())).map(|_| false);
+            };
+            match audio::save(dir, id, &x, decode::RATE as u32) {
+                Ok(_) => Ok(true),
+                Err(e) => throw(env, &e.to_string()).map(|_| false),
             }
         })
         .resolve::<ThrowRuntimeExAndDefault>()

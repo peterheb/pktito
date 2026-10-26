@@ -41,11 +41,14 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.IntentCompat
 import androidx.core.os.BundleCompat
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import net.pktito.app.ui.About
 import net.pktito.app.ui.ModelButton
 import net.pktito.app.ui.PktitoTheme
 import net.pktito.app.ui.Ready
+import net.pktito.app.ui.ReadyActions
 import net.pktito.app.ui.Setup
 import net.pktito.app.ui.SetupActions
 import net.pktito.app.ui.Sound
@@ -60,14 +63,17 @@ import net.pktito.app.ui.stepped
 /**
  * The screen, the desktop window's: choose a speech model and download it,
  * open a recording, watch its transcript come, play it, and copy, share or
- * save it. The system's pickers grant the one document picked and the one
- * saved, as Open with and Share grant theirs, so the app asks for no
- * access to files; the work is TranscribeService's, and a download's
- * Downloads'.
+ * save it, and open it again from the recent list. The system's pickers
+ * grant the one document picked and the one saved, as Open with and Share
+ * grant theirs, so the app asks for no access to files; the work is
+ * TranscribeService's, and a download's Downloads'.
  */
 class MainActivity : ComponentActivity() {
     private val open = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) start(uri)
+        if (uri != null) {
+            Recents.hold(this, uri)
+            start(uri)
+        }
     }
     private val notify = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
     // a .pkf has no type of its own to ask for
@@ -111,6 +117,12 @@ class MainActivity : ComponentActivity() {
         about = savedInstanceState?.getBoolean("about") ?: false
         waiting = savedInstanceState?.let { BundleCompat.getParcelable(it, "waiting", Uri::class.java) }
         Models.refresh(this)
+        Recents.refresh(this)
+        Recents.prune(this)
+        // a transcript of the list that was on the screen when Android let the
+        // process go, in the background, is there again
+        val shown = savedInstanceState?.getString("recent")
+        if (shown != null && Transcriber.step.isEmpty() && Recents.items.any { it.id == shown }) openRecent(shown)
         setContent { PktitoTheme { App() } }
         if (savedInstanceState == null) opened(intent)
     }
@@ -132,6 +144,7 @@ class MainActivity : ComponentActivity() {
             else -> null
         }
         if (uri == null || Transcriber.running) return
+        Recents.hold(this, uri)
         if (setup()) {
             waiting = uri
             about = false
@@ -146,6 +159,8 @@ class MainActivity : ComponentActivity() {
         outState.putString("saving", saving)
         outState.putBoolean("about", about)
         outState.putParcelable("waiting", waiting)
+        val t = Transcriber
+        if (t.step == "done" && Recents.items.any { it.id == t.id }) outState.putString("recent", t.id)
     }
 
     // the transcript's audio stops with the screen, but not for a turn or a
@@ -162,10 +177,21 @@ class MainActivity : ComponentActivity() {
         val review = t.step == "done" || t.step == "stopped"
         val rows = if (captions && review) t.cues ?: emptyList() else t.segments
 
-        // the finished transcript's audio, ready to play; another file's let go
-        LaunchedEffect(t.step) {
-            if (review) Player.load(this@MainActivity, Transcriber.wav(this@MainActivity))
-            else Player.release(this@MainActivity)
+        // the finished transcript's audio, ready to play; another file's let
+        // go. One of the list's whose audio the cache let go reads its
+        // original again first (app.js, reloadAudio), the play button dimmed
+        // and the line under the views saying why until it can
+        LaunchedEffect(t.step, t.id) {
+            if (!review) return@LaunchedEffect Player.release(this@MainActivity)
+            val wav = Transcriber.wav(this@MainActivity)
+            val uri = t.uri
+            if (!wav.isFile && t.reopened && uri != null) {
+                Player.release(this@MainActivity)
+                t.why = getString(R.string.play_reading)
+                val (id, name, duration) = Triple(t.id, t.name, t.duration)
+                t.why = withContext(Dispatchers.IO) { Recents.reread(this@MainActivity, id, uri, name, duration) }
+            }
+            Player.load(this@MainActivity, wav)
         }
         // where playback has got to, each frame while it plays
         LaunchedEffect(Player.playing) {
@@ -178,7 +204,7 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(captions, t.transcript) {
             val tr = t.transcript
             if (captions && tr != null && t.cues == null)
-                t.cues = runCatching { Transcriber.parseCues(Engine.captions(Transcriber.engine, tr)) }
+                t.cues = runCatching { Transcriber.parseCues(Engine.captions(tr)) }
                     .onFailure { Log.w(TAG, "captions", it) }
                     .getOrDefault(emptyList())
         }
@@ -251,7 +277,16 @@ class MainActivity : ComponentActivity() {
                     ),
                 )
             else if (t.step.isEmpty())
-                Ready(onChoose = { open.launch(MEDIA) }, onAbout = { about = true }) {
+                Ready(
+                    Recents.items,
+                    ReadyActions(
+                        choose = { open.launch(MEDIA) },
+                        about = { about = true },
+                        open = ::openRecent,
+                        forget = { Recents.forget(this@MainActivity, it) },
+                        clear = { Recents.clear(this@MainActivity) },
+                    ),
+                ) {
                     ModelButton(
                         Models.offers, Models.model, Models.own?.name,
                         onPick = { o ->
@@ -274,6 +309,7 @@ class MainActivity : ComponentActivity() {
                     peaks = t.peaks,
                     rows = rows,
                     error = t.error,
+                    why = t.why,
                     stats = if (review && t.segments.isNotEmpty() && t.transcribed > 0)
                         getString(R.string.stats_transcribed, clock(t.transcribed), pace(t.done * t.duration, t.transcribed))
                     else null,
@@ -432,13 +468,29 @@ class MainActivity : ComponentActivity() {
 
     private fun back() {
         Player.release(this)
+        // the audio of a transcript that is not on the list, stopped or
+        // failed, goes with it
+        val id = Transcriber.id
+        if (id.isNotEmpty() && Recents.items.none { it.id == id }) Transcriber.wav(this).delete()
         Transcriber.clear()
+    }
+
+    /** A transcript of the recent list on the screen again (app.js, openRecent); one that cannot be read, said so. */
+    private fun openRecent(id: String) {
+        try {
+            Transcriber.reopen(id, Recents.load(this, id))
+        } catch (e: Exception) {
+            Log.w(TAG, "opening $id", e)
+            Transcriber.clear()
+            toast = getString(R.string.recent_unreadable)
+            Recents.refresh(this)
+        }
     }
 
     /** The transcript in a format, the desktop's bytes for it. */
     private fun text(ext: String, times: Boolean): String? {
         val tr = Transcriber.transcript ?: return null
-        return Engine.format(Transcriber.engine, tr, ext, Transcriber.name, times)
+        return Engine.format(tr, ext, Transcriber.name, times)
     }
 
     /** Its text, or as captions its subtitles, on the clipboard, as the desktop's Copy. */

@@ -1,8 +1,11 @@
 package net.pktito.app.ui
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -10,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -24,47 +28,88 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import net.pktito.app.R
+import net.pktito.app.Recents
 import net.pktito.app.Seg
+
+/** What the start screen does with what it is asked: choose a file, About, and the recent list's open, forget and clear, by a transcript's id. */
+class ReadyActions(
+    val choose: () -> Unit,
+    val about: () -> Unit,
+    val open: (id: String) -> Unit,
+    val forget: (id: String) -> Unit,
+    val clear: () -> Unit,
+)
 
 /**
  * The start screen (ui/index.html, #ready): the wordmark and the model in
  * use, its menu (ModelButton), on the column's top edge, and under them the
  * prompt and its button in a dashed zone, as the desktop's drop zone,
  * which says where a file goes. A phone has nothing to drop, so the zone
- * says what it is for. The wordmark opens About.
+ * says what it is for. The wordmark opens About. With transcripts on the
+ * recent list, the column is the screen's height and the list takes what
+ * is left under the zone (app.css, .has-recent); without, the column is in
+ * the middle.
  */
 @Composable
-fun Ready(onChoose: () -> Unit, onAbout: () -> Unit, model: @Composable () -> Unit) {
+fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> Unit) {
     val p = pk
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    var asking by remember { mutableStateOf(false) }
+    val listed = recent.isNotEmpty()
+    Box(Modifier.fillMaxSize(), contentAlignment = if (listed) Alignment.TopCenter else Alignment.Center) {
         Column(
             Modifier
                 .widthIn(max = 640.dp)
                 .fillMaxWidth()
+                .then(if (listed) Modifier.fillMaxHeight() else Modifier)
                 .padding(horizontal = 20.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                WordmarkButton(onAbout)
+                WordmarkButton(a.about)
                 Spacer(Modifier.weight(1f))
                 model()
             }
@@ -92,10 +137,209 @@ fun Ready(onChoose: () -> Unit, onAbout: () -> Unit, model: @Composable () -> Un
                     color = p.ink,
                     textAlign = TextAlign.Center,
                 )
-                PkButton(stringResource(R.string.choose), onChoose, kind = Kind.Primary, large = true)
+                PkButton(stringResource(R.string.choose), a.choose, kind = Kind.Primary, large = true)
+            }
+            if (listed) Recent(recent, a, onClear = { asking = true }, Modifier.weight(1f))
+        }
+    }
+    if (asking)
+        AskClear(
+            onClear = {
+                asking = false
+                a.clear()
+            },
+            onCancel = { asking = false },
+        )
+}
+
+/**
+ * The recent list (app.css, .pk-recent): its heading and Clear, which asks
+ * first, then each transcript, newest first, opened by a tap; taken off the
+ * list by a long press's menu, by the × over its date under a mouse, or by
+ * Delete from the keyboard, which goes on to the row that takes its place
+ * (app.js, renderReady and forget). Each row is a line where the list is
+ * 440 dp wide, the desktop's narrowest window's (480 less its margins),
+ * which leaves a name 250; on a phone, narrower, its length and date go
+ * under its name, which keeps the width.
+ */
+@Composable
+private fun Recent(items: List<Recents.Item>, a: ReadyActions, onClear: () -> Unit, modifier: Modifier) {
+    val p = pk
+    val rows = remember { mutableMapOf<String, FocusRequester>() }
+    val now by rememberUpdatedState(items)
+    var refocus by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(refocus) {
+        val i = refocus ?: return@LaunchedEffect
+        // a frame, for the list to lay out the row that took its place
+        withFrameNanos { }
+        now.getOrNull(minOf(i, now.size - 1))?.let { runCatching { rows[it.id]?.requestFocus() } }
+        refocus = null
+    }
+    Column(modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(R.string.recent_title), style = Type.ui, color = p.ink, modifier = Modifier.weight(1f))
+            // the list's one action, a ghost button as small as the heading,
+            // its padding outside it so that its word ends over the dates,
+            // in their grey (app.css, #clear-recent)
+            Text(
+                stringResource(R.string.recent_clear),
+                style = Type.ui.copy(fontSize = 13.sp),
+                color = p.inkMuted,
+                modifier = Modifier
+                    .bleed(8.dp, 11.dp)
+                    .control(Corner, label = stringResource(R.string.recent_clear_label), onClick = onClear)
+                    .padding(horizontal = 8.dp, vertical = 11.dp),
+            )
+        }
+        BoxWithConstraints(Modifier.weight(1f)) {
+            val oneLine = maxWidth >= 440.dp
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                itemsIndexed(items, key = { _, r -> r.id }) { i, r ->
+                    val focus = remember { FocusRequester() }
+                    DisposableEffect(r.id) {
+                        rows[r.id] = focus
+                        onDispose { rows.remove(r.id) }
+                    }
+                    RecentRow(
+                        r, oneLine, focus,
+                        onOpen = { a.open(r.id) },
+                        onForget = { keys ->
+                            if (keys) refocus = i
+                            a.forget(r.id)
+                        },
+                    )
+                }
             }
         }
     }
+}
+
+/** A recent row's name (app.css, .pk-row .pk-name). */
+private val rowName = Type.ui.copy(lineHeight = 1.3.em)
+
+/** onForget: true from the keyboard, which then goes on to the next row. */
+@Composable
+private fun RecentRow(r: Recents.Item, oneLine: Boolean, focus: FocusRequester, onOpen: () -> Unit, onForget: (keys: Boolean) -> Unit) {
+    val p = pk
+    var menu by remember { mutableStateOf(false) }
+    val hover = remember { MutableInteractionSource() }
+    val hovered by hover.collectIsHoveredAsState()
+    val remove = stringResource(R.string.recent_remove, r.name)
+    val length = hms(r.duration, r.duration)
+    val date = whenDone(r.finished)
+    val stamp = Type.stamp.copy(fontFeatureSettings = "tnum")
+    // the row's hover is its box's, which holds the × too: on the × the row
+    // would lose it, and the × with it
+    Box(Modifier.fillMaxWidth().hoverable(hover)) {
+        Row(
+            Modifier
+                .focusRequester(focus)
+                .control(Corner, onLongClick = { menu = true }, onClick = onOpen)
+                .onKeyEvent { e ->
+                    val del = e.type == KeyEventType.KeyDown && (e.key == Key.Delete || e.key == Key.Backspace)
+                    if (del) onForget(true)
+                    del
+                }
+                .semantics { customActions = listOf(CustomAccessibilityAction(remove) { onForget(false); true }) }
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(Icons.file, null, tint = p.ink, modifier = Modifier.size(16.dp))
+            if (oneLine) {
+                Text(r.name, style = rowName, color = p.ink, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(length, style = stamp, color = p.inkMuted, maxLines = 1)
+                Text(
+                    date, style = Type.small, color = p.inkMuted, maxLines = 1, textAlign = TextAlign.End,
+                    // the desktop's 72, and as much more as a date of another year needs
+                    modifier = Modifier.widthIn(min = 72.dp).alpha(if (hovered) 0f else 1f),
+                )
+            } else
+                Column(Modifier.weight(1f)) {
+                    Text(r.name, style = rowName, color = p.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Row {
+                        Text(length, style = stamp, color = p.inkMuted, maxLines = 1, modifier = Modifier.alignByBaseline())
+                        Text(" · $date", style = Type.small, color = p.inkMuted, maxLines = 1, modifier = Modifier.alignByBaseline())
+                    }
+                }
+        }
+        // its × over its date under a mouse, as the desktop's (app.css,
+        // .pk-x), out of the keys' way: Delete is theirs
+        if (hovered)
+            Box(
+                Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 6.dp)
+                    .size(32.dp)
+                    .focusProperties { canFocus = false }
+                    .control(CornerSm, label = remove, onClick = { onForget(false) }),
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.x, null, tint = p.inkMuted, modifier = Modifier.size(16.dp)) }
+        Menu(menu, { menu = false }) {
+            Item(stringResource(R.string.recent_remove_item), null, note = AnnotatedString(stringResource(R.string.recent_remove_note))) {
+                menu = false
+                onForget(false)
+            }
+        }
+    }
+}
+
+/** When a transcript finished, as the desktop's list says it: Today, Yesterday, else the date, its year if not this one's (app.js, when). */
+@Composable
+private fun whenDone(secs: Long): String {
+    val today = LocalDate.now()
+    val day = Instant.ofEpochSecond(secs).atZone(ZoneId.systemDefault()).toLocalDate()
+    return when (ChronoUnit.DAYS.between(day, today)) {
+        0L -> stringResource(R.string.date_today)
+        1L -> stringResource(R.string.date_yesterday)
+        else -> {
+            val locale = LocalConfiguration.current.locales[0]
+            val skeleton = if (day.year == today.year) "MMMd" else "yMMMd"
+            DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale).format(day)
+        }
+    }
+}
+
+/**
+ * Clearing the list asks first, as the desktop's window does (app.js,
+ * askClear): what it does, then Clear, in the error's red, and Cancel, the
+ * one the question is for. Back, Esc and a tap beside it are Cancel; with
+ * keys, Cancel has the focus, so that Enter does not clear the list.
+ */
+@Composable
+private fun AskClear(onClear: () -> Unit, onCancel: () -> Unit) {
+    val p = pk
+    val cancel = remember { FocusRequester() }
+    val keys = hasKeys()
+    Modal(onCancel) {
+        Column(
+            Modifier
+                .widthIn(max = 400.dp)
+                .fillMaxWidth()
+                .floating()
+                .padding(24.dp),
+        ) {
+            Text(stringResource(R.string.ask_clear_title), style = Type.ui, color = p.ink)
+            Text(stringResource(R.string.ask_clear_text), style = Type.ui.copy(fontWeight = FontWeight.W400), color = p.ink, modifier = Modifier.padding(top = 8.dp))
+            Row(
+                Modifier.fillMaxWidth().padding(top = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            ) {
+                PkButton(stringResource(R.string.ask_clear), onClear, Modifier.widthIn(min = 80.dp), kind = Kind.Del)
+                PkButton(stringResource(R.string.ask_cancel), onCancel, Modifier.widthIn(min = 80.dp).focusRequester(cancel), kind = Kind.Primary)
+            }
+        }
+    }
+    if (keys)
+        LaunchedEffect(Unit) {
+            withFrameNanos { }
+            runCatching { cancel.requestFocus() }
+        }
 }
 
 /** The wordmark as each screen's way to About, its padding outside it so that the word stays where it is (app.css, button.pk-wm). */
@@ -149,6 +393,7 @@ fun Work(
     peaks: ByteArray?,
     rows: List<Seg>,
     error: String?,
+    why: String?,
     stats: String?,
     pace: String?,
     captions: Boolean,
@@ -229,6 +474,9 @@ fun Work(
             error != null -> error
             step == "stopped" -> stringResource(R.string.status_stopped_at, (done * 100).toInt())
             step == "done" && rows.isEmpty() -> stringResource(R.string.no_speech)
+            // why the audio does not play, or not yet: a transcript of the list
+            // reading its original again
+            review && why != null -> why
             else -> null
         }
         if (msg != null)

@@ -2,6 +2,7 @@ package net.pktito.app
 
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,7 +14,9 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isPopup
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -21,11 +24,13 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import java.io.File
 import net.pktito.app.ui.About
 import net.pktito.app.ui.ModelButton
 import net.pktito.app.ui.PktitoTheme
 import net.pktito.app.ui.Ready
+import net.pktito.app.ui.ReadyActions
 import net.pktito.app.ui.Setup
 import net.pktito.app.ui.SetupActions
 import net.pktito.app.ui.Sound
@@ -111,7 +116,7 @@ class Shots {
             name = "wonderland_ch_01.flac", step = step, done = done,
             duration = if (step == "reading" || step == "loading") 0.0 else 640.505,
             peaks = if (step == "reading" || step == "loading") null else peaks,
-            rows = rows, error = error,
+            rows = rows, error = error, why = null,
             stats = if (step == "done") "Transcribed in 0:11, 58.2x real-time" else null,
             pace = if (step == "transcribing") "57.9x real-time" else null,
             captions = captions, times = false, playable = step == "done", playing = playing,
@@ -132,14 +137,42 @@ class Shots {
         ),
     )
     private val models = @Composable { ModelButton(offers(have = true), "parakeet-tdt-0.6b-v2", null, {}, {}) }
-    @Test fun ready() = shot("ready", false) { Ready({}, {}, models) }
-    @Test fun readyDark() = shot("ready", true) { Ready({}, {}, models) }
+    private val readyActions = ReadyActions({}, {}, {}, {}, {})
+    // the recent list: today's, yesterday's, this year's and last year's,
+    // an hour long and minutes, a name that fits and two that do not
+    private val day = 86_400L
+    private val now = System.currentTimeMillis() / 1000
+    private val recent = listOf(
+        Recents.Item("5", Uri.parse("content://x/5"), "wonderland_ch_01.flac", 640.505, now),
+        Recents.Item("4", Uri.parse("content://x/4"), "Interview with Dr. Ramirez, part 2.m4a", 3725.0, now - day),
+        Recents.Item("3", Uri.parse("content://x/3"), "Recording 2026-10-24 14-32-11.m4a", 312.4, now - 2 * day),
+        Recents.Item("2", Uri.parse("content://x/2"), "Team standup.mp4", 905.0, now - 6 * day),
+        Recents.Item("1", Uri.parse("content://x/1"), "Lecture 7, Thermodynamics.mp3", 4810.0, now - 400 * day),
+    )
+    @Test fun ready() = shot("ready", false) { Ready(emptyList(), readyActions, models) }
+    @Test fun readyDark() = shot("ready", true) { Ready(emptyList(), readyActions, models) }
+    @Test fun readyRecent() = shot("ready-recent", false) { Ready(recent, readyActions, models) }
+    @Test fun readyRecentDark() = shot("ready-recent", true) { Ready(recent, readyActions, models) }
+    @Test fun readyRecentNarrow() = shot("ready-recent-360", false, narrow = true) { Ready(recent, readyActions, models) }
+    @Test fun readyRecentWindow() = shot("ready-recent", false, window = true) { Ready(recent, readyActions, models) }
+    @Test fun readyRecentLand() = shot("ready-recent", false, land = true) { Ready(recent, readyActions, models) }
+    private val removeMenu = {
+        compose.onNodeWithText("Team standup.mp4").performTouchInput { longClick() }
+        compose.onRoot()
+    }
+    @Test fun recentMenu() = shot("recent-menu", false, act = removeMenu) { Ready(recent, readyActions, models) }
+    private val askClear = {
+        compose.onNodeWithText("Clear").performClick()
+        compose.onNode(isDialog())
+    }
+    @Test fun recentClear() = shot("recent-clear", false, act = askClear) { Ready(recent, readyActions, models) }
+    @Test fun recentClearDark() = shot("recent-clear", true, act = askClear) { Ready(recent, readyActions, models) }
     private val modelMenu = {
         compose.onNodeWithText("English model").performClick()
         compose.onNode(isPopup())
     }
-    @Test fun modelMenu() = shot("models", false, act = modelMenu) { Ready({}, {}, models) }
-    @Test fun modelMenuDark() = shot("models", true, act = modelMenu) { Ready({}, {}, models) }
+    @Test fun modelMenu() = shot("models", false, act = modelMenu) { Ready(emptyList(), readyActions, models) }
+    @Test fun modelMenuDark() = shot("models", true, act = modelMenu) { Ready(emptyList(), readyActions, models) }
 
     // the setup screen in each of its modes, a download a third of the way, as the desktop's stand-in has it
     private val setupActions = SetupActions({}, {}, {}, {}, {}, {}, {}, {})

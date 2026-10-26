@@ -1,15 +1,16 @@
 package net.pktito.app
 
 import android.content.Context
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import java.io.File
 import java.io.IOException
 import org.json.JSONArray
+import org.json.JSONObject
 
 /** A word of a transcript, its times in seconds. */
 class Word(val text: String, val start: Double, val end: Double)
@@ -20,11 +21,16 @@ class Seg(val start: Double, val end: Double, val text: String, val words: List<
 /**
  * The one transcription at a time, as the screen shows it, in the steps the
  * desktop's window names: loading (the model), reading (the audio),
- * transcribing, then done, stopped or error. TranscribeService's thread
- * tells it through post, so that the state only changes on the main
- * thread, where the screen reads it.
+ * transcribing, then done, stopped or error; or a transcript of the recent
+ * list, opened again, done. TranscribeService's thread tells it through
+ * post, so that the state only changes on the main thread, where the
+ * screen reads it.
  */
 object Transcriber {
+    /** Its place on the recent list, and its audio's name in the cache: the time it began, in ms (recent.rs, new_id). */
+    var id by mutableStateOf("")
+    /** The recording it reads, as its picker gave it. */
+    var uri: Uri? = null
     var name by mutableStateOf("")
     var step by mutableStateOf("")
     /** The fraction of the audio transcribed. */
@@ -44,6 +50,10 @@ object Transcriber {
     var cues by mutableStateOf<List<Seg>?>(null)
     /** A video's frame rate, for times in frames; 0 for audio. */
     var fps by mutableStateOf(0.0)
+    /** Opened from the recent list, not transcribed in this run. */
+    var reopened by mutableStateOf(false)
+    /** Why its audio does not play, or not yet: read again from its original (app.js, audioWhy). */
+    var why by mutableStateOf<String?>(null)
 
     val running: Boolean
         get() = step == "loading" || step == "reading" || step == "transcribing"
@@ -58,7 +68,9 @@ object Transcriber {
         main.post { block() }
     }
 
-    fun begin(name: String) {
+    fun begin(name: String, uri: Uri?) {
+        id = if (uri == null) "" else System.currentTimeMillis().toString()
+        this.uri = uri
         this.name = name
         step = "reading"
         done = 0.0
@@ -70,17 +82,48 @@ object Transcriber {
         transcript = null
         cues = null
         fps = 0.0
+        reopened = false
+        why = null
     }
 
     /** Back to the start screen, the transcript let go. */
     fun clear() {
-        begin("")
+        begin("", null)
         step = ""
     }
 
+    /**
+     * A transcript of the recent list (Recents.load's JSON) on the screen
+     * again, as it was when it finished (app.js, openRecent); its audio is
+     * the cache's, or its original's, read again.
+     */
+    fun reopen(id: String, json: String) {
+        val o = JSONObject(json)
+        val segs = o.getJSONArray("segments")
+        val loud = o.getJSONArray("peaks")
+        begin(o.getString("name"), Uri.parse(o.getString("path")))
+        this.id = id
+        duration = o.getDouble("duration")
+        fps = o.optDouble("fps", 0.0)
+        peaks = ByteArray(loud.length()) { loud.getInt(it).toByte() }
+        segments.addAll(parse(segs))
+        transcribed = o.optDouble("transcribed", 0.0)
+        // what Engine.format and Engine.captions take, as Engine.transcribe gave it
+        transcript = JSONObject()
+            .put("duration", duration)
+            .put("complete", true)
+            .put("model", o.getString("model"))
+            .put("segments", segs)
+            .toString()
+        done = 1.0
+        reopened = true
+        step = "done"
+    }
+
     /** The segments of Engine.transcribe's JSON. */
-    fun parse(json: String): List<Seg> {
-        val a = JSONArray(json)
+    fun parse(json: String): List<Seg> = parse(JSONArray(json))
+
+    private fun parse(a: JSONArray): List<Seg> {
         return (0 until a.length()).map { i ->
             val s = a.getJSONObject(i)
             val w = s.getJSONArray("words")
@@ -103,8 +146,8 @@ object Transcriber {
         }
     }
 
-    /** Where Engine.transcribe writes the audio it heard, to play the transcript back by. */
-    fun wav(context: Context) = File(context.cacheDir, "audio/playing.wav")
+    /** Where Engine.transcribe writes the audio it heard, to play the transcript back by: the cache's, at its id. */
+    fun wav(context: Context) = Recents.wav(context, id)
 
     /** Whether the model in use is the one loaded. */
     @Synchronized
@@ -128,8 +171,4 @@ object Transcriber {
         }
         return handle
     }
-
-    /** The model that made the transcript on the screen, for Engine.format and Engine.captions, which take its name. */
-    val engine: Long
-        @Synchronized get() = handle
 }

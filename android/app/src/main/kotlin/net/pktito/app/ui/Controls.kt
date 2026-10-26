@@ -11,6 +11,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -18,38 +20,47 @@ import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -67,6 +78,9 @@ import androidx.compose.ui.unit.offset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import kotlin.math.roundToInt
 
 val Corner = RoundedCornerShape(Radius.radiusUi)
@@ -76,7 +90,9 @@ val CornerSm = RoundedCornerShape(Radius.radiusSm)
  * Hover and press as every control of the desktop's has them, a tint laid
  * over its fill or what it sits on (design/README.md): darker in light,
  * lighter in dark, term's own on the strip. Keyboard focus is a 2 dp ring,
- * ink in light and plume in dark. No ripple: the desktop has none.
+ * ink in light and plume in dark. No ripple: the desktop has none. A long
+ * press, where a control has one, is Android's way to a row's other
+ * actions, which the desktop keeps under the pointer.
  */
 @Composable
 fun Modifier.control(
@@ -86,6 +102,7 @@ fun Modifier.control(
     enabled: Boolean = true,
     role: Role = Role.Button,
     label: String? = null,
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ): Modifier {
     val source = remember { MutableInteractionSource() }
@@ -105,7 +122,10 @@ fun Modifier.control(
         .background(fill)
         .background(tint)
         .hoverable(source, enabled)
-        .clickable(source, null, enabled, role = role, onClick = onClick)
+        .then(
+            if (onLongClick == null) Modifier.clickable(source, null, enabled, role = role, onClick = onClick)
+            else Modifier.combinedClickable(source, null, enabled, role = role, onLongClick = onLongClick, onClick = onClick)
+        )
         .then(if (label != null) Modifier.semantics { contentDescription = label } else Modifier)
 }
 
@@ -136,11 +156,12 @@ fun Modifier.cssLine(style: TextStyle) = layout { measurable, constraints ->
     layout(p.width, line) { p.place(0, (line - p.height) / 2) }
 }
 
-enum class Kind { Default, Primary, Ghost }
+enum class Kind { Default, Primary, Ghost, Del }
 
 /**
  * A button: sunk at rest, plume for the one a screen is for, ghost for one
- * that waits its turn (Stop). 40 dp tall, past the desktop's 32 for a
+ * that waits its turn (Stop), and sunk with the error's red for one that
+ * deletes (app.css, .pk-btn-del). 40 dp tall, past the desktop's 32 for a
  * finger, 48 large; a dimmed one is disabled. An icon before its words or
  * after them, 6 dp apart.
  */
@@ -158,10 +179,14 @@ fun PkButton(
     val p = pk
     val fill = when (kind) {
         Kind.Primary -> p.plume
-        Kind.Default -> p.sunk
+        Kind.Default, Kind.Del -> p.sunk
         Kind.Ghost -> Color.Transparent
     }
-    val ink = if (kind == Kind.Primary) p.onPlume else p.ink
+    val ink = when (kind) {
+        Kind.Primary -> p.onPlume
+        Kind.Del -> p.err
+        else -> p.ink
+    }
     Row(
         modifier
             .alpha(if (enabled) 1f else 0.45f)
@@ -273,6 +298,42 @@ fun LinkButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier)
             .control(RoundedCornerShape(4.dp), onClick = onClick)
             .padding(horizontal = 4.dp, vertical = 8.dp),
     )
+}
+
+/**
+ * What floats over a screen until it is done with, About's sheets and the
+ * recent list's question: a dialog, so that a reader and the keys stay in
+ * it while it is up, in the middle of the window on the desktop's scrim,
+ * not the system's darker dim, 24 dp in from its edges. Back, Esc and a
+ * tap beside what it holds dismiss it; what it holds is floating.
+ */
+@Composable
+fun Modal(onDismiss: () -> Unit, content: @Composable BoxScope.() -> Unit) {
+    Dialog(onDismiss, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        val window = (LocalView.current.parent as? DialogWindowProvider)?.window
+        SideEffect { window?.setDimAmount(0f) }
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(pk.scrim)
+                .pointerInput(onDismiss) { detectTapGestures { onDismiss() } }
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .padding(24.dp),
+            contentAlignment = Alignment.Center,
+            content = content,
+        )
+    }
+}
+
+/** What a Modal holds: on the ground, with the shadow of what floats, the app's corners; a tap on it is not one beside it. */
+@Composable
+fun Modifier.floating(): Modifier {
+    val p = pk
+    return this
+        .shadow(12.dp, Corner)
+        .clip(Corner)
+        .background(p.ground)
+        .pointerInput(Unit) { detectTapGestures { } }
 }
 
 /** A word that comes and goes at the screen's foot, on term, as the desktop's toast. */

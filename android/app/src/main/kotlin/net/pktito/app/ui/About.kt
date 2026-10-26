@@ -271,52 +271,33 @@ private fun external(s: AnnotatedString) = buildAnnotatedString {
 
 /**
  * A sheet over About (app.css, .pk-notices): its title and the way to close
- * it on surface, what it holds scrolling under them, in the middle of the
- * window on the desktop's scrim, 600 dp wide at most for Privacy, as tall
- * as it is, and 760 by 760 for the licenses. A dialog, so that a reader and
- * the keys stay in it while it is up; Back, Esc and a tap beside it close it.
+ * it on surface, what it holds scrolling under them, a Modal, 600 dp wide
+ * at most for Privacy, as tall as it is, and 760 by 760 for the licenses.
  */
 @Composable
 private fun Sheet(title: String, narrow: Boolean, onClose: () -> Unit, body: @Composable (Modifier) -> Unit) {
-    Dialog(onClose, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        // the desktop's scrim, not the system's darker dim
-        val window = (LocalView.current.parent as? DialogWindowProvider)?.window
-        SideEffect { window?.setDimAmount(0f) }
-        val p = pk
-        Box(
+    val p = pk
+    Modal(onClose) {
+        Column(
             Modifier
-                .fillMaxSize()
-                .background(p.scrim)
-                .pointerInput(onClose) { detectTapGestures { onClose() } }
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(24.dp),
-            contentAlignment = Alignment.Center,
+                .widthIn(max = if (narrow) 600.dp else 760.dp)
+                .heightIn(max = 760.dp)
+                .then(if (narrow) Modifier else Modifier.fillMaxHeight())
+                .fillMaxWidth()
+                .testTag("sheet")
+                .floating(),
         ) {
-            Column(
+            Row(
                 Modifier
-                    .widthIn(max = if (narrow) 600.dp else 760.dp)
-                    .heightIn(max = 760.dp)
-                    .then(if (narrow) Modifier else Modifier.fillMaxHeight())
                     .fillMaxWidth()
-                    .testTag("sheet")
-                    .shadow(12.dp, Corner)
-                    .clip(Corner)
-                    .background(p.ground)
-                    // a tap on it is not one beside it
-                    .pointerInput(Unit) { detectTapGestures { } },
+                    .background(p.surface)
+                    .padding(start = 24.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .background(p.surface)
-                        .padding(start = 24.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(title, style = Type.ui, color = p.ink, modifier = Modifier.weight(1f))
-                    IconBtn(Icons.x, stringResource(R.string.sheet_close), onClose, kind = Kind.Ghost)
-                }
-                body(Modifier.weight(1f, fill = !narrow))
+                Text(title, style = Type.ui, color = p.ink, modifier = Modifier.weight(1f))
+                IconBtn(Icons.x, stringResource(R.string.sheet_close), onClose, kind = Kind.Ghost)
             }
+            body(Modifier.weight(1f, fill = !narrow))
         }
     }
 }

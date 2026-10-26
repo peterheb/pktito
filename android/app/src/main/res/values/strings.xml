@@ -52,6 +52,27 @@
     <string name="no_speech">No speech in this file</string>
     <string name="real_time">%1$sx real-time</string><!-- time.real_time -->
     <string name="stats_transcribed">Transcribed in %1$s, %2$s</string><!-- stats.transcribed -->
+    <!-- The recent list (recent.*, ask.*, date.*) and its audio (play.*) -->
+    <string name="recent_title">Recent</string>
+    <string name="recent_clear">Clear</string>
+    <string name="recent_clear_label">Clear the recent list</string>
+    <string name="recent_remove">Remove %1$s from Recent</string>
+    <!-- recent.remove_tip, as a long press's menu has it -->
+    <string name="recent_remove_item">Remove from Recent</string>
+    <string name="recent_remove_note">The file stays where it is</string>
+    <string name="recent_unreadable">Can\'t read this transcript</string>
+    <string name="ask_clear_title">Clear the recent list?</string>
+    <string name="ask_clear_text">All recent transcripts will be permanently deleted. Your original audio and video files, and any transcripts you saved, are not affected.</string>
+    <string name="ask_clear">Clear</string>
+    <string name="ask_cancel">Cancel</string>
+    <string name="date_today">Today</string>
+    <string name="date_yesterday">Yesterday</string>
+    <string name="play_cant">Can\'t play</string>
+    <string name="play_reading">Reading the audio…</string>
+    <string name="play_moved">Can\'t play: the original file was moved or deleted</string>
+    <string name="play_changed">Can\'t play: the original file has changed since it was transcribed</string>
+    <!-- Android's own: a share's or Open with's access ends with its task -->
+    <string name="play_no_access">Can\'t play: pktito no longer has access to the original file</string>
     <!-- About (about.*); the strings in CDATA are HTML, as the desktop's
          *_html are, for AnnotatedString.fromHtml -->
     <string name="about_open">About pktito</string>
@@ -80,7 +101,7 @@
     <string name="privacy_files_text">pktito opens only the recordings you choose, open with it or share to it, and saves only where you choose. It asks for no access to your storage. A transcript you share goes to the app you pick.</string>
     <string name="privacy_choices">Your choices</string>
     <string name="privacy_choice_file">To skip the download, use a model file you already have: choose “Open a model file…”.</string>
-    <string name="privacy_choice_uninstall">pktito keeps its settings, its models and the transcript open with the app, out of Android\'s backups; uninstalling it deletes them.</string>
+    <string name="privacy_choice_uninstall">pktito keeps its settings, its models and its recent transcripts out of Android\'s backups; uninstalling it deletes them.</string>
     <string name="privacy_questions">Questions</string>
     <string name="privacy_ask"><![CDATA[Ask by email, at <a href="mailto:peter.hebert@pktito.net">peter.hebert@pktito.net</a>, or on <a href="https://github.com/peterheb/pktito/issues">GitHub</a>. The full policy is at <a href="https://pktito.net/privacy">pktito.net/privacy</a>.]]></string>
     <string name="privacy_updated">Last updated October 26, 2026</string>

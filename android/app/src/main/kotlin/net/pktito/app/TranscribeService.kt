@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.net.Uri
@@ -43,7 +44,7 @@ class TranscribeService : Service() {
             if (!Transcriber.running) stop(startId)
             return START_NOT_STICKY
         }
-        Transcriber.begin(nameOf(uri))
+        Transcriber.begin(nameOf(uri), uri)
         thread(name = "transcribe") {
             val wake = getSystemService(PowerManager::class.java)
                 .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "pktito:transcribe")
@@ -71,6 +72,7 @@ class TranscribeService : Service() {
     }
 
     private fun transcribe(uri: Uri) {
+        val start = SystemClock.elapsedRealtime()
         if (!Transcriber.loaded(this)) {
             Transcriber.post { step = "loading" }
             Transcriber.model(this)
@@ -78,16 +80,19 @@ class TranscribeService : Service() {
         }
         val handle = Transcriber.model(this)
         val notes = getSystemService(NotificationManager::class.java)
-        // the last transcript's audio goes, so that a WAV not written plays nothing
-        val wav = Transcriber.wav(this).apply { delete() }
+        // set by begin, before this thread
+        val id = Transcriber.id
+        val name = Transcriber.name
         var shown = 0L
         var began = 0L
         var video = 0.0
-        readable(uri).use { pfd ->
-            val t = Engine.transcribe(handle, pfd.fd, Transcriber.name, wav.path, object : Engine.Progress {
+        var loudness = ByteArray(0)
+        readable(this, uri).use { pfd ->
+            val t = Engine.transcribe(handle, pfd.fd, name, Transcriber.wav(this).path, object : Engine.Progress {
                 override fun audio(duration: Double, fps: Double, peaks: ByteArray) {
                     began = SystemClock.elapsedRealtime()
                     video = fps
+                    loudness = peaks
                     Transcriber.post {
                         this.duration = duration
                         this.fps = fps
@@ -113,37 +118,35 @@ class TranscribeService : Service() {
                     }
                 }
             })
-            val complete = JSONObject(t).getBoolean("complete")
+            val o = JSONObject(t)
+            val complete = o.getBoolean("complete")
             // for adb's logcat: what was done, and how fast
             val secs = (SystemClock.elapsedRealtime() - began) / 1000.0
-            Log.i(TAG, "transcribed ${Transcriber.name}${if (complete) "" else ", stopped"}: " +
-                "${JSONObject(t).getJSONArray("segments").length()} segments in %.1f s".format(secs) +
+            Log.i(TAG, "transcribed $name${if (complete) "" else ", stopped"}: " +
+                "${o.getJSONArray("segments").length()} segments in %.1f s".format(secs) +
                 if (video > 0) ", video at %.3f fps".format(video) else "")
+            // finished, it goes on the recent list, as the desktop's does;
+            // a list that cannot be written leaves it on the screen alone
+            if (complete)
+                try {
+                    val item = JSONObject()
+                        .put("id", id)
+                        .put("path", uri.toString())
+                        .put("name", name)
+                        .put("duration", o.getDouble("duration"))
+                        .put("finished", System.currentTimeMillis() / 1000)
+                        .put("took", (SystemClock.elapsedRealtime() - start) / 1000.0)
+                        .put("transcribed", secs)
+                        .put("model", o.getString("model"))
+                        .put("fps", video)
+                    Recents.keep(this, item, t, loudness)
+                } catch (e: Exception) {
+                    Log.w(TAG, "keeping $name on the recent list", e)
+                }
             Transcriber.post {
                 transcript = t
                 step = if (complete) "done" else "stopped"
             }
-        }
-    }
-
-    /**
-     * The document as a file: Android's decoder reads by offset, and a
-     * provider that streams a document (a cloud drive's, a pipe with no size)
-     * has none, so its bytes are copied into the cache first. The copy is
-     * unlinked once open; the descriptor keeps it until it is closed.
-     */
-    private fun readable(uri: Uri): ParcelFileDescriptor {
-        val pfd = contentResolver.openFileDescriptor(uri, "r") ?: throw IOException("$uri: nothing to read")
-        if (pfd.statSize >= 0)
-            return pfd
-        val copy = File.createTempFile("document", null, cacheDir)
-        try {
-            ParcelFileDescriptor.AutoCloseInputStream(pfd).use { input ->
-                copy.outputStream().use { input.copyTo(it) }
-            }
-            return ParcelFileDescriptor.open(copy, ParcelFileDescriptor.MODE_READ_ONLY)
-        } finally {
-            copy.delete()
         }
     }
 
@@ -184,5 +187,26 @@ class TranscribeService : Service() {
         const val NOTE = 1
         /** the wake lock's own end, should the service never release it: the 6 hours */
         const val LIMIT_MS = 6 * 60 * 60 * 1000L
+    }
+}
+
+/**
+ * The document at uri as a file: Android's decoder reads by offset, and a
+ * provider that streams a document (a cloud drive's, a pipe with no size)
+ * has none, so its bytes are copied into the cache first. The copy is
+ * unlinked once open; the descriptor keeps it until it is closed.
+ */
+fun readable(context: Context, uri: Uri): ParcelFileDescriptor {
+    val pfd = context.contentResolver.openFileDescriptor(uri, "r") ?: throw IOException("$uri: nothing to read")
+    if (pfd.statSize >= 0)
+        return pfd
+    val copy = File.createTempFile(Recents.COPY, null, context.cacheDir)
+    try {
+        ParcelFileDescriptor.AutoCloseInputStream(pfd).use { input ->
+            copy.outputStream().use { input.copyTo(it) }
+        }
+        return ParcelFileDescriptor.open(copy, ParcelFileDescriptor.MODE_READ_ONLY)
+    } finally {
+        copy.delete()
     }
 }
