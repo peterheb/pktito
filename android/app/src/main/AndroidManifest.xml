@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- A transcription runs in a foreground service, its progress in a
          notification, so that it goes on with the screen off or another app
@@ -10,6 +11,14 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- A model's download from models.pktito.net (Downloads): from Android
+         14 a user-initiated data transfer job, whose condition is a
+         network, so it reads the network's state; before 14, a dataSync
+         foreground service, as above -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RUN_USER_INITIATED_JOBS" />
 
     <!-- no permission to read files: each recording is one the person picked,
          or opened with pktito or shared to it from another app, and each of
@@ -58,5 +67,15 @@
             android:name=".TranscribeService"
             android:exported="false"
             android:foregroundServiceType="mediaProcessing|dataSync" />
+        <!-- scheduled only from Android 14, which has user-initiated jobs (Downloads.start) -->
+        <service
+            android:name=".DownloadJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            tools:targetApi="34" />
+        <service
+            android:name=".DownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
 </manifest>

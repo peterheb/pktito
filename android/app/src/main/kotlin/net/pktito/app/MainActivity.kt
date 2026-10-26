@@ -32,18 +32,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.IntentCompat
+import androidx.core.os.BundleCompat
 import java.util.Locale
 import kotlinx.coroutines.delay
 import net.pktito.app.ui.About
+import net.pktito.app.ui.ModelButton
 import net.pktito.app.ui.PktitoTheme
 import net.pktito.app.ui.Ready
+import net.pktito.app.ui.Setup
+import net.pktito.app.ui.SetupActions
 import net.pktito.app.ui.Sound
 import net.pktito.app.ui.Timebase
 import net.pktito.app.ui.Toast
@@ -54,17 +57,22 @@ import net.pktito.app.ui.pk
 import net.pktito.app.ui.stepped
 
 /**
- * The screen, the desktop window's: open a recording, watch its transcript
- * come, play it, and copy, share or save it. The system's pickers grant the
- * one document picked and the one saved, as Open with and Share grant
- * theirs, so the app asks for no access to files; the work is
- * TranscribeService's.
+ * The screen, the desktop window's: choose a speech model and download it,
+ * open a recording, watch its transcript come, play it, and copy, share or
+ * save it. The system's pickers grant the one document picked and the one
+ * saved, as Open with and Share grant theirs, so the app asks for no
+ * access to files; the work is TranscribeService's, and a download's
+ * Downloads'.
  */
 class MainActivity : ComponentActivity() {
     private val open = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) start(uri)
     }
     private val notify = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    // a .pkf has no type of its own to ask for
+    private val pickModel = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) ownFile(uri)
+    }
     private val create = registerForActivityResult(CreateText) { uri -> if (uri != null) write(uri) }
 
     private val prefs by lazy { getSharedPreferences("pktito", MODE_PRIVATE) }
@@ -84,6 +92,8 @@ class MainActivity : ComponentActivity() {
     }
     /** The format being saved while the system's dialog is up. */
     private var saving: String? = null
+    /** A recording opened or shared before there was a model to transcribe it with: transcribed once there is. */
+    private var waiting by mutableStateOf<Uri?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -98,6 +108,8 @@ class MainActivity : ComponentActivity() {
         Player.restore(prefs.getFloat("speed", 1f).toDouble(), prefs.getFloat("volume", 1f).toDouble())
         saving = savedInstanceState?.getString("saving")
         about = savedInstanceState?.getBoolean("about") ?: false
+        waiting = savedInstanceState?.let { BundleCompat.getParcelable(it, "waiting", Uri::class.java) }
+        Models.refresh(this)
         setContent { PktitoTheme { App() } }
         if (savedInstanceState == null) opened(intent)
     }
@@ -107,20 +119,32 @@ class MainActivity : ComponentActivity() {
         opened(intent)
     }
 
-    /** A recording opened with pktito, or shared to it: transcribed, unless one is under way. */
+    /**
+     * A recording opened with pktito, or shared to it: transcribed, unless
+     * one is under way; kept until there is a model, as the desktop keeps
+     * files dropped on its setup screen.
+     */
     private fun opened(i: Intent) {
         val uri = when (i.action) {
             Intent.ACTION_VIEW -> i.data
             Intent.ACTION_SEND -> IntentCompat.getParcelableExtra(i, Intent.EXTRA_STREAM, Uri::class.java)
             else -> null
         }
-        if (uri != null && !Transcriber.running) start(uri)
+        if (uri == null || Transcriber.running) return
+        if (setup()) {
+            waiting = uri
+            about = false
+        } else start(uri)
     }
+
+    /** Whether the screen is the setup screen's: no model yet, or one coming, by download or from a file. */
+    private fun setup() = Models.ready == null || Downloads.state != null || Models.copying != null
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString("saving", saving)
         outState.putBoolean("about", about)
+        outState.putParcelable("waiting", waiting)
     }
 
     // the transcript's audio stops with the screen, but not for a turn or a
@@ -134,8 +158,6 @@ class MainActivity : ComponentActivity() {
     private fun App() {
         val t = Transcriber
         val list = rememberLazyListState()
-        val model = remember { Transcriber.modelFile(this) }
-        val label = remember(model) { model?.let { Engine.label(it.nameWithoutExtension) } ?: "" }
         val review = t.step == "done" || t.step == "stopped"
         val rows = if (captions && review) t.cues ?: emptyList() else t.segments
 
@@ -155,7 +177,7 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(captions, t.transcript) {
             val tr = t.transcript
             if (captions && tr != null && t.cues == null)
-                t.cues = runCatching { Transcriber.parseCues(Engine.captions(Transcriber.model(this@MainActivity), tr)) }
+                t.cues = runCatching { Transcriber.parseCues(Engine.captions(Transcriber.engine, tr)) }
                     .onFailure { Log.w(TAG, "captions", it) }
                     .getOrDefault(emptyList())
         }
@@ -181,6 +203,22 @@ class MainActivity : ComponentActivity() {
                 toast = null
             }
         }
+        // a model downloaded, said so
+        LaunchedEffect(Models.news) {
+            Models.news?.let {
+                toast = it
+                Models.news = null
+            }
+        }
+        // the recording that waited for a model, once there is one
+        val setup = setup()
+        LaunchedEffect(setup, waiting) {
+            val w = waiting
+            if (!setup && w != null && t.step.isEmpty()) {
+                waiting = null
+                start(w)
+            }
+        }
         BackHandler(enabled = t.step.isNotEmpty() && !t.running) { back() }
         BackHandler(enabled = about) { about = false }
 
@@ -192,8 +230,40 @@ class MainActivity : ComponentActivity() {
         ) {
             if (about)
                 About(version, onBack = { about = false }, onLink = ::link)
+            else if (t.step.isEmpty() && setup)
+                Setup(
+                    Models.offers, Models.model, Downloads.state, Models.copying, if (waiting != null) 1 else 0,
+                    SetupActions(
+                        download = ::download,
+                        use = {
+                            Models.use(this@MainActivity, it.name)
+                            Models.refresh(this@MainActivity)
+                        },
+                        pause = { Downloads.pause(this@MainActivity) },
+                        cancel = {
+                            if (Models.copying != null) Models.stopCopying() else Downloads.cancel(this@MainActivity)
+                        },
+                        retry = { Downloads.retry(this@MainActivity) },
+                        ownFile = { pickModel.launch(arrayOf("*/*")) },
+                        link = ::link,
+                        about = { about = true },
+                    ),
+                )
             else if (t.step.isEmpty())
-                Ready(label, model != null, onChoose = { open.launch(MEDIA) }, onAbout = { about = true })
+                Ready(onChoose = { open.launch(MEDIA) }, onAbout = { about = true }) {
+                    ModelButton(
+                        Models.offers, Models.model, Models.own?.name,
+                        onPick = { o ->
+                            if (!o.have) download(o)
+                            else {
+                                Models.use(this@MainActivity, o.name)
+                                Models.refresh(this@MainActivity)
+                                toast = getString(R.string.models_using, Models.label(resources, o.key))
+                            }
+                        },
+                        onOwnFile = { pickModel.launch(arrayOf("*/*")) },
+                    )
+                }
             else
                 Work(
                     name = t.name,
@@ -289,7 +359,7 @@ class MainActivity : ComponentActivity() {
             ctrl && event.keyCode == KeyEvent.KEYCODE_S ->
                 if (review && t.segments.isNotEmpty()) save(if (event.isShiftPressed) "srt" else "txt")
             ctrl && event.keyCode == KeyEvent.KEYCODE_O && !event.isShiftPressed ->
-                if (t.step.isEmpty() && Transcriber.modelFile(this) != null) open.launch(MEDIA)
+                if (t.step.isEmpty() && !setup()) open.launch(MEDIA)
             event.keyCode == KeyEvent.KEYCODE_ESCAPE && t.step.isNotEmpty() && !t.running -> back()
             event.keyCode == KeyEvent.KEYCODE_SPACE && event.hasNoModifiers() && review && Player.ready ->
                 if (event.repeatCount == 0) Player.toggle(this)
@@ -317,11 +387,33 @@ class MainActivity : ComponentActivity() {
                 .setData(uri)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
         )
-        // the progress notification, from Android 13, is the person's to allow
+        askToNotify()
+    }
+
+    /** A catalog model's download, its progress in a notification as a transcription's is. */
+    private fun download(o: Offer) {
+        Downloads.start(this, o)
+        askToNotify()
+    }
+
+    /** The progress notifications, from Android 13, are the person's to allow. */
+    private fun askToNotify() {
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         )
             notify.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    /**
+     * A model file of the person's own, copied in and checked, then in use
+     * (Models.open): a download under way is let go once it is, as the
+     * desktop's useOwnFile does, and what is wrong with one it is not, said.
+     */
+    private fun ownFile(uri: Uri) {
+        Models.open(this, uri) { said, used ->
+            toast = said
+            if (used && Downloads.state != null) Downloads.cancel(this)
+        }
     }
 
     /** A link of About's, in the browser, as the desktop's open in the system's (main.rs, open_link). */
@@ -342,7 +434,7 @@ class MainActivity : ComponentActivity() {
     /** The transcript in a format, the desktop's bytes for it. */
     private fun text(ext: String, times: Boolean): String? {
         val tr = Transcriber.transcript ?: return null
-        return Engine.format(Transcriber.model(this), tr, ext, Transcriber.name, times)
+        return Engine.format(Transcriber.engine, tr, ext, Transcriber.name, times)
     }
 
     /** Its text, or as captions its subtitles, on the clipboard, as the desktop's Copy. */

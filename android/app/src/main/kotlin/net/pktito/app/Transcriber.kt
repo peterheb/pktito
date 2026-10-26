@@ -50,6 +50,8 @@ object Transcriber {
 
     private val main = Handler(Looper.getMainLooper())
     private var handle = 0L
+    /** The file the model in handle was loaded from. */
+    private var loadedFrom: String? = null
 
     /** block on the main thread, where the screen reads this state. */
     fun post(block: Transcriber.() -> Unit) {
@@ -104,20 +106,30 @@ object Transcriber {
     /** Where Engine.transcribe writes the audio it heard, to play the transcript back by. */
     fun wav(context: Context) = File(context.cacheDir, "audio/playing.wav")
 
-    /** The model's file: the first .pkf, by name, in the app's no_backup/models, which a backup leaves out. */
-    fun modelFile(context: Context): File? =
-        File(context.noBackupFilesDir, "models").listFiles { f -> f.name.endsWith(".pkf") }?.minByOrNull { it.name }
+    /** Whether the model in use is the one loaded. */
+    @Synchronized
+    fun loaded(context: Context): Boolean = handle != 0L && loadedFrom == Models.usable(context)?.path
 
-    val loaded: Boolean
-        @Synchronized get() = handle != 0L
-
-    /** The model, loaded once for the process; the English one (parakeet-tdt-0.6b-v2) sorts first. */
+    /**
+     * The model in use (Models), loaded once for the process, and again
+     * once another is chosen, the one before let go: on the
+     * transcription's thread, before it starts, where nothing else uses it.
+     */
     @Synchronized
     fun model(context: Context): Long {
+        val pkf = Models.usable(context) ?: throw IOException(context.getString(R.string.no_model))
+        if (handle != 0L && loadedFrom != pkf.path) {
+            Engine.free(handle)
+            handle = 0L
+        }
         if (handle == 0L) {
-            val pkf = modelFile(context) ?: throw IOException(context.getString(R.string.no_model))
             handle = Engine.load(pkf.path)
+            loadedFrom = pkf.path
         }
         return handle
     }
+
+    /** The model that made the transcript on the screen, for Engine.format and Engine.captions, which take its name. */
+    val engine: Long
+        @Synchronized get() = handle
 }

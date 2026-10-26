@@ -7,7 +7,6 @@
     <string name="ready_lead">Transcribe audio or video</string>
     <string name="choose">Choose a file…</string>
     <string name="no_model">No speech model yet</string>
-    <string name="no_model_how">pktito needs a model to transcribe. Downloading one here is still to come.</string>
     <string name="back">Back</string><!-- nav.back -->
     <string name="stop">Stop</string><!-- work.stop -->
     <string name="copy_text">Copy text</string><!-- copy.text -->
@@ -92,6 +91,74 @@
     <string name="notices_libraries">Libraries (Android)</string>
     <string name="notices_texts">License texts</string>
     <string name="link_failed">Couldn\'t open %1$s</string>
-    <!-- the notification channel's name, in the system's settings -->
+    <!-- the notification channels' names, in the system's settings -->
     <string name="channel">Transcribing</string>
+    <string name="channel_download">Model download</string><!-- download.bar -->
+    <!-- The models: the catalog's words (catalog.*), the model menu
+         (models.*), the setup screen (setup.*), a download (download.*), a
+         model file of one's own (model_file.*) -->
+    <string name="catalog_english">English</string>
+    <string name="catalog_english_about">English only</string>
+    <string name="catalog_multilingual">Multilingual</string>
+    <string name="catalog_multilingual_about">25 European languages</string>
+    <string name="models_named">%1$s model</string>
+    <string name="models_downloaded">Downloaded</string>
+    <string name="models_download_size">%1$s MB download</string>
+    <string name="models_among">, %1$s among them</string>
+    <string name="models_open_file">Open a model file…</string>
+    <string name="models_using">Using the %1$s model</string>
+    <string name="models_using_file">Using %1$s</string>
+    <string name="models_ready">%1$s model ready</string>
+    <string name="setup_title">Choose a speech model</string>
+    <string name="setup_legend">Speech model</string>
+    <string name="setup_on_device">on this device</string><!-- setup.on_computer -->
+    <string name="setup_size">%1$s MB</string>
+    <string name="setup_accuracy">Accuracy varies by language.</string>
+    <string name="setup_details">Details</string>
+    <string name="setup_have_file">I already have a model file…</string>
+    <plurals name="setup_waiting">
+        <item quantity="one">%d file waiting</item>
+        <item quantity="other">%d files waiting</item>
+    </plurals>
+    <string name="setup_use">Use the %1$s model</string>
+    <string name="setup_download">Download the %1$s model · %2$s MB</string>
+    <string name="setup_download_rest">Download the %1$s model · %2$s MB to go</string>
+    <string name="download_title">Downloading the %1$s model</string>
+    <string name="download_from">%1$s from %2$s</string><!-- download.from_html -->
+    <string name="download_bar">Model download</string>
+    <string name="download_bar_stopped">Model download, stopped</string>
+    <string name="download_pause">Pause</string>
+    <string name="download_resume">Resume</string>
+    <string name="download_cancel">Cancel</string>
+    <string name="download_progress">%1$s of %2$s MB</string>
+    <string name="download_progress_paused">%1$s of %2$s MB · paused</string>
+    <string name="download_progress_speed">%1$s of %2$s MB · %3$s MB/s · %4$s</string>
+    <string name="download_checking">Checking</string>
+    <string name="download_stopped_at">Stopped at %1$s of %2$s MB</string>
+    <string name="download_nothing_yet">Nothing downloaded yet</string>
+    <string name="download_details">Details</string>
+    <string name="download_try_again">Try again</string>
+    <string name="download_trying">Trying…</string>
+    <string name="download_retrying">Retrying automatically</string>
+    <string name="download_use_file">Use a model file…</string>
+    <string name="download_damaged">The download was damaged</string>
+    <string name="download_not_answering">%1$s isn\'t answering</string>
+    <string name="download_not_found">Model not found</string>
+    <string name="download_cant_reach">Can\'t reach %1$s</string>
+    <string name="download_connection_lost">Connection lost</string>
+    <string name="download_too_much">%1$s sent too much</string>
+    <string name="download_cant_check">Couldn\'t check the download</string>
+    <string name="download_disk_full">Not enough disk space</string>
+    <string name="download_cant_save">Couldn\'t save the model</string>
+    <!-- Android's own: a document is copied in, then checked, where the
+         desktop uses a file where it is -->
+    <string name="copy_title">Opening the model file</string>
+    <string name="model_file_newer">Needs a newer version of pktito</string>
+    <string name="model_file_not_model">Not a pktito model</string>
+    <string name="model_file_cant_open">Can\'t open the model file</string>
+    <string name="model_file_damaged">Model file incomplete or damaged</string>
+    <string name="problem_unexpected">Something went wrong</string>
+    <string name="problem_memory">Not enough memory. Close other apps and try again.</string>
+    <string name="time_left_seconds">about %1$d s left</string>
+    <string name="time_left_minutes">about %1$d min left</string>
 </resources>

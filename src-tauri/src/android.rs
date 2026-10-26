@@ -1,6 +1,6 @@
-//! The Android app's way in (android/, in Kotlin): the model, a recording's
-//! samples, transcribing and the formats, behind the native methods of
-//! net.pktito.app.Engine. Kotlin owns the screen, the files and the service
+//! The Android app's way in (android/, in Kotlin): the models and their
+//! download, the model, a recording's samples, transcribing and the
+//! formats, behind the native methods of net.pktito.app.Engine. Kotlin owns the screen, the files and the service
 //! that keeps a transcription running; this owns what the desktop's Rust
 //! owns, the same code, so a recording gives the same transcript here as on
 //! every other platform.
@@ -10,15 +10,18 @@
 //! back as an IOException with the reason, and a panic as a
 //! RuntimeException, never across into Java.
 
-use crate::{audio, decode, format, model, pktito, transcribe};
+use crate::{audio, decode, download, format, model, pktito, transcribe};
 use jni::errors::ThrowRuntimeExAndDefault;
 use jni::objects::{JClass, JObject, JString, JValue};
 use jni::strings::JNIString;
 use jni::sys::{jboolean, jint, jlong};
 use jni::{jni_sig, jni_str, Env, EnvUnowned};
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::cell::RefCell;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 
 /// What Engine.load's Long stands for: a model and its transcriber, one
 /// transcription at a time (Kotlin's service queues them).
@@ -39,6 +42,11 @@ struct Transcript {
 
 /// stop()'s word to the transcription running, read before each chunk.
 static STOP: AtomicBool = AtomicBool::new(false);
+
+/// The download download() is running, for pauseDownload, cancelDownload
+/// and retryDownload to tell from the screen's thread, as main.rs's
+/// AppState.download is the window's; None while none runs.
+static DOWNLOAD: Mutex<Option<Arc<download::Job>>> = Mutex::new(None);
 
 fn throw(env: &mut Env, why: &str) -> jni::errors::Result<()> {
     env.throw_new(jni_str!("java/io/IOException"), JNIString::from(why))
@@ -299,20 +307,175 @@ pub extern "system" fn Java_net_pktito_app_Engine_backend<'a>(
         .resolve::<ThrowRuntimeExAndDefault>()
 }
 
-/// Engine.label(name): what the catalog calls the model of that name, as
-/// the desktop's start screen shows it ("English", "Multilingual"); "" for
-/// a model it does not list. No model is loaded for it.
+/// What catalog() says of each model, as main.rs's Offer: its entry,
+/// whether it is downloaded, the bytes a download that stopped has kept,
+/// and its file's path, which the app loads it from.
+#[derive(Serialize)]
+struct Offer {
+    #[serde(flatten)]
+    entry: &'static model::Entry,
+    have: bool,
+    partial: u64,
+    file: String,
+}
+
+/// Engine.catalog(dir): the models models.pktito.net serves, as JSON, each
+/// as it stands in dir, the app's models folder. No model is loaded for it.
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_net_pktito_app_Engine_label<'a>(
+pub extern "system" fn Java_net_pktito_app_Engine_catalog<'a>(
     mut unowned: EnvUnowned<'a>,
     _class: JClass<'a>,
-    name: JString<'a>,
+    dir: JString<'a>,
 ) -> JObject<'a> {
     unowned
         .with_env(|env| -> jni::errors::Result<JObject<'a>> {
+            let dir = PathBuf::from(dir.try_to_string(env)?);
+            let offers: Vec<Offer> = model::CATALOG
+                .iter()
+                .map(|e| Offer {
+                    entry: e,
+                    have: model::have(&dir, e),
+                    partial: model::partial(&dir, e),
+                    file: model::file_in(&dir, e).to_string_lossy().into_owned(),
+                })
+                .collect();
+            Ok(env
+                .new_string(serde_json::to_string(&offers).unwrap_or_default())?
+                .into())
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.download(dir, name, progress): the catalog model name downloaded
+/// into dir, or its download gone on with from what it kept, on this
+/// thread, as the window's runs on one of its own (download.rs: checked
+/// against its size and SHA-256, tried again by itself while the network
+/// is away). progress.state(json) hears each change of download::State, at
+/// most ten a second while bytes come, and last how it ended. The checked
+/// file's path, or "" where it stopped short: paused, cancelled or failed.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_download<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    dir: JString<'a>,
+    name: JString<'a>,
+    progress: JObject<'a>,
+) -> JObject<'a> {
+    unowned
+        .with_env(|env| -> jni::errors::Result<JObject<'a>> {
+            let dir = PathBuf::from(dir.try_to_string(env)?);
             let name = name.try_to_string(env)?;
-            let label = model::entry(&name).map(|e| e.label).unwrap_or("");
-            Ok(env.new_string(label)?.into())
+            let Some(e) = model::entry(&name) else {
+                return throw(env, &format!("{name}: no such model")).map(|_| JObject::null());
+            };
+            let job = Arc::new(download::Job::new(e, &dir));
+            *DOWNLOAD.lock().unwrap() = Some(job.clone());
+            let failed = RefCell::new(None);
+            let tell = |s: &download::State| {
+                // after Kotlin threw, nothing more is said: its exception
+                // waits to be thrown on, and JNI takes no call over it
+                if failed.borrow().is_some() {
+                    return;
+                }
+                let json = serde_json::to_string(s).unwrap_or_default();
+                let call = env.with_local_frame(2, |env| -> jni::errors::Result<()> {
+                    let json = env.new_string(json)?;
+                    env.call_method(
+                        &progress,
+                        jni_str!("state"),
+                        jni_sig!("(Ljava/lang/String;)V"),
+                        &[JValue::from(&json)],
+                    )?;
+                    Ok(())
+                });
+                if let Err(err) = call {
+                    // the download stops where it is, keeping what it has
+                    failed.replace(Some(err));
+                    job.ctl.pause.store(true, Ordering::Relaxed);
+                }
+            };
+            let got = job.run(e, &dir, &tell);
+            tell(&job.state());
+            {
+                let mut slot = DOWNLOAD.lock().unwrap();
+                if slot.as_ref().is_some_and(|j| Arc::ptr_eq(j, &job)) {
+                    *slot = None;
+                }
+            }
+            if let Some(err) = failed.into_inner() {
+                return Err(err);
+            }
+            let path = got
+                .map(|p| p.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            Ok(env.new_string(path)?.into())
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.pauseDownload(): the download running stops before its next read,
+/// keeping what it has; download() goes on from there.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_pauseDownload<'a>(
+    _unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+) {
+    if let Some(j) = DOWNLOAD.lock().unwrap().as_ref() {
+        j.ctl.pause.store(true, Ordering::Relaxed);
+    }
+}
+
+/// Engine.retryDownload(): the download running, waiting to try again after
+/// the network failed it, tries now.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_retryDownload<'a>(
+    _unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+) {
+    if let Some(j) = DOWNLOAD.lock().unwrap().as_ref() {
+        j.resume_now();
+    }
+}
+
+/// Engine.cancelDownload(dir, name): the download of name stops and what it
+/// had is deleted, by its own thread, which says so, if it is running
+/// (true); else here, from dir, the app's models folder (false).
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_cancelDownload<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    dir: JString<'a>,
+    name: JString<'a>,
+) -> jboolean {
+    unowned
+        .with_env(|env| -> jni::errors::Result<jboolean> {
+            let dir = PathBuf::from(dir.try_to_string(env)?);
+            let name = name.try_to_string(env)?;
+            if let Some(j) = DOWNLOAD.lock().unwrap().as_ref() {
+                j.ctl.cancel.store(true, Ordering::Relaxed);
+                return Ok(true);
+            }
+            if let Some(e) = model::entry(&name) {
+                let _ = fs::remove_file(model::part_in(&dir, e));
+            }
+            Ok(false)
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.trouble(why): what a model file that load() refused for why
+/// means to its user, as the catalog's key ("model_file.not_model"), for
+/// the app's words, as the window words it (model::trouble).
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_trouble<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    why: JString<'a>,
+) -> JObject<'a> {
+    unowned
+        .with_env(|env| -> jni::errors::Result<JObject<'a>> {
+            let why = why.try_to_string(env)?;
+            Ok(env.new_string(model::trouble(&why))?.into())
         })
         .resolve::<ThrowRuntimeExAndDefault>()
 }

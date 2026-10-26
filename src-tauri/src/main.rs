@@ -322,44 +322,9 @@ fn use_file(app: &AppHandle, state: &AppState, path: &Path) -> Result<(), Proble
     {
         let mut slot = state.engine.lock().unwrap();
         ensure_engine(&mut slot, path)
-            .map_err(|why| Problem::new(model_trouble(&why)).detail(why))?;
+            .map_err(|why| Problem::new(model::trouble(&why)).detail(why))?;
     }
     Ok(model::choose_file(&data_dir(app)?, path)?)
-}
-
-/// What a model file pktito could not load means to its user, as the
-/// catalog's key (strings.rs), from the
-/// engine's reason (core/model.c's pk_model_load, os.c's pk_map_file): a
-/// newer pktito's model, or one for another architecture, wants a newer
-/// app; a file that is not one at all is said so; one that is, but cut
-/// short or damaged, is told apart from it, as a download that stopped is.
-fn model_trouble(why: &str) -> &'static str {
-    let has = |words: &[&str]| words.iter().any(|w| why.contains(w));
-    if has(&["out of memory", "not enough memory"]) {
-        "problem.memory"
-    } else if has(&["model file version", "the architecture is not"]) {
-        "model_file.newer"
-    } else if has(&[
-        "not a pktito model file",
-        "shorter than a header",
-        "empty file",
-        "no model bytes",
-        "larger than any model file",
-    ]) {
-        "model_file.not_model"
-    } else if has(&[
-        "cannot map",
-        "mmap:",
-        "cannot tell its size",
-        "No such file",
-        "not found",
-        "Permission denied",
-        "denied",
-    ]) {
-        "model_file.cant_open"
-    } else {
-        "model_file.damaged"
-    }
 }
 
 /// Of these paths, the files that are there: the window queues no others.

@@ -71,7 +71,7 @@ class TranscribeService : Service() {
     }
 
     private fun transcribe(uri: Uri) {
-        if (!Transcriber.loaded) {
+        if (!Transcriber.loaded(this)) {
             Transcriber.post { step = "loading" }
             Transcriber.model(this)
             Transcriber.post { step = "reading" }

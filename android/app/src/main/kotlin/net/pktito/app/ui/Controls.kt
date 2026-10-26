@@ -54,9 +54,12 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.TextUnit
@@ -64,6 +67,7 @@ import androidx.compose.ui.unit.offset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 
 val Corner = RoundedCornerShape(Radius.radiusUi)
 val CornerSm = RoundedCornerShape(Radius.radiusSm)
@@ -118,12 +122,27 @@ fun Modifier.bleed(horizontal: Dp = 0.dp, vertical: Dp = 0.dp) = layout { measur
     layout(p.width - 2 * h, p.height - 2 * v) { p.place(-h, -v) }
 }
 
+/**
+ * A line of text as tall as CSS makes it where that is shorter than its
+ * font, as the desktop's figure (64 px at 0.9) and wordmark (20 at 1) are:
+ * Compose keeps a line at least as tall as its font's ascent and descent
+ * (ui-text 1.12: 64 sp at 0.9 em and at 1 em both 70 dp, at 1.2 em 77;
+ * LinesTest), where CSS lets the letters overflow a shorter line evenly
+ * above and below. A single line, in style.
+ */
+fun Modifier.cssLine(style: TextStyle) = layout { measurable, constraints ->
+    val line = (if (style.lineHeight.isEm) style.fontSize.toPx() * style.lineHeight.value else style.lineHeight.toPx()).roundToInt()
+    val p = measurable.measure(constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity))
+    layout(p.width, line) { p.place(0, (line - p.height) / 2) }
+}
+
 enum class Kind { Default, Primary, Ghost }
 
 /**
  * A button: sunk at rest, plume for the one a screen is for, ghost for one
  * that waits its turn (Stop). 40 dp tall, past the desktop's 32 for a
- * finger, 48 large; a dimmed one is disabled.
+ * finger, 48 large; a dimmed one is disabled. An icon before its words or
+ * after them, 6 dp apart.
  */
 @Composable
 fun PkButton(
@@ -134,6 +153,7 @@ fun PkButton(
     large: Boolean = false,
     enabled: Boolean = true,
     trailing: ImageVector? = null,
+    leading: ImageVector? = null,
 ) {
     val p = pk
     val fill = when (kind) {
@@ -151,7 +171,9 @@ fun PkButton(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
     ) {
-        Text(text, style = Type.ui.copy(fontSize = if (large) 15.sp else 14.sp), color = ink, maxLines = 1)
+        if (leading != null)
+            Icon(leading, null, tint = ink, modifier = Modifier.size(16.dp))
+        Text(text, style = Type.ui.copy(fontSize = if (large) 15.sp else 14.sp), color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (trailing != null)
             Icon(trailing, null, tint = ink, modifier = Modifier.size(16.dp))
     }
@@ -184,16 +206,12 @@ fun IconBtn(
 fun Wordmark(modifier: Modifier = Modifier, size: TextUnit = 20.sp) {
     val square = with(LocalDensity.current) { (size * 0.5f).toDp() }
     val gap = with(LocalDensity.current) { (size * 0.08f).toDp() }
+    val style = TextStyle(
+        fontFamily = Fonts.sans, fontWeight = FontWeight.W700, fontSize = size,
+        lineHeight = 1.em, lineHeightStyle = CssLine, letterSpacing = (-0.03).em,
+    )
     Row(modifier) {
-        Text(
-            "pktito",
-            style = TextStyle(
-                fontFamily = Fonts.sans, fontWeight = FontWeight.W700, fontSize = size,
-                lineHeight = 1.em, lineHeightStyle = CssLine, letterSpacing = (-0.03).em,
-            ),
-            color = pk.ink,
-            modifier = Modifier.alignByBaseline(),
-        )
+        Text("pktito", style = style, color = pk.ink, modifier = Modifier.alignByBaseline().cssLine(style))
         Spacer(Modifier.width(gap))
         Box(Modifier.size(square).alignBy { it.measuredHeight }.background(pk.beak))
     }
@@ -239,6 +257,24 @@ fun Switch2(first: String, second: String, onSecond: Boolean, onChange: (Boolean
     }
 }
 
+/**
+ * A button that reads as a link (app.css, .pk-linkbtn): its words in ink,
+ * underlined, 500 14/20. Its padding outside it holds its tint and its
+ * focus ring, 8 dp above and below where the desktop's has 2, for a finger.
+ */
+@Composable
+fun LinkButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Text(
+        text,
+        style = Type.ui.copy(lineHeight = 20.sp, textDecoration = TextDecoration.Underline),
+        color = pk.ink,
+        modifier = modifier
+            .bleed(4.dp, 8.dp)
+            .control(RoundedCornerShape(4.dp), onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 8.dp),
+    )
+}
+
 /** A word that comes and goes at the screen's foot, on term, as the desktop's toast. */
 @Composable
 fun Toast(text: String, modifier: Modifier = Modifier) {
@@ -282,12 +318,16 @@ fun Menu(expanded: Boolean, onDismiss: () -> Unit, gap: Dp = 6.dp, wide: Boolean
 
 /**
  * A menu's item (app.css, .pk-mi): what it does, under it in mono the file
- * it makes, and 16 dp after its words, on their line, the key that does it
+ * it makes, or in its words what it is (note, .pk-sub, as the model menu
+ * has it), and 16 dp after its words, on their line, the key that does it
  * too where there are keys (hint: Kbd or KeyCap), or the check of the one
  * chosen of a menu's choices (selected, not null for a choice).
  */
 @Composable
-fun Item(text: String, sub: String?, hint: (@Composable () -> Unit)? = null, selected: Boolean? = null, onClick: () -> Unit) {
+fun Item(
+    text: String, sub: String?, hint: (@Composable () -> Unit)? = null, selected: Boolean? = null,
+    note: AnnotatedString? = null, onClick: () -> Unit,
+) {
     val words = Type.ui.copy(lineHeight = 1.35.em)
     Row(
         Modifier
@@ -302,6 +342,8 @@ fun Item(text: String, sub: String?, hint: (@Composable () -> Unit)? = null, sel
             Text(text, style = words, color = pk.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (sub != null)
                 Text(sub, style = Type.stamp.copy(lineHeight = 1.4.em), color = pk.inkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (note != null)
+                Text(note, style = Type.small.copy(lineHeight = 1.4.em), color = pk.inkMuted)
         }
         if (hint != null) {
             val line = with(LocalDensity.current) { (words.fontSize * 1.35f).toDp() }

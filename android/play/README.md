@@ -51,10 +51,12 @@ purchases.
 The recordings and transcripts never do: the engine runs on the device, and
 files come and go only through the system's pickers, Open with and Share.
 The one thing that leaves is the model download's request to
-models.pktito.net (from the download screen still to come): the IP address
+models.pktito.net, from the setup screen or the model menu: the IP address
 and user agent the server logs, for security and to count downloads, as the
-policy says. Google's form has no IP-address type, and its guidance is to
-disclose IP addresses "based on their particular usage". No location is
+policy says. A model file of one's own is copied into the app from the
+system's picker and never leaves the device. Google's form has no
+IP-address type, and its guidance is to disclose IP addresses "based on
+their particular usage". No location is
 inferred and no profile kept, so the leaning answer is **no data collected
 or shared**, with that reasoning on file. That is Peter's to decide when he
 fills in the form.
@@ -63,7 +65,11 @@ fills in the form.
 what deferring it would cost the user, a use case from Play's list and a
 video ([foreground service requirements](https://support.google.com/googleplay/android-developer/answer/13392821)).
 The transcription uses mediaProcessing on Android 15 and later, and dataSync
-before it, where mediaProcessing does not exist:
+before it, where mediaProcessing does not exist. The model download is a
+user-initiated data transfer job on Android 14 and later, which that page
+recommends over dataSync for a transfer the user asks for, and which is not
+a foreground service; on Android 10 to 13, which have no such jobs, it is a
+dataSync foreground service, so dataSync has a second use case:
 
 | | mediaProcessing | dataSync |
 |---|---|---|
@@ -71,10 +77,17 @@ before it, where mediaProcessing does not exist:
 | Description | pktito transcribes an audio or video file the user chose, on the device: it turns its speech into text. An hour of audio takes about 50 seconds on a Snapdragon X Elite laptop (69.8 times real time, AliceBench), and longer on a phone. The user starts it with a tap and sees its progress in a notification, which opens the app, where Stop is. It never starts on its own. | The same transcription, on Android 10 to 14. |
 | If deferred | The user waits for a transcript they asked for. Interrupted, it ends where it got to, and finishing it means transcribing the recording again: the app keeps nothing to resume from. | The same. |
 
-The video, one for both: choose a recording, see the transcription start
-with its notification, switch to another app while the notification counts
-up, come back to the finished transcript. Recorded on the S25, as Peter
-chooses.
+| | dataSync, the model download (Android 10 to 13) |
+|---|---|
+| Use case | Network transfer: Upload or download |
+| Description | pktito downloads the speech model the user chose (624 or 648 MB, once) from models.pktito.net, when they tap Download on the setup screen or choose a model in the model menu. Its progress is in a notification; the app has Pause and Cancel. It never starts on its own. |
+| If deferred | The app cannot transcribe until it has a model. Interrupted, the download keeps what it has and goes on from there. |
+
+The videos: for the transcription, choose a recording, see the transcription
+start with its notification, switch to another app while the notification
+counts up, come back to the finished transcript; for the download, tap
+Download the English model on the setup screen and watch it come, in the
+app and in its notification. Recorded on the S25, as Peter chooses.
 
 **Generative AI.** Play's AI-generated content policy covers apps that make
 new content from prompts: chatbots, image generators, made-up voices or
@@ -95,4 +108,4 @@ then Apply for production in the Console, which Google usually reviews in
 seven days or less
 ([testing requirements](https://support.google.com/googleplay/android-developer/answer/14151465)).
 The testers install from Play, so they cannot be given a model by adb: the
-model download screen has to be in the build they test.
+build they test downloads one from the setup screen, as the desktop's does.

@@ -115,7 +115,12 @@ impl Job {
         });
     }
 
-    fn run(&self, e: &'static Entry, dir: &Path, tell: &impl Fn(&State)) -> Option<PathBuf> {
+    /// The download on this thread: `tell` hears each change of state as it
+    /// goes, and state() says how it ended; the checked file, or None where
+    /// it stopped short. start runs it on a thread of its own, the Android
+    /// app on one of its own (android.rs, download), which a job or a
+    /// service keeps alive for it.
+    pub fn run(&self, e: &'static Entry, dir: &Path, tell: &impl Fn(&State)) -> Option<PathBuf> {
         let mut wait = Duration::from_secs(2);
         loop {
             let started = self.state.lock().unwrap().got;

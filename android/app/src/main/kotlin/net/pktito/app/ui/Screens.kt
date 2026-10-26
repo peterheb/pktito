@@ -46,14 +46,14 @@ import net.pktito.app.R
 import net.pktito.app.Seg
 
 /**
- * The start screen (ui/index.html, #ready): the wordmark and the model on
- * the column's top edge, and under them the prompt and its button in a
- * dashed zone, as the desktop's drop zone, which says where a file goes.
- * A phone has nothing to drop, so the zone says what it is for. The
- * wordmark opens About.
+ * The start screen (ui/index.html, #ready): the wordmark and the model in
+ * use, its menu (ModelButton), on the column's top edge, and under them the
+ * prompt and its button in a dashed zone, as the desktop's drop zone,
+ * which says where a file goes. A phone has nothing to drop, so the zone
+ * says what it is for. The wordmark opens About.
  */
 @Composable
-fun Ready(model: String, hasModel: Boolean, onChoose: () -> Unit, onAbout: () -> Unit) {
+fun Ready(onChoose: () -> Unit, onAbout: () -> Unit, model: @Composable () -> Unit) {
     val p = pk
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
@@ -64,16 +64,9 @@ fun Ready(model: String, hasModel: Boolean, onChoose: () -> Unit, onAbout: () ->
             verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                // the way to About, its padding outside it so that the word
-                // stays where it is (app.css, button.pk-wm)
-                Box(
-                    Modifier
-                        .bleed(6.dp, 4.dp)
-                        .control(Corner, label = stringResource(R.string.about_open), onClick = onAbout)
-                        .padding(horizontal = 6.dp, vertical = 4.dp),
-                ) { Wordmark() }
+                WordmarkButton(onAbout)
                 Spacer(Modifier.weight(1f))
-                if (model.isNotEmpty()) Text(model, style = Type.ui, color = p.ink)
+                model()
             }
             // its dashes 6.2:1 on the surface inside, 6.8 on the ground
             // outside, past the 3:1 a boundary needs (app.css, .pk-ready-drop)
@@ -94,18 +87,26 @@ fun Ready(model: String, hasModel: Boolean, onChoose: () -> Unit, onAbout: () ->
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
-                    stringResource(if (hasModel) R.string.ready_lead else R.string.no_model),
+                    stringResource(R.string.ready_lead),
                     style = Type.lead.copy(fontSize = 22.sp),
                     color = p.ink,
                     textAlign = TextAlign.Center,
                 )
-                if (hasModel)
-                    PkButton(stringResource(R.string.choose), onChoose, kind = Kind.Primary, large = true)
-                else
-                    Text(stringResource(R.string.no_model_how), style = Type.small, color = p.inkMuted, textAlign = TextAlign.Center)
+                PkButton(stringResource(R.string.choose), onChoose, kind = Kind.Primary, large = true)
             }
         }
     }
+}
+
+/** The wordmark as each screen's way to About, its padding outside it so that the word stays where it is (app.css, button.pk-wm). */
+@Composable
+fun WordmarkButton(onAbout: () -> Unit) {
+    Box(
+        Modifier
+            .bleed(6.dp, 4.dp)
+            .control(Corner, label = stringResource(R.string.about_open), onClick = onAbout)
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+    ) { Wordmark() }
 }
 
 /** What the work screen does with what it is asked. */

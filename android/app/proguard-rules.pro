@@ -10,3 +10,8 @@
     public void audio(double, double, byte[]);
     public void update(double, java.lang.String);
 }
+
+# and Engine.Download's one (android.rs, download: "state" (Ljava/lang/String;)V)
+-keepclassmembers class * implements net.pktito.app.Engine$Download {
+    public void state(java.lang.String);
+}

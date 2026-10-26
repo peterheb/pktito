@@ -36,6 +36,7 @@ object Icons {
     )
     val down = icon("down", "M6 9L12 15L18 9")
     val check = icon("check", "M20 6L9 17L4 12")
+    val download = icon("download", "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "M7 10L12 15L17 10", "M12 15V3")
     val alert = icon("alert", "M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z", "M12 8v4", "M12 16h0.01")
     // feather's share, in the set the desktop's icons come from
     val share = icon("share", "M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8", "M16 6L12 2L8 6", "M12 2v13")

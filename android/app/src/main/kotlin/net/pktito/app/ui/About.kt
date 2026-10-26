@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -215,19 +214,18 @@ private fun Credit(name: String, twoColumns: Boolean, what: @Composable () -> Un
 /** The inline content of a link that leaves the app: its icon. */
 private const val EXTERNAL = "external"
 
-/** Text with links in it, each in the link's colour, underlined; one that leaves the app with its icon after it. */
+/** Text with links in it, each in the link's colour, underlined; one that leaves the app with its icon after it, in that colour. */
 @Composable
-private fun Words(s: AnnotatedString, style: TextStyle, color: Color, modifier: Modifier = Modifier) {
-    val p = pk
+fun Words(s: AnnotatedString, style: TextStyle, color: Color, modifier: Modifier = Modifier, linkColor: Color = pk.link) {
     // 12 sp after 3, its foot 1 under the line (.pk-about a .pk-ico)
     val icon = InlineTextContent(Placeholder(15.sp, 12.sp, PlaceholderVerticalAlign.AboveBaseline)) {
-        Icon(Icons.external, null, tint = p.link, modifier = Modifier.padding(start = 3.dp).offset(y = 1.dp).fillMaxSize())
+        Icon(Icons.external, null, tint = linkColor, modifier = Modifier.padding(start = 3.dp).offset(y = 1.dp).fillMaxSize())
     }
     Text(s, modifier, style = style, color = color, inlineContent = mapOf(EXTERNAL to icon))
 }
 
 @Composable
-private fun linkStyles() = TextLinkStyles(SpanStyle(color = pk.link, textDecoration = TextDecoration.Underline))
+private fun linkStyles(color: Color = pk.link) = TextLinkStyles(SpanStyle(color = color, textDecoration = TextDecoration.Underline))
 
 /**
  * One of the desktop's *_html strings (strings.xml, in CDATA), its links
@@ -244,8 +242,8 @@ private fun html(s: String, onLink: (String) -> Unit): AnnotatedString {
 }
 
 @Composable
-private fun link(text: String, url: String, onLink: (String) -> Unit): AnnotatedString {
-    val styles = linkStyles()
+fun link(text: String, url: String, onLink: (String) -> Unit, color: Color = pk.link): AnnotatedString {
+    val styles = linkStyles(color)
     return remember(text, url, styles) {
         external(buildAnnotatedString { withLink(LinkAnnotation.Url(url, styles) { onLink(url) }) { append(text) } })
     }

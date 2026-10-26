@@ -18,11 +18,16 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.onChildren
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import java.io.File
 import net.pktito.app.ui.About
+import net.pktito.app.ui.ModelButton
 import net.pktito.app.ui.PktitoTheme
 import net.pktito.app.ui.Ready
+import net.pktito.app.ui.Setup
+import net.pktito.app.ui.SetupActions
 import net.pktito.app.ui.Sound
 import net.pktito.app.ui.Timebase
 import net.pktito.app.ui.Work
@@ -114,9 +119,64 @@ class Shots {
             sound = Sound(speed, Player.SPEEDS, volume, false, {}, { _, _ -> }, {}), chosen = base, a = actions,
         )
 
-    @Test fun ready() = shot("ready", false) { Ready("English", true, {}, {}) }
-    @Test fun readyDark() = shot("ready", true) { Ready("English", true, {}, {}) }
-    @Test fun readyNoModel() = shot("ready-no-model", false) { Ready("", false, {}, {}) }
+    // the catalog as model.rs has it, nothing downloaded, or the English model here
+    private val languages = listOf(
+        "bg", "cs", "da", "de", "el", "en", "es", "et", "fi", "fr", "hr", "hu", "it", "lt",
+        "lv", "mt", "nl", "pl", "pt", "ro", "ru", "sk", "sl", "sv", "uk",
+    )
+    private fun offers(have: Boolean = false) = listOf(
+        Offer("parakeet-tdt-0.6b-v2", "english", listOf("en"), "", 624_480_196, "", have, 0, File("")),
+        Offer(
+            "parakeet-tdt-0.6b-v3", "multilingual", languages, "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3#multilingual-asr",
+            647_552_644, "", false, 0, File(""),
+        ),
+    )
+    private val models = @Composable { ModelButton(offers(have = true), "parakeet-tdt-0.6b-v2", null, {}, {}) }
+    @Test fun ready() = shot("ready", false) { Ready({}, {}, models) }
+    @Test fun readyDark() = shot("ready", true) { Ready({}, {}, models) }
+    private val modelMenu = {
+        compose.onNodeWithText("English model").performClick()
+        compose.onNode(isPopup())
+    }
+    @Test fun modelMenu() = shot("models", false, act = modelMenu) { Ready({}, {}, models) }
+    @Test fun modelMenuDark() = shot("models", true, act = modelMenu) { Ready({}, {}, models) }
+
+    // the setup screen in each of its modes, a download a third of the way, as the desktop's stand-in has it
+    private val setupActions = SetupActions({}, {}, {}, {}, {}, {}, {}, {})
+    private fun download(step: String, got: Long, speed: Double = 0.0, problem: Problem? = null, retry: Boolean = false) =
+        Download("parakeet-tdt-0.6b-v2", step, got, 624_480_196, speed, "models.pktito.net", problem, retry, trying = false)
+    private val lost = Problem(
+        "download.cant_reach", "models.pktito.net",
+        "Dns Failed: resolve dns name 'models.pktito.net:443': failed to lookup address information: " +
+            "No address associated with hostname\nGET https://models.pktito.net/8bfa6750b83c/parakeet-tdt-0.6b-v2.pkf\nRange: bytes=262144000-",
+    )
+    @Composable
+    private fun setupScreen(d: Download? = null, copying: Copy? = null, waiting: Int = 0) =
+        Setup(offers(), null, d, copying, waiting, setupActions)
+    @Test fun setup() = shot("setup", false) { setupScreen() }
+    @Test fun setupDark() = shot("setup", true) { setupScreen() }
+    @Test fun setupNarrow() = shot("setup-360", false, narrow = true) { setupScreen() }
+    @Test fun setupWindow() = shot("setup", false, window = true) { setupScreen(waiting = 1) }
+    // the count is a link in its card's words, a node of its own under them
+    private val languagesOpen = {
+        compose.onNodeWithText("25 European languages", substring = true, useUnmergedTree = true).onChildren().onFirst().performClick()
+        compose.onRoot()
+    }
+    @Test fun setupLanguages() = shot("setup-languages", false, act = languagesOpen) { setupScreen() }
+    @Test fun setupLanguagesDark() = shot("setup-languages", true, act = languagesOpen) { setupScreen() }
+    @Test fun downloading() = shot("downloading", false) { setupScreen(download("downloading", 262_144_000, 11.8e6)) }
+    @Test fun downloadingDark() = shot("downloading", true) { setupScreen(download("downloading", 262_144_000, 11.8e6)) }
+    @Test fun downloadingNarrow() = shot("downloading-360", false, narrow = true) { setupScreen(download("downloading", 262_144_000, 11.8e6), waiting = 1) }
+    @Test fun downloadPaused() = shot("download-paused", false) { setupScreen(download("paused", 262_144_000)) }
+    @Test fun downloadChecking() = shot("download-checking", false) { setupScreen(download("checking", 624_480_196)) }
+    private val details = {
+        compose.onNodeWithText("Details").performClick()
+        compose.onRoot()
+    }
+    @Test fun downloadFailed() = shot("download-failed", false, act = details) { setupScreen(download("failed", 262_144_000, problem = lost, retry = true)) }
+    @Test fun downloadFailedDark() = shot("download-failed", true) { setupScreen(download("failed", 262_144_000, problem = lost, retry = true)) }
+    @Test fun downloadFailedNarrow() = shot("download-failed-360", false, narrow = true) { setupScreen(download("failed", 262_144_000, problem = lost, retry = true)) }
+    @Test fun copying() = shot("copying", false) { setupScreen(copying = Copy("parakeet-tdt-0.6b-v3.pkf", 302_000_000, 647_552_644)) }
     private val about = @Composable { About("Version 0.9.2 · neon-dp", {}, {}) }
     @Test fun about() = shot("about", false, content = about)
     @Test fun aboutDark() = shot("about", true, content = about)
