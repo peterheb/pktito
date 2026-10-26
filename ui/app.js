@@ -2008,6 +2008,9 @@ function showTime(t, follow = false) {
     if (word) word.classList.add("pk-now");
     curWord = word;
   }
+  // a search's match after the playhead: where a jump lands, and as
+  // playback passes one
+  if (follow) followHit(t, follow === true);
 }
 
 /* The strip's time is where its format is chosen: seconds and hundredths,
@@ -2116,7 +2119,19 @@ $("wavebtn").addEventListener("keydown", (e) => {
 let query = "",
   hits = [],
   hitTimes = [],
-  hitAt = -1;
+  hitAt = -1,
+  // the match the playhead last passed when the reader was last put by it
+  // (followHit); -1 for none
+  passed = -1;
+
+/* the match the playhead has last passed at t, or -1 */
+function passedAt(t) {
+  let k = -1;
+  hitTimes.forEach((h, j) => {
+    if (h <= t) k = j;
+  });
+  return k;
+}
 
 /* text with each match marked, and where in text it starts */
 /* The word of s at a character of its text, found as bodyHtml finds them:
@@ -2157,14 +2172,22 @@ function runFind() {
   // or rests mid-recording starts where the listener is; the first when it
   // has passed none
   hitAt = -1;
-  if (hits.length) {
-    let k = 0;
-    hitTimes.forEach((t, j) => {
-      if (t <= f.pos) k = j;
-    });
-    goHit(k);
-  }
+  passed = passedAt(f.pos);
+  if (hits.length) goHit(Math.max(0, passed));
   findCount();
+}
+
+/* The reader on the match the playhead last passed, the first where it has
+   passed none, as a tick tapped puts them (Peter, 2026-10-26): as playback
+   passes a match, and wherever a seek lands (jump), though it lands short
+   of the next. A match stepped to stays until then. The transcript stays
+   where the playhead has it. */
+function followHit(t, jump) {
+  if (!hits.length) return;
+  const k = passedAt(t);
+  if (!jump && k === passed) return;
+  passed = k;
+  goHit(Math.max(0, k), false);
 }
 
 function stepHit(d) {
@@ -2175,12 +2198,12 @@ function stepHit(d) {
 const hitPieces = (k) =>
   $("transcript").querySelectorAll(`[data-hit="${hits[k].dataset.hit}"]`);
 
-function goHit(k) {
+function goHit(k, scroll = true) {
   if (hitAt >= 0)
     for (const el of hitPieces(hitAt)) el.classList.remove("is-on");
   hitAt = k;
   for (const el of hitPieces(hitAt)) el.classList.add("is-on");
-  hits[hitAt].scrollIntoView({ block: "center" });
+  if (scroll) hits[hitAt].scrollIntoView({ block: "center" });
   findCount();
 }
 
@@ -2228,8 +2251,11 @@ $("find-next").onclick = (e) => {
 $("ticks").addEventListener("click", (e) => {
   const k = e.target.closest("[data-k]");
   if (!k) return;
-  goHit(Number(k.dataset.k));
-  seek(hitTimes[hitAt], false);
+  const i = Number(k.dataset.k);
+  seek(hitTimes[i], false);
+  // after the seek, which puts the reader on the match it last passed: a
+  // tick's own, where two share its time
+  goHit(i);
 });
 $("find").addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
