@@ -3,6 +3,8 @@ package net.pktito.app.ui
 import android.text.format.DateFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -27,6 +29,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.text.selection.SelectionState
+import androidx.compose.foundation.text.selection.rememberSelectionState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -59,6 +63,8 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -498,8 +504,10 @@ fun Work(
                 tickAt = find.at,
                 // a tick: its match, and the playhead there (app.js, #ticks)
                 onTick = { k ->
-                    find.go(hits, k)
                     a.seek(hits[k].time, false)
+                    // after the seek, which puts the reader on the match it
+                    // last passed: a tick's own, where two share its time
+                    find.go(hits, k)
                 },
                 modifier = Modifier.padding(horizontal = 16.dp),
                 why = why,
@@ -588,7 +596,8 @@ fun kbd(key: String, shift: Boolean = false): String =
  * above the text, as the desktop's window has it (app.css, max-width:
  * 619px), where its 112 dp column left too little of the line, a cue's two
  * times a range. The row playing on the surface, the beak's square after
- * its time and the word playing underlined in it; a time plays from there.
+ * its time and the word playing underlined in it; a row, tapped anywhere,
+ * plays from its time.
  */
 @Composable
 private fun Rows(
@@ -609,14 +618,16 @@ private fun Rows(
     val current = if (review && (playing || position > 0)) rows.indexOfLast { it.start <= position + 1e-3 } else -1
     // each row's matches, by their place among all of them
     val marks = remember(hits) { hits.withIndex().groupBy { it.value.row } }
+    // the text selected, if any (SegRow)
+    val selection = rememberSelectionState()
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val wide = maxWidth >= 620.dp
-        SelectionContainer {
+        SelectionContainer(selection) {
             LazyColumn(state = list, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp)) {
                 itemsIndexed(rows) { i, s ->
                     val now = i == current
                     val word = if (now) s.words.indexOfLast { it.start <= position + 1e-3 } else -1
-                    SegRow(s, now, word, marks[i], at, wide, captions, review, base) { a.seek(s.start, true) }
+                    SegRow(s, now, word, marks[i], at, wide, captions, review, base, selection) { a.seek(s.start, true) }
                 }
                 if (stats != null)
                     item {
@@ -635,17 +646,12 @@ private fun Rows(
 @Composable
 private fun SegRow(
     s: Seg, now: Boolean, word: Int, marks: List<IndexedValue<Hit>>?, at: Int, wide: Boolean, cue: Boolean, review: Boolean,
-    base: Timebase, onTime: () -> Unit,
+    base: Timebase, selection: SelectionState, onTime: () -> Unit,
 ) {
     val p = pk
     val stamp = Type.stamp.copy(fontFeatureSettings = "tnum")
     val start = @Composable { mod: Modifier ->
-        Text(
-            base.at(s.start),
-            style = stamp.copy(lineHeight = 20.sp),
-            color = p.inkMuted,
-            modifier = mod.then(if (review) Modifier.clickable(remember { MutableInteractionSource() }, null, onClick = onTime) else Modifier),
-        )
+        Text(base.at(s.start), style = stamp.copy(lineHeight = 20.sp), color = p.inkMuted, modifier = mod)
     }
     val end = @Composable { mod: Modifier -> Text(base.at(s.end), style = stamp, color = p.inkMuted, modifier = mod) }
     // the row playing: the beak's square after its time, on its baseline
@@ -677,10 +683,30 @@ private fun SegRow(
                 if (cue) end(Modifier)
             }
     }
+    // the whole row plays from its time, its words as well as the time, which
+    // a thumb is too broad to find (Peter, the S25, 2026-10-26); but not a
+    // tap that lets go of a selection of the text. The selection is gone by
+    // the time the tap is, so whether there was one is taken as the finger
+    // comes down, before the text's own gestures see it.
+    val selecting = remember { booleanArrayOf(false) }
     val box = Modifier
         .widthIn(max = 716.dp)
         .fillMaxWidth()
         .background(if (now) p.surface else Color.Transparent, Corner)
+        .then(
+            if (review)
+                Modifier
+                    .pointerInput(selection) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                            selecting[0] = selection.selectedTexts.isNotEmpty()
+                        }
+                    }
+                    .clickable(remember { MutableInteractionSource() }, null, onClickLabel = stringResource(R.string.play_from, base.at(s.start))) {
+                        if (!selecting[0]) onTime()
+                    }
+            else Modifier
+        )
     if (wide)
         Row(box.padding(horizontal = 16.dp, vertical = 8.dp)) {
             time(Modifier.width(112.dp).alignByBaseline())

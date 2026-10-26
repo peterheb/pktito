@@ -34,6 +34,7 @@
     <string name="captions">Captions</string><!-- work.captions -->
     <string name="play">Play</string>
     <string name="pause">Pause</string>
+    <string name="play_from">Play from %1$s</string><!-- seg.play_from -->
     <string name="speed_label">Playback speed, %1$s times</string><!-- speed.label -->
     <string name="speed_group">Playback speed</string><!-- speed.group -->
     <string name="speed_slower">Slower</string><!-- speed.slower -->

@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -245,6 +246,8 @@ class MainActivity : ComponentActivity() {
         // the match to be on once the matches change, and each move to one
         // brought into sight, its row a third of the way down (app.js, goHit)
         LaunchedEffect(hits) { finder.settle(hits, Player.position) }
+        // the match playback passes, the reader with it (Finder.follow)
+        LaunchedEffect(hits) { snapshotFlow { Player.position }.collect { finder.follow(hits, it, false) } }
         LaunchedEffect(finder.moved) {
             val h = hits.getOrNull(finder.at) ?: return@LaunchedEffect
             val info = list.layoutInfo
@@ -409,7 +412,10 @@ class MainActivity : ComponentActivity() {
                             prefs.edit().putBoolean("captions", it).apply()
                         },
                         play = { Player.toggle(this@MainActivity) },
-                        seek = { s, play -> Player.seek(this@MainActivity, s, play) },
+                        seek = { s, play ->
+                            Player.seek(this@MainActivity, s, play)
+                            finder.follow(hits, Player.position, true)
+                        },
                         setBase = {
                             base = it
                             prefs.edit()

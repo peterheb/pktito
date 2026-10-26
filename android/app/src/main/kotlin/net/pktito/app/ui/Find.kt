@@ -129,6 +129,8 @@ class Finder {
      */
     var keys by mutableStateOf<Keys?>(null)
     private var time = -1.0
+    /** The match the playhead last passed when the reader was last put by it (follow); -1 for none. */
+    private var passed = -1
 
     val searching: Boolean
         get() = open || query.isNotEmpty()
@@ -140,12 +142,31 @@ class Finder {
      * has passed none (app.js, runFind).
      */
     fun settle(hits: List<Hit>, position: Double) {
+        passed = passedAt(hits, position)
         if (hits.isEmpty()) {
             at = -1
             return
         }
         val same = if (time >= 0) hits.indexOfFirst { abs(it.time - time) < 1e-9 } else -1
-        go(hits, if (same >= 0) same else maxOf(0, hits.indexOfLast { it.time <= position }))
+        go(hits, if (same >= 0) same else maxOf(0, passed))
+    }
+
+    // as the rows find the one playing (Screens.kt, Rows)
+    private fun passedAt(hits: List<Hit>, position: Double) = hits.indexOfLast { it.time <= position + 1e-3 }
+
+    /**
+     * The reader on the match the playhead last passed, the first where it
+     * has passed none, as a tick tapped puts them (Peter, 2026-10-26): as
+     * playback passes a match, and wherever a seek lands (jump), though it
+     * lands short of the next. A match stepped to stays until then. The rows
+     * stay where the playhead has them: no move to bring into sight.
+     */
+    fun follow(hits: List<Hit>, position: Double, jump: Boolean) {
+        val k = passedAt(hits, position)
+        if (hits.isEmpty() || (!jump && k == passed)) return
+        passed = k
+        at = maxOf(0, k)
+        time = hits[at].time
     }
 
     fun go(hits: List<Hit>, k: Int) {
@@ -171,6 +192,7 @@ class Finder {
         open = false
         at = -1
         time = -1.0
+        passed = -1
         keys = Keys.Drop
     }
 }
