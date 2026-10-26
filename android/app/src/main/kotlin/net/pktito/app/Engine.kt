@@ -14,8 +14,8 @@ object Engine {
 
     /** Told what the transcription has got to, on its thread. */
     interface Progress {
-        /** The audio is read: its length in seconds, and its loudness in slices, 0 to 255 each. */
-        fun audio(duration: Double, peaks: ByteArray)
+        /** The audio is read: its length in seconds, a video's frame rate (0 for audio), and its loudness in slices, 0 to 255 each. */
+        fun audio(duration: Double, fps: Double, peaks: ByteArray)
 
         /** After each chunk: the fraction of the audio done, and the segments just done. */
         fun update(done: Double, segments: String)

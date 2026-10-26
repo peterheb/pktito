@@ -82,12 +82,15 @@ class TranscribeService : Service() {
         val wav = Transcriber.wav(this).apply { delete() }
         var shown = 0L
         var began = 0L
+        var video = 0.0
         readable(uri).use { pfd ->
             val t = Engine.transcribe(handle, pfd.fd, Transcriber.name, wav.path, object : Engine.Progress {
-                override fun audio(duration: Double, peaks: ByteArray) {
+                override fun audio(duration: Double, fps: Double, peaks: ByteArray) {
                     began = SystemClock.elapsedRealtime()
+                    video = fps
                     Transcriber.post {
                         this.duration = duration
+                        this.fps = fps
                         this.peaks = peaks
                         step = "transcribing"
                     }
@@ -114,7 +117,8 @@ class TranscribeService : Service() {
             // for adb's logcat: what was done, and how fast
             val secs = (SystemClock.elapsedRealtime() - began) / 1000.0
             Log.i(TAG, "transcribed ${Transcriber.name}${if (complete) "" else ", stopped"}: " +
-                "${JSONObject(t).getJSONArray("segments").length()} segments in %.1f s".format(secs))
+                "${JSONObject(t).getJSONArray("segments").length()} segments in %.1f s".format(secs) +
+                if (video > 0) ", video at %.3f fps".format(video) else "")
             Transcriber.post {
                 transcript = t
                 step = if (complete) "done" else "stopped"

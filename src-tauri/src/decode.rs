@@ -249,6 +249,18 @@ pub fn decode_fd(fd: c_int, name: &str) -> Result<Vec<f32>, DecodeError> {
     Ok(flac_cut_in(&mut copy_of(fd)?, x))
 }
 
+/// A video's frame rate, as Android's extractor reads the file at fd
+/// (native/decode_android.c, pkapp_video_rate_fd), for times in frames;
+/// None for a file with no video, or none it can say, as frame_rate.
+#[cfg(target_os = "android")]
+pub fn frame_rate_fd(fd: c_int) -> Option<f64> {
+    extern "C" {
+        fn pkapp_video_rate_fd(fd: c_int) -> f64;
+    }
+    let r = unsafe { pkapp_video_rate_fd(fd) };
+    Some(r).filter(|r| r.is_finite() && (1.0..=1000.0).contains(r))
+}
+
 /// Starts the binder thread pool Android's decoder answers through, for a
 /// program of its own: pktito-cli, when adb's shell runs it. An app's
 /// process has one from the start (native/decode_android.c). False if

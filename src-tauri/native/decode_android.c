@@ -226,3 +226,77 @@ done:
     free(x);
     return rc;
 }
+
+static int earlier(const void *a, const void *b) {
+    int64_t x = *(const int64_t *)a, y = *(const int64_t *)b;
+    return (x > y) - (x < y);
+}
+
+/* ex's first video track's rate: its frames over its length where it says
+ * both (MP4, QuickTime, 3GP), else its first frames' times, their span over
+ * their count (Matroska and WebM, which say neither). Android's own
+ * frame-rate key is a whole number, 30 for a 29.97 fps MP4 and 24 for a
+ * 23.976, where frames over length were 29.969 and 23.975 (the Googlebook,
+ * Android 17). The times are a decoder's order, sorted; where the reading
+ * stops short of the end, the last read may be shown after frames not read
+ * yet (B-frames), and the latest 40 are left out: with them, an H.264 MKV
+ * at 23.976 read 23.779. 259 intervals of Matroska's millisecond times put
+ * 29.97 within 0.003. */
+static double rate_of(AMediaExtractor *ex) {
+    size_t tracks = AMediaExtractor_getTrackCount(ex), t;
+    for (t = 0; t < tracks; t++) {
+        AMediaFormat *f = AMediaExtractor_getTrackFormat(ex, t);
+        const char *mime = NULL;
+        int video = AMediaFormat_getString(f, AMEDIAFORMAT_KEY_MIME, &mime) && !strncmp(mime, "video/", 6);
+        int32_t frames = 0;
+        int64_t us = 0;
+        double r = 0;
+        if (video && AMediaFormat_getInt32(f, AMEDIAFORMAT_KEY_FRAME_COUNT, &frames) &&
+            AMediaFormat_getInt64(f, AMEDIAFORMAT_KEY_DURATION, &us) && frames > 1 && us > 0)
+            r = frames * 1e6 / us;
+        AMediaFormat_delete(f);
+        if (r > 0)
+            return r;
+        if (video)
+            break;
+    }
+    if (t == tracks)
+        return 0;
+    int64_t at[300];
+    size_t n = 0;
+    int end = 0;
+    AMediaExtractor_selectTrack(ex, t);
+    while (n < sizeof at / sizeof at[0]) {
+        int64_t us = AMediaExtractor_getSampleTime(ex);
+        if (us < 0) {
+            end = 1;
+            break;
+        }
+        at[n++] = us;
+        if (!AMediaExtractor_advance(ex)) {
+            end = 1;
+            break;
+        }
+    }
+    qsort(at, n, sizeof at[0], earlier);
+    if (!end)
+        n -= 40;
+    if (n < 3)
+        return 0;
+    return at[n - 1] > at[0] ? (n - 1) * 1e6 / (at[n - 1] - at[0]) : 0;
+}
+
+/* A video's frame rate, for times in frames (decode.rs, frame_rate_fd), as
+ * the desktop's comes from the OS or ffmpeg: 0 for a file with no video
+ * track, or one Android cannot read. fd stays the caller's. */
+double pkapp_video_rate_fd(int fd) {
+    struct stat st;
+    if (fstat(fd, &st) || !S_ISREG(st.st_mode))
+        return 0;
+    AMediaExtractor *ex = AMediaExtractor_new();
+    if (!ex)
+        return 0;
+    double r = AMediaExtractor_setDataSourceFd(ex, fd, 0, st.st_size) == AMEDIA_OK ? rate_of(ex) : 0;
+    AMediaExtractor_delete(ex);
+    return r;
+}

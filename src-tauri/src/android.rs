@@ -105,8 +105,8 @@ pub extern "system" fn Java_net_pktito_app_Engine_about<'a>(
 /// Transcript's JSON. Once it is read, the samples pktito hears go to wav as
 /// a 16-bit WAV, for the screen to play in step with the transcript's
 /// times whatever the original's format, as the desktop's window plays
-/// them (audio.rs; "" for none), and progress.audio(seconds, the loudness
-/// in audio::PEAKS slices) draws the strip; progress.update(fraction, the
+/// them (audio.rs; "" for none), and progress.audio(seconds, a video's
+/// frame rate or 0, the loudness in audio::PEAKS slices) draws the strip; progress.update(fraction, the
 /// segments just done, in JSON) after each chunk. All on this thread.
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
@@ -124,6 +124,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
             let name = name.try_to_string(env)?;
             let wav = wav.try_to_string(env)?;
             STOP.store(false, Ordering::Relaxed);
+            let fps = decode::frame_rate_fd(fd).unwrap_or(0.0);
             let x = match decode::decode_fd(fd, &name) {
                 Ok(x) => x,
                 Err(e) => return throw(env, &e.message()).map(|_| JObject::null()),
@@ -141,8 +142,8 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
                 env.call_method(
                     &progress,
                     jni_str!("audio"),
-                    jni_sig!("(D[B)V"),
-                    &[JValue::Double(duration), JValue::from(&peaks)],
+                    jni_sig!("(DD[B)V"),
+                    &[JValue::Double(duration), JValue::Double(fps), JValue::from(&peaks)],
                 )?;
                 Ok(())
             })?;
