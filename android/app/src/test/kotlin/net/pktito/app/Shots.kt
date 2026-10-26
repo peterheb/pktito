@@ -8,9 +8,13 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.isPopup
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import java.io.File
 import net.pktito.app.ui.PktitoTheme
 import net.pktito.app.ui.Ready
@@ -48,7 +52,11 @@ class Shots {
     private val peaks = resource("alice-peaks.bin")
     private val actions = WorkActions({}, {}, {}, {}, {}, {}, {}, {}, { _, _ -> })
 
-    private fun shot(name: String, dark: Boolean, wide: Boolean = false, content: @Composable () -> Unit) {
+    /** The screen, or what act leads to on it (a menu, its own window). */
+    private fun shot(
+        name: String, dark: Boolean, wide: Boolean = false,
+        act: (() -> SemanticsNodeInteraction)? = null, content: @Composable () -> Unit,
+    ) {
         RuntimeEnvironment.setQualifiers(if (wide) "w840dp-h900dp-xhdpi" else "w411dp-h891dp-xxhdpi")
         RuntimeEnvironment.setQualifiers(if (dark) "+night" else "+notnight")
         compose.setContent {
@@ -56,7 +64,8 @@ class Shots {
         }
         val dir = File("build/shots").apply { mkdirs() }
         val file = File(dir, "$name-${if (dark) "dark" else "light"}${if (wide) "-wide" else ""}.png")
-        file.outputStream().use { compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it) }
+        val node = act?.invoke() ?: compose.onRoot()
+        file.outputStream().use { node.captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
     @Composable
@@ -83,6 +92,12 @@ class Shots {
     @Test fun doneDark() = shot("done", true) { work("done", 1.0, position = 30.0, playing = true) }
     @Test fun doneWide() = shot("done", false, wide = true) { work("done", 1.0, position = 30.0, playing = true) }
     @Test fun doneWideDark() = shot("done", true, wide = true) { work("done", 1.0, position = 30.0, playing = true) }
+    private val saveAs = {
+        compose.onNodeWithText("Save as").performClick()
+        compose.onNode(isPopup())
+    }
+    @Test fun saveAsMenu() = shot("save-as", false, act = saveAs) { work("done", 1.0) }
+    @Test fun saveAsMenuDark() = shot("save-as", true, act = saveAs) { work("done", 1.0) }
     @Test fun captions() = shot("captions", false) { work("done", 1.0, cues, captions = true, position = 12.0) }
     @Test fun error() = shot("error", false) {
         work("error", 0.0, emptyList(), error = "Can't read this file (Android has no decoder for audio/alac)")
