@@ -460,8 +460,8 @@ write("about", "About pktito",
 privacy = f"""<main class="wrap">
 <section class="page-head">
   <h1 class="display">Privacy</h1>
-  <p class="measure">pktito is local transcription software: it turns speech into text on your computer. Your media files are not uploaded to cloud servers, and the app has no accounts, ads or tracking. This page says what does reach the internet, and what happens to it.</p>
-  <p class="measure legal-date">Last updated October 23, 2026</p>
+  <p class="measure">pktito is local transcription software: it turns speech into text on your computer or phone. Your media files are not uploaded to cloud servers, and the app has no accounts, ads or tracking. This page says what does reach the internet, and what happens to it.</p>
+  <p class="measure legal-date">Last updated October 26, 2026</p>
 </section>
 
 <section class="part">
@@ -482,17 +482,19 @@ privacy = f"""<main class="wrap">
 
 <section class="part">
   <h2 class="lead">Your data</h2>
-  <p class="measure">Everything the app keeps is on your computer, in its data folder: your settings, the models and the recent transcripts. Clearing the recent list deletes its transcripts. Uninstalling the app removes the app, and the data folder stays until you delete it. We hold nothing about you to look up, correct or delete.</p>
+  <p class="measure">Everything the app keeps is on your computer, in its data folder: your settings, the models and the recent transcripts. Clearing the recent list deletes its transcripts. Uninstalling the app removes the app, and the data folder stays until you delete it. pktito from the Microsoft Store keeps its settings, models and recent transcripts with the app instead, and uninstalling it deletes them.</p>
+  <p class="measure">On Android, the app keeps its settings, its models and the transcript open with the app, out of Android’s backups, and uninstalling it deletes them. It opens only the recordings you choose, open with it or share to it, saves only where you choose, and asks for no access to your storage. A transcript you share goes to the app you pick.</p>
+  <p class="measure">We hold nothing about you to look up, correct or delete.</p>
 </section>
 
 <section class="part">
   <h2 class="lead">Changes and questions</h2>
-  <p class="measure">If this policy changes, this page changes with it, under a new date, and the app’s copy comes with its next update. Ask questions {arrow("on GitHub", GITHUB + "/issues")}</p>
+  <p class="measure">If this policy changes, this page changes with it, under a new date, and the app’s copy comes with its next update. Ask questions by email, at <a class="pk-link" href="mailto:peter.hebert@pktito.net">peter.hebert@pktito.net</a>, or {arrow("on GitHub", GITHUB + "/issues")}</p>
 </section>
 </main>"""
 
 write("privacy", "pktito: privacy",
-      "What pktito sends where: the app transcribes on your computer, and a model download and this site are the only things that reach the internet.",
+      "What pktito sends where: the app transcribes on your computer or phone, and a model download and this site are the only things that reach the internet.",
       privacy)
 
 # ------------------------------------------------------------------- 404 --

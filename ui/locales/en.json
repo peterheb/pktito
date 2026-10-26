@@ -275,8 +275,8 @@
   "privacy.choice_uninstall": "Uninstalling pktito leaves its data folder (settings, models and recent transcripts) for you to delete.",
   "privacy.choice_uninstall_store": "pktito from the Microsoft Store keeps its settings, models and recent transcripts with the app; uninstalling it deletes them.",
   "privacy.questions": "Questions",
-  "privacy.ask_html": "Ask on <a href=\"https://github.com/peterheb/pktito/issues\">GitHub</a>. The full policy is at <a href=\"https://pktito.net/privacy\">pktito.net/privacy</a>.",
-  "privacy.updated": "Last updated October 23, 2026",
+  "privacy.ask_html": "Ask by email, at <a href=\"mailto:peter.hebert@pktito.net\">peter.hebert@pktito.net</a>, or on <a href=\"https://github.com/peterheb/pktito/issues\">GitHub</a>. The full policy is at <a href=\"https://pktito.net/privacy\">pktito.net/privacy</a>.",
+  "privacy.updated": "Last updated October 26, 2026",
 
   "notices.title": "Open source licenses",
   "notices.label": "The projects and their licenses",
