@@ -22,7 +22,7 @@
   IgnorableNamespaces="uap uap5 desktop4 rescap">
   <Identity Name="@NAME@" Publisher="@PUBLISHER@" Version="@VERSION@" ProcessorArchitecture="@ARCH@" />
   <Properties>
-    <DisplayName>pktito</DisplayName>
+    <DisplayName>@DISPLAY@</DisplayName>
     <PublisherDisplayName>@PUBLISHER_DISPLAY@</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -37,7 +37,7 @@
   </Resources>
   <Applications>
     <Application Id="pktito" Executable="pktito-app.exe" EntryPoint="Windows.FullTrustApplication">
-      <uap:VisualElements DisplayName="pktito" Description="Speech to text on this computer"
+      <uap:VisualElements DisplayName="@DISPLAY@" Description="Speech to text on this computer"
         BackgroundColor="transparent" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png" />
       <Extensions>
         <uap:Extension Category="windows.fileTypeAssociation">

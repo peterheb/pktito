@@ -30,6 +30,16 @@ What the app does about it (f264534):
 Writes outside AppData are not redirected: a transcript saved next to its
 recording lands there, as from the setup program's copy.
 
+Windows redirects only a folder the package makes. Where the setup
+program's copy ran first, `%APPDATA%\net.pktito.app` is already there, and
+the Store's copy reads and writes that real folder: same models, settings
+and recent list, and uninstalling it leaves them. This was found with a
+signed test package on the 9950X (2026-10-26): its recent transcript went
+into the real folder, and its `LocalCache` held nothing of pktito's. So
+`status.store` says where the app came from, not where its data is. In
+that case Privacy's "uninstalling deletes them" is wrong, and the hidden
+Show in File Explorer would work.
+
 No restricted capability beyond `runFullTrust`, which every desktop program
 in a package declares; Partner Center asks for a line saying why ("a Win32
 desktop app"). `unvirtualizedResources` would keep AppData shared with the
