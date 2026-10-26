@@ -83,7 +83,7 @@
     <string name="privacy_choice_uninstall">pktito keeps its settings, its models and the transcript open with the app, out of Android\'s backups; uninstalling it deletes them.</string>
     <string name="privacy_questions">Questions</string>
     <string name="privacy_ask"><![CDATA[Ask by email, at <a href="mailto:peter.hebert@pktito.net">peter.hebert@pktito.net</a>, or on <a href="https://github.com/peterheb/pktito/issues">GitHub</a>. The full policy is at <a href="https://pktito.net/privacy">pktito.net/privacy</a>.]]></string>
-    <string name="privacy_updated">Last updated October 25, 2026</string>
+    <string name="privacy_updated">Last updated October 26, 2026</string>
     <!-- the licenses (notices.*), from assets/notices.json (android/notices.py) -->
     <string name="notices_title">Open source licenses</string>
     <string name="notices_intro">This build of pktito includes the following open-source software and libraries:</string>
