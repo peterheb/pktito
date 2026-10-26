@@ -43,6 +43,19 @@ const RETRY_BREAK_S: f64 = 1.0;
 /// chunk if that is more: music Silero takes for speech, which gives no
 /// words however it is cut, then costs at most a fifth more time.
 const RETRY_SHARE: f64 = 0.2;
+/// A stretch is transcribed again only if its speech is within this many dB
+/// of the recording's: dropped speech is the voice the rest of the recording
+/// is in, where a voice in the background, which Silero hears as speech too,
+/// is quieter. AliceBench's dropped stretches lie -3.6 to +2.7 dB from their
+/// chapters' speech; LibriSpeech long-form recordings with three other
+/// speakers mixed in at 10 dB SNR had stretches retried down to -24 dB
+/// (median -3.8), and the retries put the background's words into them. The
+/// mixes' WER, with no retry, ungated, and gated at 4, 5 and 6 dB: at 10 dB
+/// SNR 6.21%, 9.20%, 6.02%, 6.46%, 6.73%; at 5 dB 19.88%, 21.91%, 19.79%,
+/// 20.78%, 21.36%; at 0 dB, the background as loud as the speaker, 56.44%,
+/// 58.68%, 58.40% (24 recordings, 2026-10-26). Pink noise and a phone band
+/// draw no retry at all, nor do two songs; a third's one gives no words.
+const RETRY_LEVEL_DB: f64 = 4.0;
 
 /// PKTITO_THREADS, for finding out what a machine does on fewer threads (the
 /// engine CLI's -t); unset, 0: one a core, and pktito's choice among them.
@@ -83,6 +96,11 @@ pub fn run(
     let chunks = model.chunks(x, MAX_CHUNK_S)?;
     let total: i64 = chunks.iter().map(|c| c.end - c.start).sum::<i64>().max(1);
     let mut retries = (total as f64 * RETRY_SHARE).max(MAX_CHUNK_S * rate) as i64;
+    let (e, n) = chunks.iter().fold((0.0, 0), |(e, n), c| {
+        let (ce, cn) = power(c, x, c.start, c.end);
+        (e + ce, n + cn)
+    });
+    let floor = db(e, n) - RETRY_LEVEL_DB;
     let mut done = 0i64;
     let mut all = Vec::new();
     for c in &chunks {
@@ -90,7 +108,7 @@ pub fn run(
             return Ok((all, false));
         }
         let toks = asr.run(&x[c.start as usize..c.end as usize])?;
-        let toks = again(model, asr, x, c, toks, &mut retries)?;
+        let toks = again(model, asr, x, c, toks, floor, &mut retries)?;
         let segs = sentences(model, &toks, c.start as f64 / rate, frame);
         done += c.end - c.start;
         progress(done as f64 / total as f64, &segs);
@@ -100,17 +118,22 @@ pub fn run(
 }
 
 /// A chunk's tokens with those of each stretch of it transcribed again
-/// (RETRY_SPEECH_S, RETRY_BREAK_S), while the samples left to retry last:
-/// each stretch's tokens at its own frames in the chunk, all of them in
-/// frame order.
+/// (RETRY_SPEECH_S, RETRY_BREAK_S), its speech no quieter than floor dB
+/// (RETRY_LEVEL_DB), while the samples left to retry last: each stretch's
+/// tokens at its own frames in the chunk, all of them in frame order.
 fn again(
     model: &Model,
     asr: &mut Asr,
     x: &[f32],
     c: &Chunk,
     mut toks: Vec<Tok>,
+    floor: f64,
     retries: &mut i64,
 ) -> Result<Vec<Tok>, String> {
+    let loud = |s0: i64, s1: i64| {
+        let (e, n) = power(c, x, s0, s1);
+        db(e, n) >= floor
+    };
     let rate = model.rate() as f64;
     let spf = (model.frame_seconds() * rate).round() as i64;
     let frames = (c.end - c.start + spf - 1) / spf;
@@ -121,7 +144,7 @@ fn again(
     let samples = |(f0, f1): (i64, i64)| (c.start + f0 * spf, (c.start + f1 * spf).min(c.end));
     let stretches = if toks.is_empty() {
         let (s0, s1) = (c.start, c.end);
-        if c.heard(s0, s1) < at_break || s1 - s0 > *retries {
+        if c.heard(s0, s1) < at_break || !loud(s0, s1) || s1 - s0 > *retries {
             return Ok(toks);
         }
         *retries -= s1 - s0;
@@ -144,7 +167,7 @@ fn again(
             } else {
                 inside
             };
-            if s1 - s0 <= *retries && c.heard(s0, s1) >= enough {
+            if s1 - s0 <= *retries && c.heard(s0, s1) >= enough && loud(s0, s1) {
                 *retries -= s1 - s0;
                 chosen.push((f0, f1));
             }
@@ -184,6 +207,28 @@ fn gaps(words: impl Iterator<Item = (i64, i64, bool)>, n: i64) -> Vec<(i64, i64,
         out.push((at, n, after_break));
     }
     out
+}
+
+/// The energy of x where Silero heard speech in [from, to) of a chunk, and
+/// over how many samples.
+fn power(c: &Chunk, x: &[f32], from: i64, to: i64) -> (f64, i64) {
+    let (mut e, mut n) = (0.0, 0);
+    for s in &c.speech {
+        let (a, b) = (s.start.max(from), s.end.min(to));
+        if b > a {
+            e += x[a as usize..b as usize]
+                .iter()
+                .map(|&v| v as f64 * v as f64)
+                .sum::<f64>();
+            n += b - a;
+        }
+    }
+    (e, n)
+}
+
+/// Mean power in dB, of energy e over n samples; very low for none.
+fn db(e: f64, n: i64) -> f64 {
+    10.0 * (e / n.max(1) as f64).max(1e-20).log10()
 }
 
 /// Where a chunk is cut for its retry, from its start: the middle of its

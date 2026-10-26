@@ -119,7 +119,9 @@ Text appears as each part of a recording finishes (whole up to 30 s, else
 cut at its silences), and Stop ends it after the part it is on, keeping the
 text so far. A stretch in which Silero heard speech but the model wrote
 no words is transcribed again on its own: 2 s of speech inside a sentence,
-1 s between sentences, and a part with no words at all cut in two. The
+1 s between sentences, and a part with no words at all cut in two, if its
+speech is within 4 dB of the recording's, so that a voice in the
+background stays out. The
 English model, NeMo's own included, drops the LibriVox notices, credits
 and titles at the start of seven of AliceBench's chapters as they are
 cut, and these give them back (`src-tauri/src/transcribe.rs`,
