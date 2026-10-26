@@ -39,6 +39,19 @@ android {
     }
 }
 
+// what the release build packages from Maven, each module and its file, for
+// notices.py's list of licenses: what resolves to a file, so neither a
+// BOM nor a multiplatform module's metadata, whose code is its -android's
+tasks.register("packaged") {
+    val modules = configurations.named("releaseRuntimeClasspath")
+        .flatMap { it.incoming.artifacts.resolvedArtifacts }
+        .map { all -> all.map { "${it.id.componentIdentifier.displayName}\t${it.file}" }.distinct().sorted() }
+    val out = layout.buildDirectory.file("notices/packaged.txt")
+    inputs.property("modules", modules)
+    outputs.file(out)
+    doLast { out.get().asFile.writeText(modules.get().joinToString("\n", postfix = "\n")) }
+}
+
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2026.09.00"))
     implementation("androidx.compose.material3:material3")
