@@ -250,9 +250,10 @@ private fun SaveAs(name: String, times: Boolean, a: WorkActions) {
 
 /**
  * The transcript's rows (app.css, .pk-seg): each sentence's time, or a cue's
- * start and end, then its text, at most 560 dp wide; on a narrow screen the
- * time above the text, where the desktop's 112 dp column left too little
- * of the line. The row playing on the surface, the beak's square after its
+ * start and end, then its text, at most 560 dp wide; under 620 dp the time
+ * above the text, as the desktop's window has it (app.css, max-width:
+ * 619px), where its 112 dp column left too little of the line. The row
+ * playing on the surface, the beak's square after its
  * time and the word playing underlined in it; a time plays from there.
  */
 @Composable
@@ -270,7 +271,7 @@ private fun Rows(
     val p = pk
     val current = if (review && (playing || position > 0)) rows.indexOfLast { it.start <= position + 1e-3 } else -1
     BoxWithConstraints(modifier.fillMaxWidth()) {
-        val wide = maxWidth >= 600.dp
+        val wide = maxWidth >= 620.dp
         SelectionContainer {
             LazyColumn(state = list, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp)) {
                 itemsIndexed(rows) { i, s ->
