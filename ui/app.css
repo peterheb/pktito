@@ -1787,11 +1787,39 @@ html[data-chrome="win"] .pk-head {
   .pk-stats {
     padding-left: 12px;
   }
-  /* a cue's start and end side by side above its lines */
+  /* a cue's start and end side by side above its lines, as a range,
+     00:02.88 – 00:05.60, spaced as the mono type spaces it (0.6 em, a
+     space's width), and the beak after the range: a start with the beak
+     after it and the end beside that read as two times of their own
+     (Peter, the Android app on the S25, 2026-10-26) */
   .pk-seg-times {
     flex-direction: row;
     align-items: baseline;
-    gap: 10px;
+    gap: 0;
+  }
+  .pk-cue .pk-seg-end {
+    align-items: baseline;
+    gap: 0;
+  }
+  .pk-cue .pk-seg-end::before {
+    content: "\2013";
+    padding: 0 0.6em;
+  }
+  .pk-cue.is-current .pk-seg-t::after {
+    content: none;
+  }
+  .pk-cue.is-current .pk-seg-end::after {
+    content: "";
+    width: 7px;
+    height: 7px;
+    margin-left: 3px;
+    background: var(--beak);
+    flex: none;
+  }
+  .pk-cue .pk-fast {
+    order: 1;
+    align-self: center;
+    margin-left: 4px;
   }
 }
 /* a narrow window, down to the 480 it allows: the edges closer in */
