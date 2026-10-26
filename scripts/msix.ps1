@@ -7,7 +7,8 @@
 # DIR holds pktito-app.exe, pktito-cli.exe and WebView2Loader.dll (default:
 # src-tauri's target/release, or target/aarch64-pc-windows-gnullvm/release
 # for arm64). The version is Cargo.toml's with a fourth part of 0, which the
-# Store keeps for itself.
+# Store keeps for itself; -Version sets another, as a test package's must
+# rise for Windows to install it over the last and draw its icons afresh.
 #
 # -Identity store uses the name and publisher Partner Center gives the app
 # (Product identity), below; the Store signs that package itself. -Identity
@@ -26,7 +27,8 @@ param(
     [string]$Exes,
     [string]$Out,
     [ValidateSet('store', 'test', 'sideload')] [string]$Identity = 'test',
-    [string[]]$Bundle
+    [string[]]$Bundle,
+    [string]$Version
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
@@ -53,6 +55,7 @@ $test = @{
 $sdk = "${env:ProgramFiles(x86)}\Windows Kits\10\bin"
 $makeappx = Get-ChildItem "$sdk\10.*\x64\makeappx.exe" | Sort-Object FullName | Select-Object -Last 1
 if (-not $makeappx) { throw "no makeappx.exe under $sdk (the Windows SDK)" }
+$makepri = Join-Path $makeappx.DirectoryName 'makepri.exe'
 
 if ($Bundle) {
     if (-not $Out) { throw '-Bundle needs -Out' }
@@ -66,7 +69,7 @@ if ($Bundle) {
     return
 }
 
-$version = (Select-String -Path "$tauri\Cargo.toml" -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches[0].Groups[1].Value + '.0'
+$version = if ($Version) { $Version } else { (Select-String -Path "$tauri\Cargo.toml" -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches[0].Groups[1].Value + '.0' }
 if (-not $Exes) {
     $Exes = if ($Arch -eq 'arm64') { "$tauri\target\aarch64-pc-windows-gnullvm\release" } else { "$tauri\target\release" }
 }
@@ -90,6 +93,11 @@ try {
         Copy-Item "$tauri\icons\$f" "$layout\Assets"
     }
     Copy-Item "$tauri\icons\model\48x48.png" "$layout\Assets\model.png"
+    # the taskbar's and Start's icon at each size they draw it, unplated:
+    # with only Square44x44Logo, Windows scales it onto a plate of the
+    # accent color, whose edge showed round the icon's corners (the
+    # 2026-10-26 test package, in the taskbar)
+    Copy-Item "$tauri\windows\msix\Assets\*.png" "$layout\Assets"
     # licenses beside the exes, as the setup program installs them
     New-Item -ItemType Directory "$layout\licenses" | Out-Null
     Copy-Item "$root\ui\fonts\Archivo-OFL.txt", "$root\ui\fonts\CommitMono-OFL.txt" "$layout\licenses"
@@ -100,6 +108,13 @@ try {
         -replace '@PUBLISHER_DISPLAY@', $id.PublisherDisplay -replace '@DISPLAY@', $id.Display `
         -replace '@VERSION@', $version -replace '@ARCH@', $Arch |
         Set-Content -Encoding utf8 "$layout\AppxManifest.xml"
+
+    # the resource index, by which Windows finds the icons' sized forms
+    # (Assets\*.targetsize-*); without it only the plain file names count
+    & $makepri createconfig /cf "$layout\..\priconfig-$PID.xml" /dq en-US /o | Out-Null
+    & $makepri new /pr $layout /cf "$layout\..\priconfig-$PID.xml" /of "$layout\resources.pri" /o | Out-Null
+    if ($LASTEXITCODE) { throw "makepri failed ($LASTEXITCODE)" }
+    Remove-Item "$layout\..\priconfig-$PID.xml"
 
     & $makeappx pack /o /d $layout /p $Out
     if ($LASTEXITCODE) { throw "makeappx pack failed ($LASTEXITCODE)" }

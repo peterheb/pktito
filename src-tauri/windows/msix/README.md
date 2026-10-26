@@ -94,3 +94,22 @@ install.
   administrator).
 - Version: Cargo.toml's, with a fourth part of 0, which the Store keeps for
   itself.
+
+## The icons
+
+`Assets/` holds the taskbar and Start icon, `Square44x44Logo`, at each
+target size Windows draws it, in the unplated and light-unplated forms.
+Without them, Windows scales the 44 px logo onto a plate of the accent
+colour, which shows round the icon's rounded corners. They are
+`icons/icon.png` resized with Lanczos:
+
+```sh
+python3 -c "
+from PIL import Image
+src = Image.open('src-tauri/icons/icon.png').convert('RGBA')
+for n in (16, 20, 24, 30, 32, 36, 40, 48, 60, 64, 72, 80, 96, 256):
+    im = src.resize((n, n), Image.LANCZOS)
+    for alt in ('altform-unplated', 'altform-lightunplated'):
+        im.save(f'src-tauri/windows/msix/Assets/Square44x44Logo.targetsize-{n}_{alt}.png')
+"
+```
