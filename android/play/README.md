@@ -31,8 +31,10 @@ python3 android/notices.py --check                  # the licenses list is the b
 - **Website:** https://pktito.net · **Privacy policy:** https://pktito.net/privacy
 - **Contact email:** peter.hebert@pktito.net, the account's support email, which the
   privacy policy gives too
-- **Still to make:** the 1024 × 500 feature graphic, and phone screenshots
-  (2 to 8, from the Galaxy S25); Chromebook ones from the Googlebook are optional.
+- **Still to choose:** the 1024 × 500 feature graphic (three drafts), and 2 to
+  8 phone screenshots of the nine taken on the Galaxy S25 Ultra (1080 × 2118,
+  the status and navigation bars cropped off); Chromebook ones from the
+  Googlebook are optional.
 
 ## App content
 
@@ -87,7 +89,11 @@ The videos: for the transcription, choose a recording, see the transcription
 start with its notification, switch to another app while the notification
 counts up, come back to the finished transcript; for the download, tap
 Download the English model on the setup screen and watch it come, in the
-app and in its notification. Recorded on the S25, as Peter chooses.
+app and in its notification. Recorded on the emulator (a Pixel 5 image),
+where no other app's notifications show: the transcription on Android 16
+(mediaProcessing; AliceBench's chapter 10, 53 s), the download on Android 13
+(dataSync, its use case there; 123 s). Play takes each as a YouTube link,
+unlisted.
 
 **Generative AI.** Play's AI-generated content policy covers apps that make
 new content from prompts: chatbots, image generators, made-up voices or
