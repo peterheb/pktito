@@ -13,8 +13,9 @@ cd android && ./gradlew bundleRelease               # app/build/outputs/bundle/r
 python3 android/notices.py --check                  # the licenses list is the build's
 ```
 
-- R8 shrinks the release (4.7 MB APK, 4.6 MB bundle); `proguard-rules.pro`
-  keeps the two methods the native library calls by name.
+- R8 shrinks the release (8.3 MB APK, 6.6 MB bundle, both ABIs; a phone
+  gets one, its native library 2.4 MB on arm64-v8a); `proguard-rules.pro`
+  keeps the three methods the native library calls by name.
 - Native code for arm64-v8a and x86_64 only (`abiFilters`), each library 16 KB
   aligned, as Play requires of apps for Android 15 and later.
 - targetSdk 36, minSdk 29 (Android 10). `versionCode` goes up with every upload.
@@ -56,9 +57,9 @@ and user agent the server logs, for security and to count downloads, as the
 policy says. A model file of one's own is copied into the app from the
 system's picker and never leaves the device. Google's form has no
 IP-address type, and its guidance is to disclose IP addresses "based on
-their particular usage". No location is
-inferred and no profile kept, so the leaning answer is **no data collected
-or shared**, with that reasoning on file. That is Peter's to decide when he
+their particular usage". No location is inferred and no profile kept, so
+the leaning answer is **no data collected or shared**, with that reasoning
+on file. That is Peter's to decide when he
 fills in the form.
 
 **Foreground service.** Each type the manifest declares needs a description,
