@@ -253,6 +253,12 @@ class Shots {
     @Test fun saveAsMenuKeys() = shot("save-as", false, keys = true, act = saveAs) { work("done", 1.0) }
     @Test fun saveAsMenuKeysDark() = shot("save-as", true, keys = true, act = saveAs) { work("done", 1.0) }
     @Test fun captions() = shot("captions", false) { work("done", 1.0, cues, captions = true, position = 12.0) }
+    @Test fun captionsDark() = shot("captions", true) { work("done", 1.0, cues, captions = true, position = 12.0) }
+    // a cue's range on a phone at 360 in frames, its longest; a laptop's window keeps start over end
+    @Test fun captionsNarrowFrames() = shot("captions-360-frames", false, narrow = true) {
+        work("done", 1.0, cues, captions = true, position = 12.0, base = Timebase(frames = true, video = 29.97))
+    }
+    @Test fun captionsWide() = shot("captions", false, wide = true) { work("done", 1.0, cues, captions = true, position = 12.0) }
     // the time menu as the desktop's stand-in has it (an audio file, 25 fps chosen, at the start),
     // and a 29.97 video's in frames at its own rate, drop-frame, half a minute in
     private fun timeMenu(time: String) = {

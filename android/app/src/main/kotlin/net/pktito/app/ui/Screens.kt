@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -527,9 +528,9 @@ fun kbd(key: String, shift: Boolean = false): String =
  * The transcript's rows (app.css, .pk-seg): each sentence's time, or a cue's
  * start and end, then its text, at most 560 dp wide; under 620 dp the time
  * above the text, as the desktop's window has it (app.css, max-width:
- * 619px), where its 112 dp column left too little of the line. The row
- * playing on the surface, the beak's square after its
- * time and the word playing underlined in it; a time plays from there.
+ * 619px), where its 112 dp column left too little of the line, a cue's two
+ * times a range. The row playing on the surface, the beak's square after
+ * its time and the word playing underlined in it; a time plays from there.
  */
 @Composable
 private fun Rows(
@@ -572,35 +573,42 @@ private fun Rows(
 @Composable
 private fun SegRow(s: Seg, now: Boolean, word: Int, wide: Boolean, cue: Boolean, review: Boolean, base: Timebase, onTime: () -> Unit) {
     val p = pk
+    val stamp = Type.stamp.copy(fontFeatureSettings = "tnum")
     val start = @Composable { mod: Modifier ->
-        Row(mod) {
-            Text(
-                base.at(s.start),
-                style = Type.stamp.copy(lineHeight = 20.sp, fontFeatureSettings = "tnum"),
-                color = p.inkMuted,
-                modifier = Modifier
-                    .alignByBaseline()
-                    .then(if (review) Modifier.clickable(remember { MutableInteractionSource() }, null, onClick = onTime) else Modifier),
-            )
-            if (now) {
+        Text(
+            base.at(s.start),
+            style = stamp.copy(lineHeight = 20.sp),
+            color = p.inkMuted,
+            modifier = mod.then(if (review) Modifier.clickable(remember { MutableInteractionSource() }, null, onClick = onTime) else Modifier),
+        )
+    }
+    val end = @Composable { mod: Modifier -> Text(base.at(s.end), style = stamp, color = p.inkMuted, modifier = mod) }
+    // the row playing: the beak's square after its time, on its baseline
+    val beak = @Composable { scope: RowScope ->
+        if (now)
+            with(scope) {
                 Spacer(Modifier.width(3.dp))
                 Box(Modifier.size(7.dp).alignBy { it.measuredHeight }.background(p.beak))
             }
-        }
     }
-    val end = @Composable { mod: Modifier ->
-        Text(base.at(s.end), style = Type.stamp.copy(fontFeatureSettings = "tnum"), color = p.inkMuted, modifier = mod)
-    }
-    // a cue's end under its start, or on a narrow screen beside it
+    // a cue's end under its start, or on a narrow screen after it as a
+    // range, 00:02.88 – 00:05.60, the beak after the range: side by side, a
+    // start with the beak after it and the end beside that read as two
+    // times of their own (Peter, the S25, 2026-10-26)
     val time = @Composable { mod: Modifier ->
         if (cue && !wide)
-            Row(mod, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(mod) {
                 start(Modifier.alignByBaseline())
+                Text(" – ", style = stamp, color = p.inkMuted, modifier = Modifier.alignByBaseline())
                 end(Modifier.alignByBaseline())
+                beak(this)
             }
         else
             Column(mod, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                start(Modifier)
+                Row {
+                    start(Modifier.alignByBaseline())
+                    beak(this)
+                }
                 if (cue) end(Modifier)
             }
     }
