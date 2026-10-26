@@ -23,6 +23,17 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask">
+            <!-- A window's first size where Android has windows (the
+                 Googlebook, a tablet's desktop): the desktop's, 680 by 800
+                 inside its title bar and 480 by 480 at the least
+                 (tauri.conf.json, main.rs fit_size), with the 40 dp header
+                 Android draws across a window's top (60 px at 240 dpi,
+                 measured on the Googlebook) -->
+            <layout
+                android:defaultWidth="680dp"
+                android:defaultHeight="840dp"
+                android:minWidth="480dp"
+                android:minHeight="520dp" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
