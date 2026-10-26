@@ -30,6 +30,8 @@ tauri-plugin-dialog = "2"
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.22"
+# a FLAC's samples, read here rather than by the phone's decoder (decode.rs, flac_fd)
+claxon = "0.4"
 
 # unoptimized, a debug build hashes the model's download at 28 MB/s
 [profile.dev.package.sha2]

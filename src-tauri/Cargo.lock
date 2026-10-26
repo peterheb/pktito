@@ -473,6 +473,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "claxon"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4bfbf56724aa9eca8afa4fcfadeb479e722935bb2a0900c2d37e0cc477af0688"
+
+[[package]]
 name = "combine"
 version = "4.6.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2524,6 +2530,7 @@ name = "pktito-app"
 version = "0.9.2"
 dependencies = [
  "cc",
+ "claxon",
  "dirs",
  "jni 0.22.4",
  "serde",

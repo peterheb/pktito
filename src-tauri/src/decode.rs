@@ -225,9 +225,10 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
 
 /// The recording open at fd, which Android's document picker hands over
 /// with no name the app may open it by again (android.rs): a WAV or AIFF
-/// by pktito's reader, anything else by Android's own decoder
-/// (native/decode_android.c). Each reads from the start of a copy of fd,
-/// which stays the caller's to close; name says which file a failure was.
+/// by pktito's reader, a FLAC by claxon (flac_fd says why), anything else
+/// by Android's own decoder (native/decode_android.c). Each reads from the
+/// start of a copy of fd, which stays the caller's to close; name says
+/// which file a failure was.
 ///
 /// Android's decoders start where ffmpeg's do, priming and all, on every
 /// format of scripts/media-matrix.sh's that Android reads (no lag: AAC in
@@ -246,8 +247,65 @@ pub fn decode_fd(fd: c_int, name: &str) -> Result<Vec<f32>, DecodeError> {
     if let Some(read) = wav_fd(fd, name) {
         return read;
     }
-    let x = decode_android(fd)?;
+    let x = match flac_fd(fd) {
+        Some(read) => read?,
+        None => decode_android(fd)?,
+    };
     Ok(flac_cut_in(&mut copy_of(fd)?, x))
+}
+
+/// The FLAC open at fd, decoded here: a lossless file's samples are its
+/// own whoever decodes them, ffmpeg's bit for bit, and Android's decoders
+/// do not all give them all. Samsung's (c2.sec.flac.decoder, a Galaxy S25
+/// Ultra, Android 17), handed buffers of several frames by Samsung's
+/// extractor, drops the frames it has read ahead when the stream ends: the
+/// matrix's 44.1 kHz FLAC lost its last 1008 samples, and each AliceBench
+/// chapter 0.23 to 1.99 s, 8 of 12 then off the reference transcript.
+/// Google's decoder takes one frame from each such buffer. None for a file
+/// that is not a FLAC, or one claxon cannot read to its end, which goes to
+/// Android's decoder.
+#[cfg(target_os = "android")]
+fn flac_fd(fd: c_int) -> Option<Result<Vec<f32>, DecodeError>> {
+    let mut r = match copy_of(fd) {
+        Ok(f) => claxon::FlacReader::new(f).ok()?,
+        Err(e) => return Some(Err(e)),
+    };
+    let s = r.streaminfo();
+    // full scale at 1, as pktito's WAV reader and ffmpeg's float: a
+    // 16-bit sample over 32768
+    let scale = 1.0 / (1u64 << (s.bits_per_sample - 1)) as f32;
+    let f = WavFormat {
+        rate: s.sample_rate,
+        ch: s.channels,
+        mask: 0,
+    };
+    let mut mix = match Mix::new(&f) {
+        Ok(m) => m,
+        Err(e) => return Some(Err(e)),
+    };
+    let mut blocks = r.blocks();
+    let (mut buf, mut x, mut total) = (Vec::new(), Vec::new(), 0);
+    loop {
+        let block = match blocks.read_next_or_eof(buf) {
+            Ok(Some(b)) if b.channels() == s.channels => b,
+            Ok(None) => break,
+            _ => return None,
+        };
+        let ch: Vec<&[i32]> = (0..block.channels()).map(|c| block.channel(c)).collect();
+        x.clear();
+        for i in 0..block.duration() as usize {
+            x.extend(ch.iter().map(|c| c[i] as f32 * scale));
+        }
+        if let Err(e) = mix.push(&x) {
+            return Some(Err(e));
+        }
+        total += block.duration() as usize;
+        buf = block.into_buffer();
+    }
+    if total == 0 {
+        return Some(Err(DecodeError::NoAudio));
+    }
+    Some(mix.take())
 }
 
 /// A video's frame rate, as Android's extractor reads the file at fd
