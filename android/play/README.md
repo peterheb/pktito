@@ -28,7 +28,8 @@ python3 android/notices.py --check                  # the licenses list is the b
 - **Icon:** `icon-512.png` (from `android/icon.py`)
 - **Category:** Productivity
 - **Website:** https://pktito.net · **Privacy policy:** https://pktito.net/privacy
-- **Contact email:** still to choose (Peter)
+- **Contact email:** peter.hebert@pktito.net, the account's support email, which the
+  privacy policy gives too
 - **Still to make:** the 1024 × 500 feature graphic, and phone screenshots
   (2 to 8, from the Galaxy S25); Chromebook ones from the Googlebook are optional.
 

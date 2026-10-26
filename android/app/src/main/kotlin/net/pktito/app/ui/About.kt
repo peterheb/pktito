@@ -231,8 +231,9 @@ private fun linkStyles() = TextLinkStyles(SpanStyle(color = pk.link, textDecorat
 
 /**
  * One of the desktop's *_html strings (strings.xml, in CDATA), its links
- * opened by onLink; each, as all of About's links go to another site, with
- * the icon of one that leaves the app, held to its last word (app.js).
+ * opened by onLink; each, as all of About's links leave the app for another
+ * site or the email app, with the icon of one that does, held to its last
+ * word (app.js).
  */
 @Composable
 private fun html(s: String, onLink: (String) -> Unit): AnnotatedString {
