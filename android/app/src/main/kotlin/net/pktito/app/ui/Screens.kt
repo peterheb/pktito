@@ -49,10 +49,11 @@ import net.pktito.app.Seg
  * The start screen (ui/index.html, #ready): the wordmark and the model on
  * the column's top edge, and under them the prompt and its button in a
  * dashed zone, as the desktop's drop zone, which says where a file goes.
- * A phone has nothing to drop, so the zone says what it is for.
+ * A phone has nothing to drop, so the zone says what it is for. The
+ * wordmark opens About.
  */
 @Composable
-fun Ready(model: String, hasModel: Boolean, onChoose: () -> Unit) {
+fun Ready(model: String, hasModel: Boolean, onChoose: () -> Unit, onAbout: () -> Unit) {
     val p = pk
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
@@ -63,7 +64,14 @@ fun Ready(model: String, hasModel: Boolean, onChoose: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Wordmark()
+                // the way to About, its padding outside it so that the word
+                // stays where it is (app.css, button.pk-wm)
+                Box(
+                    Modifier
+                        .bleed(6.dp, 4.dp)
+                        .control(Corner, label = stringResource(R.string.about_open), onClick = onAbout)
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                ) { Wordmark() }
                 Spacer(Modifier.weight(1f))
                 if (model.isNotEmpty()) Text(model, style = Type.ui, color = p.ink)
             }

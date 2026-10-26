@@ -39,6 +39,9 @@ object Icons {
     val alert = icon("alert", "M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z", "M12 8v4", "M12 16h0.01")
     // feather's share, in the set the desktop's icons come from
     val share = icon("share", "M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8", "M16 6L12 2L8 6", "M12 2v13")
+    val x = icon("x", "M18 6L6 18", "M6 6L18 18")
+    // after a link that leaves the app, as the desktop's About has it
+    val external = icon("external", "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6", "M15 3h6v6", "M10 14L21 3")
     val play = icon("play", "M6 3L20 12L6 21Z", filled = true)
     val pause = icon("pause", "M6 4h4v16H6z", "M14 4h4v16h-4z", filled = true)
     // the speaker, and its sound: two waves from half the volume up, one

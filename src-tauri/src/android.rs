@@ -276,6 +276,22 @@ pub extern "system" fn Java_net_pktito_app_Engine_captions<'a>(
         .resolve::<ThrowRuntimeExAndDefault>()
 }
 
+/// Engine.backend(): the engine's code for this processor, picked by its
+/// CPU, by its name and what it uses ("neon-dp (ARMv8.2 NEON: SDOT int8,
+/// fp32)"), for About's version line, as the desktop's status has it. No
+/// model is loaded for it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_backend<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+) -> JObject<'a> {
+    unowned
+        .with_env(|env| -> jni::errors::Result<JObject<'a>> {
+            Ok(env.new_string(pktito::backend())?.into())
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
 /// Engine.label(name): what the catalog calls the model of that name, as
 /// the desktop's start screen shows it ("English", "Multilingual"); "" for
 /// a model it does not list. No model is loaded for it.

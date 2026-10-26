@@ -53,6 +53,45 @@
     <string name="no_speech">No speech in this file</string>
     <string name="real_time">%1$sx real-time</string><!-- time.real_time -->
     <string name="stats_transcribed">Transcribed in %1$s, %2$s</string><!-- stats.transcribed -->
+    <!-- About (about.*); the strings in CDATA are HTML, as the desktop's
+         *_html are, for AnnotatedString.fromHtml -->
+    <string name="about_open">About pktito</string>
+    <string name="about_mascot">pktito\'s mascot, a budgie beside a speech bubble and a transcript</string>
+    <string name="about_tagline"><![CDATA[A compact Parakeet implementation <i>(pronounced “pick-a-tito”)</i><br>Speech to text on this device.]]></string>
+    <string name="about_version">Version %1$s · %2$s</string>
+    <string name="about_copyright"><![CDATA[Copyright (c) 2026 Peter Hebert, under the <a href="https://github.com/peterheb/pktito/blob/main/LICENSE">MIT license</a>]]></string>
+    <string name="about_docs">Documentation</string>
+    <string name="about_privacy">Privacy</string>
+    <string name="about_models"><![CDATA[NVIDIA\'s <a href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2">parakeet-tdt-0.6b-v2</a> and <a href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3">-v3</a>, under <a href="https://creativecommons.org/licenses/by/4.0/">CC&nbsp;BY&nbsp;4.0</a>, modified by pktito (partly quantized to int8). Provided as is, without warranties. pktito is not affiliated with or endorsed by NVIDIA.]]></string>
+    <string name="about_silero"><![CDATA[Voice activity detection, <a href="https://github.com/snakers4/silero-vad/blob/master/LICENSE">MIT</a><br>Copyright (c) 2020-present Silero Team]]></string>
+    <string name="about_else">Everything else</string>
+    <!-- about.else_list: no Tauri on Android -->
+    <string name="about_else_list">Jetpack Compose, Rust crates, typefaces, icons, etc.</string>
+    <string name="about_licenses">Open source licenses</string>
+    <string name="sheet_close">Close</string>
+    <!-- Privacy (privacy.*), as Android has it: a device, the system's
+         pickers, the app's data deleted with it; site/build.py's policy
+         says the same -->
+    <string name="privacy_title">Privacy</string>
+    <string name="privacy_intro">pktito is local transcription software — it turns speech into text on this device. Your media files are not uploaded to cloud servers, and pktito has no accounts, ads or tracking.</string>
+    <string name="privacy_internet">What reaches the internet</string>
+    <string name="privacy_download"><![CDATA[<b>Downloading a model.</b> pktito downloads AI models from models.pktito.net, hosted on a content delivery network. The server logs your IP address, the time, the file requested and a standard user-agent string, but no name, account or device identifier. These logs are used to keep the service secure and to count downloads in aggregate. We don\'t use them to identify you, combine them with other data, or sell or share them.]]></string>
+    <string name="privacy_links"><![CDATA[<b>Links.</b> Links in pktito open in your browser, and each site\'s own privacy policy applies there.]]></string>
+    <string name="privacy_files">Your files</string>
+    <string name="privacy_files_text">pktito opens only the recordings you choose, open with it or share to it, and saves only where you choose. It asks for no access to your storage. A transcript you share goes to the app you pick.</string>
+    <string name="privacy_choices">Your choices</string>
+    <string name="privacy_choice_file">To skip the download, use a model file you already have: choose “Open a model file…”.</string>
+    <string name="privacy_choice_uninstall">pktito keeps its settings, its models and the transcript open with the app, out of Android\'s backups; uninstalling it deletes them.</string>
+    <string name="privacy_questions">Questions</string>
+    <string name="privacy_ask"><![CDATA[Ask on <a href="https://github.com/peterheb/pktito/issues">GitHub</a>. The full policy is at <a href="https://pktito.net/privacy">pktito.net/privacy</a>.]]></string>
+    <string name="privacy_updated">Last updated October 25, 2026</string>
+    <!-- the licenses (notices.*), from assets/notices.json (android/notices.py) -->
+    <string name="notices_title">Open source licenses</string>
+    <string name="notices_intro">This build of pktito includes the following open-source software and libraries:</string>
+    <string name="notices_type">Typefaces and icons</string>
+    <string name="notices_libraries">Libraries (Android)</string>
+    <string name="notices_texts">License texts</string>
+    <string name="link_failed">Couldn\'t open %1$s</string>
     <!-- the notification channel's name, in the system's settings -->
     <string name="channel">Transcribing</string>
 </resources>

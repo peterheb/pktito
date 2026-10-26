@@ -29,6 +29,9 @@ object Engine {
     /** The model, the backend and the threads it runs on. */
     @JvmStatic external fun about(handle: Long): String
 
+    /** The engine's code for this processor, by its name and what it uses: "neon-dp (ARMv8.2 NEON: SDOT int8, fp32)". */
+    @JvmStatic external fun backend(): String
+
     /** What the catalog calls the model of that name ("English"), or "" for one it does not list. */
     @JvmStatic external fun label(name: String): String
 

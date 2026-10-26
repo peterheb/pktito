@@ -2,6 +2,7 @@ package net.pktito.app
 
 import android.Manifest
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -40,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.IntentCompat
 import java.util.Locale
 import kotlinx.coroutines.delay
+import net.pktito.app.ui.About
 import net.pktito.app.ui.PktitoTheme
 import net.pktito.app.ui.Ready
 import net.pktito.app.ui.Sound
@@ -73,6 +75,13 @@ class MainActivity : ComponentActivity() {
     /** The strip's choice of how times are written, the video's own rate aside. */
     private var base by mutableStateOf(Timebase())
     private var toast by mutableStateOf<String?>(null)
+    /** About is up, over the start screen. */
+    private var about by mutableStateOf(false)
+    /** About's version line: the app's, and the engine's code for this processor by its name. */
+    private val version by lazy {
+        val name = packageManager.getPackageInfo(packageName, 0).versionName ?: ""
+        getString(R.string.about_version, name, Engine.backend().substringBefore(" ("))
+    }
     /** The format being saved while the system's dialog is up. */
     private var saving: String? = null
 
@@ -88,6 +97,7 @@ class MainActivity : ComponentActivity() {
         )
         Player.restore(prefs.getFloat("speed", 1f).toDouble(), prefs.getFloat("volume", 1f).toDouble())
         saving = savedInstanceState?.getString("saving")
+        about = savedInstanceState?.getBoolean("about") ?: false
         setContent { PktitoTheme { App() } }
         if (savedInstanceState == null) opened(intent)
     }
@@ -110,6 +120,7 @@ class MainActivity : ComponentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString("saving", saving)
+        outState.putBoolean("about", about)
     }
 
     // the transcript's audio stops with the screen, but not for a turn or a
@@ -171,6 +182,7 @@ class MainActivity : ComponentActivity() {
             }
         }
         BackHandler(enabled = t.step.isNotEmpty() && !t.running) { back() }
+        BackHandler(enabled = about) { about = false }
 
         Box(
             Modifier
@@ -178,8 +190,10 @@ class MainActivity : ComponentActivity() {
                 .background(pk.ground)
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
-            if (t.step.isEmpty())
-                Ready(label, model != null) { open.launch(MEDIA) }
+            if (about)
+                About(version, onBack = { about = false }, onLink = ::link)
+            else if (t.step.isEmpty())
+                Ready(label, model != null, onChoose = { open.launch(MEDIA) }, onAbout = { about = true })
             else
                 Work(
                     name = t.name,
@@ -251,7 +265,8 @@ class MainActivity : ComponentActivity() {
      * plays and pauses, < and > step the speed, Ctrl+S saves the text and
      * Ctrl+Shift+S the subtitles, Ctrl+O chooses a recording on the start
      * screen, and Esc goes back as the back gesture does, which Android
-     * leaves to the app (the Googlebook, 2026-10-25). Before the controls,
+     * leaves to the app (the Googlebook, 2026-10-25), and closes About,
+     * where it is the only key the app has. Before the controls,
      * as the desktop's are before its buttons: a control with the focus
      * would take Space as a press, and Back's threw the transcript away (the
      * Googlebook). An open menu is a window of its own, and has the keys
@@ -265,6 +280,11 @@ class MainActivity : ComponentActivity() {
         val review = t.step == "done" || t.step == "stopped"
         val ctrl = event.isCtrlPressed && !event.isAltPressed && !event.isMetaPressed
         val char = event.unicodeChar.toChar()
+        if (about) {
+            if (event.keyCode != KeyEvent.KEYCODE_ESCAPE) return false
+            about = false
+            return true
+        }
         when {
             ctrl && event.keyCode == KeyEvent.KEYCODE_S ->
                 if (review && t.segments.isNotEmpty()) save(if (event.isShiftPressed) "srt" else "txt")
@@ -290,6 +310,8 @@ class MainActivity : ComponentActivity() {
         getString(R.string.real_time, String.format(Locale.getDefault(), "%.1f", audio / secs))
 
     private fun start(uri: Uri) {
+        // a recording opened or shared to pktito while About is up is shown at work
+        about = false
         startForegroundService(
             Intent(this, TranscribeService::class.java)
                 .setData(uri)
@@ -300,6 +322,16 @@ class MainActivity : ComponentActivity() {
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         )
             notify.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    /** A link of About's, in the browser, as the desktop's open in the system's (main.rs, open_link). */
+    private fun link(url: String) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (e: ActivityNotFoundException) {
+            Log.w(TAG, "no app for $url", e)
+            toast = getString(R.string.link_failed, url)
+        }
     }
 
     private fun back() {

@@ -15,10 +15,12 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.isPopup
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import java.io.File
+import net.pktito.app.ui.About
 import net.pktito.app.ui.PktitoTheme
 import net.pktito.app.ui.Ready
 import net.pktito.app.ui.Sound
@@ -60,13 +62,24 @@ class Shots {
     /**
      * The screen, or what act leads to on it (a menu, its own window); with
      * keys, as with the Googlebook's keyboard, which a qualifier cannot say
-     * (its hardKeyboardHidden is the device's, not a resource's).
+     * (its hardKeyboardHidden is the device's, not a resource's). land is a
+     * landscape window's, the Googlebook's own window the default one's
+     * there, 680 by 800 inside its header.
      */
     private fun shot(
         name: String, dark: Boolean, wide: Boolean = false, keys: Boolean = false, narrow: Boolean = false,
+        land: Boolean = false, window: Boolean = false,
         act: (() -> SemanticsNodeInteraction)? = null, content: @Composable () -> Unit,
     ) {
-        RuntimeEnvironment.setQualifiers(if (wide) "w840dp-h900dp-xhdpi" else if (narrow) "w360dp-h780dp-xxhdpi" else "w411dp-h891dp-xxhdpi")
+        RuntimeEnvironment.setQualifiers(
+            when {
+                land -> "w1100dp-h760dp-xhdpi"
+                window -> "w680dp-h800dp-hdpi"
+                wide -> "w840dp-h900dp-xhdpi"
+                narrow -> "w360dp-h780dp-xxhdpi"
+                else -> "w411dp-h891dp-xxhdpi"
+            },
+        )
         RuntimeEnvironment.setQualifiers(if (dark) "+night" else "+notnight")
         compose.setContent {
             val c = Configuration(LocalConfiguration.current)
@@ -79,7 +92,8 @@ class Shots {
             }
         }
         val dir = File("build/shots").apply { mkdirs() }
-        val file = File(dir, "$name${if (keys) "-keys" else ""}-${if (dark) "dark" else "light"}${if (wide) "-wide" else ""}.png")
+        val size = if (land) "-land" else if (window) "-window" else if (wide) "-wide" else ""
+        val file = File(dir, "$name${if (keys) "-keys" else ""}-${if (dark) "dark" else "light"}$size.png")
         val node = act?.invoke() ?: compose.onRoot()
         file.outputStream().use { node.captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
@@ -100,9 +114,27 @@ class Shots {
             sound = Sound(speed, Player.SPEEDS, volume, false, {}, { _, _ -> }, {}), chosen = base, a = actions,
         )
 
-    @Test fun ready() = shot("ready", false) { Ready("English", true) {} }
-    @Test fun readyDark() = shot("ready", true) { Ready("English", true) {} }
-    @Test fun readyNoModel() = shot("ready-no-model", false) { Ready("", false) {} }
+    @Test fun ready() = shot("ready", false) { Ready("English", true, {}, {}) }
+    @Test fun readyDark() = shot("ready", true) { Ready("English", true, {}, {}) }
+    @Test fun readyNoModel() = shot("ready-no-model", false) { Ready("", false, {}, {}) }
+    private val about = @Composable { About("Version 0.9.2 · neon-dp", {}, {}) }
+    @Test fun about() = shot("about", false, content = about)
+    @Test fun aboutDark() = shot("about", true, content = about)
+    @Test fun aboutNarrow() = shot("about-360", false, narrow = true, content = about)
+    @Test fun aboutWindow() = shot("about", false, window = true, content = about)
+    @Test fun aboutLand() = shot("about", false, land = true, content = about)
+    @Test fun aboutLandDark() = shot("about", true, land = true, content = about)
+    // the sheets, each alone, as About opens it
+    private fun sheet(link: String) = {
+        compose.onNodeWithText(link).performClick()
+        compose.onNodeWithTag("sheet")
+    }
+    @Test fun privacy() = shot("privacy", false, act = sheet("Privacy"), content = about)
+    @Test fun privacyDark() = shot("privacy", true, act = sheet("Privacy"), content = about)
+    @Test fun privacyWindow() = shot("privacy", false, window = true, act = sheet("Privacy"), content = about)
+    @Test fun licenses() = shot("licenses", false, act = sheet("Open source licenses"), content = about)
+    @Test fun licensesDark() = shot("licenses", true, act = sheet("Open source licenses"), content = about)
+    @Test fun licensesLand() = shot("licenses", false, land = true, act = sheet("Open source licenses"), content = about)
     @Test fun reading() = shot("reading", false) { work("reading", 0.0, emptyList()) }
     @Test fun transcribing() = shot("transcribing", false) { work("transcribing", 0.42, segments.take(6)) }
     @Test fun transcribingDark() = shot("transcribing", true) { work("transcribing", 0.42, segments.take(6)) }
