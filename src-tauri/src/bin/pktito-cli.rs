@@ -36,6 +36,10 @@ SHA-256 of its transcript).
 ";
 
 fn main() {
+    #[cfg(target_os = "android")]
+    if !decode::binder_pool() {
+        eprintln!("pktito-cli: no binder thread pool, which Android's decoder answers through");
+    }
     let args: Vec<String> = std::env::args().skip(1).collect();
     std::process::exit(match run(&args) {
         Ok(code) => code,

@@ -10,9 +10,9 @@ android {
     defaultConfig {
         applicationId = "net.pktito.app"
         // Android 10: a foreground service's type, and the NDK's media
-        // calls native/decode_android.c makes (AMediaCodec_getName, a
-        // decoder's PCM encoding), with no older path beside them;
-        // native.sh builds for the same
+        // key native/decode_android.c sets (a decoder's PCM encoding,
+        // Android 9), with no older path beside them; native.sh builds for
+        // the same
         minSdk = 29
         targetSdk = 36
         versionCode = 1

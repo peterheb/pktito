@@ -4,19 +4,23 @@
  * adds), its first audio track decoded at the decoder's own rate and in
  * its own channels, as float where the decoder gives float, and handed to
  * the mix (mix.h). The decoder is asked for no conversion of rate or
- * channels.
+ * channels. Every decoder of the Googlebook's (Android 17, c2.android.*)
+ * gave 16-bit samples, asked for float or not, as did its FLAC extractor
+ * of a 24-bit file.
  *
  * The file is a descriptor, as Android's document picker hands it over,
  * and the extractor reads it by offset, so it must be a file, not a pipe;
  * fd stays the caller's.
  *
  * 0 on success, with *out malloc'd (the caller frees it) holding *n
- * samples and codec the decoder's name (its own start and end are the
- * caller's to cut, decode.rs); -1 if the file has no audio track; -2 if
- * Android cannot read it, the reason in err. */
+ * samples (decode.rs says where they start and end against ffmpeg's); -1
+ * if the file has no audio track Android shows, which a track it has no
+ * decoder for is not; -2 if Android cannot read it, the reason in err. */
+#include <dlfcn.h>
 #include <media/NdkMediaCodec.h>
 #include <media/NdkMediaExtractor.h>
 #include <media/NdkMediaFormat.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,14 +35,21 @@ enum { PCM_16 = 2, PCM_FLOAT = 4 };
  * before it is given up on, in waits of 10 ms: 10 s. */
 #define STALL 1000
 
-static int fail(char *err, size_t errlen, const char *what, int code) {
-    snprintf(err, errlen, "%s (%d)", what, code);
+static int fail(char *err, size_t errlen, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(err, errlen, fmt, ap);
+    va_end(ap);
     return -2;
 }
 
 /* The output format: rate, channels and encoding, into the mix. Android's
  * channel masks are WAVE's speaker bits two places up (AudioFormat's
- * CHANNEL_OUT_FRONT_LEFT is 0x4, WAVE's SPEAKER_FRONT_LEFT 0x1). */
+ * CHANNEL_OUT_FRONT_LEFT is 0x4, WAVE's SPEAKER_FRONT_LEFT 0x1), as the
+ * AAC decoder's are (stereo 12); the Vorbis and Opus decoders give WAVE's
+ * own (stereo 3, mono 1), which two places down name fewer channels than
+ * there are, and the mix takes the usual layout for the count, the same
+ * one (the Googlebook, Android 17). */
 static int format(AMediaCodec *c, pkapp_mix *mix, int32_t *ch, int32_t *enc) {
     AMediaFormat *f = AMediaCodec_getOutputFormat(c);
     int32_t rate = 0, mask = 0;
@@ -53,15 +64,28 @@ static int format(AMediaCodec *c, pkapp_mix *mix, int32_t *ch, int32_t *enc) {
     return pkapp_mix_format_wave(mix, (unsigned)rate, (unsigned)*ch, (unsigned)mask >> 2);
 }
 
-int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *codec, size_t codeclen, char *err,
-                    size_t errlen) {
+/* For a program of its own, as pktito-cli is when adb's shell runs it:
+ * starts the process's binder thread pool, which an app's runtime starts
+ * before any of the app runs. The decoder answers through it: without one,
+ * a decode waited for its first output for good, and with one the same file
+ * decoded (the Googlebook, Android 17, c2.android.aac.decoder). The NDK
+ * leaves the call to the platform's own programs, so it is looked up. 0, or
+ * -1 if there is none to call. */
+int pkapp_binder_pool(void) {
+    void *h = dlopen("libbinder_ndk.so", RTLD_NOW);
+    void (*start)(void) = h ? (void (*)(void))dlsym(h, "ABinderProcess_startThreadPool") : NULL;
+    if (!start)
+        return -1;
+    start();
+    return 0;
+}
+
+int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *err, size_t errlen) {
     *out = NULL;
     *n = 0;
-    if (codeclen)
-        codec[0] = '\0';
     struct stat st;
     if (fstat(fd, &st) || !S_ISREG(st.st_mode))
-        return fail(err, errlen, "not a file Android's extractor can read", 0);
+        return fail(err, errlen, "Android's extractor reads a file, and this is not one");
     AMediaExtractor *ex = AMediaExtractor_new();
     AMediaCodec *c = NULL;
     AMediaFormat *f = NULL;
@@ -71,11 +95,11 @@ int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *codec, 
     int rc = -2;
     media_status_t s;
     if (!ex || !mix) {
-        rc = fail(err, errlen, "out of memory", 0);
+        rc = fail(err, errlen, "out of memory");
         goto done;
     }
     if ((s = AMediaExtractor_setDataSourceFd(ex, fd, 0, st.st_size)) != AMEDIA_OK) {
-        rc = fail(err, errlen, "Android cannot read this file", s);
+        rc = fail(err, errlen, "Android doesn't read files of this kind (%d)", s);
         goto done;
     }
     /* the first audio track */
@@ -94,19 +118,18 @@ int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *codec, 
     }
     AMediaExtractor_selectTrack(ex, t);
     if (!(c = AMediaCodec_createDecoderByType(mime))) {
-        rc = fail(err, errlen, "Android has no decoder for this audio", 0);
-        snprintf(err + strlen(err), errlen - strlen(err), ": %s", mime);
+        rc = fail(err, errlen, "Android has no decoder for %s", mime);
         goto done;
     }
-    char *name = NULL;
-    if (AMediaCodec_getName(c, &name) == AMEDIA_OK) {
-        snprintf(codec, codeclen, "%s", name);
-        AMediaCodec_releaseName(c, name);
-    }
-    /* float, where the decoder gives it; 16-bit otherwise */
-    AMediaFormat_setInt32(f, AMEDIAFORMAT_KEY_PCM_ENCODING, PCM_FLOAT);
+    /* float, where the decoder gives it; 16-bit otherwise. A track that is
+     * PCM already (audio/raw: Android's FLAC extractor decodes in the
+     * extractor) has its own encoding in that key, which its decoder passes
+     * through as it is: set to float, it passed 16-bit samples on as float,
+     * and a 60 s FLAC came out 30 s of noise (the Googlebook, Android 17) */
+    if (strcmp(mime, "audio/raw"))
+        AMediaFormat_setInt32(f, AMEDIAFORMAT_KEY_PCM_ENCODING, PCM_FLOAT);
     if ((s = AMediaCodec_configure(c, f, NULL, NULL, 0)) != AMEDIA_OK || (s = AMediaCodec_start(c)) != AMEDIA_OK) {
-        rc = fail(err, errlen, "Android's decoder would not start", s);
+        rc = fail(err, errlen, "Android's decoder for %s would not start (%d)", mime, s);
         goto done;
     }
     int in_done = 0, have_format = 0, idle = 0;
@@ -134,7 +157,7 @@ int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *codec, 
         ssize_t ob = AMediaCodec_dequeueOutputBuffer(c, &info, 10000);
         if (ob == AMEDIACODEC_INFO_OUTPUT_FORMAT_CHANGED) {
             if (format(c, mix, &ch, &enc)) {
-                rc = fail(err, errlen, "Android's decoder gives audio in a form it cannot use", enc);
+                rc = fail(err, errlen, "Android's decoder gives samples of a kind pktito does not take (%d)", enc);
                 goto done;
             }
             have_format = 1;
@@ -146,7 +169,7 @@ int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *codec, 
                 if (!have_format) {
                     if (format(c, mix, &ch, &enc)) {
                         AMediaCodec_releaseOutputBuffer(c, (size_t)ob, false);
-                        rc = fail(err, errlen, "Android's decoder gives audio in a form it cannot use", enc);
+                        rc = fail(err, errlen, "Android's decoder gives samples of a kind pktito does not take (%d)", enc);
                         goto done;
                     }
                     have_format = 1;
@@ -161,7 +184,7 @@ int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *codec, 
                         float *bigger = realloc(x, k * sizeof *x);
                         if (!bigger) {
                             AMediaCodec_releaseOutputBuffer(c, (size_t)ob, false);
-                            rc = fail(err, errlen, "out of memory", 0);
+                            rc = fail(err, errlen, "out of memory");
                             goto done;
                         }
                         x = bigger;
@@ -174,7 +197,7 @@ int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *codec, 
                 }
                 if (pkapp_mix_push(mix, y, frames)) {
                     AMediaCodec_releaseOutputBuffer(c, (size_t)ob, false);
-                    rc = fail(err, errlen, "out of memory", 0);
+                    rc = fail(err, errlen, "out of memory");
                     goto done;
                 }
             }
@@ -185,11 +208,11 @@ int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *codec, 
         }
         idle = moved ? 0 : idle + 1;
         if (idle > STALL) {
-            rc = fail(err, errlen, "Android's decoder stopped part way", 0);
+            rc = fail(err, errlen, "Android's decoder stopped part way");
             goto done;
         }
     }
-    rc = pkapp_mix_take(mix, out, n) ? fail(err, errlen, "out of memory", 0) : 0;
+    rc = pkapp_mix_take(mix, out, n) ? fail(err, errlen, "out of memory") : 0;
 done:
     if (c) {
         AMediaCodec_stop(c);

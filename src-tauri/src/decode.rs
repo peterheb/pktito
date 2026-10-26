@@ -225,17 +225,40 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
 /// The recording open at fd, which Android's document picker hands over
 /// with no name the app may open it by again (android.rs): a WAV or AIFF
 /// by pktito's reader, anything else by Android's own decoder
-/// (native/decode_android.c), cut to the file's sound as every other
-/// decoder's samples are. Each reads from the start of a copy of fd, which
-/// stays the caller's to close; name says which file a failure was.
+/// (native/decode_android.c). Each reads from the start of a copy of fd,
+/// which stays the caller's to close; name says which file a failure was.
+///
+/// Android's decoders start where ffmpeg's do, priming and all, on every
+/// format of scripts/media-matrix.sh's that Android reads (no lag: AAC in
+/// MP4, M4A, MOV, 3GP, MKV and ADTS, MP3 tagged or not, Opus, Vorbis,
+/// FLAC; the Googlebook, Android 17, its c2.android decoders), so nothing
+/// is cut from the start. Two end later than ffmpeg's: an untagged MP3 by
+/// the 529 samples of its decoder's delay, which Android gives back at the
+/// end, the signal's own tail that ffmpeg drops, and Opus by its last
+/// packet's padding, 648 samples at 48 kHz, which Android leaves in; cut
+/// or not, neither moved a word or a time of the matrix's transcripts, and
+/// they are left. Vorbis in WebM ends earlier, where its sound does
+/// (ffmpeg's has 832 samples more). A FLAC is held to its STREAMINFO
+/// length, as every decoder's is.
 #[cfg(target_os = "android")]
 pub fn decode_fd(fd: c_int, name: &str) -> Result<Vec<f32>, DecodeError> {
     if let Some(read) = wav_fd(fd, name) {
         return read;
     }
-    let (x, codec) = decode_android(fd)?;
-    let mut file = copy_of(fd)?;
-    Ok(android_cut(&mut file, &codec, x))
+    let x = decode_android(fd)?;
+    Ok(flac_cut_in(&mut copy_of(fd)?, x))
+}
+
+/// Starts the binder thread pool Android's decoder answers through, for a
+/// program of its own: pktito-cli, when adb's shell runs it. An app's
+/// process has one from the start (native/decode_android.c). False if
+/// Android had none to start.
+#[cfg(target_os = "android")]
+pub fn binder_pool() -> bool {
+    extern "C" {
+        fn pkapp_binder_pool() -> c_int;
+    }
+    unsafe { pkapp_binder_pool() == 0 }
 }
 
 /// A File of its own on fd's file, at its start.
@@ -306,24 +329,21 @@ fn wav_fd(fd: c_int, name: &str) -> Option<Result<Vec<f32>, DecodeError>> {
     Some(read_wav(&w, &info))
 }
 
-/// Android's decoder's samples at 16 kHz, and the decoder's name.
+/// Android's decoder's samples at 16 kHz.
 #[cfg(target_os = "android")]
-fn decode_android(fd: c_int) -> Result<(Vec<f32>, String), DecodeError> {
+fn decode_android(fd: c_int) -> Result<Vec<f32>, DecodeError> {
     extern "C" {
         fn pkapp_decode_fd(
             fd: c_int,
             rate: c_uint,
             out: *mut *mut f32,
             n: *mut usize,
-            codec: *mut c_char,
-            codeclen: usize,
             err: *mut c_char,
             errlen: usize,
         ) -> c_int;
     }
     let mut out: *mut f32 = std::ptr::null_mut();
     let mut n = 0usize;
-    let mut codec = [0 as c_char; 128];
     let mut err = [0 as c_char; 512];
     let rc = unsafe {
         pkapp_decode_fd(
@@ -331,31 +351,26 @@ fn decode_android(fd: c_int) -> Result<(Vec<f32>, String), DecodeError> {
             RATE as c_uint,
             &mut out,
             &mut n,
-            codec.as_mut_ptr(),
-            codec.len(),
             err.as_mut_ptr(),
             err.len(),
         )
     };
-    let text = |b: &[c_char]| unsafe { CStr::from_ptr(b.as_ptr()) }.to_string_lossy().into_owned();
     match rc {
         0 => {
             let x = take_c(out, n);
             if x.is_empty() {
                 return Err(DecodeError::NoAudio);
             }
-            Ok((x, text(&codec)))
+            Ok(x)
         }
         -1 => Err(DecodeError::NoAudio),
-        _ => Err(DecodeError::Unreadable(UNREADABLE, text(&err))),
+        _ => {
+            let why = unsafe { CStr::from_ptr(err.as_ptr()) }
+                .to_string_lossy()
+                .into_owned();
+            Err(DecodeError::Unreadable(UNREADABLE, why))
+        }
     }
-}
-
-/// Android's decoder's samples cut to the file's sound: so far the FLAC
-/// length every decoder is held to.
-#[cfg(target_os = "android")]
-fn android_cut(file: &mut std::fs::File, _codec: &str, x: Vec<f32>) -> Vec<f32> {
-    flac_cut_in(file, x)
 }
 
 extern "C" {
