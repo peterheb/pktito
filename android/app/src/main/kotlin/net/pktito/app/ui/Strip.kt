@@ -46,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.roundToInt
@@ -185,6 +186,10 @@ fun Strip(
  * and taller by the lane's gaps, so that its shape tells it too. Drawn and
  * touched across the gaps, 15 dp, and a tap goes to the nearest tick within
  * 16 dp of it: the desktop's target is 9 px wide, and a finger is wider.
+ * Over the times' line in touch: its controls reach 6 dp up into the lane
+ * (bleed), and the line, after the lane, took the lower half of each tick
+ * there; a tick tapped there muted the speaker (Peter's S25, 2026-10-26;
+ * on the emulator, y 545 px of the lane's 516 to 558).
  */
 @Composable
 private fun Ticks(ticks: List<Double>, at: Int, onTick: (Int) -> Unit) {
@@ -192,6 +197,7 @@ private fun Ticks(ticks: List<Double>, at: Int, onTick: (Int) -> Unit) {
     val gap = 3.dp
     Canvas(
         Modifier
+            .zIndex(1f)
             .fillMaxWidth()
             .bleed(vertical = gap)
             .height(9.dp + gap * 2)
