@@ -28,7 +28,13 @@
 # So each chapter's transcript is also checked against the one every
 # machine gives, which says this pktito computes what the reference engine
 # does; the line below each is the SHA-256 of the FLAC, of the WAV and of
-# its transcript (pktito-cli bench --json's).
+# its transcript (pktito-cli bench --json's), and for chapters 8 and 10 the
+# transcript every build before 0.9.3 gives: 0.9.3 transcribes again, in
+# two halves, a chunk of speech that comes back with no words (pktito-app's
+# src-tauri/src/transcribe.rs, RETRY_SPEECH_S), which gives those two
+# chapters back their first 27 s, the LibriVox notice and title that the
+# English model drops there, as NeMo does. Either passes, and one of an
+# earlier version is named as such.
 #
 # -frame_size 4096: without it ffmpeg's FLAC encoder fixes its block size
 # from the first audio the resampler hands it, which made 399 and 419
@@ -47,9 +53,9 @@ wonderland_ch_04 f575db797db9a0db3af94f1a560b191fcd485e9cc212c19da4ebdf9f2af8e20
 wonderland_ch_05 57d3ec5801fd93782f8d5e6f193a45f11f06ffb5e8358c88b9aecf5bbb2780b5 3b0005e4e815566b2f91a72eb6aa0709fb59a1da370b4c039246652566f7aa98 3fbcb15dbb16a47449618d283e2e1de0b96477ee32279fd3b179e33b535a0643
 wonderland_ch_06 cffb9569b7e875e2588bcd92c0fcc38bdb15be232595d54a57c25ca5fcc6133f ab2792a680b87d713bc89e6b38332ac7c4af16c1c257fa0922845c65f60444ad f0170d1b5162a1a7efb6492e991eb17782753d8785357ab2bb9fc0f0fe93e1bb
 wonderland_ch_07 59fbba17032e80ae188837a4f77b399fa97817597bf57925952f28e3cd7c731a 69e487aa4ccdff941cc87eb357186e465c35526a173487d3827b72f950cc2687 4c5aff13c3eafa3c080d1ca38bf48ed02ff474989c94ef0ad78a0e1b5cb9d9a4
-wonderland_ch_08 e47086d07d2f7e73488550531b2eb4c7e20c7761e806a68f0f544a5dc8d51d5a 8fe1aad714433fee0651c38f6ee568ba9cc8ffa5a4f2c0d9a645ad5edd570492 d0f40e98ee30f34a4e1efb66f7608c4b74199d4f50e25ada12f3c0fde6fb1548
+wonderland_ch_08 e47086d07d2f7e73488550531b2eb4c7e20c7761e806a68f0f544a5dc8d51d5a 8fe1aad714433fee0651c38f6ee568ba9cc8ffa5a4f2c0d9a645ad5edd570492 fcbfdcde16f1aae7aa8f5b7176eb68068060400621b7240596ce76b8d65f5f59 d0f40e98ee30f34a4e1efb66f7608c4b74199d4f50e25ada12f3c0fde6fb1548
 wonderland_ch_09 a0ec98e0bcb2cc84502faaffdcede67d309f27cc846d8ec18b00160c4c322f0e b78f98e64fb213b2864c1ba280872dfda8b13b8ee8405bb3211669e4616ed439 8d4180ce60b8c69b368a29953adf7fb5bd6f8b0972ec7c8498ab5717b786b8b5
-wonderland_ch_10 463975d3aaedb928618ef1b16bb4ede8640c4a75d0d92b209fcc9c8bd6832aa5 53216cf90987d9262e1d3cb125a576d080cabfbe799dce4ad940a65b7baf7cda a480673ea85f2728d719c92eddecacce14757b7c073aaa95f946714734ff3ac3
+wonderland_ch_10 463975d3aaedb928618ef1b16bb4ede8640c4a75d0d92b209fcc9c8bd6832aa5 53216cf90987d9262e1d3cb125a576d080cabfbe799dce4ad940a65b7baf7cda 71379e5f4aa571f7ae5c6c33b530cb5ac0361b93cfd2a184903582c1c8384692 a480673ea85f2728d719c92eddecacce14757b7c073aaa95f946714734ff3ac3
 wonderland_ch_11 6ef258f362737f4976e06713624dde9aff46a8a72728a5ecf2c70ef907384f59 80241c5a802b31922fa932bace59d5d37a25934d61eedf384a965d8952f3a2e6 a770e46c49181c3511d2863201cb3507b9ff6dc149576fcf5dbd5cd43658c7fc
 wonderland_ch_12 922986f0c8f45fe6465daf990b832d664f24b8fdc159c45082ea449abac64ff9 b5260f9949cea728bd45c19f9c3a622982af3615c0a9ece99775383639735312 9a2d63b4ff85f2df4ed5daa9f01853df7e3f692259b02b01a223f80ae49c2624
 '
@@ -88,12 +94,13 @@ out=$dir/result.json
 # each chapter's speed and whether its transcript is the reference's, from
 # bench's JSON (one key a line), against the list above; then the whole's
 echo "$chapters" | awk '
-    NR == FNR { if ($1 != "") ref[$1 ".flac"] = ref[$1 ".wav"] = $4; next }
+    NR == FNR { if ($1 != "") { ref[$1 ".flac"] = ref[$1 ".wav"] = $4; was[$1 ".flac"] = was[$1 ".wav"] = $5 }; next }
     function val(s) { sub(/^[^:]*: */, "", s); sub(/,$/, "", s); gsub(/"/, "", s); return s }
     /"file":/ { file = val($0) }
     /"x_real_time":/ && file != "" { x = val($0) }
     /"transcript_sha256":/ { sha = val($0) }
-    /^    }/ { ok = sha == ref[file] ? "" : "  transcript differs"; if (!ok) same++; else differ++
+    /^    }/ { ok = sha == ref[file] ? "" : sha == was[file] && sha != "" ? "  as before 0.9.3" : "  transcript differs"
+               if (ok == "  transcript differs") differ++; else { same++; if (ok) earlier++ }
                printf "%7.1fx  %s%s\n", x, file, ok; got++; file = "" }
     /^  "backend":/ { backend = val($0) } /^  "model":/ { model = val($0) }
     /^  "pktito_cli":/ { version = val($0) } /^  "threads":/ { threads = val($0) }
@@ -103,5 +110,5 @@ echo "$chapters" | awk '
         printf "AliceBench v1: %.1fx real time (pktito-cli %s, %s, %s, %s threads%s)\n", total, version, model, backend, threads, (compiler != "" ? ", " compiler : "")
         if (got != 12) { print "  only " got " of the 12 chapters were timed"; exit 1 }
         if (differ) { print "  " differ " of the 12 transcripts differ from the reference: not what pktito should compute"; exit 1 }
-        print "  all 12 transcripts are the reference'"'"'s"
+        print "  all 12 transcripts are the reference'"'"'s" (earlier ? ", " earlier " as before 0.9.3" : "")
     }' - "$out"

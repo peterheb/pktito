@@ -55,6 +55,15 @@ pub struct Span {
     pub end: i64,
 }
 
+/// A chunk of a recording, in samples, and how many of them Silero's
+/// speech segments cover.
+#[derive(Clone, Copy, Default)]
+pub struct Chunk {
+    pub start: i64,
+    pub end: i64,
+    pub speech: i64,
+}
+
 #[repr(C)]
 struct CapWord {
     text: *const c_char,
@@ -251,8 +260,9 @@ impl Model {
     /// fits in max_chunk seconds and has speech, else at the middle of its
     /// silences (Silero's VAD), every chunk max_chunk seconds at most; what
     /// lies between the speech is chunks too, but where it is silent or
-    /// shorter than 3 s (pk_chunks).
-    pub fn chunks(&self, x: &[f32], max_chunk: f64) -> Result<Vec<Span>, String> {
+    /// shorter than 3 s (pk_chunks). Each with the samples of it Silero's
+    /// segments cover.
+    pub fn chunks(&self, x: &[f32], max_chunk: f64) -> Result<Vec<Chunk>, String> {
         let rate = self.rate();
         let max_len = (max_chunk * rate as f64) as i64;
         if x.is_empty() {
@@ -300,7 +310,18 @@ impl Model {
             )
         };
         out.truncate(nc);
-        Ok(out)
+        let speech = &seg[..ns];
+        Ok(out
+            .iter()
+            .map(|c| Chunk {
+                start: c.start,
+                end: c.end,
+                speech: speech
+                    .iter()
+                    .map(|s| (s.end.min(c.end) - s.start.max(c.start)).max(0))
+                    .sum(),
+            })
+            .collect())
     }
 
     pub fn raw(&self) -> *const RawModel {

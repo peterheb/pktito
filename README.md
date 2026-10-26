@@ -117,7 +117,11 @@ The models are NVIDIA's (CC-BY-4.0), converted by pktito-tools.
 
 Text appears as each part of a recording finishes (whole up to 30 s, else
 cut at its silences), and Stop ends it after the part it is on, keeping the
-text so far. Each finished transcript stays on the recent list, the 50
+text so far. A part in which Silero heard speech but the model wrote
+nothing is transcribed again, cut in two: the English model, NeMo's own
+included, drops the first 27 s of AliceBench's chapters 8 and 10 as they
+are cut, and each half gives its words back (`src-tauri/src/transcribe.rs`,
+`RETRY_SPEECH_S`). Each finished transcript stays on the recent list, the 50
 newest in the app's data folder, with its audio as pktito heard it: a 16 kHz
 16-bit WAV in the cache, so that playback lines up with the timestamps
 whatever the original's format, and whether or not the webview could play

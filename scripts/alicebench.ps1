@@ -18,14 +18,15 @@ wonderland_ch_04.flac f575db797db9a0db3af94f1a560b191fcd485e9cc212c19da4ebdf9f2a
 wonderland_ch_05.flac 57d3ec5801fd93782f8d5e6f193a45f11f06ffb5e8358c88b9aecf5bbb2780b5 3fbcb15dbb16a47449618d283e2e1de0b96477ee32279fd3b179e33b535a0643
 wonderland_ch_06.flac cffb9569b7e875e2588bcd92c0fcc38bdb15be232595d54a57c25ca5fcc6133f f0170d1b5162a1a7efb6492e991eb17782753d8785357ab2bb9fc0f0fe93e1bb
 wonderland_ch_07.flac 59fbba17032e80ae188837a4f77b399fa97817597bf57925952f28e3cd7c731a 4c5aff13c3eafa3c080d1ca38bf48ed02ff474989c94ef0ad78a0e1b5cb9d9a4
-wonderland_ch_08.flac e47086d07d2f7e73488550531b2eb4c7e20c7761e806a68f0f544a5dc8d51d5a d0f40e98ee30f34a4e1efb66f7608c4b74199d4f50e25ada12f3c0fde6fb1548
+wonderland_ch_08.flac e47086d07d2f7e73488550531b2eb4c7e20c7761e806a68f0f544a5dc8d51d5a fcbfdcde16f1aae7aa8f5b7176eb68068060400621b7240596ce76b8d65f5f59 d0f40e98ee30f34a4e1efb66f7608c4b74199d4f50e25ada12f3c0fde6fb1548
 wonderland_ch_09.flac a0ec98e0bcb2cc84502faaffdcede67d309f27cc846d8ec18b00160c4c322f0e 8d4180ce60b8c69b368a29953adf7fb5bd6f8b0972ec7c8498ab5717b786b8b5
-wonderland_ch_10.flac 463975d3aaedb928618ef1b16bb4ede8640c4a75d0d92b209fcc9c8bd6832aa5 a480673ea85f2728d719c92eddecacce14757b7c073aaa95f946714734ff3ac3
+wonderland_ch_10.flac 463975d3aaedb928618ef1b16bb4ede8640c4a75d0d92b209fcc9c8bd6832aa5 71379e5f4aa571f7ae5c6c33b530cb5ac0361b93cfd2a184903582c1c8384692 a480673ea85f2728d719c92eddecacce14757b7c073aaa95f946714734ff3ac3
 wonderland_ch_11.flac 6ef258f362737f4976e06713624dde9aff46a8a72728a5ecf2c70ef907384f59 a770e46c49181c3511d2863201cb3507b9ff6dc149576fcf5dbd5cd43658c7fc
 wonderland_ch_12.flac 922986f0c8f45fe6465daf990b832d664f24b8fdc159c45082ea449abac64ff9 9a2d63b4ff85f2df4ed5daa9f01853df7e3f692259b02b01a223f80ae49c2624
 '@ -split "`r?`n" | Where-Object { $_ } | ForEach-Object {
-    $name, $file, $transcript = $_ -split ' '
-    [pscustomobject]@{ Name = $name; File = $file; Transcript = $transcript }
+    # a fourth field, for chapters 8 and 10: the transcript before 0.9.3 (alicebench.sh says why)
+    $name, $file, $transcript, $before = $_ -split ' '
+    [pscustomobject]@{ Name = $name; File = $file; Transcript = $transcript; Before = $before }
 }
 
 $cli = $env:PKTITO_CLI
@@ -50,10 +51,12 @@ $json = & $cli bench -m parakeet-tdt-0.6b-v2 --json @files
 $json | Set-Content (Join-Path $Dir 'result.json')
 $r = $json | Out-String | ConvertFrom-Json
 
-$differ = 0
+$differ = 0; $earlier = 0
 foreach ($f in $r.files) {
-    $ref = ($chapters | Where-Object Name -eq $f.file).Transcript
-    $ok = if ($f.transcript_sha256 -eq $ref) { '' } else { $differ++; '  transcript differs' }
+    $c = $chapters | Where-Object Name -eq $f.file
+    $ok = if ($f.transcript_sha256 -eq $c.Transcript) { '' }
+          elseif ($c.Before -and $f.transcript_sha256 -eq $c.Before) { $earlier++; '  as before 0.9.3' }
+          else { $differ++; '  transcript differs' }
     '{0,7:F1}x  {1}{2}' -f $f.x_real_time, $f.file, $ok
 }
 # the compiler, as alicebench.sh gives it, when pktito-cli names one
@@ -61,4 +64,4 @@ $compiler = if ($r.compiler) { ", $($r.compiler)" } else { '' }
 'AliceBench v1: {0:F1}x real time (pktito-cli {1}, {2}, {3}, {4} threads{5})' -f $r.x_real_time, $r.pktito_cli, $r.model, $r.backend, $r.threads, $compiler
 if (@($r.files).Count -ne 12) { "  only $(@($r.files).Count) of the 12 chapters were timed"; exit 1 }
 if ($differ) { "  $differ of the 12 transcripts differ from the reference: not what pktito should compute"; exit 1 }
-'  all 12 transcripts are the reference''s'
+'  all 12 transcripts are the reference''s' + $(if ($earlier) { ", $earlier as before 0.9.3" } else { '' })
