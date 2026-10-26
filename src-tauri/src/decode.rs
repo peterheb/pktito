@@ -218,7 +218,8 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
     if !path.is_file() {
         return Err(DecodeError::Unreadable("decode.not_found", String::new()));
     }
-    let f = std::fs::File::open(path).map_err(|e| DecodeError::Unreadable(UNREADABLE, e.to_string()))?;
+    let f = std::fs::File::open(path)
+        .map_err(|e| DecodeError::Unreadable(UNREADABLE, e.to_string()))?;
     decode_fd(f.as_raw_fd(), &path.to_string_lossy())
 }
 
@@ -332,7 +333,8 @@ fn wav_fd(fd: c_int, name: &str) -> Option<Result<Vec<f32>, DecodeError>> {
         frames: 0,
     };
     let mut err = [0 as c_char; 256];
-    let w = unsafe { pk_wav_open_file(f.0, c_name.as_ptr(), &mut info, err.as_mut_ptr(), err.len()) };
+    let w =
+        unsafe { pk_wav_open_file(f.0, c_name.as_ptr(), &mut info, err.as_mut_ptr(), err.len()) };
     if w.is_null() {
         return None;
     }
@@ -518,7 +520,9 @@ fn flac_cut(path: &Path, x: Vec<f32>) -> Vec<f32> {
 fn flac_cut_in(f: &mut std::fs::File, mut x: Vec<f32>) -> Vec<f32> {
     use std::io::{Seek, SeekFrom};
     let mut b = [0u8; 26];
-    let read = f.seek(SeekFrom::Start(0)).and_then(|_| f.read_exact(&mut b));
+    let read = f
+        .seek(SeekFrom::Start(0))
+        .and_then(|_| f.read_exact(&mut b));
     if let Some((rate, total)) = read.ok().and_then(|_| flac_length(&b)) {
         // at 16 kHz, the samples themselves; at another rate, the mix's
         // count of them, to the nearest; a count past usize cuts nothing

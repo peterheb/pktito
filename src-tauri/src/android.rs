@@ -133,7 +133,8 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
             // a WAV that cannot be written leaves the transcript without
             // playback, as on the desktop
             let wav = Path::new(&wav);
-            if let (Some(dir), Some(id)) = (wav.parent(), wav.file_stem().and_then(|s| s.to_str())) {
+            if let (Some(dir), Some(id)) = (wav.parent(), wav.file_stem().and_then(|s| s.to_str()))
+            {
                 let _ = audio::save(dir, id, &x, decode::RATE as u32);
             }
             let peaks = audio::peaks(&x, audio::PEAKS);
@@ -143,7 +144,11 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
                     &progress,
                     jni_str!("audio"),
                     jni_sig!("(DD[B)V"),
-                    &[JValue::Double(duration), JValue::Double(fps), JValue::from(&peaks)],
+                    &[
+                        JValue::Double(duration),
+                        JValue::Double(fps),
+                        JValue::from(&peaks),
+                    ],
                 )?;
                 Ok(())
             })?;
@@ -269,7 +274,9 @@ pub extern "system" fn Java_net_pktito_app_Engine_captions<'a>(
                 segments: &t.segments,
             });
             match cues {
-                Ok(c) => Ok(env.new_string(serde_json::to_string(&c).unwrap_or_default())?.into()),
+                Ok(c) => Ok(env
+                    .new_string(serde_json::to_string(&c).unwrap_or_default())?
+                    .into()),
                 Err(why) => throw(env, &why).map(|_| JObject::null()),
             }
         })
