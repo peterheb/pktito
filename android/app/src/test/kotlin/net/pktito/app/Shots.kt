@@ -80,12 +80,14 @@ class Shots {
      */
     private fun shot(
         name: String, dark: Boolean, wide: Boolean = false, keys: Boolean = false, narrow: Boolean = false,
-        land: Boolean = false, window: Boolean = false,
+        land: Boolean = false, window: Boolean = false, short: Boolean = false,
         act: (() -> SemanticsNodeInteraction)? = null, content: @Composable () -> Unit,
     ) {
         RuntimeEnvironment.setQualifiers(
             when {
                 land -> "w1100dp-h760dp-xhdpi"
+                // a phone on its side, the emulator's Pixel 5
+                short -> "w851dp-h393dp-xxhdpi"
                 window -> "w680dp-h800dp-hdpi"
                 wide -> "w840dp-h900dp-xhdpi"
                 narrow -> "w360dp-h780dp-xxhdpi"
@@ -104,7 +106,7 @@ class Shots {
             }
         }
         val dir = File("build/shots").apply { mkdirs() }
-        val size = if (land) "-land" else if (window) "-window" else if (wide) "-wide" else ""
+        val size = if (land) "-land" else if (short) "-short" else if (window) "-window" else if (wide) "-wide" else ""
         val file = File(dir, "$name${if (keys) "-keys" else ""}-${if (dark) "dark" else "light"}$size.png")
         val node = act?.invoke() ?: compose.onRoot()
         file.outputStream().use { node.captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it) }
@@ -170,6 +172,7 @@ class Shots {
     @Test fun readyRecentNarrow() = shot("ready-recent-360", false, narrow = true) { Ready(recent, readyActions, models) }
     @Test fun readyRecentWindow() = shot("ready-recent", false, window = true) { Ready(recent, readyActions, models) }
     @Test fun readyRecentLand() = shot("ready-recent", false, land = true) { Ready(recent, readyActions, models) }
+    @Test fun readyRecentShort() = shot("ready-recent", false, short = true) { Ready(recent, readyActions, models) }
     private val removeMenu = {
         compose.onNodeWithText("Team standup.mp4").performTouchInput { longClick() }
         compose.onRoot()

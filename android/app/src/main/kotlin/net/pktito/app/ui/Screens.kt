@@ -25,13 +25,16 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -97,19 +100,31 @@ class ReadyActions(
  * says what it is for. The wordmark opens About. With transcripts on the
  * recent list, the column is the screen's height and the list takes what
  * is left under the zone (app.css, .has-recent); without, the column is in
- * the middle.
+ * the middle. A screen too short for the list under the zone, which with
+ * the wordmark and the list's heading takes 330 dp of it, scrolls as a
+ * whole, the list with it: the desktop's window is never that short, but
+ * a phone on its side is (393 dp on the emulator's Pixel 5), and a split
+ * screen.
  */
 @Composable
 fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> Unit) {
     val p = pk
     var asking by remember { mutableStateOf(false) }
     val listed = recent.isNotEmpty()
-    Box(Modifier.fillMaxSize(), contentAlignment = if (listed) Alignment.TopCenter else Alignment.Center) {
+    BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = if (listed) Alignment.TopCenter else Alignment.Center) {
+        // room for three rows under the zone's 330 dp, or the whole scrolls
+        val short = maxHeight < 480.dp
         Column(
             Modifier
                 .widthIn(max = 640.dp)
                 .fillMaxWidth()
-                .then(if (listed) Modifier.fillMaxHeight() else Modifier)
+                .then(
+                    when {
+                        short -> Modifier.verticalScroll(rememberScrollState())
+                        listed -> Modifier.fillMaxHeight()
+                        else -> Modifier
+                    },
+                )
                 .padding(horizontal = 20.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
@@ -144,7 +159,7 @@ fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> 
                 )
                 PkButton(stringResource(R.string.choose), a.choose, kind = Kind.Primary, large = true)
             }
-            if (listed) Recent(recent, a, onClear = { asking = true }, Modifier.weight(1f))
+            if (listed) Recent(recent, a, onClear = { asking = true }, scrolls = !short, if (short) Modifier else Modifier.weight(1f))
         }
     }
     if (asking)
@@ -165,10 +180,11 @@ fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> 
  * (app.js, renderReady and forget). Each row is a line where the list is
  * 440 dp wide, the desktop's narrowest window's (480 less its margins),
  * which leaves a name 250; on a phone, narrower, its length and date go
- * under its name, which keeps the width.
+ * under its name, which keeps the width. scrolls: the list scrolls under
+ * its heading, else it is all there, for a screen that scrolls (Ready).
  */
 @Composable
-private fun Recent(items: List<Recents.Item>, a: ReadyActions, onClear: () -> Unit, modifier: Modifier) {
+private fun Recent(items: List<Recents.Item>, a: ReadyActions, onClear: () -> Unit, scrolls: Boolean, modifier: Modifier) {
     val p = pk
     val rows = remember { mutableMapOf<String, FocusRequester>() }
     val now by rememberUpdatedState(items)
@@ -199,25 +215,31 @@ private fun Recent(items: List<Recents.Item>, a: ReadyActions, onClear: () -> Un
                     .padding(horizontal = 8.dp, vertical = 11.dp),
             )
         }
-        BoxWithConstraints(Modifier.weight(1f)) {
+        BoxWithConstraints(if (scrolls) Modifier.weight(1f) else Modifier) {
             val oneLine = maxWidth >= 440.dp
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                itemsIndexed(items, key = { _, r -> r.id }) { i, r ->
-                    val focus = remember { FocusRequester() }
-                    DisposableEffect(r.id) {
-                        rows[r.id] = focus
-                        onDispose { rows.remove(r.id) }
-                    }
-                    RecentRow(
-                        r, oneLine, focus,
-                        onOpen = { a.open(r.id) },
-                        onForget = { keys ->
-                            if (keys) refocus = i
-                            a.forget(r.id)
-                        },
-                    )
+            val row = @Composable { i: Int, r: Recents.Item ->
+                val focus = remember { FocusRequester() }
+                DisposableEffect(r.id) {
+                    rows[r.id] = focus
+                    onDispose { rows.remove(r.id) }
                 }
+                RecentRow(
+                    r, oneLine, focus,
+                    onOpen = { a.open(r.id) },
+                    onForget = { keys ->
+                        if (keys) refocus = i
+                        a.forget(r.id)
+                    },
+                )
             }
+            if (scrolls)
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    itemsIndexed(items, key = { _, r -> r.id }) { i, r -> row(i, r) }
+                }
+            else
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    items.forEachIndexed { i, r -> key(r.id) { row(i, r) } }
+                }
         }
     }
 }
