@@ -4,7 +4,8 @@ besides its own code and the two models About names, and the licenses each
 is used under, for the list that About's "Everything else" opens, as
 scripts/notices.py makes ui/notices.js for the desktop's.
 
-    android/notices.py      # after Cargo.lock or a dependency changes
+    android/notices.py              # after Cargo.lock or a dependency changes
+    android/notices.py --check      # before a release: 1 if it is stale
 
 The Rust crates are the ones Cargo says the Android library links, taken as
 scripts/notices.py takes the desktop's. The Kotlin side is what Gradle packages
@@ -41,6 +42,7 @@ LICENSES = {
     "Apache-2.0": "Apache-2.0",
 }
 GRADLE = os.path.expanduser("~/.gradle/caches/modules-2/files-2.1")
+PATH = os.path.join(here, "app", "src", "main", "assets", "notices.json")
 POM = {"m": "http://maven.apache.org/POM/4.0.0"}
 
 
@@ -78,6 +80,27 @@ def license_files(path):
         found += [(n, inner) for n in inner.namelist()]
     return [(n, zz.read(n).decode("utf-8", "replace").replace("\r\n", "\n"))
             for n, zz in found if desk.FILE.match(n.rsplit("/", 1)[-1]) and not n.endswith("/")]
+
+
+def check(out):
+    """1, saying what differs, if notices.json is not what the build is made
+    of now, as scripts/notices.py --check says of ui/notices.js; else 0."""
+    with open(PATH, encoding="utf-8") as fh:
+        had = json.load(fh)
+    found = []
+    for part in ("type", "libraries"):
+        old, new = ({r[0]: r for r in x[part]} for x in (had, out))
+        found += [f"{part[:-1] if part == 'type' else 'library'} {what}: {n}" for what, names in
+                  (("added", new.keys() - old.keys()), ("removed", old.keys() - new.keys()),
+                   ("changed", {n for n in old.keys() & new.keys() if old[n] != new[n]})) for n in sorted(names)]
+    old, new = had["texts"], out["texts"]
+    found += [f"text {what}: {k}" for what, keys in
+              (("added", new.keys() - old.keys()), ("removed", old.keys() - new.keys()),
+               ("changed", {k for k in old.keys() & new.keys() if old[k] != new[k]})) for k in sorted(keys)]
+    for f in found:
+        print(f)
+    print(f"{os.path.relpath(PATH, root)}: " + ("stale, run android/notices.py" if found else "current"))
+    return 1 if found else 0
 
 
 def packaged():
@@ -124,11 +147,12 @@ def main():
     }
     used = [k for row in out["type"] + out["libraries"] for k in row[3]]
     out["texts"] = {k: texts[k] for k in dict.fromkeys(used)}
-    path = os.path.join(here, "app", "src", "main", "assets", "notices.json")
+    if "--check" in sys.argv[1:]:
+        sys.exit(check(out))
     js = json.dumps(out, ensure_ascii=False, separators=(",", ":")) + "\n"
-    with open(path, "w", encoding="utf-8") as fh:
+    with open(PATH, "w", encoding="utf-8") as fh:
         fh.write(js)
-    print(f"{path}: {len(js.encode()) / 1024:.0f} KB, {len(maven)} Maven modules, {len(data['crates'])} crates, "
+    print(f"{PATH}: {len(js.encode()) / 1024:.0f} KB, {len(maven)} Maven modules, {len(data['crates'])} crates, "
           f"{len(out['texts'])} texts")
     for u in unknown:
         print("  a license not in PREFER, check it:", u)
