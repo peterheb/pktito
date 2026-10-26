@@ -126,10 +126,39 @@ needs a higher `-Version`, or Windows keeps the last one's icons.
     650 MB from models.pktito.net.
 - The Windows App Certification Kit on the bundle (it needs an
   administrator).
-- A clean computer's run, x64 and arm64: the data in the package, the model
-  menu and Privacy as above, and uninstalling deleting it.
 - Version: Cargo.toml's, with a fourth part of 0, which the Store keeps for
   itself.
+
+## Tested
+
+A sideload bundle, 0.9.2.3, packed from this branch's signed setup
+programs (2026-10-26):
+
+- **armlet, Arm64, as a fresh computer** (its own data folders set aside
+  for the run):
+  - the bundle installed its Arm64 package with no prompt;
+  - with no data folder anywhere, the window offered the models to download
+    and said `data_in_package`;
+  - a model and settings written inside the package went to its own copy,
+    and the real `%APPDATA%\net.pktito.app` stayed absent;
+  - through the alias, `pktito-cli` saw that model in use and transcribed
+    test.wav;
+  - the window was ready, with no Show in File Explorer, and gave the
+    Store's Privacy sentence;
+  - uninstalling took the package, the alias and the package's data with
+    the model, and left nothing in the real folders.
+- **The 9950X, x64, with the setup program's folder already there:**
+  - the package shared the folder;
+  - `data_in_package` was false: the menu kept Show in File Explorer and
+    Privacy gave the setup program's sentence;
+  - with the package's own copy made for the run, both turned as on armlet;
+  - through the alias, test.wav's transcript was byte for byte the setup
+    program's CLI's.
+
+The window was driven through WebView2's debugging port, from PowerShell
+started in the package (`Invoke-CommandInDesktopPackage`), which passes
+`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` on to the app as the package's own
+activation does not. Not yet run: the Certification Kit, and Windows 10.
 
 ## The icons
 
