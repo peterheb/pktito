@@ -1,10 +1,11 @@
 /* The audio of a media file, through Android's media framework, the NDK's
  * AMediaExtractor and AMediaCodec: whatever the device plays (mp3; aac in
  * mp4, m4a, 3gp and adts; opus, vorbis, flac, amr, and what its maker
- * adds), its first audio track decoded at the decoder's own rate and in
- * its own channels, as float where the decoder gives float, and handed to
- * the mix (mix.h). The decoder is asked for no conversion of rate or
- * channels. Every decoder of the Googlebook's (Android 17, c2.android.*)
+ * adds), its first audio track decoded at the decoder's own rate, in its
+ * own channels and in its own sample format (16-bit, or float where the
+ * decoder gives float of itself), and handed to the mix (mix.h). The
+ * decoder is asked for no conversion of any of them (the configure below
+ * says why). Every decoder of the Googlebook's (Android 17, c2.android.*)
  * gave 16-bit samples, asked for float or not, as did its FLAC extractor
  * of a 24-bit file.
  *
@@ -121,13 +122,15 @@ int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *err, si
         rc = fail(err, errlen, "Android has no decoder for %s", mime);
         goto done;
     }
-    /* float, where the decoder gives it; 16-bit otherwise. A track that is
-     * PCM already (audio/raw: Android's FLAC extractor decodes in the
-     * extractor) has its own encoding in that key, which its decoder passes
-     * through as it is: set to float, it passed 16-bit samples on as float,
-     * and a 60 s FLAC came out 30 s of noise (the Googlebook, Android 17) */
-    if (strcmp(mime, "audio/raw"))
-        AMediaFormat_setInt32(f, AMEDIAFORMAT_KEY_PCM_ENCODING, PCM_FLOAT);
+    /* The decoder's own samples, 16-bit unless it gives float of itself: it
+     * is not asked for float, because a decoder asked can say float and give
+     * 16-bit. Samsung's FLAC decoder (c2.sec.flac.decoder, a Galaxy S25
+     * Ultra, Android 17) did, and a 10:40 chapter came out 5:20 long, with
+     * no speech found in it; a track that is PCM already (audio/raw: the
+     * Googlebook's FLAC extractor decodes in the extractor) passed 16-bit
+     * samples on as float, and a 60 s FLAC came out 30 s of noise. Every
+     * decoder of the Googlebook's gave 16-bit, asked for float or not, so
+     * its transcripts are the same either way. */
     if ((s = AMediaCodec_configure(c, f, NULL, NULL, 0)) != AMEDIA_OK || (s = AMediaCodec_start(c)) != AMEDIA_OK) {
         rc = fail(err, errlen, "Android's decoder for %s would not start (%d)", mime, s);
         goto done;
