@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  pktito for the Microsoft Store: the setup program's two exes, unchanged,
+  in an MSIX package. scripts/msix.ps1 fills in the @...@ values and packs
+  it; the exes tell they are packaged at run time (main.rs, store_edition).
+
+  What the setup program does that this does instead (windows/hooks.nsh):
+  - .pkf as "pktito model": the file type association below.
+  - pktito-cli on the PATH: an execution alias, which Windows puts on the
+    PATH itself, from its own Application (an alias needs one that may run
+    many times at once, and a console subsystem, and is kept out of Start).
+  AppData is redirected into the package's own storage (models, settings,
+  recent transcripts), which uninstalling deletes; the app says so in
+  Privacy. runFullTrust is the one capability: a desktop program's.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
+  xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap5 desktop4 rescap">
+  <Identity Name="@NAME@" Publisher="@PUBLISHER@" Version="@VERSION@" ProcessorArchitecture="@ARCH@" />
+  <Properties>
+    <DisplayName>pktito</DisplayName>
+    <PublisherDisplayName>@PUBLISHER_DISPLAY@</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+  <Dependencies>
+    <!-- Windows 10 1809, the oldest MSIX's desktop extensions run on; the
+         window also needs the WebView2 runtime, which a package cannot
+         install (Windows 11 has it, as does Windows 10 with Edge updates) -->
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+  <Applications>
+    <Application Id="pktito" Executable="pktito-app.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements DisplayName="pktito" Description="Speech to text on this computer"
+        BackgroundColor="transparent" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png" />
+      <Extensions>
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="pktitomodel">
+            <uap:DisplayName>pktito model</uap:DisplayName>
+            <uap:Logo>Assets\model.png</uap:Logo>
+            <uap:SupportedFileTypes>
+              <uap:FileType>.pkf</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap:FileTypeAssociation>
+        </uap:Extension>
+      </Extensions>
+    </Application>
+    <Application Id="pktitocli" Executable="pktito-cli.exe" EntryPoint="Windows.FullTrustApplication" desktop4:SupportsMultipleInstances="true">
+      <uap:VisualElements DisplayName="pktito-cli" Description="pktito from the command line" AppListEntry="none"
+        BackgroundColor="transparent" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png" />
+      <Extensions>
+        <uap5:Extension Category="windows.appExecutionAlias" Executable="pktito-cli.exe" EntryPoint="Windows.FullTrustApplication">
+          <uap5:AppExecutionAlias desktop4:Subsystem="console">
+            <uap5:ExecutionAlias Alias="pktito-cli.exe" />
+          </uap5:AppExecutionAlias>
+        </uap5:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>
