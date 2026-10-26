@@ -9,9 +9,9 @@
   - pktito-cli on the PATH: an execution alias, which Windows puts on the
     PATH itself, from its own Application (an alias needs one that may run
     many times at once, and a console subsystem, and is kept out of Start).
-  AppData is redirected into the package's own storage (models, settings,
-  recent transcripts), which uninstalling deletes; the app says so in
-  Privacy. runFullTrust is the one capability: a desktop program's.
+  The data folder in AppData is the package's own, which uninstalling
+  deletes, unless the setup program's copy made it first (README.md, "Where
+  the data is"). runFullTrust is the one capability: a desktop program's.
 -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"

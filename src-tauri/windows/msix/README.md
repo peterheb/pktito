@@ -1,50 +1,69 @@
 # pktito in the Microsoft Store
 
-The Store edition is the setup program's two exes, unchanged, in an MSIX
-package (`AppxManifest.xml` here, packed by `scripts/msix.ps1`). The exes
-tell they are packaged at run time (`store_edition` in main.rs, which asks
-`GetCurrentPackageFullName`), and the page reads that as `status.store`.
-Nothing is compiled differently.
+The Store edition is the setup program's exes, unchanged, in an MSIX
+package: `AppxManifest.xml` here, packed by `scripts/msix.ps1` from a
+release's signed setup program. Nothing is compiled differently. The exes
+ask Windows at run time whether they run from a package (`store_edition`
+in main.rs, by `GetCurrentPackageFullName`) and where their data is
+(`data_in_package`), and the page reads both from `status`.
 
 ## What packaging changes
 
-| | Setup program | Store package |
-|---|---|---|
-| Installed to | `%LOCALAPPDATA%\pktito` | `C:\Program Files\WindowsApps\…`, read-only |
-| Settings, models, recent | `%APPDATA%\net.pktito.app` | the same path, which Windows redirects into the package's own `LocalCache` |
-| Uninstalling | leaves the data folder | deletes it, models with it |
-| `.pkf` as "pktito model" | registry, hooks.nsh | `windows.fileTypeAssociation` |
-| `pktito-cli` on the PATH | path.ps1 edits the user's PATH | an execution alias, which Windows puts on the PATH |
-| Updates | a new setup program | the Store |
-| Signing | our certificate, every exe and the setup | the Store signs the package |
+|                          | Setup program                           | Store package                                                                                            |
+| ------------------------ | --------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Installed to             | `%LOCALAPPDATA%\pktito`                 | `C:\Program Files\WindowsApps\…`, read-only                                                              |
+| Settings, models, recent | `%APPDATA%\net.pktito.app`              | the package's own copy of that folder, under its `LocalCache`, unless the folder was there first (below) |
+| Uninstalling             | leaves the data folder                  | deletes the package's own copy, models with it                                                           |
+| `.pkf` as "pktito model" | registry, hooks.nsh                     | `windows.fileTypeAssociation`                                                                            |
+| `pktito-cli` on the PATH | path.ps1 edits the user's PATH          | an execution alias, in a folder on every user's PATH (below)                                             |
+| Updates                  | a new setup program                     | the Store                                                                                                |
+| Signing                  | our certificate: the exes and the setup | the same signed exes; the Store signs the package                                                        |
 
-What the app does about it (f264534):
-- The redirected folder can't be shown in Explorer from outside the package,
-  so the model menu has no Show in File Explorer. Open a model file… stays,
-  and so does a saved transcript's Show in File Explorer: transcripts are
-  saved in the user's own folders, which aren't redirected.
-- Privacy says that uninstalling deletes the data. The site's privacy policy
-  must say so too, since the listing links it.
-- About says "Microsoft Store".
-
-Writes outside AppData are not redirected: a transcript saved next to its
-recording lands there, as from the setup program's copy.
+### Where the data is
 
 Windows redirects only a folder the package makes. Where the setup
-program's copy ran first, `%APPDATA%\net.pktito.app` is already there, and
-the Store's copy reads and writes that real folder: same models, settings
-and recent list, and uninstalling it leaves them. This was found with a
-signed test package on the 9950X (2026-10-26): its recent transcript went
-into the real folder, and its `LocalCache` held nothing of pktito's. So
-`status.store` says where the app came from, not where its data is. In
-that case Privacy's "uninstalling deletes them" is wrong, and the hidden
-Show in File Explorer would work.
+program's copy made `%APPDATA%\net.pktito.app` first, the Store's copy
+reads and writes that real folder: the same models, settings and recent
+list as the other copy, and uninstalling it leaves them. (The signed test
+package on the 9950X, 2026-10-26: its recent transcript went into the real
+folder, and its `LocalCache` held nothing of pktito's.) So the app asks
+where its data is, not only where it came from:
 
-No restricted capability beyond `runFullTrust`, which every desktop program
-in a package declares; Partner Center asks for a line saying why ("a Win32
-desktop app"). `unvirtualizedResources` would keep AppData shared with the
-setup program's copy. It was tested and does that (2026-10-23), but the Store
+- `data_in_package`: the package's own copy is there, or no folder is there
+  yet and the first write will make one in the package. Then the model menu
+  has no Show in File Explorer, since Explorer outside the package can't
+  show that folder, and Privacy says uninstalling deletes the data.
+- Otherwise the menu and Privacy are the setup program's, which are right
+  for a shared folder.
+- `store`: About says "Microsoft Store" whenever the app runs from the
+  package.
+
+Open a model file… and a saved transcript's Show in File Explorer stay in
+both cases: transcripts are saved in the user's own folders, which aren't
+redirected. The site's privacy policy, which the listing links, says the
+Store edition's data goes when it is uninstalled; it needs the shared case
+too.
+
+`runFullTrust` is the one restricted capability, which every desktop
+program in a package declares; Partner Center asks for a line saying why
+("a Win32 desktop app"). `unvirtualizedResources` would make the folder
+always shared. It was tested and does that (2026-10-23), but the Store
 often refuses it, and nothing here needs it.
+
+### The command line
+
+`pktito-cli` is an app execution alias: Windows puts it in
+`%LOCALAPPDATA%\Microsoft\WindowsApps`, which is on every user's PATH, and
+runs it inside the package, where it sees the window's models and
+settings. Through it, a transcript of test.wav came out byte for byte the
+setup program's CLI's (2026-10-26).
+
+- With both editions installed, the Store's alias comes first on the PATH.
+- Over SSH (armlet, 2026-10-23), Windows refused the alias while the app
+  ran in the desktop session. For SSH, services and other accounts, the
+  setup program's CLI is the one to use.
+- A user can turn the alias off: Settings, Apps, Advanced app settings, App
+  execution aliases.
 
 ## The window's runtime
 
@@ -54,44 +73,61 @@ Windows 10 updated through Edge. The manifest's minimum is Windows 10 1809.
 ## Two ways into the Store
 
 1. **The MSIX (this):** the Store hosts, signs and updates it, and a user
-   installs it with no prompt. The data is per package and goes on uninstall.
+   installs it with no prompt.
 2. **The setup program as a Win32 listing:**
    - The Store links to our signed setup by a versioned URL (policy 10.2.9).
    - It must install silently (`/S`) and offline, and must not download the
      app.
    - The Store doesn't update it, so each release is a new submission. The
      app doesn't update itself.
-   - Behaviour is identical to the download from pktito.net.
+   - Behavior is identical to the download from pktito.net.
 
 The MSIX is the better fit: updates come through the Store, which the setup
-program can't offer, and uninstalling takes the models with it.
+program can't offer. Partner Center can't turn one kind of product into
+the other, so the MSIX needs a product made as an "MSIX or PWA app". Once
+listed, the app is in winget's `msstore` source too
+(`winget install <Store ID> -s msstore`).
 
 ## Making a package
 
 ```powershell
-# from the release build (cargo tauri build --no-bundle, plus pktito-cli)
-scripts\msix.ps1 -Arch x64                    # unsigned test package
-scripts\msix.ps1 -Arch arm64
-scripts\msix.ps1 -Arch x64 -Identity store    # Partner Center's identity
-scripts\msix.ps1 -Bundle a.msix,b.msix -Out pktito_0.9.2.0.msixbundle
+# a release: the signed setup programs, a package of each, then the bundle
+scripts\msix.ps1 -Setup pktito_0.9.2_x64-setup.exe -Identity store
+scripts\msix.ps1 -Setup pktito_0.9.2_arm64-setup.exe -Identity store
+scripts\msix.ps1 -Bundle pktito_0.9.2.0_x64.msix,pktito_0.9.2.0_arm64.msix
+
+# a test, from a build (cargo tauri build --no-bundle, and pktito-cli)
+scripts\msix.ps1
+scripts\msix.ps1 -Exes src-tauri\target\aarch64-pc-windows-gnullvm\release
 ```
 
-A test package installs from an administrator's PowerShell:
-`Add-AppxPackage -AllowUnsigned pktito_0.9.2.0_x64-test.msix`. It has its
-own identity, so it sits beside the setup program's copy and beside a Store
-install.
+The Store and sideload identities take only signed exes. A test package
+installs from an administrator's PowerShell:
+`Add-AppxPackage -AllowUnsigned pktito_0.9.2.0_x64-test.msix`. A sideload
+package, signed with the certificate that signs the setup program, installs
+with no prompt. Either has its own identity, so it sits beside the setup
+program's copy and beside a Store install. Installed again, a test package
+needs a higher `-Version`, or Windows keeps the last one's icons.
 
 ## Before the first submission
 
-- Reserve the name in Partner Center, and copy its Package/Identity/Name and
-  Publisher into `$store` in msix.ps1.
-- The listing needs:
-  - screenshots and a description;
+- Partner Center:
+  - Copy the product's Package/Identity/Name and Publisher (Product
+    identity) into msix.ps1's store identity.
+  - Its Display must be the reserved name, exactly.
+- The listing:
+  - a description;
+  - screenshots of at least 1366×768 (the site's standard shots, 682×832,
+    are too small);
   - the privacy policy URL (pktito.net/privacy);
-  - an age rating questionnaire;
-  - the runFullTrust justification.
-- Run the Windows App Certification Kit on the package (it needs an
+  - the age rating questionnaire;
+  - the runFullTrust justification;
+  - certification notes, saying the first run downloads a model of about
+    650 MB from models.pktito.net.
+- The Windows App Certification Kit on the bundle (it needs an
   administrator).
+- A clean computer's run, x64 and arm64: the data in the package, the model
+  menu and Privacy as above, and uninstalling deleting it.
 - Version: Cargo.toml's, with a fourth part of 0, which the Store keeps for
   itself.
 
@@ -99,9 +135,10 @@ install.
 
 `Assets/` holds the taskbar and Start icon, `Square44x44Logo`, at each
 target size Windows draws it, in the unplated and light-unplated forms.
-Without them, Windows scales the 44 px logo onto a plate of the accent
-colour, which shows round the icon's rounded corners. They are
-`icons/icon.png` resized with Lanczos:
+Windows finds them by the package's resource index, `resources.pri`, which
+msix.ps1 makes with makepri. Without the two, Windows scales the 44 px logo
+onto a plate of the accent color, which shows round the icon's rounded
+corners. They are `icons/icon.png` resized with Lanczos:
 
 ```sh
 python3 -c "
