@@ -98,7 +98,17 @@ pktito's pictures are screenshots of the app itself, taken by script so they can
 - scrolled past the LibriVox notice
 - in light and dark, on each system
 
-`scripts/screenshots-mac.sh` takes the Mac's two, and `site/README.md` says how the rest are taken and which a visitor sees.
+The recording is `wonderland_ch_01_64kb.mp3` from archive.org's `alice_in_wonderland_librivox`, scrolled so that "Alice's Adventures in Wonderland by Lewis Carroll." is the first row. The shots live in `design/screenshots/`, and pktito-site copies them (`npm run sync` there). A visitor sees their own system's; a phone sees its nearest (Android the Windows one, iPhone the Mac's), and Linux the Linux one.
+
+| System  | Taken on              | How                                            | Files                               |
+| ------- | --------------------- | ---------------------------------------------- | ----------------------------------- |
+| macOS   | the Mac               | `scripts/screenshots-mac.sh`                   | `mac-light.png`, `mac-dark.png`     |
+| Windows | the 9950X, x64        | not yet: the same shot, the window's own frame | `win-light.png`, `win-dark.png`     |
+| Linux   | pi5a's desktop, labwc | not yet: the same shot, under its title bar    | `linux-light.png`, `linux-dark.png` |
+
+Why the multilingual model and the MP3: the English model runs the notice, the title and "Chapter one" together as one row, so no row is the title; and the first 16 rows of the MP3 are the same through macOS's decoder and ffmpeg, Linux's (2026-10-23, 0.8.5), and through Media Foundation since MP3s are cut to where their sound starts (`src-tauri/src/mp3.rs`).
+
+The Mac's script quits pktito, sets its settings for the shot and puts them back, opens the chapter (downloaded once and checked), scrolls three rows by simulated trackpad pixels, and captures the window with macOS's shadow in light and then dark, putting the system's appearance back after. It needs Screen Recording and Accessibility for the terminal it runs in. Retake the shots after any change to the window's look; if the row spacing changes, the script's `SCROLL` (three one-line rows, 43 px each) changes with it. The Mac's display is 2560×1440 at 1×, so its shots are 1× (792×912 with the shadow); a Retina display would give 2×.
 
 - Show real transcripts of audio that may be published. Never put the app in a device mock-up, or shrink it until it's unreadable.
 - No stock microphones, headphones or AI brains.

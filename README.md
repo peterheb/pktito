@@ -91,11 +91,16 @@ desktop file (src-tauri/linux).
 Each file lives under the first twelve digits of its SHA-256, as
 `https://models.pktito.net/8bfa6750b83c/parakeet-tdt-0.6b-v2.pkf`, so an
 address never serves two different files and a CDN can keep each one
-forever. models.pktito.net is a bunny.net pull zone, and
-`scripts/models-upload.sh` puts converted models in its storage that way
-(site/README.md). `scripts/models-tree.sh` lays them out the same way for a
-local server, and `PKTITO_MODEL_BASE` points the download at another
-server, such as a mirror or that local one:
+forever. models.pktito.net is a bunny.net storage zone behind a pull zone
+with that hostname (a CNAME in Cloudflare's DNS, not proxied, so that bunny
+can issue its certificate), which answers the range requests that resume a
+download. `scripts/models-upload.sh` puts converted models in the storage
+zone that way, through the zone's own endpoint (`ny.storage.bunnycdn.com`;
+the plain `storage.bunnycdn.com` refuses its password), with the password
+read from a file; bunny checks each file against its SHA-256, and the
+script checks what the zone then holds. `scripts/models-tree.sh` lays them
+out the same way for a local server, and `PKTITO_MODEL_BASE` points the
+download at another server, such as a mirror or that local one:
 
 ```sh
 scripts/models-tree.sh ../pktito/models/*.pkf /tmp/models
@@ -301,7 +306,7 @@ file. It needs no installed targets, so any machine can run it. Cargo knows
 only crates: a typeface, an icon set or a file shipped beside the app (as
 `WebView2Loader.dll` is) added since the last release goes into the
 script's `EXTRAS` by hand, its license text into `scripts/licenses`.
-`site/README.md` posts the builds.
+pktito-site's README (Installers) posts the builds.
 
 ## Design
 
@@ -314,8 +319,11 @@ which `scripts/tokens.py` makes from `design/tokens.json`; the icon set in
 
 ## The site
 
-`site/` builds pktito.net from the same design system, and its Cloudflare
-Worker serves the installers (site/README.md).
+pktito.net is its own repository,
+[pktito-site](https://github.com/peterheb/pktito-site), built from this
+design system; its Cloudflare Worker hands out the installers. `npm run
+sync` there copies the design system's files and the screenshots
+(`design/screenshots`) from a checkout of this repository beside it.
 
 ## License
 

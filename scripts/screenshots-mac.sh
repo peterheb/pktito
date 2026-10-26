@@ -6,7 +6,7 @@
 # the first row; once in light and once in dark, each with macOS's window
 # shadow, as ⌘⇧4 Space takes it.
 #
-#     scripts/screenshots-mac.sh [OUT]       (default site/screenshots)
+#     scripts/screenshots-mac.sh [OUT]       (default design/screenshots)
 #
 # writes OUT/mac-light.png and OUT/mac-dark.png. Why these choices:
 #
@@ -31,7 +31,7 @@
 # system's appearance back as it was. The cursor is moved over the window to scroll it and back after.
 set -euo pipefail
 here=$(cd "$(dirname "$0")/.." && pwd)
-out=${1:-$here/site/screenshots}
+out=${1:-$here/design/screenshots}
 app=${PKTITO_APP:-$here/src-tauri/target/release/bundle/macos/pktito.app}
 data="$HOME/Library/Application Support/net.pktito.app"
 SCROLL=129

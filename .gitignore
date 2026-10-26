@@ -2,5 +2,3 @@
 /src-tauri/gen/
 node_modules/
 .DS_Store
-/site/public/
-/site/.wrangler/
