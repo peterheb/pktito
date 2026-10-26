@@ -326,9 +326,9 @@ fn flac_cut(path: &Path, mut x: Vec<f32>) -> Vec<f32> {
     let read = std::fs::File::open(path).and_then(|mut f| f.read_exact(&mut b));
     if let Some((rate, total)) = read.ok().and_then(|_| flac_length(&b)) {
         // at 16 kHz, the samples themselves; at another rate, the mix's
-        // count of them, to the nearest
-        let n = ((total as u128 * RATE as u128 + rate as u128 / 2) / rate as u128) as usize;
-        x.truncate(n);
+        // count of them, to the nearest; a count past usize cuts nothing
+        let n = (total as u128 * RATE as u128 + rate as u128 / 2) / rate as u128;
+        x.truncate(usize::try_from(n).unwrap_or(usize::MAX));
     }
     x
 }

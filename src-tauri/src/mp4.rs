@@ -22,6 +22,12 @@ use std::path::Path;
 /// Larger than any moov of a file a person transcribes; a bigger one is not read.
 const MOOV_MAX: u64 = 64 << 20;
 
+/// The most silence an empty edit may put before the sound, in seconds.
+/// apply() makes it as samples, 64 KB a second at 16 kHz, where the day the
+/// edit's other times may run to would be 5.5 GB; a file that delays its
+/// sound longer than this is no edit.
+const LEAD_MAX: f64 = 600.0;
+
 /// What the edit list makes of the decoded track, in seconds: silence before
 /// it (an empty edit: the sound starts that late), the decoded sound to drop
 /// from its start (the priming), and how much to keep after that, if it says.
@@ -154,7 +160,7 @@ fn from_moov(moov: &[u8]) -> Option<Edit> {
         }
         let (skip, keep) = found?;
         let ok = |s: f64| s.is_finite() && (0.0..=86400.0).contains(&s);
-        return (ok(lead) && ok(skip) && ok(keep)).then_some(Edit {
+        return (ok(lead) && lead <= LEAD_MAX && ok(skip) && ok(keep)).then_some(Edit {
             lead,
             skip,
             keep: (keep > 0.0).then_some(keep),
@@ -197,15 +203,21 @@ fn smpb(moov: &[u8], trak: &[u8]) -> Option<(f64, f64)> {
     None
 }
 
-/// x, at rate, as the edit presents it.
+/// x, at rate, as the edit presents it. The silence before it is the one
+/// length here that x does not bound, so it is held to LEAD_MAX, and if
+/// even that much memory can't be had, x is left as decoded.
 pub fn apply(x: Vec<f32>, e: &Edit, rate: f64) -> Vec<f32> {
     let skip = ((e.skip * rate).round() as usize).min(x.len());
-    let rest = &x[skip..];
-    let keep = e.keep.map_or(rest.len(), |k| {
-        ((k * rate).round() as usize).min(rest.len())
+    let keep = e.keep.map_or(x.len() - skip, |k| {
+        ((k * rate).round() as usize).min(x.len() - skip)
     });
-    let mut y = vec![0.0f32; (e.lead * rate).round() as usize];
-    y.extend_from_slice(&rest[..keep]);
+    let lead = (e.lead.clamp(0.0, LEAD_MAX) * rate).round() as usize;
+    let mut y = Vec::new();
+    if y.try_reserve_exact(lead.saturating_add(keep)).is_err() {
+        return x;
+    }
+    y.resize(lead, 0.0);
+    y.extend_from_slice(&x[skip..skip + keep]);
     y
 }
 
@@ -316,6 +328,26 @@ mod tests {
         bad.truncate(bad.len() - 5);
         assert_eq!(from_moov(&bad), None); // cut short
         assert_eq!(from_moov(&[0, 0, 0, 1, b'm', b'v', b'h', b'd']), None); // a size it cannot have
+                                                                            // a sound delayed past LEAD_MAX, 601 s
+        assert_eq!(from_moov(&moov(&[(601_000, -1), (2000, 0)], b"soun")), None);
+    }
+
+    #[test]
+    fn lead_held_to_its_most() {
+        // a day of silence asked for, LEAD_MAX's made: at 10 Hz, 6000 samples
+        let e = Edit {
+            lead: 86400.0,
+            skip: 0.0,
+            keep: None,
+        };
+        let y = apply(vec![1.0; 10], &e, 10.0);
+        assert_eq!((y.len(), y[5999], y[6000]), (6010, 0.0, 1.0));
+        // nothing for a lead that is not a number
+        let e = Edit {
+            lead: f64::NAN,
+            ..e
+        };
+        assert_eq!(apply(vec![1.0; 10], &e, 10.0).len(), 10);
     }
 }
 
