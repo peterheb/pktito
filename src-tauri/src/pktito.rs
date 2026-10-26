@@ -55,13 +55,23 @@ pub struct Span {
     pub end: i64,
 }
 
-/// A chunk of a recording, in samples, and how many of them Silero's
-/// speech segments cover.
-#[derive(Clone, Copy, Default)]
+/// A chunk of a recording, in samples, and Silero's speech segments in it,
+/// cut to its edges.
+#[derive(Clone, Default)]
 pub struct Chunk {
     pub start: i64,
     pub end: i64,
-    pub speech: i64,
+    pub speech: Vec<Span>,
+}
+
+impl Chunk {
+    /// The samples of [from, to) that Silero heard as speech.
+    pub fn heard(&self, from: i64, to: i64) -> i64 {
+        self.speech
+            .iter()
+            .map(|s| (s.end.min(to) - s.start.max(from)).max(0))
+            .sum()
+    }
 }
 
 #[repr(C)]
@@ -318,8 +328,12 @@ impl Model {
                 end: c.end,
                 speech: speech
                     .iter()
-                    .map(|s| (s.end.min(c.end) - s.start.max(c.start)).max(0))
-                    .sum(),
+                    .filter(|s| s.end > c.start && s.start < c.end)
+                    .map(|s| Span {
+                        start: s.start.max(c.start),
+                        end: s.end.min(c.end),
+                    })
+                    .collect(),
             })
             .collect())
     }

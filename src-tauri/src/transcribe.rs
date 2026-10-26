@@ -1,9 +1,8 @@
 //! A recording's samples to timed segments: pktito's chunks (whole up to 30
 //! s, else cut at the silences, the silence left out), each transcribed,
 //! and split into sentences timed by pktito's word timestamps, which each
-//! segment keeps, word by word, for the window to follow playback with. A
-//! chunk of speech that comes back with no words is transcribed again in
-//! two halves (RETRY_SPEECH_S).
+//! segment keeps, word by word, for the window to follow playback with.
+//! Speech the model wrote no word for is transcribed again (RETRY_SPEECH_S).
 
 use crate::pktito::{Asr, Chunk, Model, Tok};
 use serde::{Deserialize, Serialize};
@@ -14,20 +13,35 @@ pub const MAX_CHUNK_S: f64 = 30.0;
 /// A segment with no sentence end in this long is cut at a word anyway.
 const MAX_SEGMENT_S: f64 = 20.0;
 
-/// A chunk that comes back with no words, though Silero heard at least this
-/// much speech in it, is transcribed again, cut in two at quietest(). The
-/// English model gives nothing for the first chunk of AliceBench's chapters
-/// 8 and 10 (0.897-28.112 s and 0.929-28.32 s): the LibriVox notice, the
-/// title and two sentences of chapter 8, lost. At every frame its decoder
-/// visits, blank beats the first word, by 0.02 logits at the closest, and
-/// NeMo's own float32 transcription of the same cut gives nothing too
-/// (NeMo 3.0.0, the original v2 checkpoint, 2026-10-26). Each half gives
-/// its words: 24 and 13 for chapter 10, 29 and 35 for chapter 8. A chunk
-/// with words is never touched, so every other transcript stays as it was.
+/// A stretch of a chunk that the model wrote no word for, inside a sentence,
+/// though Silero heard at least this much speech in it, is transcribed
+/// again on its own, once; between sentences, RETRY_BREAK_S is enough. The
+/// English model gives nothing for the first chunk of
+/// AliceBench's chapters 8 and 10 (0.897-28.112 s, 0.929-28.32 s), and keeps
+/// only "This is a LibriVox recording" of the first chunk of chapters 2, 7,
+/// 9 and 12, dropping the credits and titles after it: at every frame its
+/// decoder visits, blank beats the next word (by 0.02 logits at the closest,
+/// chapter 10), and NeMo's own float32 transcription of chapter 8's chunk
+/// gives nothing too (NeMo 3.0.0, the original v2 checkpoint, 2026-10-26).
+/// The multilingual model drops chapter 5's closing chunk, chapter 1's
+/// closing credits, a title in chapter 5 and a line of chapter 10. Each,
+/// transcribed again, gives its words; LibriSpeech's long40 and long300
+/// have no such stretch with either model (pktito-9950x's count, the same
+/// day). A chunk whose words cover its speech is never touched. Inside a
+/// sentence, less is too little: at 1 s, a FLEURS Polish recording's "km",
+/// spoken "kilometrów kwadratowych", left a second after it that gave
+/// "metrów kwadratowych." again, a word and a full stop too many.
 const RETRY_SPEECH_S: f64 = 2.0;
-/// The most of a recording retried, as a share of it, or one chunk if that
-/// is more: music Silero takes for speech, which gives no words however it
-/// is cut, then costs at most a fifth more time.
+/// The same between sentences: after a word that ends one, at a chunk's start
+/// or end, or for the whole chunk if it gave no words, cut in two at
+/// quietest() (whole again, it would give nothing again). AliceBench's
+/// chapter 1 gets back "End of chapter one", 1.6 s after "...finished off
+/// the cake." with no word, which 2 s missed; the corpus (ls200, long40 and
+/// long300 with both models, six FLEURS sets) is otherwise as at 2 s.
+const RETRY_BREAK_S: f64 = 1.0;
+/// The most of a recording transcribed again, as a share of it, or one
+/// chunk if that is more: music Silero takes for speech, which gives no
+/// words however it is cut, then costs at most a fifth more time.
 const RETRY_SHARE: f64 = 0.2;
 
 /// PKTITO_THREADS, for finding out what a machine does on fewer threads (the
@@ -75,22 +89,9 @@ pub fn run(
         if stop() {
             return Ok((all, false));
         }
-        let (a, b) = (c.start as usize, c.end as usize);
-        let toks = asr.run(&x[a..b])?;
-        let segs = if toks.is_empty() && retry(c, rate, retries) {
-            retries -= c.end - c.start;
-            let m = a + quietest(&x[a..b], rate);
-            let mut segs = sentences(model, &asr.run(&x[a..m])?, a as f64 / rate, frame);
-            segs.extend(sentences(
-                model,
-                &asr.run(&x[m..b])?,
-                m as f64 / rate,
-                frame,
-            ));
-            segs
-        } else {
-            sentences(model, &toks, a as f64 / rate, frame)
-        };
+        let toks = asr.run(&x[c.start as usize..c.end as usize])?;
+        let toks = again(model, asr, x, c, toks, &mut retries)?;
+        let segs = sentences(model, &toks, c.start as f64 / rate, frame);
         done += c.end - c.start;
         progress(done as f64 / total as f64, &segs);
         all.extend(segs);
@@ -98,10 +99,91 @@ pub fn run(
     Ok((all, true))
 }
 
-/// Whether a chunk that gave no words is transcribed again: if Silero heard
-/// RETRY_SPEECH_S of speech in it, and the retries left cover it.
-fn retry(c: &Chunk, rate: f64, retries_left: i64) -> bool {
-    c.speech as f64 >= RETRY_SPEECH_S * rate && c.end - c.start <= retries_left
+/// A chunk's tokens with those of each stretch of it transcribed again
+/// (RETRY_SPEECH_S, RETRY_BREAK_S), while the samples left to retry last:
+/// each stretch's tokens at its own frames in the chunk, all of them in
+/// frame order.
+fn again(
+    model: &Model,
+    asr: &mut Asr,
+    x: &[f32],
+    c: &Chunk,
+    mut toks: Vec<Tok>,
+    retries: &mut i64,
+) -> Result<Vec<Tok>, String> {
+    let rate = model.rate() as f64;
+    let spf = (model.frame_seconds() * rate).round() as i64;
+    let frames = (c.end - c.start + spf - 1) / spf;
+    let (inside, at_break) = (
+        (RETRY_SPEECH_S * rate) as i64,
+        (RETRY_BREAK_S * rate) as i64,
+    );
+    let samples = |(f0, f1): (i64, i64)| (c.start + f0 * spf, (c.start + f1 * spf).min(c.end));
+    let stretches = if toks.is_empty() {
+        let (s0, s1) = (c.start, c.end);
+        if c.heard(s0, s1) < at_break || s1 - s0 > *retries {
+            return Ok(toks);
+        }
+        *retries -= s1 - s0;
+        let m = quietest(&x[s0 as usize..s1 as usize], rate) as i64 / spf;
+        vec![(0, m), (m, frames)]
+    } else {
+        let words = model.words(&toks).into_iter().map(|w| {
+            let text = model.text(&toks[w.tok as usize..(w.tok + w.ntok) as usize]);
+            (
+                w.start as i64,
+                w.end as i64,
+                text.ends_with(['.', '?', '!']),
+            )
+        });
+        let mut chosen = Vec::new();
+        for (f0, f1, after_break) in gaps(words, frames) {
+            let (s0, s1) = samples((f0, f1));
+            let enough = if after_break || f1 == frames {
+                at_break
+            } else {
+                inside
+            };
+            if s1 - s0 <= *retries && c.heard(s0, s1) >= enough {
+                *retries -= s1 - s0;
+                chosen.push((f0, f1));
+            }
+        }
+        chosen
+    };
+    for f in stretches {
+        let (s0, s1) = samples(f);
+        if s1 > s0 {
+            let more = asr.run(&x[s0 as usize..s1 as usize])?;
+            toks.extend(more.into_iter().map(|t| Tok {
+                frame: t.frame + f.0 as i32,
+                ..t
+            }));
+        }
+    }
+    toks.sort_by_key(|t| t.frame);
+    Ok(toks)
+}
+
+/// The stretches of a chunk of n frames that none of its words covers:
+/// before the first, between each two, and after the last. Each word is
+/// [start, end) in frames, in order, and whether it ends a sentence; each
+/// stretch is [start, end) and whether it follows a sentence's end, as the
+/// chunk's start does.
+fn gaps(words: impl Iterator<Item = (i64, i64, bool)>, n: i64) -> Vec<(i64, i64, bool)> {
+    let mut out = Vec::new();
+    let (mut at, mut after_break) = (0, true);
+    for (start, end, ends) in words {
+        if start > at {
+            out.push((at, start, after_break));
+        }
+        at = at.max(end);
+        after_break = ends;
+    }
+    if n > at {
+        out.push((at, n, after_break));
+    }
+    out
 }
 
 /// Where a chunk is cut for its retry, from its start: the middle of its
@@ -175,18 +257,45 @@ mod tests {
     }
 
     #[test]
-    fn retried_with_speech_and_room_left() {
-        let rate = 16000.0;
+    fn the_stretches_no_word_covers() {
+        // words at frames [3, 5), ending a sentence, and [9, 12) of 20:
+        // before (the chunk's start a break), between (after the sentence's
+        // end) and after (inside a sentence)
+        assert_eq!(
+            gaps([(3, 5, true), (9, 12, false)].into_iter(), 20),
+            vec![(0, 3, true), (5, 9, true), (12, 20, false)]
+        );
+        // words that touch or overlap leave nothing between them
+        assert_eq!(
+            gaps(
+                [(0, 4, false), (4, 9, false), (8, 20, true)].into_iter(),
+                20
+            ),
+            vec![]
+        );
+        // no words: the whole chunk
+        assert_eq!(gaps(std::iter::empty(), 7), vec![(0, 7, true)]);
+    }
+
+    #[test]
+    fn speech_heard_in_a_stretch() {
+        use crate::pktito::Span;
         let c = Chunk {
-            start: 0,
-            end: 28 * 16000,
-            speech: 20 * 16000,
+            start: 100,
+            end: 1000,
+            speech: vec![
+                Span {
+                    start: 100,
+                    end: 300,
+                },
+                Span {
+                    start: 500,
+                    end: 900,
+                },
+            ],
         };
-        assert!(retry(&c, rate, 30 * 16000));
-        // too little speech heard: silence or noise
-        let quiet = Chunk { speech: 16000, ..c };
-        assert!(!retry(&quiet, rate, 30 * 16000));
-        // the retries spent
-        assert!(!retry(&c, rate, 27 * 16000));
+        assert_eq!(c.heard(100, 1000), 600);
+        assert_eq!(c.heard(250, 600), 150);
+        assert_eq!(c.heard(300, 500), 0);
     }
 }

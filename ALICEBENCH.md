@@ -8,11 +8,12 @@ rewrite. Which of these the site shows is decided there, not here.
 "All 12" means every chapter's transcript matched the reference, so the
 build computes what every other build does.
 
-From 0.9.3, chapters 8 and 10 have new references: 0.9.3 transcribes
-again, in two halves, a chunk of speech that comes back with no words,
-which gives those chapters back their first 27 s (the LibriVox notice and
-title). Rows dated before 2026-10-26 matched the earlier references, which
-the scripts still accept and name ("as before 0.9.3").
+From 0.9.3, chapters 1, 2, 7, 8, 9, 10 and 12 have new references: 0.9.3
+transcribes again the speech the English model wrote no words for, which
+gives those chapters back the LibriVox notices, credits and titles it
+drops at their starts, and chapter 1 its "End of chapter one". Rows dated
+before 2026-10-26 matched the earlier references, which the scripts still
+accept and name ("as before 0.9.3").
 
 | Date       | Machine                                                                    | OS                                     | pktito                          | Code path   | Threads | × real time | Whole book | Transcripts | Notes                                                                                                                                                                                                                                               |
 | ---------- | -------------------------------------------------------------------------- | -------------------------------------- | ------------------------------- | ----------- | ------- | ----------- | ---------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
