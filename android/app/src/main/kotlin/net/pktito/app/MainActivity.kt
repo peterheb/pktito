@@ -1,6 +1,7 @@
 package net.pktito.app
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.ClipData
@@ -340,8 +341,11 @@ class MainActivity : ComponentActivity() {
      * as the desktop's are before its buttons: a control with the focus
      * would take Space as a press, and Back's threw the transcript away (the
      * Googlebook). An open menu is a window of its own, and has the keys
-     * first; it closes on Esc.
+     * first; it closes on Esc. The method is Activity's, which lint takes for
+     * a restricted one (RestrictedApi): it sees it through androidx.core's
+     * ComponentActivity, a class between the two that androidx keeps to itself.
      */
+    @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean =
         event.action == KeyEvent.ACTION_DOWN && key(event) || super.dispatchKeyEvent(event)
 
