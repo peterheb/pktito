@@ -31,6 +31,12 @@ android {
     buildFeatures {
         compose = true
     }
+    // the screens drawn on the JVM (src/test, Shots), with the app's fonts
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        // Robolectric sets up its file descriptors through the JDK's internals
+        unitTests.all { it.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED") }
+    }
 }
 
 dependencies {
@@ -38,4 +44,8 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.core:core-ktx:1.19.1")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.17")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

@@ -1,13 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The desktop's words where the screen is the desktop's (ui/locales/en.json,
+     by the key in each comment); Android's own where it differs. -->
 <resources>
     <string name="app_name">pktito</string>
-    <string name="open">Open a recording</string>
-    <string name="stop">Stop</string>
+    <!-- a phone has nothing to drop: ready.drop's place says what the zone is for -->
+    <string name="ready_lead">Transcribe audio or video</string>
+    <string name="choose">Choose a file…</string>
+    <string name="no_model">No speech model yet</string>
+    <string name="no_model_how">pktito needs a model to transcribe. Downloading one here is still to come.</string>
+    <string name="back">Back</string><!-- nav.back -->
+    <string name="stop">Stop</string><!-- work.stop -->
+    <string name="copy_text">Copy text</string><!-- copy.text -->
+    <string name="copy_captions">Copy captions (SRT)</string><!-- copy.captions -->
+    <string name="copied">Copied</string><!-- copy.done -->
+    <string name="copied_captions">Copied captions</string><!-- copy.done_captions -->
     <string name="share">Share</string>
+    <string name="save_as">Save as</string><!-- save.as -->
+    <string name="save_times">Timestamps in .txt and .md</string><!-- save.times -->
+    <string name="saved">Saved %1$s</string><!-- save.saved -->
+    <string name="save_failed">Couldn\'t save %1$s</string><!-- save.failed -->
+    <string name="format_txt">Text</string>
+    <string name="format_txt_times">Text with times</string>
+    <string name="format_srt">Subtitles</string>
+    <string name="format_vtt">Web subtitles</string>
+    <string name="format_md">Markdown</string>
+    <string name="format_md_times">Markdown with times</string>
+    <string name="format_json">JSON with word timings</string>
+    <string name="sentences">Sentences</string><!-- work.sentences -->
+    <string name="captions">Captions</string><!-- work.captions -->
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="status_loading">Loading the model</string>
+    <string name="status_reading">Reading the audio</string>
+    <string name="status_transcribing">Transcribing %1$d%%</string>
+    <string name="status_stopped_at">Stopped at %1$d%%</string>
+    <string name="no_speech">No speech in this file</string>
+    <string name="real_time">%1$sx real-time</string><!-- time.real_time -->
+    <string name="stats_transcribed">Transcribed in %1$s, %2$s</string><!-- stats.transcribed -->
+    <!-- the notification channel's name, in the system's settings -->
     <string name="channel">Transcribing</string>
-    <string name="reading">Reading the audio</string>
-    <string name="transcribing">Transcribing %1$d%%</string>
-    <string name="stopped">Stopped before the end</string>
-    <string name="no_model">No model in %1$s</string>
-    <string name="hint">Pick a WAV to transcribe, here on this device.</string>
 </resources>

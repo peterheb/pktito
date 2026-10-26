@@ -12,7 +12,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- no permission to read files: each recording is one the person picked,
-         and the picker grants that one -->
+         or opened with pktito or shared to it from another app, and each of
+         those grants that one -->
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
@@ -25,6 +26,21 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Open with, from the Files app: a type and no scheme takes
+                 content: and file: alike -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
+            <!-- Share, from a recorder or anything with a recording -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="video/*" />
             </intent-filter>
         </activity>
         <service

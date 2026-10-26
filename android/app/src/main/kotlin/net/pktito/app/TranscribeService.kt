@@ -10,11 +10,12 @@ import android.content.pm.ServiceInfo
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
+import android.os.ParcelFileDescriptor
 import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.OpenableColumns
 import android.util.Log
-import androidx.core.app.ServiceCompat
+import java.io.File
 import java.io.IOException
 import kotlin.concurrent.thread
 import org.json.JSONObject
@@ -33,7 +34,10 @@ class TranscribeService : Service() {
         getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(CHANNEL, getString(R.string.channel), NotificationManager.IMPORTANCE_LOW)
         )
-        ServiceCompat.startForeground(this, NOTE, note(getString(R.string.reading), -1), type())
+        // Service's own call, not ServiceCompat's: androidx.core 1.19.1 keeps
+        // only the types Android 14 had (0x40000fff), and mediaProcessing
+        // (0x2000) came to none, which Android 17 refused
+        startForeground(NOTE, note(getString(R.string.status_reading), -1), type())
         val uri = intent?.data
         if (uri == null || Transcriber.running) {
             if (!Transcriber.running) stop(startId)
@@ -48,10 +52,13 @@ class TranscribeService : Service() {
                 transcribe(uri)
             } catch (e: Exception) {
                 Log.w(TAG, "transcribing ${Transcriber.name}", e)
-                Transcriber.error = e.message ?: e.toString()
+                val why = e.message ?: e.toString()
+                Transcriber.post {
+                    error = why
+                    step = "error"
+                }
             } finally {
                 wake.release()
-                Transcriber.running = false
                 stop(startId)
             }
         }
@@ -64,32 +71,80 @@ class TranscribeService : Service() {
     }
 
     private fun transcribe(uri: Uri) {
+        if (!Transcriber.loaded) {
+            Transcriber.post { step = "loading" }
+            Transcriber.model(this)
+            Transcriber.post { step = "reading" }
+        }
         val handle = Transcriber.model(this)
         val notes = getSystemService(NotificationManager::class.java)
+        // the last transcript's audio goes, so that a WAV not written plays nothing
+        val wav = Transcriber.wav(this).apply { delete() }
         var shown = 0L
-        val pfd = contentResolver.openFileDescriptor(uri, "r") ?: throw IOException("$uri: nothing to read")
-        pfd.use {
-            // PROBE, to remove: can the app open the document again by its fd's name?
-            val again = runCatching { java.io.File("/proc/self/fd/${it.fd}").inputStream().use { s -> s.read() } }
-            Log.i(TAG, "probe: /proc/self/fd reopen ${again.exceptionOrNull() ?: "works"} for ${uri.authority}")
-            val t = Engine.transcribe(handle, it.fd, Transcriber.name) { done, segments ->
-                Transcriber.add(done, segments)
-                // Android drops a notification's updates past a few a second
-                val now = SystemClock.elapsedRealtime()
-                if (now - shown >= 500) {
-                    shown = now
-                    val percent = (done * 100).toInt()
-                    notes.notify(NOTE, note(getString(R.string.transcribing, percent), percent))
+        var began = 0L
+        readable(uri).use { pfd ->
+            val t = Engine.transcribe(handle, pfd.fd, Transcriber.name, wav.path, object : Engine.Progress {
+                override fun audio(duration: Double, peaks: ByteArray) {
+                    began = SystemClock.elapsedRealtime()
+                    Transcriber.post {
+                        this.duration = duration
+                        this.peaks = peaks
+                        step = "transcribing"
+                    }
                 }
+
+                override fun update(done: Double, segments: String) {
+                    val segs = Transcriber.parse(segments)
+                    val spent = (SystemClock.elapsedRealtime() - began) / 1000.0
+                    Transcriber.post {
+                        this.done = done
+                        this.segments.addAll(segs)
+                        transcribed = spent
+                    }
+                    // Android drops a notification's updates past a few a second
+                    val now = SystemClock.elapsedRealtime()
+                    if (now - shown >= 500) {
+                        shown = now
+                        val percent = (done * 100).toInt()
+                        notes.notify(NOTE, note(getString(R.string.status_transcribing, percent), percent))
+                    }
+                }
+            })
+            val complete = JSONObject(t).getBoolean("complete")
+            // for adb's logcat: what was done, and how fast
+            val secs = (SystemClock.elapsedRealtime() - began) / 1000.0
+            Log.i(TAG, "transcribed ${Transcriber.name}${if (complete) "" else ", stopped"}: " +
+                "${JSONObject(t).getJSONArray("segments").length()} segments in %.1f s".format(secs))
+            Transcriber.post {
+                transcript = t
+                step = if (complete) "done" else "stopped"
             }
-            Transcriber.transcript = t
-            if (!JSONObject(t).getBoolean("complete"))
-                Transcriber.error = getString(R.string.stopped)
+        }
+    }
+
+    /**
+     * The document as a file: Android's decoder reads by offset, and a
+     * provider that streams a document (a cloud drive's, a pipe with no size)
+     * has none, so its bytes are copied into the cache first. The copy is
+     * unlinked once open; the descriptor keeps it until it is closed.
+     */
+    private fun readable(uri: Uri): ParcelFileDescriptor {
+        val pfd = contentResolver.openFileDescriptor(uri, "r") ?: throw IOException("$uri: nothing to read")
+        if (pfd.statSize >= 0)
+            return pfd
+        val copy = File.createTempFile("document", null, cacheDir)
+        try {
+            ParcelFileDescriptor.AutoCloseInputStream(pfd).use { input ->
+                copy.outputStream().use { input.copyTo(it) }
+            }
+            return ParcelFileDescriptor.open(copy, ParcelFileDescriptor.MODE_READ_ONLY)
+        } finally {
+            copy.delete()
         }
     }
 
     private fun stop(startId: Int) {
-        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf(startId)
     }
 

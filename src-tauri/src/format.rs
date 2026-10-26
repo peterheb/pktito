@@ -116,17 +116,19 @@ pub fn text(t: &Transcript, ext: &str, times: bool) -> Result<String, String> {
 /// A cue as the files write it: its times in milliseconds, its text with a
 /// line break where its second line begins, and an ellipsis after one cut
 /// at a pause in mid-sentence (PK_CUE_PAUSE)
-struct Cue {
-    start: i64,
-    end: i64,
-    text: String,
+#[derive(serde::Serialize)]
+pub struct Cue {
+    pub start: i64,
+    pub end: i64,
+    pub text: String,
 }
 
 const PK_CUE_PAUSE: i32 = 8;
 
 /// The subtitle track of t: English's rules for a model of English alone,
-/// and for any other the engine's own guess whether its words are English
-fn cues(t: &Transcript) -> Result<Vec<Cue>, String> {
+/// and for any other the engine's own guess whether its words are English.
+/// The Android app's Captions view shows them as they are (android.rs).
+pub fn cues(t: &Transcript) -> Result<Vec<Cue>, String> {
     let ms = |s: f64| (s * 1000.0).round() as i64;
     let words: Vec<&crate::transcribe::Word> = t.segments.iter().flat_map(|s| &s.words).collect();
     let timed: Vec<(String, i64, i64)> = words

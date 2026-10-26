@@ -10,11 +10,11 @@
 //! back as an IOException with the reason, and a panic as a
 //! RuntimeException, never across into Java.
 
-use crate::{decode, format, pktito, transcribe};
+use crate::{audio, decode, format, model, pktito, transcribe};
 use jni::errors::ThrowRuntimeExAndDefault;
 use jni::objects::{JClass, JObject, JString, JValue};
 use jni::strings::JNIString;
-use jni::sys::{jint, jlong};
+use jni::sys::{jboolean, jint, jlong};
 use jni::{jni_sig, jni_str, Env, EnvUnowned};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -100,10 +100,14 @@ pub extern "system" fn Java_net_pktito_app_Engine_about<'a>(
         .resolve::<ThrowRuntimeExAndDefault>()
 }
 
-/// Engine.transcribe(handle, fd, name, progress): the recording open at fd
-/// (name: what to call it in an error), read and transcribed, as a
-/// Transcript's JSON. progress.update(fraction, the segments just done, in
-/// JSON) after each chunk, on this thread.
+/// Engine.transcribe(handle, fd, name, wav, progress): the recording open
+/// at fd (name: what to call it in an error), read and transcribed, as a
+/// Transcript's JSON. Once it is read, the samples pktito hears go to wav as
+/// a 16-bit WAV, for the screen to play in step with the transcript's
+/// times whatever the original's format, as the desktop's window plays
+/// them (audio.rs; "" for none), and progress.audio(seconds, the loudness
+/// in audio::PEAKS slices) draws the strip; progress.update(fraction, the
+/// segments just done, in JSON) after each chunk. All on this thread.
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
     mut unowned: EnvUnowned<'a>,
@@ -111,17 +115,37 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
     handle: jlong,
     fd: jint,
     name: JString<'a>,
+    wav: JString<'a>,
     progress: JObject<'a>,
 ) -> JObject<'a> {
     unowned
         .with_env(|env| -> jni::errors::Result<JObject<'a>> {
             let l = unsafe { &mut *(handle as *mut Loaded) };
             let name = name.try_to_string(env)?;
+            let wav = wav.try_to_string(env)?;
             STOP.store(false, Ordering::Relaxed);
             let x = match decode::decode_fd(fd, &name) {
                 Ok(x) => x,
                 Err(e) => return throw(env, &e.message()).map(|_| JObject::null()),
             };
+            let duration = x.len() as f64 / decode::RATE as f64;
+            // a WAV that cannot be written leaves the transcript without
+            // playback, as on the desktop
+            let wav = Path::new(&wav);
+            if let (Some(dir), Some(id)) = (wav.parent(), wav.file_stem().and_then(|s| s.to_str())) {
+                let _ = audio::save(dir, id, &x, decode::RATE as u32);
+            }
+            let peaks = audio::peaks(&x, audio::PEAKS);
+            env.with_local_frame(2, |env| -> jni::errors::Result<()> {
+                let peaks = env.byte_array_from_slice(&peaks)?;
+                env.call_method(
+                    &progress,
+                    jni_str!("audio"),
+                    jni_sig!("(D[B)V"),
+                    &[JValue::Double(duration), JValue::from(&peaks)],
+                )?;
+                Ok(())
+            })?;
             let mut failed = None;
             let run = transcribe::run(
                 &l.model,
@@ -156,7 +180,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
                 Err(why) => return throw(env, &why).map(|_| JObject::null()),
             };
             let t = Transcript {
-                duration: x.len() as f64 / decode::RATE as f64,
+                duration,
                 complete,
                 segments,
             };
@@ -175,8 +199,9 @@ pub extern "system" fn Java_net_pktito_app_Engine_stop<'a>(
     STOP.store(true, Ordering::Relaxed);
 }
 
-/// Engine.format(handle, transcript, ext, name): a Transcript's JSON as a
-/// file of the kind ext names (txt, md, srt, vtt, json), the desktop's.
+/// Engine.format(handle, transcript, ext, name, times): a Transcript's JSON
+/// as a file of the kind ext names (txt, md, srt, vtt, json), the
+/// desktop's; times puts each sentence's time before it in txt and md.
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_net_pktito_app_Engine_format<'a>(
     mut unowned: EnvUnowned<'a>,
@@ -185,6 +210,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_format<'a>(
     transcript: JString<'a>,
     ext: JString<'a>,
     name: JString<'a>,
+    times: jboolean,
 ) -> JObject<'a> {
     unowned
         .with_env(|env| -> jni::errors::Result<JObject<'a>> {
@@ -205,12 +231,64 @@ pub extern "system" fn Java_net_pktito_app_Engine_format<'a>(
                     segments: &t.segments,
                 },
                 &ext,
-                false,
+                times,
             );
             match text {
                 Ok(text) => Ok(env.new_string(text)?.into()),
                 Err(why) => throw(env, &why).map(|_| JObject::null()),
             }
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.captions(handle, transcript): a Transcript's subtitle track, the
+/// cues its .srt and .vtt have (format::cues), as JSON: each cue's start
+/// and end in milliseconds, and its text, a line break where its second
+/// line begins. The Captions view shows them.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_captions<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    handle: jlong,
+    transcript: JString<'a>,
+) -> JObject<'a> {
+    unowned
+        .with_env(|env| -> jni::errors::Result<JObject<'a>> {
+            let l = unsafe { &*(handle as *const Loaded) };
+            let json = transcript.try_to_string(env)?;
+            let t: Transcript = match serde_json::from_str(&json) {
+                Ok(t) => t,
+                Err(e) => return throw(env, &e.to_string()).map(|_| JObject::null()),
+            };
+            let model = l.model.name();
+            let cues = format::cues(&format::Transcript {
+                name: "",
+                duration: t.duration,
+                model: Some(&model),
+                segments: &t.segments,
+            });
+            match cues {
+                Ok(c) => Ok(env.new_string(serde_json::to_string(&c).unwrap_or_default())?.into()),
+                Err(why) => throw(env, &why).map(|_| JObject::null()),
+            }
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.label(name): what the catalog calls the model of that name, as
+/// the desktop's start screen shows it ("English", "Multilingual"); "" for
+/// a model it does not list. No model is loaded for it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_label<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    name: JString<'a>,
+) -> JObject<'a> {
+    unowned
+        .with_env(|env| -> jni::errors::Result<JObject<'a>> {
+            let name = name.try_to_string(env)?;
+            let label = model::entry(&name).map(|e| e.label).unwrap_or("");
+            Ok(env.new_string(label)?.into())
         })
         .resolve::<ThrowRuntimeExAndDefault>()
 }
