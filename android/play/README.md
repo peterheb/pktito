@@ -58,9 +58,8 @@ policy says. A model file of one's own is copied into the app from the
 system's picker and never leaves the device. Google's form has no
 IP-address type, and its guidance is to disclose IP addresses "based on
 their particular usage". No location is inferred and no profile kept, so
-the leaning answer is **no data collected or shared**, with that reasoning
-on file. That is Peter's to decide when he
-fills in the form.
+the answer is **no data collected or shared** (Peter, October 26), with
+that reasoning on file.
 
 **Foreground service.** Each type the manifest declares needs a description,
 what deferring it would cost the user, a use case from Play's list and a
