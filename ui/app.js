@@ -1574,10 +1574,20 @@ function appendSegs(f, segs) {
   updateHead(f, "running");
 }
 
+/* A row plays from its time stamp, or for a finger from anywhere on it: the
+   stamp is too small a target for one (Peter, on his phone, 2026-10-26),
+   on a touchscreen as much as there. A mouse keeps the words for selecting,
+   and a tap that comes while a selection is up only puts it away. */
+let tapClears = false;
+$("transcript").addEventListener("pointerdown", (e) => {
+  tapClears = e.pointerType === "touch" && !!String(getSelection());
+});
 $("transcript").addEventListener("click", (e) => {
-  const t = e.target.closest(".pk-seg-t");
-  const f = current();
+  const touch = e.pointerType === "touch",
+    t = e.target.closest(touch ? ".pk-seg" : ".pk-seg-t"),
+    f = current();
   if (!t || !f || modeOf(f) !== "review") return;
+  if (touch && tapClears) return getSelection().removeAllRanges();
   seek(rowsOf(f)[Number(t.closest(".pk-seg").dataset.i)].start, true);
 });
 
