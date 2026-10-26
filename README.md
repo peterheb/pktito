@@ -130,7 +130,8 @@ Everything else lists each other part the app is built from, the typefaces,
 the icons and the Rust crates of the system it runs on, each with its
 copyright and license, and then the licenses' texts. `scripts/notices.py`
 writes that list, `ui/notices.js`, from what Cargo says each system's build
-links; run it when Cargo.lock changes. The mascot, a budgie of voxels that
+links; run it when Cargo.lock changes, and with `--check` before every
+release (Releasing, below). The mascot, a budgie of voxels that
 turns when dragged and chirps when clicked, is WebGL 2: `scripts/mascot.py`
 (numpy) builds its model into `ui/mascot-model.js`, and `ui/mascot.js` draws
 it. Each loads the first time it is shown, the mascot 29 KB of the app's
@@ -284,6 +285,23 @@ against the speech's own transcript:
 scripts/media-matrix.sh speech.wav /tmp/matrix
 PKTITO_DECODER=os scripts/media-check.sh src-tauri/target/debug/pktito-app parakeet-tdt-0.6b-v2.pkf speech.wav /tmp/matrix
 ```
+
+## Releasing
+
+Before a version is tagged and its builds are made:
+
+```sh
+python3 scripts/notices.py --check
+```
+
+It builds About's list from what Cargo says each system links, without
+writing it, and fails naming each crate added, removed or changed since
+`ui/notices.js` was written; then run it without `--check` and commit the
+file. It needs no installed targets, so any machine can run it. Cargo knows
+only crates: a typeface, an icon set or a file shipped beside the app (as
+`WebView2Loader.dll` is) added since the last release goes into the
+script's `EXTRAS` by hand, its license text into `scripts/licenses`.
+`site/README.md` posts the builds.
 
 ## Design
 

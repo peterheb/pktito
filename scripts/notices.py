@@ -3,7 +3,8 @@
 models About names, and the licenses each is used under, for the list that
 About's "Everything else" opens.
 
-    python3 scripts/notices.py      # after Cargo.lock changes
+    python3 scripts/notices.py           # after Cargo.lock changes
+    python3 scripts/notices.py --check   # before a release: is ui/notices.js current?
 
 Cargo says which crates each system's build links: the normal dependencies,
 walked from the app, so that build scripts, what only they use, and
@@ -241,6 +242,36 @@ def authors(p):
     return f"the {p['name']} authors" + (f", {home}" if home else "")
 
 
+def check(data):
+    """0 if ui/notices.js holds data, else 1, after naming the crates added,
+    removed or changed, and any hand-listed part or text: 0.9.2 shipped
+    without the three crates ureq's SOCKS proxy brought in the day after the
+    list was last written."""
+    path = os.path.join(ROOT, "ui", "notices.js")
+    js = read(path)
+    old = json.loads(js[js.index("const NOTICES = ") + len("const NOTICES = "):].rstrip().rstrip(";"))
+    new = json.loads(json.dumps(data, ensure_ascii=False))
+    if old == new:
+        print(f"{path}: current, {len(new['crates'])} crates")
+        return 0
+
+    def differ(what, a, b):
+        for k in sorted(b.keys() - a.keys()):
+            print(f"  {what} added: {k}")
+        for k in sorted(a.keys() - b.keys()):
+            print(f"  {what} removed: {k}")
+        for k in sorted(a.keys() & b.keys()):
+            if a[k] != b[k]:
+                print(f"  {what} changed: {k}")
+
+    differ("crate", {f"{c[0]} {c[1]}": c for c in old["crates"]}, {f"{c[0]} {c[1]}": c for c in new["crates"]})
+    differ("part", {e[1]: e for e in old["extras"]}, {e[1]: e for e in new["extras"]})
+    differ("text", old["texts"], new["texts"])
+    differ("system", old["systems"], new["systems"])
+    print(f"{path} is out of date: run python3 scripts/notices.py and commit it")
+    return 1
+
+
 def main():
     crates, texts = {}, {}
 
@@ -368,6 +399,8 @@ def main():
             v.pop(x, None)
     data = {"systems": {s: b for s, (b, _) in SYSTEMS.items()}, "extras": extras, "crates": out,
             "texts": {k: v for k, v in texts.items() if k in used}}
+    if "--check" in sys.argv[1:]:
+        sys.exit(check(data))
     js = ("/* What pktito is built from, besides its own code and the models About\n"
           "   names, and the licenses each is used under: from scripts/notices.py. */\n"
           "const NOTICES = " + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";\n")
