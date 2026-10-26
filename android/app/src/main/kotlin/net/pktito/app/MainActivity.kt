@@ -100,10 +100,11 @@ class MainActivity : ComponentActivity() {
         outState.putString("saving", saving)
     }
 
-    // the transcript's audio stops with the screen; the transcription does not
+    // the transcript's audio stops with the screen, but not for a turn or a
+    // window's resize, which make the screen anew; the transcription goes on
     override fun onStop() {
         super.onStop()
-        Player.pause(this)
+        if (!isChangingConfigurations) Player.pause(this)
     }
 
     @Composable

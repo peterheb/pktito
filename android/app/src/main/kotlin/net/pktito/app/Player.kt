@@ -5,6 +5,7 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -29,22 +30,32 @@ object Player {
     private var path = ""
     private var focus: AudioFocusRequest? = null
 
-    /** The audio at file, if it is not the one loaded; nothing if there is none. */
+    /**
+     * The audio at file, if it is not the one loaded; nothing if there is
+     * none, or none Android can play, and then the transcript is shown
+     * without play.
+     */
     fun load(context: Context, file: File) {
         if (file.path == path && mp != null) return
         release(context)
         if (!file.isFile) return
         val app = context.applicationContext
-        mp = MediaPlayer().apply {
-            setAudioAttributes(attributes)
-            setDataSource(file.path)
-            prepare()
-            setOnCompletionListener {
-                playing = false
-                position = duration / 1000.0
-                abandon(app)
-            }
+        val p = MediaPlayer()
+        try {
+            p.setAudioAttributes(attributes)
+            p.setDataSource(file.path)
+            p.prepare()
+        } catch (e: Exception) {
+            Log.w("pktito", "playing ${file.path}", e)
+            p.release()
+            return
         }
+        p.setOnCompletionListener {
+            playing = false
+            position = p.duration / 1000.0
+            abandon(app)
+        }
+        mp = p
         path = file.path
         ready = true
     }
