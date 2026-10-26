@@ -114,12 +114,12 @@ class WorkActions(
     val seek: (seconds: Double, play: Boolean) -> Unit,
 )
 
-/** The formats Save as offers, the desktop's, in its order. */
-class Format(val ext: String, val label: Int, val withTimes: Int = label)
+/** The formats Save as offers, the desktop's, in its order, and the letter that saves one with Ctrl (and Shift). */
+class Format(val ext: String, val label: Int, val withTimes: Int = label, val key: String? = null, val shift: Boolean = false)
 
 val FORMATS = listOf(
-    Format("txt", R.string.format_txt, R.string.format_txt_times),
-    Format("srt", R.string.format_srt),
+    Format("txt", R.string.format_txt, R.string.format_txt_times, key = "S"),
+    Format("srt", R.string.format_srt, key = "S", shift = true),
     Format("vtt", R.string.format_vtt),
     Format("md", R.string.format_md, R.string.format_md_times),
     Format("json", R.string.format_json),
@@ -148,6 +148,7 @@ fun Work(
     playing: Boolean,
     position: Double,
     list: LazyListState,
+    sound: Sound,
     a: WorkActions,
 ) {
     val p = pk
@@ -202,6 +203,7 @@ fun Work(
                 playLabel = stringResource(if (playing) R.string.pause else R.string.play),
                 onPlay = a.play,
                 onSeek = { a.seek(it * duration, false) },
+                sound = sound,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
         if (review && rows.isNotEmpty())
@@ -234,19 +236,30 @@ fun Work(
 private fun SaveAs(name: String, times: Boolean, a: WorkActions) {
     var open by remember { mutableStateOf(false) }
     val stem = name.substringBeforeLast('.').ifEmpty { name }
+    val keys = hasKeys()
     Box {
         PkButton(stringResource(R.string.save_as), { open = true }, kind = Kind.Primary, trailing = Icons.down)
         Menu(open, { open = false }) {
-            for (f in FORMATS)
-                Item(stringResource(if (times) f.withTimes else f.label), "$stem.${f.ext}") {
+            for (f in FORMATS) {
+                val shortcut = f.key?.takeIf { keys }?.let { kbd(it, f.shift) }
+                Item(
+                    stringResource(if (times) f.withTimes else f.label), "$stem.${f.ext}",
+                    hint = shortcut?.let { { Kbd(it) } },
+                ) {
                     open = false
                     a.save(f.ext)
                 }
+            }
             MenuLine()
             Check(stringResource(R.string.save_times), times, a.setTimes)
         }
     }
 }
+
+/** A shortcut's keys as the desktop writes them off macOS: Ctrl+S, Ctrl+Shift+S (app.js, kbd). */
+@Composable
+fun kbd(key: String, shift: Boolean = false): String =
+    stringResource(R.string.key_ctrl) + "+" + (if (shift) stringResource(R.string.key_shift) + "+" else "") + key
 
 /**
  * The transcript's rows (app.css, .pk-seg): each sentence's time, or a cue's

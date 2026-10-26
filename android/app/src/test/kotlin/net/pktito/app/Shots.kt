@@ -1,13 +1,16 @@
 package net.pktito.app
 
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.isPopup
@@ -18,6 +21,7 @@ import androidx.compose.ui.test.performClick
 import java.io.File
 import net.pktito.app.ui.PktitoTheme
 import net.pktito.app.ui.Ready
+import net.pktito.app.ui.Sound
 import net.pktito.app.ui.Work
 import net.pktito.app.ui.WorkActions
 import net.pktito.app.ui.pk
@@ -52,25 +56,37 @@ class Shots {
     private val peaks = resource("alice-peaks.bin")
     private val actions = WorkActions({}, {}, {}, {}, {}, {}, {}, {}, { _, _ -> })
 
-    /** The screen, or what act leads to on it (a menu, its own window). */
+    /**
+     * The screen, or what act leads to on it (a menu, its own window); with
+     * keys, as with the Googlebook's keyboard, which a qualifier cannot say
+     * (its hardKeyboardHidden is the device's, not a resource's).
+     */
     private fun shot(
-        name: String, dark: Boolean, wide: Boolean = false,
+        name: String, dark: Boolean, wide: Boolean = false, keys: Boolean = false,
         act: (() -> SemanticsNodeInteraction)? = null, content: @Composable () -> Unit,
     ) {
         RuntimeEnvironment.setQualifiers(if (wide) "w840dp-h900dp-xhdpi" else "w411dp-h891dp-xxhdpi")
         RuntimeEnvironment.setQualifiers(if (dark) "+night" else "+notnight")
         compose.setContent {
-            PktitoTheme { Box(Modifier.fillMaxSize().background(pk.ground)) { content() } }
+            val c = Configuration(LocalConfiguration.current)
+            if (keys) {
+                c.keyboard = Configuration.KEYBOARD_QWERTY
+                c.hardKeyboardHidden = Configuration.HARDKEYBOARDHIDDEN_NO
+            }
+            CompositionLocalProvider(LocalConfiguration provides c) {
+                PktitoTheme { Box(Modifier.fillMaxSize().background(pk.ground)) { content() } }
+            }
         }
         val dir = File("build/shots").apply { mkdirs() }
-        val file = File(dir, "$name-${if (dark) "dark" else "light"}${if (wide) "-wide" else ""}.png")
+        val file = File(dir, "$name${if (keys) "-keys" else ""}-${if (dark) "dark" else "light"}${if (wide) "-wide" else ""}.png")
         val node = act?.invoke() ?: compose.onRoot()
         file.outputStream().use { node.captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
     @Composable
     private fun work(step: String, done: Double, rows: List<Seg> = segments, captions: Boolean = false,
-                     position: Double = 0.0, playing: Boolean = false, error: String? = null) =
+                     position: Double = 0.0, playing: Boolean = false, error: String? = null,
+                     speed: Double = 1.0, volume: Double = 1.0) =
         Work(
             name = "wonderland_ch_01.flac", step = step, done = done,
             duration = if (step == "reading" || step == "loading") 0.0 else 640.505,
@@ -79,7 +95,8 @@ class Shots {
             stats = if (step == "done") "Transcribed in 0:11, 58.2x real-time" else null,
             pace = if (step == "transcribing") "57.9x real-time" else null,
             captions = captions, times = false, playable = step == "done", playing = playing,
-            position = position, list = rememberLazyListState(), a = actions,
+            position = position, list = rememberLazyListState(),
+            sound = Sound(speed, Player.SPEEDS, volume, false, {}, { _, _ -> }, {}), a = actions,
         )
 
     @Test fun ready() = shot("ready", false) { Ready("English", true) {} }
@@ -96,8 +113,19 @@ class Shots {
         compose.onNodeWithText("Save as").performClick()
         compose.onNode(isPopup())
     }
+    private val speedMenu = {
+        compose.onNodeWithText("1×").performClick()
+        compose.onNode(isPopup())
+    }
+    @Test fun speedMenu() = shot("speed", false, act = speedMenu) { work("done", 1.0) }
+    @Test fun speedMenuDark() = shot("speed", true, act = speedMenu) { work("done", 1.0) }
+    // a speed other than 1× on play's ground, and the speaker's one wave under half the volume
+    @Test fun doneSlowQuiet() = shot("done-1.5x-quiet", false) { work("done", 1.0, position = 30.0, speed = 1.5, volume = 0.3) }
     @Test fun saveAsMenu() = shot("save-as", false, act = saveAs) { work("done", 1.0) }
     @Test fun saveAsMenuDark() = shot("save-as", true, act = saveAs) { work("done", 1.0) }
+    @Test fun speedMenuKeys() = shot("speed", false, keys = true, act = speedMenu) { work("done", 1.0) }
+    @Test fun saveAsMenuKeys() = shot("save-as", false, keys = true, act = saveAs) { work("done", 1.0) }
+    @Test fun saveAsMenuKeysDark() = shot("save-as", true, keys = true, act = saveAs) { work("done", 1.0) }
     @Test fun captions() = shot("captions", false) { work("done", 1.0, cues, captions = true, position = 12.0) }
     @Test fun error() = shot("error", false) {
         work("error", 0.0, emptyList(), error = "Can't read this file (Android has no decoder for audio/alac)")

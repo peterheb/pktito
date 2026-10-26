@@ -1,5 +1,6 @@
 package net.pktito.app.ui
 
+import android.content.res.Configuration
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -18,6 +19,8 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -44,6 +47,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -51,8 +56,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.offset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -95,6 +102,19 @@ fun Modifier.control(
         .hoverable(source, enabled)
         .clickable(source, null, enabled, role = role, onClick = onClick)
         .then(if (label != null) Modifier.semantics { contentDescription = label } else Modifier)
+}
+
+/**
+ * The room a control takes back around itself, as CSS's negative margin
+ * does: laid out the size of what it holds less horizontal and vertical on
+ * each side, drawn and touched whole, so that the strip's small buttons
+ * leave its lines as tall as their words (app.css, .pk-speed, .pk-vol).
+ */
+fun Modifier.bleed(horizontal: Dp = 0.dp, vertical: Dp = 0.dp) = layout { measurable, constraints ->
+    val h = horizontal.roundToPx()
+    val v = vertical.roundToPx()
+    val p = measurable.measure(constraints.offset(2 * h, 2 * v))
+    layout(p.width - 2 * h, p.height - 2 * v) { p.place(-h, -v) }
 }
 
 enum class Kind { Default, Primary, Ghost }
@@ -235,39 +255,92 @@ fun Toast(text: String, modifier: Modifier = Modifier) {
 
 /**
  * The desktop's menu: on the ground, its corners the app's, a ring of sunk
- * and the shadow of what floats; items are Item and Check below.
+ * and the shadow of what floats, its items 6 dp in from its edges, 2 apart
+ * (app.css, .pk-menu); items are Item and Check below. Material's menu keeps
+ * 8 dp above and below its items, and the items take 2 of each back.
  */
 @Composable
-fun Menu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable () -> Unit) {
+fun Menu(expanded: Boolean, onDismiss: () -> Unit, gap: Dp = 6.dp, content: @Composable () -> Unit) {
     val p = pk
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
-        offset = DpOffset(0.dp, 6.dp),
+        offset = DpOffset(0.dp, gap),
         shape = Corner,
         containerColor = p.ground,
         shadowElevation = 12.dp,
         border = BorderStroke(1.dp, p.sunk),
     ) {
         Column(
-            Modifier.widthIn(min = 240.dp).padding(horizontal = 6.dp),
+            Modifier.bleed(vertical = 2.dp).widthIn(min = 240.dp).padding(horizontal = 6.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) { content() }
     }
 }
 
-/** A menu's item: what it does, and under it, in mono, the file it makes. */
+/**
+ * A menu's item (app.css, .pk-mi): what it does, under it in mono the file
+ * it makes, and 16 dp after its words, on their line, the key that does it
+ * too where there are keys (hint: Kbd or KeyCap).
+ */
 @Composable
-fun Item(text: String, sub: String?, onClick: () -> Unit) {
-    Column(
+fun Item(text: String, sub: String?, hint: (@Composable () -> Unit)? = null, onClick: () -> Unit) {
+    val words = Type.ui.copy(lineHeight = 1.35.em)
+    Row(
         Modifier
             .control(CornerSm, onClick = onClick)
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(text, style = Type.ui.copy(lineHeight = 1.35.em), color = pk.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (sub != null)
-            Text(sub, style = Type.stamp.copy(lineHeight = 1.4.em), color = pk.inkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Column(Modifier.weight(1f)) {
+            Text(text, style = words, color = pk.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (sub != null)
+                Text(sub, style = Type.stamp.copy(lineHeight = 1.4.em), color = pk.inkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        if (hint != null) {
+            val line = with(LocalDensity.current) { (words.fontSize * 1.35f).toDp() }
+            Box(
+                Modifier.align(if (sub != null) Alignment.Top else Alignment.CenterVertically).heightIn(min = line),
+                contentAlignment = Alignment.Center,
+            ) { hint() }
+        }
+    }
+}
+
+/**
+ * Whether there are keys to press: a keyboard as the Googlebook's, or one
+ * given to a tablet or a phone. A phone alone has none, and its menus say no
+ * keys.
+ */
+@Composable
+fun hasKeys(): Boolean {
+    val c = LocalConfiguration.current
+    return c.keyboard == Configuration.KEYBOARD_QWERTY && c.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_NO
+}
+
+/** A shortcut beside its item, Ctrl+S, in the type of the file under it (app.css, .pk-kbd). */
+@Composable
+fun Kbd(keys: String) {
+    Text(keys, style = Type.stamp.copy(lineHeight = 1.em), color = pk.inkMuted, maxLines = 1, softWrap = false)
+}
+
+/**
+ * A key to press beside its item, on a key's tone step: a lone < or > in the
+ * type of a shortcut read as no key at all (app.css, .pk-key).
+ */
+@Composable
+fun KeyCap(key: String) {
+    Box(
+        Modifier
+            .height(22.dp)
+            .widthIn(min = 22.dp)
+            .background(pk.sunk, RoundedCornerShape(5.dp))
+            .padding(horizontal = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(key, style = Type.stamp.copy(fontWeight = FontWeight.W500, lineHeight = 1.em), color = pk.ink, maxLines = 1)
     }
 }
 
@@ -300,4 +373,37 @@ fun Check(text: String, checked: Boolean, onChange: (Boolean) -> Unit) {
 @Composable
 fun MenuLine() {
     Box(Modifier.padding(horizontal = 10.dp, vertical = 3.dp).fillMaxWidth().height(1.dp).background(pk.sunk))
+}
+
+/**
+ * A menu's row of chips, the one chosen in ink (app.css, .pk-rates): the
+ * speeds, and the frame rates. top is 8 dp where the chips open the menu,
+ * 2 under a choice they serve.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun <T> Rates(chips: List<Pair<String, T>>, chosen: (T) -> Boolean, label: String, top: Dp, onPick: (T) -> Unit) {
+    val p = pk
+    FlowRow(
+        Modifier
+            .padding(start = 10.dp, end = 10.dp, top = top, bottom = 8.dp)
+            .semantics { contentDescription = label },
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        for ((text, value) in chips) {
+            val on = chosen(value)
+            Text(
+                text,
+                style = TextStyle(
+                    fontFamily = Fonts.mono, fontWeight = FontWeight.W400, fontSize = 12.sp, lineHeight = 16.sp,
+                    lineHeightStyle = CssLine, fontFeatureSettings = "tnum",
+                ),
+                color = if (on) p.ground else p.ink,
+                modifier = Modifier
+                    .control(CornerSm, if (on) p.ink else p.surface) { onPick(value) }
+                    .padding(horizontal = 7.dp, vertical = 4.dp),
+            )
+        }
+    }
 }

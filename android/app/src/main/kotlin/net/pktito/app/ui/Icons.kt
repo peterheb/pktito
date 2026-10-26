@@ -41,4 +41,10 @@ object Icons {
     val share = icon("share", "M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8", "M16 6L12 2L8 6", "M12 2v13")
     val play = icon("play", "M6 3L20 12L6 21Z", filled = true)
     val pause = icon("pause", "M6 4h4v16H6z", "M14 4h4v16h-4z", filled = true)
+    // the speaker, and its sound: two waves from half the volume up, one
+    // under it, a cross at none
+    private const val SPEAKER = "M11 5L6 9H2v6h4l5 4z"
+    val vol2 = icon("vol2", SPEAKER, "M19.07 4.93a10 10 0 0 1 0 14.14", "M15.54 8.46a5 5 0 0 1 0 7.07")
+    val vol1 = icon("vol1", SPEAKER, "M15.54 8.46a5 5 0 0 1 0 7.07")
+    val volX = icon("volX", SPEAKER, "M23 9L17 15", "M17 9L23 15")
 }

@@ -30,6 +30,15 @@
     <string name="captions">Captions</string><!-- work.captions -->
     <string name="play">Play</string>
     <string name="pause">Pause</string>
+    <string name="speed_label">Playback speed, %1$s times</string><!-- speed.label -->
+    <string name="speed_group">Playback speed</string><!-- speed.group -->
+    <string name="speed_slower">Slower</string><!-- speed.slower -->
+    <string name="speed_faster">Faster</string><!-- speed.faster -->
+    <string name="volume_label">Volume</string><!-- volume.label -->
+    <string name="volume_mute">Mute</string><!-- volume.mute -->
+    <string name="volume_unmute">Unmute</string><!-- volume.unmute -->
+    <string name="key_ctrl">Ctrl</string><!-- key.ctrl -->
+    <string name="key_shift">Shift</string><!-- key.shift -->
     <string name="status_loading">Loading the model</string>
     <string name="status_reading">Reading the audio</string>
     <string name="status_transcribing">Transcribing %1$d%%</string>

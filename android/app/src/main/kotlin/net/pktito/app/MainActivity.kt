@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.util.Log
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -41,11 +42,13 @@ import java.util.Locale
 import kotlinx.coroutines.delay
 import net.pktito.app.ui.PktitoTheme
 import net.pktito.app.ui.Ready
+import net.pktito.app.ui.Sound
 import net.pktito.app.ui.Toast
 import net.pktito.app.ui.Work
 import net.pktito.app.ui.WorkActions
 import net.pktito.app.ui.clock
 import net.pktito.app.ui.pk
+import net.pktito.app.ui.stepped
 
 /**
  * The screen, the desktop window's: open a recording, watch its transcript
@@ -75,6 +78,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         times = prefs.getBoolean("times", false)
         captions = prefs.getBoolean("captions", false)
+        Player.restore(prefs.getFloat("speed", 1f).toDouble(), prefs.getFloat("volume", 1f).toDouble())
         saving = savedInstanceState?.getString("saving")
         setContent { PktitoTheme { App() } }
         if (savedInstanceState == null) opened(intent)
@@ -167,7 +171,7 @@ class MainActivity : ComponentActivity() {
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
             if (t.step.isEmpty())
-                Ready(label, model != null) { open.launch(arrayOf("audio/*", "video/*")) }
+                Ready(label, model != null) { open.launch(MEDIA) }
             else
                 Work(
                     name = t.name,
@@ -187,6 +191,22 @@ class MainActivity : ComponentActivity() {
                     playing = Player.playing,
                     position = Player.position,
                     list = list,
+                    sound = Sound(
+                        speed = Player.speed,
+                        speeds = Player.SPEEDS,
+                        volume = Player.volume,
+                        muted = Player.muted,
+                        setSpeed = ::setSpeed,
+                        setVolume = { v, kept ->
+                            Player.changeVolume(v)
+                            if (kept) prefs.edit().putFloat("volume", v.toFloat()).apply()
+                        },
+                        // unmuting at none sets it to full, which is kept
+                        mute = {
+                            Player.toggleMute()
+                            prefs.edit().putFloat("volume", Player.volume.toFloat()).apply()
+                        },
+                    ),
                     a = WorkActions(
                         back = ::back,
                         stop = { Engine.stop() },
@@ -207,6 +227,45 @@ class MainActivity : ComponentActivity() {
                 )
             toast?.let { Toast(it, Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp)) }
         }
+    }
+
+    /**
+     * The desktop's keys, where there is a keyboard (app.js, keydown): Space
+     * plays and pauses, < and > step the speed, Ctrl+S saves the text and
+     * Ctrl+Shift+S the subtitles, Ctrl+O chooses a recording on the start
+     * screen, and Esc goes back as the back gesture does, which Android
+     * leaves to the app (the Googlebook, 2026-10-25). Before the controls,
+     * as the desktop's are before its buttons: a control with the focus
+     * would take Space as a press, and Back's threw the transcript away (the
+     * Googlebook). An open menu is a window of its own, and has the keys
+     * first; it closes on Esc.
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean =
+        event.action == KeyEvent.ACTION_DOWN && key(event) || super.dispatchKeyEvent(event)
+
+    private fun key(event: KeyEvent): Boolean {
+        val t = Transcriber
+        val review = t.step == "done" || t.step == "stopped"
+        val ctrl = event.isCtrlPressed && !event.isAltPressed && !event.isMetaPressed
+        val char = event.unicodeChar.toChar()
+        when {
+            ctrl && event.keyCode == KeyEvent.KEYCODE_S ->
+                if (review && t.segments.isNotEmpty()) save(if (event.isShiftPressed) "srt" else "txt")
+            ctrl && event.keyCode == KeyEvent.KEYCODE_O && !event.isShiftPressed ->
+                if (t.step.isEmpty() && Transcriber.modelFile(this) != null) open.launch(MEDIA)
+            event.keyCode == KeyEvent.KEYCODE_ESCAPE && t.step.isNotEmpty() && !t.running -> back()
+            event.keyCode == KeyEvent.KEYCODE_SPACE && event.hasNoModifiers() && review && Player.ready ->
+                if (event.repeatCount == 0) Player.toggle(this)
+            (char == '<' || char == '>') && !event.isCtrlPressed && !event.isMetaPressed && review && Player.ready ->
+                setSpeed(stepped(Player.SPEEDS, Player.speed, if (char == '>') 1 else -1))
+            else -> return false
+        }
+        return true
+    }
+
+    private fun setSpeed(s: Double) {
+        Player.changeSpeed(s)
+        prefs.edit().putFloat("speed", s.toFloat()).apply()
     }
 
     /** how many seconds of audio a second's work transcribed (ui/app.js, realTime) */
@@ -282,6 +341,8 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val TAG = "pktito"
+        /** what the system's picker offers */
+        val MEDIA = arrayOf("audio/*", "video/*")
         /** what each format is, for the system's Save dialog */
         val MIME = mapOf(
             "txt" to "text/plain",

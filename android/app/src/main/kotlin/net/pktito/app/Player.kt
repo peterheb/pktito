@@ -26,6 +26,30 @@ object Player {
     var ready by mutableStateOf(false)
         private set
 
+    /**
+     * Playback's speed, one of SPEEDS, and its volume, 0 to 1, as the desktop
+     * keeps them (app.js, showSpeed and showVolume; the screen keeps them
+     * between runs). The voice keeps its pitch at any speed (PlaybackParams'
+     * own), and the playhead and the transcript follow the recording's own
+     * time. Muted is for now: the volume is kept, and heard again unmuted.
+     */
+    var speed by mutableStateOf(1.0)
+        private set
+    var volume by mutableStateOf(1.0)
+        private set
+    var muted by mutableStateOf(false)
+        private set
+    val SPEEDS = listOf(0.75, 1.0, 1.25, 1.5, 1.75, 2.0)
+    private var restored = false
+
+    /** The speed and volume the last run left, once a run: a screen made anew keeps what this one has. */
+    fun restore(speed: Double, volume: Double) {
+        if (restored) return
+        restored = true
+        this.speed = if (speed in SPEEDS) speed else 1.0
+        this.volume = volume.coerceIn(0.0, 1.0)
+    }
+
     private var mp: MediaPlayer? = null
     private var path = ""
     private var focus: AudioFocusRequest? = null
@@ -50,6 +74,7 @@ object Player {
             p.release()
             return
         }
+        heard(p)
         p.setOnCompletionListener {
             playing = false
             position = p.duration / 1000.0
@@ -71,6 +96,32 @@ object Player {
         p.seekTo((s * 1000).toLong(), MediaPlayer.SEEK_CLOSEST)
         position = s
         if (play && !p.isPlaying) play(context)
+    }
+
+    /** Set while it plays, the speed is heard at once; set while it waits, at play. */
+    fun changeSpeed(s: Double) {
+        speed = s
+        mp?.takeIf { it.isPlaying }?.let { it.playbackParams = it.playbackParams.setSpeed(s.toFloat()) }
+    }
+
+    fun changeVolume(v: Double) {
+        volume = v.coerceIn(0.0, 1.0)
+        muted = false
+        mp?.let(::heard)
+    }
+
+    /** Muted, or at none, the speaker brings the sound back: at none, at full (app.js, #mute). */
+    fun toggleMute() {
+        if (muted || volume == 0.0) {
+            muted = false
+            if (volume == 0.0) volume = 1.0
+        } else muted = true
+        mp?.let(::heard)
+    }
+
+    private fun heard(p: MediaPlayer) {
+        val v = if (muted) 0f else volume.toFloat()
+        p.setVolume(v, v)
     }
 
     fun pause(context: Context) {
@@ -113,7 +164,10 @@ object Player {
         if (audio.requestAudioFocus(request) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) return
         focus = request
         if (position >= p.duration / 1000.0 - 0.05) p.seekTo(0)
-        p.start()
+        // the speed with the start: a speed set on a player that waits
+        // starts it, which is why changeSpeed leaves it to here
+        p.playbackParams = p.playbackParams.setSpeed(speed.toFloat())
+        if (!p.isPlaying) p.start()
         playing = true
     }
 
