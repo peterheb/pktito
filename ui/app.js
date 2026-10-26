@@ -431,7 +431,7 @@ function modelMenu(anchor, keys) {
   items.push(
     `<div class="pk-menu-sep" aria-hidden="true"></div>` +
       `<button class="pk-mi" type="button" role="menuitem" data-own="1"><span>${esc(t("models.open_file"))}</span></button>` +
-      (st.store
+      (st.data_in_package
         ? ""
         : `<button class="pk-mi" type="button" role="menuitem" data-reveal="1"${file ? ` title="${esc(file)}"` : ""}><span>${show}</span></button>`),
   );
@@ -2784,8 +2784,8 @@ function closeSheet() {
 
 $("notices-open").onclick = () => openNotices();
 $("privacy-open").onclick = () => {
-  // the Store edition's data is in its package, which uninstalling deletes
-  if (st?.store)
+  // the Store edition's data, when in its package, goes when it is uninstalled
+  if (st?.data_in_package)
     $("privacy-uninstall").textContent = t("privacy.choice_uninstall_store");
   openSheet("privacy");
 };
