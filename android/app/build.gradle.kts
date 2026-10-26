@@ -17,11 +17,20 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.9.2"
+        // the two native.sh builds the library for: without this AndroidX's
+        // graphics-path library (Compose's) brought armeabi-v7a and x86 too,
+        // and a 32-bit phone that Play offered the app to would have had
+        // no libpktito_app.so for it
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
     buildTypes {
+        // R8's shrinking and its rules (proguard-rules.pro); signed by
+        // Play's upload key, which is not here
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
     compileOptions {
