@@ -81,7 +81,10 @@ fun stepped(speeds: List<Double>, now: Double, d: Int): Double =
  * time, which chooses how times are written, and the length, and after
  * the time the speaker and its volume. At work the waveform fills to the
  * playhead as the transcript does, and the time's place says the step or
- * the pace.
+ * the pace. A finished transcript whose recording does not play (why) has
+ * no play, its waveform the whole width, and why in the times' place,
+ * with Locate… where the file can be found again; a tap on the waveform
+ * still moves the playhead (Peter, 2026-10-26: "Just no play button").
  */
 @Composable
 fun Strip(
@@ -104,8 +107,11 @@ fun Strip(
     ticks: List<Double> = emptyList(),
     tickAt: Int = -1,
     onTick: (Int) -> Unit = {},
+    why: String? = null,
+    locate: (() -> Unit)? = null,
 ) {
     val p = pk
+    val silent = review && why != null
     Row(
         modifier
             .fillMaxWidth()
@@ -117,7 +123,7 @@ fun Strip(
         // came within 3 px of the time's
         horizontalArrangement = Arrangement.spacedBy(Space.space4),
     ) {
-        if (review)
+        if (review && !silent)
             // play, and the speed at the foot, on the times' line (app.css, .pk-transport)
             Column(
                 Modifier.fillMaxHeight().padding(top = 12.dp),
@@ -135,16 +141,16 @@ fun Strip(
                 }
                 Speed(sound, playable)
             }
-        else
+        else if (!review)
             Box(Modifier.padding(top = 12.dp)) { Ring(done) }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             val at = if (review) (if (duration > 0) position / duration else 0.0) else done
             Waveform(
                 peaks, at,
                 Modifier
-                    .alpha(if (review && !playable) 0.45f else 1f)
+                    .alpha(if (review && !playable && !silent) 0.45f else 1f)
                     .then(
-                        if (review && playable)
+                        if (review)
                             Modifier.pointerInput(Unit) {
                                 detectTapGestures { o -> onSeek((o.x / size.width).toDouble().coerceIn(0.0, 1.0)) }
                             }
@@ -153,7 +159,8 @@ fun Strip(
             )
             // the desktop's lane for a search's ticks, 9 dp, which keeps the strip its 116
             Ticks(ticks, tickAt, onTick)
-            TimesLine(
+            if (silent) Why(why!!, locate)
+            else TimesLine(
                 time = {
                     if (review) Time(left, base, position, onBase)
                     else Text(left, style = Tstamp, color = p.termInk, maxLines = 1)
@@ -337,6 +344,32 @@ private fun TimesLine(
             if (withSpeaker) s.place(speakerAt, (h - s.height) / 2)
             if (withSlider) v.place(sliderAt, (h - v.height) / 2)
             l.place(c.maxWidth - l.width, (h - l.height) / 2)
+        }
+    }
+}
+
+/**
+ * Why the recording does not play, in the times' place, whose time, speed
+ * and volume mean nothing without it: one quiet line in the strip's ink,
+ * two where a phone is too narrow, and Locate… after it, a control as the
+ * speaker is, where the file can be found again.
+ */
+@Composable
+private fun Why(why: String, locate: (() -> Unit)?) {
+    val p = pk
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(why, style = Tstamp.copy(lineHeight = 1.3.em), color = p.termInk, maxLines = 2, modifier = Modifier.weight(1f, fill = false))
+        if (locate != null) {
+            val label = stringResource(R.string.play_locate)
+            Text(" ·", style = Tstamp, color = p.termInk)
+            Box(
+                Modifier
+                    .bleed(vertical = 6.dp)
+                    .control(CornerSm, onTerm = true, label = label, onClick = locate)
+                    .padding(start = 6.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+            ) {
+                Text(label, style = Tstamp, color = p.termInk, maxLines = 1)
+            }
         }
     }
 }

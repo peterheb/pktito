@@ -544,6 +544,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
     match r {
         Ok((segments, true)) => {
             let took = t0.elapsed().as_secs_f64();
+            let (size, modified) = recent::stamp(path);
             let item = recent::Item {
                 id: key.clone(),
                 path: path.to_path_buf(),
@@ -557,6 +558,8 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
                 transcribed,
                 model: name.clone(),
                 fps,
+                size,
+                modified,
             };
             let kept = recent::add(
                 &data,

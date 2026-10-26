@@ -72,12 +72,17 @@
     <string name="ask_cancel">Cancel</string>
     <string name="date_today">Today</string>
     <string name="date_yesterday">Yesterday</string>
-    <string name="play_cant">Can\'t play</string>
-    <string name="play_reading">Reading the audio…</string>
-    <string name="play_moved">Can\'t play: the original file was moved or deleted</string>
-    <string name="play_changed">Can\'t play: the original file has changed since it was transcribed</string>
-    <!-- Android's own: a share's or Open with's access ends with its task -->
-    <string name="play_no_access">Can\'t play: pktito no longer has access to the original file</string>
+    <!-- why a finished transcript's recording does not play, in the strip's
+         times' place, and Locate…, which picks the file again (the proposal
+         Peter took, 2026-10-26) -->
+    <string name="play_cant">Android can\'t play this file</string>
+    <string name="play_moved">Original not found</string>
+    <string name="play_changed">Original changed since transcribing</string>
+    <!-- Android's own: a share's or Open with's access ends with its task,
+         where the transcript is from before pktito kept a copy of a share -->
+    <string name="play_no_access">Shared file, no longer available</string>
+    <string name="play_locate">Locate…</string>
+    <string name="play_not_it">That\'s not the file transcribed: its size is different</string>
     <!-- About (about.*); the strings in CDATA are HTML, as the desktop's
          *_html are, for AnnotatedString.fromHtml -->
     <string name="about_open">About pktito</string>

@@ -126,15 +126,15 @@ class Shots {
     private fun work(step: String, done: Double, rows: List<Seg> = segments, captions: Boolean = false,
                      position: Double = 0.0, playing: Boolean = false, error: String? = null,
                      speed: Double = 1.0, volume: Double = 1.0, base: Timebase = Timebase(),
-                     find: Finder = Finder()) =
+                     find: Finder = Finder(), why: String? = null, locate: Boolean = false) =
         Work(
             name = "wonderland_ch_01.flac", step = step, done = done,
             duration = if (step == "reading" || step == "loading") 0.0 else 640.505,
             peaks = if (step == "reading" || step == "loading") null else peaks,
-            rows = rows, error = error, why = null,
+            rows = rows, error = error, why = why, locate = if (locate) ({}) else null,
             stats = if (step == "done") "Transcribed in 0:11, 58.2x real-time" else null,
             pace = if (step == "transcribing") "57.9x real-time" else null,
-            captions = captions, times = false, playable = step == "done", playing = playing,
+            captions = captions, times = false, playable = step == "done" && why == null, playing = playing,
             position = position, list = rememberLazyListState(),
             sound = Sound(speed, Player.SPEEDS, volume, false, {}, { _, _ -> }, {}), chosen = base,
             find = find, hits = if (step == "done") findIn(rows, find.query) else emptyList(), a = actions,
@@ -159,11 +159,11 @@ class Shots {
     private val day = 86_400L
     private val now = System.currentTimeMillis() / 1000
     private val recent = listOf(
-        Recents.Item("5", Uri.parse("content://x/5"), "wonderland_ch_01.flac", 640.505, now),
-        Recents.Item("4", Uri.parse("content://x/4"), "Interview with Dr. Ramirez, part 2.m4a", 3725.0, now - day),
-        Recents.Item("3", Uri.parse("content://x/3"), "Recording 2026-10-24 14-32-11.m4a", 312.4, now - 2 * day),
-        Recents.Item("2", Uri.parse("content://x/2"), "Team standup.mp4", 905.0, now - 6 * day),
-        Recents.Item("1", Uri.parse("content://x/1"), "Lecture 7, Thermodynamics.mp3", 4810.0, now - 400 * day),
+        Recents.Item("5", Uri.parse("content://x/5"), "wonderland_ch_01.flac", 640.505, now, 0, 0),
+        Recents.Item("4", Uri.parse("content://x/4"), "Interview with Dr. Ramirez, part 2.m4a", 3725.0, now - day, 0, 0),
+        Recents.Item("3", Uri.parse("content://x/3"), "Recording 2026-10-24 14-32-11.m4a", 312.4, now - 2 * day, 0, 0),
+        Recents.Item("2", Uri.parse("content://x/2"), "Team standup.mp4", 905.0, now - 6 * day, 0, 0),
+        Recents.Item("1", Uri.parse("content://x/1"), "Lecture 7, Thermodynamics.mp3", 4810.0, now - 400 * day, 0, 0),
     )
     @Test fun ready() = shot("ready", false) { Ready(emptyList(), readyActions, models) }
     @Test fun readyDark() = shot("ready", true) { Ready(emptyList(), readyActions, models) }
@@ -300,6 +300,13 @@ class Shots {
     @Test fun doneFrames() = shot("done-frames", false) { work("done", 1.0, position = 30.0, base = Timebase(frames = true, video = 29.97)) }
     // a phone at 360 dp: the slider gives way, in seconds and in frames
     @Test fun doneNarrow() = shot("done-360", false, narrow = true) { work("done", 1.0, position = 30.0) }
+    // a recording that does not play: no play, why in the times' place, Locate… where it can be found again
+    private val moved = "Original not found"
+    private val changed = "Original changed since transcribing"
+    @Test fun doneMoved() = shot("done-moved", false) { work("done", 1.0, position = 30.0, why = moved, locate = true) }
+    @Test fun doneMovedDark() = shot("done-moved", true) { work("done", 1.0, position = 30.0, why = moved, locate = true) }
+    @Test fun doneChangedNarrow() = shot("done-changed-360", false, narrow = true) { work("done", 1.0, position = 30.0, why = changed, locate = true) }
+    @Test fun doneCant() = shot("done-cant", false) { work("done", 1.0, why = "Android can't play this file") }
     @Test fun doneNarrowFrames() = shot("done-360-frames", false, narrow = true) { work("done", 1.0, position = 30.0, base = Timebase(frames = true, video = 29.97)) }
     @Test fun error() = shot("error", false) {
         work("error", 0.0, emptyList(), error = "Can't read this file (Android has no decoder for audio/alac)")

@@ -109,6 +109,18 @@ pub fn first(path: &Path) -> Option<First> {
 
 /// The same of a file already open, as Android hands one over (decode.rs).
 pub fn first_in(file: &mut File) -> Option<First> {
+    located(file).map(|l| l.first)
+}
+
+/// Where first_in found the first frame: its offset in the file and its
+/// header, for a reader of the frames that follow it (view.rs).
+pub(crate) struct Located {
+    pub at: u64,
+    pub header: Header,
+    pub first: First,
+}
+
+pub(crate) fn located(file: &mut File) -> Option<Located> {
     let end = file.metadata().ok()?.len();
     // ID3v2 tags: "ID3", version, flags, a 28-bit size in four 7-bit bytes,
     // and a 10-byte footer when flagged
@@ -133,21 +145,26 @@ pub fn first_in(file: &mut File) -> Option<First> {
     file.take((SEARCH + 4096) as u64)
         .read_to_end(&mut buf)
         .ok()?;
-    parse(&buf)
+    let (i, header, first) = found(&buf)?;
+    Some(Located {
+        at: at + i as u64,
+        header,
+        first,
+    })
 }
 
 /// A Layer III frame header: its version, rate, samples a frame, length in
 /// bytes, and whether a CRC and one channel follow.
-struct Header {
-    mpeg1: bool,
-    rate: u32,
-    spf: u32,
-    len: usize,
+pub(crate) struct Header {
+    pub mpeg1: bool,
+    pub rate: u32,
+    pub spf: u32,
+    pub len: usize,
     crc: bool,
     mono: bool,
 }
 
-fn header(b: &[u8]) -> Option<Header> {
+pub(crate) fn header(b: &[u8]) -> Option<Header> {
     let h = u32::from_be_bytes(b.get(..4)?.try_into().ok()?);
     if h >> 21 != 0x7ff {
         return None;
@@ -193,11 +210,22 @@ fn u32_at(b: &[u8], at: usize) -> Option<u32> {
 /// The first of two frames in a row in the first SEARCH bytes, and its
 /// Info frame and LAME tag if it is one.
 pub fn parse(b: &[u8]) -> Option<First> {
-    let (at, h) = (0..SEARCH.min(b.len())).find_map(|i| {
+    found(b).map(|(_, _, f)| f)
+}
+
+/// The two frames in a row of b's first SEARCH bytes that parse finds,
+/// the first's offset in b and its header too: of a frame that follows a
+/// stretch of something else as well (view.rs).
+pub(crate) fn two_in_a_row(b: &[u8]) -> Option<(usize, Header)> {
+    (0..SEARCH.min(b.len())).find_map(|i| {
         let h = header(&b[i..])?;
         let next = header(b.get(i + h.len..)?)?;
         (h.len > 4 && next.mpeg1 == h.mpeg1 && next.rate == h.rate).then_some((i, h))
-    })?;
+    })
+}
+
+fn found(b: &[u8]) -> Option<(usize, Header, First)> {
+    let (at, h) = two_in_a_row(b)?;
     let frame = b.get(at..at + h.len)?;
     let side = match (h.mpeg1, h.mono) {
         (true, true) => 17,
@@ -216,7 +244,7 @@ pub fn parse(b: &[u8]) -> Option<First> {
         encoder: [0; 4],
     };
     if !matches!(frame.get(x..x + 4), Some(b"Info") | Some(b"Xing")) {
-        return Some(f);
+        return Some((at, h, f));
     }
     f.info = true;
     let flags = u32_at(frame, x + 4)?;
@@ -230,20 +258,20 @@ pub fn parse(b: &[u8]) -> Option<First> {
     // the LAME tag: nine bytes of the encoder's name, and 21 bytes in, the
     // delay and the padding in 12 bits each
     let Some(tag) = frame.get(p..p + 24) else {
-        return Some(f);
+        return Some((at, h, f));
     };
     if !tag[..9]
         .iter()
         .all(|c| c.is_ascii_graphic() || *c == b' ' || *c == 0)
         || tag[0] == 0
     {
-        return Some(f);
+        return Some((at, h, f));
     }
     f.encoder.copy_from_slice(&tag[..4]);
     let d = &tag[21..24];
     f.delay = Some((d[0] as u32) << 4 | (d[1] as u32) >> 4);
     f.padding = Some(((d[1] & 15) as u32) << 8 | d[2] as u32);
-    Some(f)
+    Some((at, h, f))
 }
 
 #[cfg(test)]

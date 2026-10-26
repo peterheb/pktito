@@ -20,3 +20,4 @@ pub mod recent;
 pub mod serve;
 pub mod strings;
 pub mod transcribe;
+pub mod view;

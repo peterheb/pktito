@@ -421,6 +421,8 @@ fun Work(
     rows: List<Seg>,
     error: String?,
     why: String?,
+    /** Locate…, where the recording that does not play can be found again */
+    locate: (() -> Unit)?,
     stats: String?,
     pace: String?,
     captions: Boolean,
@@ -500,6 +502,8 @@ fun Work(
                     a.seek(hits[k].time, false)
                 },
                 modifier = Modifier.padding(horizontal = 16.dp),
+                why = why,
+                locate = locate,
             )
         if (review && rows.isNotEmpty())
             Views(captions, a.setCaptions, find, hits, Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp))
@@ -507,9 +511,6 @@ fun Work(
             error != null -> error
             step == "stopped" -> stringResource(R.string.status_stopped_at, (done * 100).toInt())
             step == "done" && rows.isEmpty() -> stringResource(R.string.no_speech)
-            // why the audio does not play, or not yet: a transcript of the list
-            // reading its original again
-            review && why != null -> why
             else -> null
         }
         if (msg != null)

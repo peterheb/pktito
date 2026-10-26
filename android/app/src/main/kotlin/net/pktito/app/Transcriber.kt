@@ -27,10 +27,10 @@ class Seg(val start: Double, val end: Double, val text: String, val words: List<
  * screen reads it.
  */
 object Transcriber {
-    /** Its place on the recent list, and its audio's name in the cache: the time it began, in ms (recent.rs, new_id). */
+    /** Its place on the recent list, and its copy's name if it was shared: the time it began, in ms (recent.rs, new_id). */
     var id by mutableStateOf("")
-    /** The recording it reads, as its picker gave it. */
-    var uri: Uri? = null
+    /** The recording it reads, as its picker gave it, or Locate… found it again. */
+    var uri by mutableStateOf<Uri?>(null)
     var name by mutableStateOf("")
     var step by mutableStateOf("")
     /** The fraction of the audio transcribed. */
@@ -52,8 +52,9 @@ object Transcriber {
     var fps by mutableStateOf(0.0)
     /** Opened from the recent list, not transcribed in this run. */
     var reopened by mutableStateOf(false)
-    /** Why its audio does not play, or not yet: read again from its original (app.js, audioWhy). */
+    /** Why its recording does not play (app.js, audioWhy), and whether Locate… can find it again. */
     var why by mutableStateOf<String?>(null)
+    var locate by mutableStateOf(false)
 
     val running: Boolean
         get() = step == "loading" || step == "reading" || step == "transcribing"
@@ -84,6 +85,7 @@ object Transcriber {
         fps = 0.0
         reopened = false
         why = null
+        locate = false
     }
 
     /** Back to the start screen, the transcript let go. */
@@ -94,8 +96,8 @@ object Transcriber {
 
     /**
      * A transcript of the recent list (Recents.load's JSON) on the screen
-     * again, as it was when it finished (app.js, openRecent); its audio is
-     * the cache's, or its original's, read again.
+     * again, as it was when it finished (app.js, openRecent), to play from
+     * its recording.
      */
     fun reopen(id: String, json: String) {
         val o = JSONObject(json)
@@ -155,9 +157,6 @@ object Transcriber {
             )
         }
     }
-
-    /** Where Engine.transcribe writes the audio it heard, to play the transcript back by: the cache's, at its id. */
-    fun wav(context: Context) = Recents.wav(context, id)
 
     /** Whether the model in use is the one loaded. */
     @Synchronized

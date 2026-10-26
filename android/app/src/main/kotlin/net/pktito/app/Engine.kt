@@ -41,11 +41,9 @@ object Engine {
 
     /**
      * The recording open at fd, read and transcribed on this thread: the
-     * transcript. fd stays the caller's; name is what an error calls it. The
-     * samples as pktito hears them go to wav, a 16-bit WAV to play the
-     * transcript back by, in step with its times.
+     * transcript. fd stays the caller's; name is what an error calls it.
      */
-    @JvmStatic external fun transcribe(handle: Long, fd: Int, name: String, wav: String, progress: Progress): String
+    @JvmStatic external fun transcribe(handle: Long, fd: Int, name: String, progress: Progress): String
 
     /** The transcription running stops before its next chunk. */
     @JvmStatic external fun stop()
@@ -64,38 +62,56 @@ object Engine {
      * The recent list in data, the app's no_backup folder, newest first, as
      * JSON: each transcript's id, the URI it was read from (path), its name,
      * length (duration), when it finished in seconds since 1970, what it
-     * took, the model and a video's frame rate (the desktop's recent.rs).
+     * took, the model, a video's frame rate, and the file's size and last
+     * change as it was transcribed (size, modified; 0 where not known), the
+     * desktop's recent.rs.
      */
     @JvmStatic external fun recent(data: String): String
 
     /**
      * A finished transcript at the top of the list, in place of an earlier
      * one of the same file: item, the list's fields, as JSON; transcript,
-     * what transcribe gave; peaks, its loudness. The audio of those let go
-     * goes from audio, the cache's folder, and the rest is held to what the
-     * cache keeps. The list after.
+     * what transcribe gave; peaks, its loudness. The list after.
      */
-    @JvmStatic external fun keep(data: String, audio: String, item: String, transcript: String, peaks: ByteArray): String
+    @JvmStatic external fun keep(data: String, item: String, transcript: String, peaks: ByteArray): String
 
     /** A transcript of the list as it is kept: the list's fields, its peaks and its segments, as JSON. */
     @JvmStatic external fun openRecent(data: String, id: String): String
 
-    /** One transcript off the list, its audio in the cache with it; the file it was made from stays. The list after. */
-    @JvmStatic external fun forget(data: String, audio: String, id: String): String
+    /** One transcript off the list; the file it was made from stays. The list after. */
+    @JvmStatic external fun forget(data: String, id: String): String
 
-    /** The list emptied, and its audio. */
-    @JvmStatic external fun clearRecent(data: String, audio: String)
+    /** The list emptied. */
+    @JvmStatic external fun clearRecent(data: String)
 
-    /** Before anything is transcribed: the audio no transcript on the list needs let go, and the rest held to what the cache keeps. */
-    @JvmStatic external fun prune(data: String, audio: String)
+    /** A transcript's file found again at path, a URI, with its size and last change (0 where not known), in place of the ones it was kept with. The list after. */
+    @JvmStatic external fun relink(data: String, id: String, path: String, size: Long, modified: Long): String
 
     /**
-     * A transcript's audio read again from its original, open at fd, and
-     * written to wav as transcribe writes it, if its length is still the
-     * transcript's (true); false, and nothing written, where the file has
-     * changed since.
+     * The frames or pages of the recording open at fd, for views of it from
+     * a time on (src-tauri/src/view.rs), which Android's player starts
+     * afresh at, where it seeks an MP3 or an Ogg file seconds from where it
+     * says: a handle for view, or 0 for a recording of another kind, which
+     * the player is handed as it is. fd stays the caller's. Read off the
+     * main thread: each of an MP3's frames is read.
      */
-    @JvmStatic external fun reread(fd: Int, name: String, wav: String, duration: Double): Boolean
+    @JvmStatic external fun viewIndex(fd: Int): Long
+
+    @JvmStatic external fun viewIndexFree(index: Long)
+
+    /** The recording from t seconds in, as a player's data source (ViewSource): a handle, or 0 where it cannot be cut. */
+    @JvmStatic external fun view(index: Long, t: Double): Long
+
+    /** Where a view's first sample is in the recording, in seconds: the player's time in it counts from there. */
+    @JvmStatic external fun viewStart(view: Long): Double
+
+    /** A view's bytes. */
+    @JvmStatic external fun viewSize(view: Long): Long
+
+    /** Up to n of a view's bytes from pos, into buf from off: how many, or -1 at its end or a read that failed. */
+    @JvmStatic external fun viewRead(view: Long, pos: Long, buf: ByteArray, off: Int, n: Int): Int
+
+    @JvmStatic external fun viewFree(view: Long)
 
     /** The models models.pktito.net serves, as JSON, each as it stands in dir, the app's models folder: downloaded, or the bytes a download kept. */
     @JvmStatic external fun catalog(dir: String): String

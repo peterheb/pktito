@@ -43,7 +43,9 @@ import androidx.core.content.IntentCompat
 import androidx.core.os.BundleCompat
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import net.pktito.app.ui.About
 import net.pktito.app.ui.Finder
@@ -84,6 +86,17 @@ class MainActivity : ComponentActivity() {
         if (uri != null) ownFile(uri)
     }
     private val create = registerForActivityResult(CreateText) { uri -> if (uri != null) write(uri) }
+    // Locate…: the transcript's recording, picked again where it is now,
+    // if it is the one transcribed (Recents.relink); the player then loads it
+    private val locate = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val id = Transcriber.id
+        if (uri == null || id.isEmpty()) return@registerForActivityResult
+        if (Recents.relink(this, id, uri)) {
+            Transcriber.why = null
+            Transcriber.locate = false
+            Transcriber.uri = uri
+        } else toast = getString(R.string.play_not_it)
+    }
 
     private val prefs by lazy { getSharedPreferences("pktito", MODE_PRIVATE) }
     /** Save as's choice: each sentence's time before it in .txt and .md. */
@@ -189,21 +202,38 @@ class MainActivity : ComponentActivity() {
         // a search's matches in the rows shown, a finished transcript's only
         val hits = remember(rows, finder.query, review, t.segments.size) { if (review) findIn(rows, finder.query) else emptyList() }
 
-        // the finished transcript's audio, ready to play; another file's let
-        // go. One of the list's whose audio the cache let go reads its
-        // original again first (app.js, reloadAudio), the play button dimmed
-        // and the line under the views saying why until it can
-        LaunchedEffect(t.step, t.id) {
+        // the finished transcript's recording, ready to play, its views'
+        // index read first where it plays as views; another's let go. Where
+        // it cannot be played, the strip says why in its times' place, and
+        // Locate… finds it again (the one already loaded, kept through a
+        // turn of the screen)
+        LaunchedEffect(t.step, t.id, t.uri) {
             if (!review) return@LaunchedEffect Player.release(this@MainActivity)
-            val wav = Transcriber.wav(this@MainActivity)
-            val uri = t.uri
-            if (!wav.isFile && t.reopened && uri != null) {
-                Player.release(this@MainActivity)
-                t.why = getString(R.string.play_reading)
-                val (id, name, duration) = Triple(t.id, t.name, t.duration)
-                t.why = withContext(Dispatchers.IO) { Recents.reread(this@MainActivity, id, uri, name, duration) }
+            val uri = t.uri ?: return@LaunchedEffect
+            val key = "${t.id} $uri"
+            if (Player.loaded == key) return@LaunchedEffect
+            Player.release(this@MainActivity)
+            val (id, duration) = t.id to t.duration
+            val item = Recents.items.find { it.id == id }
+            // each step whole, and its file and index let go here if the
+            // transcript was let go while it ran
+            val off = NonCancellable + Dispatchers.IO
+            val src = withContext(off) { Recents.open(this@MainActivity, id, uri, item?.size ?: 0, item?.modified ?: 0) }
+            val file = src.file
+            if (!isActive) return@LaunchedEffect file?.close() ?: Unit
+            t.why = src.why
+            t.locate = src.locate
+            if (file == null) return@LaunchedEffect
+            val index = withContext(off) { Engine.viewIndex(file.fd) }
+            if (!isActive) {
+                file.close()
+                if (index != 0L) Engine.viewIndexFree(index)
+                return@LaunchedEffect
             }
-            Player.load(this@MainActivity, wav)
+            Player.load(this@MainActivity, key, file, index, duration) {
+                t.why = getString(R.string.play_cant)
+                t.locate = false
+            }
         }
         // where playback has got to, each frame while it plays
         LaunchedEffect(Player.playing) {
@@ -334,6 +364,7 @@ class MainActivity : ComponentActivity() {
                     rows = rows,
                     error = t.error,
                     why = t.why,
+                    locate = if (t.locate) ({ locate.launch(MEDIA) }) else null,
                     stats = if (review && t.segments.isNotEmpty() && t.transcribed > 0)
                         getString(R.string.stats_transcribed, clock(t.transcribed), pace(t.done * t.duration, t.transcribed))
                     else null,
@@ -508,10 +539,10 @@ class MainActivity : ComponentActivity() {
     private fun back() {
         finder.clear()
         Player.release(this)
-        // the audio of a transcript that is not on the list, stopped or
-        // failed, goes with it
+        // the copy of a shared recording whose transcript is not on the list,
+        // stopped or failed, goes with it
         val id = Transcriber.id
-        if (id.isNotEmpty() && Recents.items.none { it.id == id }) Transcriber.wav(this).delete()
+        if (id.isNotEmpty() && Recents.items.none { it.id == id }) Recents.copyOf(this, id).delete()
         Transcriber.clear()
     }
 

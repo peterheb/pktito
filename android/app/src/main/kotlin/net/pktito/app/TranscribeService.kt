@@ -87,8 +87,13 @@ class TranscribeService : Service() {
         var began = 0L
         var video = 0.0
         var loudness = ByteArray(0)
-        readable(this, uri).use { pfd ->
-            val t = Engine.transcribe(handle, pfd.fd, name, Transcriber.wav(this).path, object : Engine.Progress {
+        // a recording shared or opened with pktito, which Android takes the
+        // access to back once the task ends, played from a copy (Recents.copy)
+        val copy = Recents.copy(this, uri, id)
+        val (size, modified) = if (copy != null) copy.length() to 0L else Recents.stamp(this, uri)
+        val file = copy?.let { ParcelFileDescriptor.open(it, ParcelFileDescriptor.MODE_READ_ONLY) } ?: readable(this, uri)
+        file.use { pfd ->
+            val t = Engine.transcribe(handle, pfd.fd, name, object : Engine.Progress {
                 override fun audio(duration: Double, fps: Double, peaks: ByteArray) {
                     began = SystemClock.elapsedRealtime()
                     video = fps
@@ -139,6 +144,8 @@ class TranscribeService : Service() {
                         .put("transcribed", secs)
                         .put("model", o.getString("model"))
                         .put("fps", video)
+                        .put("size", size)
+                        .put("modified", modified)
                     Recents.keep(this, item, t, loudness)
                 } catch (e: Exception) {
                     Log.w(TAG, "keeping $name on the recent list", e)
