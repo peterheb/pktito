@@ -58,6 +58,12 @@ runs it inside the package, where it sees the window's models and
 settings. Through it, a transcript of test.wav came out byte for byte the
 setup program's CLI's (2026-10-26).
 
+- The alias belongs to the package's one Application, and names
+  pktito-cli.exe and a console subsystem. The Certification Kit fails a
+  package of two Applications (below). makeappx refuses a console alias
+  unless its Application allows many instances. With the window open, two
+  transcripts at once came out the setup program's CLI's, and the window
+  still opened once (0.9.2.4 on the 9950X, 2026-10-26).
 - With both editions installed, the Store's alias comes first on the PATH.
 - Over SSH (armlet, 2026-10-23), Windows refused the alias while the app
   ran in the desktop session. For SSH, services and other accounts, the
@@ -158,7 +164,34 @@ programs (2026-10-26):
 The window was driven through WebView2's debugging port, from PowerShell
 started in the package (`Invoke-CommandInDesktopPackage`), which passes
 `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` on to the app as the package's own
-activation does not. Not yet run: the Certification Kit, and Windows 10.
+activation does not. Not yet run: Windows 10.
+
+### The Certification Kit
+
+Kit 10.0.26100.7705 on the 0.9.2.3 bundle's x64 package, from an
+administrator's PowerShell on the 9950X (2026-10-26): 21 tests passed, two
+optional ones failed and one gave a warning. Microsoft's page on the kit's
+tests for desktop apps says the optional ones are "informational only and
+will not be used to evaluate your app during Microsoft Store onboarding".
+
+- **Application count** (optional): "The Microsoft Store does not support a
+  package containing more than one applications defined in the manifest."
+  0.9.2.3 gave the CLI an Application of its own. In 0.9.2.4 the alias is
+  the one Application's (above).
+- **Blocked executables** (optional) is a test for Windows in S mode, where
+  starting programs is restricted:
+  - `CreateProcessW` is how pktito starts ffmpeg, where the user has one,
+    for a format it doesn't read itself (decode.rs). It starts nothing else
+    on Windows.
+  - `ShellExecuteW` opens a link in the browser.
+  - `cmd.exe` is Rust's standard library's, for running a batch file, which
+    pktito never does.
+  - `REg` and `basH` are bytes of pktito-app.exe's machine code that spell
+    them: an address's offset, and part of Tauri's `deny-basename`.
+- **DPI awareness** (a warning): pktito-cli.exe declares none. It is a
+  console program, with no window to scale; pktito-app.exe passed.
+
+0.9.2.4 hasn't been through the kit yet.
 
 ## The icons
 
