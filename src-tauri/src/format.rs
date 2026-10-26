@@ -115,12 +115,16 @@ pub fn text(t: &Transcript, ext: &str, times: bool) -> Result<String, String> {
 
 /// A cue as the files write it: its times in milliseconds, its text with a
 /// line break where its second line begins, and an ellipsis after one cut
-/// at a pause in mid-sentence (PK_CUE_PAUSE)
+/// at a pause in mid-sentence (PK_CUE_PAUSE); and its words, n of the
+/// transcript's from the first, for the Android app's Captions view to
+/// follow and find them, which the files leave out.
 #[derive(serde::Serialize)]
 pub struct Cue {
     pub start: i64,
     pub end: i64,
     pub text: String,
+    pub first: usize,
+    pub n: usize,
 }
 
 const PK_CUE_PAUSE: i32 = 8;
@@ -161,6 +165,8 @@ pub fn cues(t: &Transcript) -> Result<Vec<Cue>, String> {
                 start: c.start,
                 end: c.end,
                 text,
+                first,
+                n,
             }
         })
         .collect())

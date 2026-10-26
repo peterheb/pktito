@@ -57,7 +57,7 @@ object Engine {
      */
     @JvmStatic external fun format(transcript: String, ext: String, name: String, times: Boolean): String
 
-    /** A transcript's subtitle track, as its .srt has it: JSON, each cue's start and end in ms, and its text. */
+    /** A transcript's subtitle track, as its .srt has it: JSON, each cue's start and end in ms, its text, and its words, n of the transcript's from the first. */
     @JvmStatic external fun captions(transcript: String): String
 
     /**

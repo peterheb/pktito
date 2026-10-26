@@ -27,6 +27,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import java.io.File
 import net.pktito.app.ui.About
+import net.pktito.app.ui.Finder
+import net.pktito.app.ui.findIn
 import net.pktito.app.ui.ModelButton
 import net.pktito.app.ui.PktitoTheme
 import net.pktito.app.ui.Ready
@@ -65,7 +67,7 @@ class Shots {
 
     private fun resource(name: String) = javaClass.getResourceAsStream("/$name")!!.readBytes()
     private val segments = Transcriber.parse(String(resource("alice-segments.json")))
-    private val cues = Transcriber.parseCues(String(resource("alice-cues.json")))
+    private val cues = Transcriber.parseCues(String(resource("alice-cues.json")), segments.flatMap { it.words })
     private val peaks = resource("alice-peaks.bin")
     private val actions = WorkActions({}, {}, {}, {}, {}, {}, {}, {}, { _, _ -> }, {})
 
@@ -108,10 +110,21 @@ class Shots {
         file.outputStream().use { node.captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
+    /** A search for query, its field open on a phone if open, on the match k (-1: the one the playhead last passed). */
+    private fun finder(rows: List<Seg>, query: String, open: Boolean = query.isNotEmpty(), k: Int = -1, position: Double = 0.0) =
+        Finder().apply {
+            this.query = query
+            this.open = open
+            val hits = findIn(rows, query)
+            settle(hits, position)
+            if (k >= 0 && k < hits.size) go(hits, k)
+        }
+
     @Composable
     private fun work(step: String, done: Double, rows: List<Seg> = segments, captions: Boolean = false,
                      position: Double = 0.0, playing: Boolean = false, error: String? = null,
-                     speed: Double = 1.0, volume: Double = 1.0, base: Timebase = Timebase()) =
+                     speed: Double = 1.0, volume: Double = 1.0, base: Timebase = Timebase(),
+                     find: Finder = Finder()) =
         Work(
             name = "wonderland_ch_01.flac", step = step, done = done,
             duration = if (step == "reading" || step == "loading") 0.0 else 640.505,
@@ -121,7 +134,8 @@ class Shots {
             pace = if (step == "transcribing") "57.9x real-time" else null,
             captions = captions, times = false, playable = step == "done", playing = playing,
             position = position, list = rememberLazyListState(),
-            sound = Sound(speed, Player.SPEEDS, volume, false, {}, { _, _ -> }, {}), chosen = base, a = actions,
+            sound = Sound(speed, Player.SPEEDS, volume, false, {}, { _, _ -> }, {}), chosen = base,
+            find = find, hits = if (step == "done") findIn(rows, find.query) else emptyList(), a = actions,
         )
 
     // the catalog as model.rs has it, nothing downloaded, or the English model here
@@ -259,6 +273,16 @@ class Shots {
         work("done", 1.0, cues, captions = true, position = 12.0, base = Timebase(frames = true, video = 29.97))
     }
     @Test fun captionsWide() = shot("captions", false, wide = true) { work("done", 1.0, cues, captions = true, position = 12.0) }
+    // a search: on a phone, the glass on the views line, then its field open over it with "alice" in it, on its
+    // third match; in a laptop's window beside the views; a word that is not there; and in the captions
+    @Test fun findClosed() = shot("find-closed", false) { work("done", 1.0, position = 30.0) }
+    @Test fun find() = shot("find", false) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
+    @Test fun findDark() = shot("find", true) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
+    @Test fun findNarrow() = shot("find-360", false, narrow = true) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
+    @Test fun findWindow() = shot("find", false, window = true) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
+    @Test fun findWindowEmpty() = shot("find-empty", false, window = true) { work("done", 1.0, find = finder(segments, "")) }
+    @Test fun findNone() = shot("find-none", false) { work("done", 1.0, find = finder(segments, "jabberwock")) }
+    @Test fun findCaptions() = shot("find-captions", false) { work("done", 1.0, cues, captions = true, find = finder(cues, "the", k = 3)) }
     // the time menu as the desktop's stand-in has it (an audio file, 25 fps chosen, at the start),
     // and a 29.97 video's in frames at its own rate, drop-frame, half a minute in
     private fun timeMenu(time: String) = {

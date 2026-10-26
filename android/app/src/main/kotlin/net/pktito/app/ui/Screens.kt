@@ -46,8 +46,10 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -60,7 +62,9 @@ import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -405,6 +409,8 @@ fun Work(
     list: LazyListState,
     sound: Sound,
     chosen: Timebase,
+    find: Finder,
+    hits: List<Hit>,
     a: WorkActions,
 ) {
     val p = pk
@@ -464,13 +470,17 @@ fun Work(
                 sound = sound,
                 base = base,
                 onBase = a.setBase,
+                ticks = if (review && duration > 0) hits.map { it.time / duration } else emptyList(),
+                tickAt = find.at,
+                // a tick: its match, and the playhead there (app.js, #ticks)
+                onTick = { k ->
+                    find.go(hits, k)
+                    a.seek(hits[k].time, false)
+                },
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
         if (review && rows.isNotEmpty())
-            Switch2(
-                stringResource(R.string.sentences), stringResource(R.string.captions), captions, a.setCaptions,
-                Modifier.padding(start = 16.dp, top = 16.dp),
-            )
+            Views(captions, a.setCaptions, find, hits, Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp))
         val msg = when {
             error != null -> error
             step == "stopped" -> stringResource(R.string.status_stopped_at, (done * 100).toInt())
@@ -490,7 +500,32 @@ fun Work(
                 if (bad) Icon(Icons.alert, null, tint = p.err, modifier = Modifier.size(16.dp))
                 Text(msg, style = Type.body.copy(fontSize = 15.sp), color = if (bad) p.err else p.inkMuted)
             }
-        Rows(rows, review, captions, playing, position, stats, base, list, a, Modifier.weight(1f))
+        Rows(rows, review, captions, playing, position, stats, base, hits, find.at, list, a, Modifier.weight(1f))
+    }
+}
+
+/**
+ * The views line: Sentences or Captions, and the search's field at its end
+ * (app.css, .pk-views and .pk-find), the desktop's 200 dp and 280 with a
+ * search in it, where the line has room for both, 480 dp; on a phone the
+ * glass in the field's place, which opens the field over the line until
+ * the search is let go, as a phone's find in page does.
+ */
+@Composable
+private fun Views(captions: Boolean, setCaptions: (Boolean) -> Unit, find: Finder, hits: List<Hit>, modifier: Modifier) {
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        val room = maxWidth >= 480.dp
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            if (room || !find.open) {
+                Switch2(stringResource(R.string.sentences), stringResource(R.string.captions), captions, setCaptions)
+                Spacer(Modifier.weight(1f))
+            }
+            when {
+                room -> FindField(find, hits, find::clear, Modifier.width(if (find.query.isNotBlank()) 280.dp else 200.dp))
+                find.open -> FindField(find, hits, find::clear, Modifier.weight(1f))
+                else -> IconBtn(Icons.search, stringResource(R.string.find_label), find::focus, kind = Kind.Ghost)
+            }
+        }
     }
 }
 
@@ -541,20 +576,24 @@ private fun Rows(
     position: Double,
     stats: String?,
     base: Timebase,
+    hits: List<Hit>,
+    at: Int,
     list: LazyListState,
     a: WorkActions,
     modifier: Modifier,
 ) {
     val p = pk
     val current = if (review && (playing || position > 0)) rows.indexOfLast { it.start <= position + 1e-3 } else -1
+    // each row's matches, by their place among all of them
+    val marks = remember(hits) { hits.withIndex().groupBy { it.value.row } }
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val wide = maxWidth >= 620.dp
         SelectionContainer {
             LazyColumn(state = list, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp)) {
                 itemsIndexed(rows) { i, s ->
                     val now = i == current
-                    val word = if (now && !captions) s.words.indexOfLast { it.start <= position + 1e-3 } else -1
-                    SegRow(s, now, word, wide, captions, review, base) { a.seek(s.start, true) }
+                    val word = if (now) s.words.indexOfLast { it.start <= position + 1e-3 } else -1
+                    SegRow(s, now, word, marks[i], at, wide, captions, review, base) { a.seek(s.start, true) }
                 }
                 if (stats != null)
                     item {
@@ -571,7 +610,10 @@ private fun Rows(
 }
 
 @Composable
-private fun SegRow(s: Seg, now: Boolean, word: Int, wide: Boolean, cue: Boolean, review: Boolean, base: Timebase, onTime: () -> Unit) {
+private fun SegRow(
+    s: Seg, now: Boolean, word: Int, marks: List<IndexedValue<Hit>>?, at: Int, wide: Boolean, cue: Boolean, review: Boolean,
+    base: Timebase, onTime: () -> Unit,
+) {
     val p = pk
     val stamp = Type.stamp.copy(fontFeatureSettings = "tnum")
     val start = @Composable { mod: Modifier ->
@@ -620,28 +662,47 @@ private fun SegRow(s: Seg, now: Boolean, word: Int, wide: Boolean, cue: Boolean,
         Row(box.padding(horizontal = 16.dp, vertical = 8.dp)) {
             time(Modifier.width(112.dp).alignByBaseline())
             Spacer(Modifier.width(12.dp))
-            Sentence(s, word, Modifier.weight(1f).alignByBaseline())
+            Sentence(s, word, marks, at, Modifier.weight(1f).alignByBaseline())
         }
     else
         Column(box.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             time(Modifier)
-            Sentence(s, word, Modifier)
+            Sentence(s, word, marks, at, Modifier)
         }
 }
 
-/** A row's text in the transcript's type, the word playing underlined in the beak's colour, 2 dp, 4 below the line. */
+/**
+ * A row's text in the transcript's type, the word playing underlined in the
+ * beak's colour, 2 dp, 4 below the line; and a search's matches marked
+ * (app.css, .pk-hit): each on plume mixed 45% into the ground, as tall as
+ * its letters and 2 dp round them, its corners 3 dp; the one the reader is
+ * on in plume, its letters on-plume, an ink bar 2 dp under it, for a state
+ * shown by more than its colour (the tokens' contrast, 2026-10-22).
+ */
 @Composable
-private fun Sentence(s: Seg, word: Int, modifier: Modifier) {
+private fun Sentence(s: Seg, word: Int, marks: List<IndexedValue<Hit>>?, at: Int, modifier: Modifier) {
     val p = pk
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val span = remember(s, word) { if (word < 0) null else wordSpan(s, word) }
+    val on = marks?.firstOrNull { it.index == at }?.value
+    val text = remember(s, on, p) {
+        buildAnnotatedString {
+            append(s.text)
+            if (on != null && on.end <= s.text.length) addStyle(SpanStyle(color = p.onPlume), on.start, on.end)
+        }
+    }
+    val hl = mix(p.ground, p.plume, 0.45f)
     Text(
-        s.text,
+        text,
         style = Type.transcript,
         color = p.ink,
         onTextLayout = { layout = it },
         modifier = modifier.drawBehind {
             val l = layout ?: return@drawBehind
+            for (m in marks.orEmpty()) {
+                val current = m.index == at
+                mark(l, m.value.start, m.value.end, if (current) p.plume else hl, if (current) p.ink else null)
+            }
             val (a, b) = span ?: return@drawBehind
             if (b <= a || b > l.layoutInput.text.length) return@drawBehind
             val line = l.getLineForOffset(a)
@@ -651,6 +712,30 @@ private fun Sentence(s: Seg, word: Int, modifier: Modifier) {
             drawLine(p.beak, Offset(x0, y), Offset(x1, y), 2.dp.toPx())
         },
     )
+}
+
+/**
+ * A match's mark behind the letters from a to b, on each line they are on:
+ * their height, from Archivo's ascent to its descent (0.878 and 0.21 em,
+ * its hhea), and 2 dp round them, as an inline mark's box is drawn on the
+ * desktop; under, an ink bar 2 dp under it, the width of the letters.
+ */
+private fun DrawScope.mark(l: TextLayoutResult, a: Int, b: Int, fill: Color, under: Color?) {
+    if (b <= a || b > l.layoutInput.text.length) return
+    val em = l.layoutInput.style.fontSize.toPx()
+    val round = 2.dp.toPx()
+    for (line in l.getLineForOffset(a)..l.getLineForOffset(b - 1)) {
+        val s0 = maxOf(a, l.getLineStart(line))
+        val s1 = minOf(b, l.getLineEnd(line, visibleEnd = true))
+        if (s1 <= s0) continue
+        val x0 = l.getHorizontalPosition(s0, true)
+        val x1 = if (l.getLineForOffset(s1) == line) l.getHorizontalPosition(s1, true) else l.getLineRight(line)
+        val base = l.getLineBaseline(line)
+        val top = base - 0.878f * em - round
+        val bottom = base + 0.21f * em + round
+        drawRoundRect(fill, Offset(x0 - round, top), Size(x1 - x0 + 2 * round, bottom - top), CornerRadius(3.dp.toPx()))
+        if (under != null) drawRect(under, Offset(x0, bottom), Size(x1 - x0, 2.dp.toPx()))
+    }
 }
 
 /** Where the word-th word of s is in its text: the words, in order, each found after the last. */

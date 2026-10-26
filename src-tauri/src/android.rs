@@ -260,8 +260,9 @@ pub extern "system" fn Java_net_pktito_app_Engine_format<'a>(
 
 /// Engine.captions(transcript): a Transcript's subtitle track, the cues its
 /// .srt and .vtt have (format::cues), as JSON: each cue's start and end in
-/// milliseconds, and its text, a line break where its second line begins.
-/// The Captions view shows them.
+/// milliseconds, its text, a line break where its second line begins, and
+/// its words, n of the transcript's from the first. The Captions view shows
+/// them.
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_net_pktito_app_Engine_captions<'a>(
     mut unowned: EnvUnowned<'a>,

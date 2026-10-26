@@ -35,6 +35,9 @@ object Icons {
         "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1",
     )
     val down = icon("down", "M6 9L12 15L18 9")
+    val up = icon("up", "M18 15L12 9L6 15")
+    // the finder's glass
+    val search = icon("search", "M11 3a8 8 0 1 0 0 16a8 8 0 1 0 0-16z", "M21 21L16.65 16.65")
     val check = icon("check", "M20 6L9 17L4 12")
     val download = icon("download", "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "M7 10L12 15L17 10", "M12 15V3")
     val alert = icon("alert", "M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z", "M12 8v4", "M12 16h0.01")

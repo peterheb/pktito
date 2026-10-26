@@ -25,6 +25,11 @@
     <string name="format_md">Markdown</string>
     <string name="format_md_times">Markdown with times</string>
     <string name="format_json">JSON with word timings</string>
+    <string name="find_placeholder">Find</string><!-- find.placeholder -->
+    <string name="find_label">Find in transcript</string><!-- find.label -->
+    <string name="find_previous">Previous match</string><!-- find.previous -->
+    <string name="find_next">Next match</string><!-- find.next -->
+    <string name="find_close">Close find</string>
     <string name="sentences">Sentences</string><!-- work.sentences -->
     <string name="captions">Captions</string><!-- work.captions -->
     <string name="play">Play</string>

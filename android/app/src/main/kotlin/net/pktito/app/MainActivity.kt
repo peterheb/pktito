@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -45,6 +46,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import net.pktito.app.ui.About
+import net.pktito.app.ui.Finder
 import net.pktito.app.ui.ModelButton
 import net.pktito.app.ui.PktitoTheme
 import net.pktito.app.ui.Ready
@@ -57,6 +59,7 @@ import net.pktito.app.ui.Toast
 import net.pktito.app.ui.Work
 import net.pktito.app.ui.WorkActions
 import net.pktito.app.ui.clock
+import net.pktito.app.ui.findIn
 import net.pktito.app.ui.pk
 import net.pktito.app.ui.stepped
 
@@ -101,6 +104,8 @@ class MainActivity : ComponentActivity() {
     private var saving: String? = null
     /** A recording opened or shared before there was a model to transcribe it with: transcribed once there is. */
     private var waiting by mutableStateOf<Uri?>(null)
+    /** The search of the transcript on the screen. */
+    private val finder = Finder()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -115,6 +120,10 @@ class MainActivity : ComponentActivity() {
         Player.restore(prefs.getFloat("speed", 1f).toDouble(), prefs.getFloat("volume", 1f).toDouble())
         saving = savedInstanceState?.getString("saving")
         about = savedInstanceState?.getBoolean("about") ?: false
+        savedInstanceState?.getString("find")?.let {
+            finder.query = it
+            finder.open = it.isNotEmpty()
+        }
         waiting = savedInstanceState?.let { BundleCompat.getParcelable(it, "waiting", Uri::class.java) }
         Models.refresh(this)
         Recents.refresh(this)
@@ -159,6 +168,7 @@ class MainActivity : ComponentActivity() {
         outState.putString("saving", saving)
         outState.putBoolean("about", about)
         outState.putParcelable("waiting", waiting)
+        outState.putString("find", finder.query)
         val t = Transcriber
         if (t.step == "done" && Recents.items.any { it.id == t.id }) outState.putString("recent", t.id)
     }
@@ -176,6 +186,8 @@ class MainActivity : ComponentActivity() {
         val list = rememberLazyListState()
         val review = t.step == "done" || t.step == "stopped"
         val rows = if (captions && review) t.cues ?: emptyList() else t.segments
+        // a search's matches in the rows shown, a finished transcript's only
+        val hits = remember(rows, finder.query, review, t.segments.size) { if (review) findIn(rows, finder.query) else emptyList() }
 
         // the finished transcript's audio, ready to play; another file's let
         // go. One of the list's whose audio the cache let go reads its
@@ -200,11 +212,21 @@ class MainActivity : ComponentActivity() {
                 Player.tick()
             }
         }
+        // the match to be on once the matches change, and each move to one
+        // brought into sight, its row a third of the way down (app.js, goHit)
+        LaunchedEffect(hits) { finder.settle(hits, Player.position) }
+        LaunchedEffect(finder.moved) {
+            val h = hits.getOrNull(finder.at) ?: return@LaunchedEffect
+            val info = list.layoutInfo
+            val row = info.visibleItemsInfo.firstOrNull { it.index == h.row }
+            if (row == null || row.offset < info.viewportStartOffset || row.offset + row.size > info.viewportEndOffset)
+                list.animateScrollToItem(h.row, -info.viewportSize.height / 3)
+        }
         // the cues, the first time the transcript is shown as captions
         LaunchedEffect(captions, t.transcript) {
             val tr = t.transcript
             if (captions && tr != null && t.cues == null)
-                t.cues = runCatching { Transcriber.parseCues(Engine.captions(tr)) }
+                t.cues = runCatching { Transcriber.parseCues(Engine.captions(tr), t.segments.flatMap { it.words }) }
                     .onFailure { Log.w(TAG, "captions", it) }
                     .getOrDefault(emptyList())
         }
@@ -247,6 +269,8 @@ class MainActivity : ComponentActivity() {
             }
         }
         BackHandler(enabled = t.step.isNotEmpty() && !t.running) { back() }
+        // a search is let go before the transcript is
+        BackHandler(enabled = t.step.isNotEmpty() && finder.searching) { finder.clear() }
         BackHandler(enabled = about) { about = false }
 
         Box(
@@ -321,6 +345,8 @@ class MainActivity : ComponentActivity() {
                     position = Player.position,
                     list = list,
                     chosen = base.copy(video = t.fps),
+                    find = finder,
+                    hits = hits,
                     sound = Sound(
                         speed = Player.speed,
                         speeds = Player.SPEEDS,
@@ -370,12 +396,18 @@ class MainActivity : ComponentActivity() {
     /**
      * The desktop's keys, where there is a keyboard (app.js, keydown): Space
      * plays and pauses, < and > step the speed, Ctrl+S saves the text and
-     * Ctrl+Shift+S the subtitles, Ctrl+O chooses a recording on the start
-     * screen, and Esc goes back as the back gesture does, which Android
-     * leaves to the app (the Googlebook, 2026-10-25), and closes About,
-     * where it is the only key the app has. Before the controls,
-     * as the desktop's are before its buttons: a control with the focus
-     * would take Space as a press, and Back's threw the transcript away (the
+     * Ctrl+Shift+S the subtitles, Ctrl+F finds, Ctrl+O chooses a recording
+     * on the start screen, and Esc lets go of a search and then goes back as
+     * the back gesture does, which Android leaves to the app (the
+     * Googlebook, 2026-10-25), and closes About, where it is the only key
+     * the app has. Space plays as it comes up, where the desktop's plays as
+     * it goes down: after a touch, Android takes a Space's press as the way
+     * out of touch mode (ViewRootImpl), and the app sees only its release
+     * (the emulator, 2026-10-26: the first Space after opening a transcript
+     * played nothing). In the search's field, Space and < and > are its
+     * letters, and Enter its next match (FindField). Before the controls, as
+     * the desktop's are before its buttons: a control with the focus would
+     * take Space as a press, and Back's threw the transcript away (the
      * Googlebook). An open menu is a window of its own, and has the keys
      * first; it closes on Esc. The method is Activity's, which lint takes for
      * a restricted one (RestrictedApi): it sees it through androidx.core's
@@ -383,11 +415,17 @@ class MainActivity : ComponentActivity() {
      */
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean =
-        event.action == KeyEvent.ACTION_DOWN && key(event) || super.dispatchKeyEvent(event)
+        key(event) || super.dispatchKeyEvent(event)
 
     private fun key(event: KeyEvent): Boolean {
         val t = Transcriber
         val review = t.step == "done" || t.step == "stopped"
+        val typing = finder.typing
+        if (event.keyCode == KeyEvent.KEYCODE_SPACE && event.hasNoModifiers() && review && Player.ready && !typing && !about) {
+            if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) Player.toggle(this)
+            return true
+        }
+        if (event.action != KeyEvent.ACTION_DOWN) return false
         val ctrl = event.isCtrlPressed && !event.isAltPressed && !event.isMetaPressed
         val char = event.unicodeChar.toChar()
         if (about) {
@@ -400,10 +438,11 @@ class MainActivity : ComponentActivity() {
                 if (review && t.segments.isNotEmpty()) save(if (event.isShiftPressed) "srt" else "txt")
             ctrl && event.keyCode == KeyEvent.KEYCODE_O && !event.isShiftPressed ->
                 if (t.step.isEmpty() && !setup()) open.launch(MEDIA)
+            ctrl && event.keyCode == KeyEvent.KEYCODE_F && !event.isShiftPressed ->
+                if (review && t.segments.isNotEmpty()) finder.focus()
+            event.keyCode == KeyEvent.KEYCODE_ESCAPE && (finder.searching || typing) -> finder.clear()
             event.keyCode == KeyEvent.KEYCODE_ESCAPE && t.step.isNotEmpty() && !t.running -> back()
-            event.keyCode == KeyEvent.KEYCODE_SPACE && event.hasNoModifiers() && review && Player.ready ->
-                if (event.repeatCount == 0) Player.toggle(this)
-            (char == '<' || char == '>') && !event.isCtrlPressed && !event.isMetaPressed && review && Player.ready ->
+            (char == '<' || char == '>') && !event.isCtrlPressed && !event.isMetaPressed && review && Player.ready && !typing ->
                 setSpeed(stepped(Player.SPEEDS, Player.speed, if (char == '>') 1 else -1))
             else -> return false
         }
@@ -467,6 +506,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun back() {
+        finder.clear()
         Player.release(this)
         // the audio of a transcript that is not on the list, stopped or
         // failed, goes with it

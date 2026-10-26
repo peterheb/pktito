@@ -137,12 +137,22 @@ object Transcriber {
         }
     }
 
-    /** The cues of Engine.captions' JSON, in seconds. */
-    fun parseCues(json: String): List<Seg> {
+    /**
+     * The cues of Engine.captions' JSON, in seconds, each with its words,
+     * which it takes from words, the transcript's in order: the Captions view
+     * follows the word playing in them, and a search's ticks stand at them,
+     * as the desktop's do (app.js, cuesOf).
+     */
+    fun parseCues(json: String, words: List<Word>): List<Seg> {
         val a = JSONArray(json)
         return (0 until a.length()).map { i ->
             val c = a.getJSONObject(i)
-            Seg(c.getLong("start") / 1000.0, c.getLong("end") / 1000.0, c.getString("text"))
+            val first = c.optInt("first", 0)
+            val n = c.optInt("n", 0)
+            Seg(
+                c.getLong("start") / 1000.0, c.getLong("end") / 1000.0, c.getString("text"),
+                if (first + n <= words.size) words.subList(first, first + n) else emptyList(),
+            )
         }
     }
 

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -102,6 +101,9 @@ fun Strip(
     base: Timebase,
     onBase: (Timebase) -> Unit,
     modifier: Modifier = Modifier,
+    ticks: List<Double> = emptyList(),
+    tickAt: Int = -1,
+    onTick: (Int) -> Unit = {},
 ) {
     val p = pk
     Row(
@@ -150,7 +152,7 @@ fun Strip(
                     ),
             )
             // the desktop's lane for a search's ticks, 9 dp, which keeps the strip its 116
-            Spacer(Modifier.height(9.dp))
+            Ticks(ticks, tickAt, onTick)
             TimesLine(
                 time = {
                     if (review) Time(left, base, position, onBase)
@@ -166,6 +168,41 @@ fun Strip(
                 },
                 length = { Text(right, style = Tstamp, color = p.termInk, maxLines = 1) },
             )
+        }
+    }
+}
+
+/**
+ * A search's ticks in the lane under the waveform (app.css, .pk-ticks), each
+ * match at its word's time, 2 dp of plume; the current one term-ink, 3 dp,
+ * and taller by the lane's gaps, so that its shape tells it too. Drawn and
+ * touched across the gaps, 15 dp, and a tap goes to the nearest tick within
+ * 16 dp of it: the desktop's target is 9 px wide, and a finger is wider.
+ */
+@Composable
+private fun Ticks(ticks: List<Double>, at: Int, onTick: (Int) -> Unit) {
+    val p = pk
+    val gap = 3.dp
+    Canvas(
+        Modifier
+            .fillMaxWidth()
+            .bleed(vertical = gap)
+            .height(9.dp + gap * 2)
+            .then(
+                if (ticks.isEmpty()) Modifier
+                else Modifier.pointerInput(ticks) {
+                    detectTapGestures { o ->
+                        val k = ticks.indices.minByOrNull { abs(ticks[it] * size.width - o.x) }
+                        if (k != null && abs(ticks[k] * size.width - o.x) <= 16.dp.toPx()) onTick(k)
+                    }
+                },
+            ),
+    ) {
+        val g = gap.toPx()
+        for ((k, t) in ticks.withIndex())
+            if (k != at) drawLine(p.plume, Offset(t.toFloat() * size.width, g), Offset(t.toFloat() * size.width, size.height - g), 2.dp.toPx())
+        ticks.getOrNull(at)?.let { t ->
+            drawLine(p.termInk, Offset(t.toFloat() * size.width, 0f), Offset(t.toFloat() * size.width, size.height), 3.dp.toPx())
         }
     }
 }
