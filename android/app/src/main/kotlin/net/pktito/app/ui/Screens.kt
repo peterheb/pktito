@@ -295,25 +295,37 @@ private fun Rows(
 @Composable
 private fun SegRow(s: Seg, now: Boolean, word: Int, wide: Boolean, cue: Boolean, review: Boolean, onTime: () -> Unit) {
     val p = pk
-    val time = @Composable { mod: Modifier ->
-        Column(mod) {
-            Row {
-                Text(
-                    stamp(s.start),
-                    style = Type.stamp.copy(lineHeight = 20.sp, fontFeatureSettings = "tnum"),
-                    color = p.inkMuted,
-                    modifier = Modifier
-                        .alignByBaseline()
-                        .then(if (review) Modifier.clickable(remember { MutableInteractionSource() }, null, onClick = onTime) else Modifier),
-                )
-                if (now) {
-                    Spacer(Modifier.width(4.dp))
-                    Box(Modifier.size(7.dp).alignBy { it.measuredHeight }.background(p.beak))
-                }
+    val start = @Composable { mod: Modifier ->
+        Row(mod) {
+            Text(
+                stamp(s.start),
+                style = Type.stamp.copy(lineHeight = 20.sp, fontFeatureSettings = "tnum"),
+                color = p.inkMuted,
+                modifier = Modifier
+                    .alignByBaseline()
+                    .then(if (review) Modifier.clickable(remember { MutableInteractionSource() }, null, onClick = onTime) else Modifier),
+            )
+            if (now) {
+                Spacer(Modifier.width(3.dp))
+                Box(Modifier.size(7.dp).alignBy { it.measuredHeight }.background(p.beak))
             }
-            if (cue)
-                Text(stamp(s.end), style = Type.stamp.copy(fontFeatureSettings = "tnum"), color = p.inkMuted)
         }
+    }
+    val end = @Composable { mod: Modifier ->
+        Text(stamp(s.end), style = Type.stamp.copy(fontFeatureSettings = "tnum"), color = p.inkMuted, modifier = mod)
+    }
+    // a cue's end under its start, or on a narrow screen beside it
+    val time = @Composable { mod: Modifier ->
+        if (cue && !wide)
+            Row(mod, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                start(Modifier.alignByBaseline())
+                end(Modifier.alignByBaseline())
+            }
+        else
+            Column(mod, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                start(Modifier)
+                if (cue) end(Modifier)
+            }
     }
     val box = Modifier
         .widthIn(max = 716.dp)
@@ -326,7 +338,7 @@ private fun SegRow(s: Seg, now: Boolean, word: Int, wide: Boolean, cue: Boolean,
             Sentence(s, word, Modifier.weight(1f).alignByBaseline())
         }
     else
-        Column(box.padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Column(box.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             time(Modifier)
             Sentence(s, word, Modifier)
         }

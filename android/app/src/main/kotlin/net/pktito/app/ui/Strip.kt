@@ -139,7 +139,7 @@ private fun Ring(done: Double) {
             "${(d * 100).toInt()}%",
             style = TextStyle(
                 fontFamily = Fonts.sans, fontWeight = FontWeight.W700, fontSize = 11.sp, lineHeight = 1.em,
-                letterSpacing = (-0.02).em, fontFeatureSettings = "tnum",
+                lineHeightStyle = CssLine, letterSpacing = (-0.02).em, fontFeatureSettings = "tnum",
             ),
             color = p.termInk,
         )

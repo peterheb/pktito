@@ -6,6 +6,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -98,19 +99,28 @@ object Fonts {
     val mono = FontFamily(Font(R.font.commit_mono_400, FontWeight.W400), Font(R.font.commit_mono_700, FontWeight.W700))
 }
 
+/**
+ * A line as CSS sets it, as the desktop's text has it: its leading split
+ * evenly above and below the letters, and kept on the first line and the
+ * last. Compose's own (LineHeightStyle.Default in ui-text 1.12.1) trims
+ * both, which set a row's time against its sentence, and a menu's items
+ * against each other, closer than the desktop's (Peter, 2026-10-25).
+ */
+val CssLine = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None)
+
 /** The type styles, by their names: transcript is the transcript's, ui the app's working size. */
 object Type {
-    val figure = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W700, fontSize = 64.sp, lineHeight = 0.9.em, letterSpacing = (-0.04).em)
-    val display = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W700, fontSize = 80.sp, lineHeight = 0.92.em, letterSpacing = (-0.02).em)
-    val lead = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W500, fontSize = 26.sp, lineHeight = 1.25.em, letterSpacing = (-0.01).em)
-    val body = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W400, fontSize = 18.sp, lineHeight = 1.5.em)
-    val transcript = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W400, fontSize = 17.sp, lineHeight = 1.6.em)
-    val bodyStrong = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W500, fontSize = 18.sp, lineHeight = 1.5.em)
-    val ui = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W500, fontSize = 14.sp, lineHeight = 1.4.em)
-    val small = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W400, fontSize = 13.sp, lineHeight = 1.45.em)
-    val code = TextStyle(fontFamily = Fonts.mono, fontWeight = FontWeight.W400, fontSize = 15.sp, lineHeight = 1.6.em)
-    val codeStrong = TextStyle(fontFamily = Fonts.mono, fontWeight = FontWeight.W700, fontSize = 15.sp, lineHeight = 1.6.em)
-    val stamp = TextStyle(fontFamily = Fonts.mono, fontWeight = FontWeight.W400, fontSize = 13.sp, lineHeight = 1.5.em)
+    val figure = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W700, fontSize = 64.sp, lineHeight = 0.9.em, lineHeightStyle = CssLine, letterSpacing = (-0.04).em)
+    val display = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W700, fontSize = 80.sp, lineHeight = 0.92.em, lineHeightStyle = CssLine, letterSpacing = (-0.02).em)
+    val lead = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W500, fontSize = 26.sp, lineHeight = 1.25.em, lineHeightStyle = CssLine, letterSpacing = (-0.01).em)
+    val body = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W400, fontSize = 18.sp, lineHeight = 1.5.em, lineHeightStyle = CssLine)
+    val transcript = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W400, fontSize = 17.sp, lineHeight = 1.6.em, lineHeightStyle = CssLine)
+    val bodyStrong = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W500, fontSize = 18.sp, lineHeight = 1.5.em, lineHeightStyle = CssLine)
+    val ui = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W500, fontSize = 14.sp, lineHeight = 1.4.em, lineHeightStyle = CssLine)
+    val small = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W400, fontSize = 13.sp, lineHeight = 1.45.em, lineHeightStyle = CssLine)
+    val code = TextStyle(fontFamily = Fonts.mono, fontWeight = FontWeight.W400, fontSize = 15.sp, lineHeight = 1.6.em, lineHeightStyle = CssLine)
+    val codeStrong = TextStyle(fontFamily = Fonts.mono, fontWeight = FontWeight.W700, fontSize = 15.sp, lineHeight = 1.6.em, lineHeightStyle = CssLine)
+    val stamp = TextStyle(fontFamily = Fonts.mono, fontWeight = FontWeight.W400, fontSize = 13.sp, lineHeight = 1.5.em, lineHeightStyle = CssLine)
 }
 
 object Space {

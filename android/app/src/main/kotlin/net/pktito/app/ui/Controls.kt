@@ -168,7 +168,7 @@ fun Wordmark(modifier: Modifier = Modifier, size: TextUnit = 20.sp) {
             "pktito",
             style = TextStyle(
                 fontFamily = Fonts.sans, fontWeight = FontWeight.W700, fontSize = size,
-                lineHeight = 1.em, letterSpacing = (-0.03).em,
+                lineHeight = 1.em, lineHeightStyle = CssLine, letterSpacing = (-0.03).em,
             ),
             color = pk.ink,
             modifier = Modifier.alignByBaseline(),
@@ -194,7 +194,11 @@ fun Spinner(modifier: Modifier = Modifier) {
     }
 }
 
-/** Two choices in a sunk track, the one chosen raised to the ground with an ink-muted edge. */
+/**
+ * Two choices in a sunk track, the one chosen raised to the ground with an
+ * ink-muted edge (app.css, .pk-views): 8 dp above and below the words to
+ * the desktop's 5, for a finger, as PkButton is 40 dp to its 32.
+ */
 @Composable
 fun Switch2(first: String, second: String, onSecond: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
     val p = pk
@@ -245,7 +249,10 @@ fun Menu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable () -> Un
         shadowElevation = 12.dp,
         border = BorderStroke(1.dp, p.sunk),
     ) {
-        Column(Modifier.padding(horizontal = 6.dp).widthIn(min = 240.dp)) { content() }
+        Column(
+            Modifier.widthIn(min = 240.dp).padding(horizontal = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) { content() }
     }
 }
 
@@ -255,7 +262,7 @@ fun Item(text: String, sub: String?, onClick: () -> Unit) {
     Column(
         Modifier
             .control(CornerSm, onClick = onClick)
-            .widthIn(min = 228.dp)
+            .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 8.dp),
     ) {
         Text(text, style = Type.ui.copy(lineHeight = 1.35.em), color = pk.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -264,28 +271,28 @@ fun Item(text: String, sub: String?, onClick: () -> Unit) {
     }
 }
 
-/** A menu's choice that stays: a box ticked or not, and its words. */
+/** A menu's choice that stays: a box ticked or not, on its words' first line, and the words (app.css, .pk-check). */
 @Composable
 fun Check(text: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     val p = pk
     Row(
         Modifier
             .control(CornerSm, role = Role.Checkbox) { onChange(!checked) }
-            .widthIn(min = 228.dp)
+            .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(
             Modifier
-                .size(18.dp)
-                .background(if (checked) p.ink else Color.Transparent, RoundedCornerShape(4.dp))
-                .border(1.5.dp, if (checked) p.ink else p.inkMuted, RoundedCornerShape(4.dp)),
+                .padding(top = 1.dp)
+                .size(16.dp)
+                .background(if (checked) p.ink else Color.Transparent, RoundedCornerShape(3.dp))
+                .border(1.5.dp, if (checked) p.ink else p.inkMuted, RoundedCornerShape(3.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            if (checked) Icon(Icons.check, null, tint = p.ground, modifier = Modifier.size(14.dp))
+            if (checked) Icon(Icons.check, null, tint = p.ground, modifier = Modifier.size(12.dp))
         }
-        Text(text, style = Type.ui, color = p.ink)
+        Text(text, style = Type.ui.copy(fontWeight = FontWeight.W400, lineHeight = 1.35.em), color = p.ink)
     }
 }
 
