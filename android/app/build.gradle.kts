@@ -1,7 +1,20 @@
+import java.io.File
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+// Play's upload key, kept outside the tree: a properties file (storeFile,
+// storePassword, keyAlias, keyPassword) at PKTITO_UPLOAD or
+// ~/.pktito-upload/upload.properties. Without one a release builds
+// unsigned. Play signs what it installs with its own key (Play App
+// Signing); this one only proves an upload is ours, and a lost one is
+// replaced through Play's support, not by a new listing
+val upload = File(
+    System.getenv("PKTITO_UPLOAD") ?: "${System.getProperty("user.home")}/.pktito-upload/upload.properties",
+).takeIf { it.isFile }?.let { f -> Properties().apply { f.inputStream().use { load(it) } } }
 
 android {
     namespace = "net.pktito.app"
@@ -24,10 +37,21 @@ android {
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
+    signingConfigs {
+        if (upload != null)
+            create("upload") {
+                storeFile = file(upload.getProperty("storeFile"))
+                storePassword = upload.getProperty("storePassword")
+                keyAlias = upload.getProperty("keyAlias")
+                keyPassword = upload.getProperty("keyPassword")
+            }
+    }
+
     buildTypes {
-        // R8's shrinking and its rules (proguard-rules.pro); signed by
-        // Play's upload key, which is not here
+        // R8's shrinking and its rules (proguard-rules.pro), signed by the
+        // upload key where there is one
         release {
+            if (upload != null) signingConfig = signingConfigs.getByName("upload")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
