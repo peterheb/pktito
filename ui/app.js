@@ -2200,8 +2200,15 @@ function followHit(t, jump) {
   goHit(Math.max(0, k), false);
 }
 
+/* A step (Enter, the arrows) while it plays takes the playhead to its match,
+   as a tick does: the reader follows the playhead then, and would be taken
+   back at the next match passed. At rest a step only reads, and the
+   playhead keeps the listener's place (Peter, 2026-10-27). */
 function stepHit(d) {
-  if (hits.length) goHit((hitAt + d + hits.length) % hits.length);
+  if (!hits.length) return;
+  const k = (hitAt + d + hits.length) % hits.length;
+  if (playing) seek(hitTimes[k], false);
+  goHit(k);
 }
 
 /* every piece of match k */
