@@ -23,23 +23,46 @@
     <section id="ready" class="pk-center" hidden>
       <div class="pk-dragbar pk-band" data-tauri-drag-region></div>
       <div class="pk-screen pk-ready">
-        <div class="pk-spread" data-tauri-drag-region="deep">
+        <!-- the top row and the recent list, which a wide window keeps in a
+         column of their own at its left, beside the drop zone or the file
+         open: the side (app.css) -->
+        <div class="pk-side">
+          <div class="pk-spread" data-tauri-drag-region="deep">
+            <button
+              class="pk-wm"
+              type="button"
+              data-about
+              data-t-aria-label="about.open"
+              data-t-title="about.open"
+            >
+              pktito
+            </button>
+            <button
+              class="pk-btn pk-btn-ghost"
+              id="ready-model"
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded="false"
+            ></button>
+          </div>
           <button
-            class="pk-wm"
+            class="pk-btn pk-side-choose"
+            id="side-choose"
             type="button"
-            data-about
-            data-t-aria-label="about.open"
-            data-t-title="about.open"
-          >
-            pktito
-          </button>
-          <button
-            class="pk-btn pk-btn-ghost"
-            id="ready-model"
-            type="button"
-            aria-haspopup="menu"
-            aria-expanded="false"
           ></button>
+          <section class="pk-recent" id="recent" hidden>
+            <div class="pk-spread">
+              <h2 class="pk-ui" data-t="recent.title"></h2>
+              <button
+                class="pk-btn pk-btn-ghost"
+                id="clear-recent"
+                type="button"
+                data-t-aria-label="recent.clear_label"
+                data-t="recent.clear"
+              ></button>
+            </div>
+            <ul id="recent-list"></ul>
+          </section>
         </div>
         <div class="pk-ready-drop">
           <div class="pk-ready-text">
@@ -53,19 +76,6 @@
             ></button>
           </div>
         </div>
-        <section class="pk-recent" id="recent" hidden>
-          <div class="pk-spread">
-            <h2 class="pk-ui" data-t="recent.title"></h2>
-            <button
-              class="pk-btn pk-btn-ghost"
-              id="clear-recent"
-              type="button"
-              data-t-aria-label="recent.clear_label"
-              data-t="recent.clear"
-            ></button>
-          </div>
-          <ul id="recent-list"></ul>
-        </section>
       </div>
     </section>
 

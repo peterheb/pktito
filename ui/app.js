@@ -310,15 +310,33 @@ function viewName() {
 /* The view in sight: About covers the one beneath, which goes on as ever. */
 const shown = () => (about ? "about" : viewName());
 
+/* The start screen's top row and recent list as a column at the window's
+   left, the side, where the window is wide enough for it and the work
+   beside it at 860 px (app.css, the side): "home" beside the drop zone,
+   while the list has anything in it, and "open" beside a file or the batch;
+   "" for none. */
+const wide = matchMedia("(min-width: 1160px)");
+function sideMode(v = viewName()) {
+  if (!wide.matches) return "";
+  if (v === "work" || v === "batch") return "open";
+  return v === "ready" && (recent.length || files.length) ? "home" : "";
+}
+
 function render() {
-  const v = viewName();
-  for (const id of ["setup", "ready", "batch", "work"]) $(id).hidden = id !== v;
+  const v = viewName(),
+    side = sideMode(v);
+  if (side) document.documentElement.dataset.side = side;
+  else delete document.documentElement.dataset.side;
+  for (const id of ["setup", "ready", "batch", "work"])
+    $(id).hidden = id !== v && !(id === "ready" && side === "open");
   if (v !== "work") pausePlayback();
   if (v === "setup") renderSetup();
   else if (v === "ready") renderReady();
   else if (v === "batch") renderBatch();
   else if (v === "work") renderWork();
+  if (side === "open") renderReady();
 }
+wide.addEventListener("change", () => render());
 
 async function refresh() {
   st = await invoke("status");
@@ -704,19 +722,31 @@ listen("download", async (e) => {
    screen shows a file, or a batch as one row. */
 function renderReady() {
   $("ready-model").innerHTML = `${esc(modelLabel(false))}${ICON.down}`;
-  $("choose").innerHTML = `${ICON.plus}${esc(t("ready.choose"))}`;
-  $("choose").title = tip(t("ready.choose_tip"), "O");
+  for (const b of [$("choose"), $("side-choose")]) {
+    b.innerHTML = `${ICON.plus}${esc(t("ready.choose"))}`;
+    b.title = tip(t("ready.choose_tip"), "O");
+  }
   $("recent").hidden = !recent.length && !files.length;
   $("ready").classList.toggle("has-recent", !$("recent").hidden);
   $("clear-recent").hidden = !recent.length;
+  // beside the side, the row of what is open marked: a file's, or the
+  // batch's; a file is its transcript's row once the list has it
+  const v = viewName(),
+    f = v === "work" ? current() : null,
+    at = (yes) => (yes ? ' aria-current="true"' : "");
   // each with the × that takes it off the list, over its date under the
   // pointer; from the keyboard, Delete
   $("recent-list").innerHTML =
-    (batch ? batchRowHtml() : files.map(liveHtml).join("")) +
+    (batch
+      ? batchRowHtml(v === "batch")
+      : files
+          .filter((x) => !recent.some((r) => r.id === x.recentId))
+          .map((x) => liveHtml(x, x === f))
+          .join("")) +
     recent
       .map(
         (r) =>
-          `<li class="pk-qi"><button class="pk-row" type="button" data-recent="${esc(r.id)}" title="${esc(r.path)}" aria-keyshortcuts="Delete">` +
+          `<li class="pk-qi"><button class="pk-row" type="button" data-recent="${esc(r.id)}" title="${esc(r.path)}" aria-keyshortcuts="Delete"${at(f && f.recentId === r.id)}>` +
           `${ICON.file}<span class="pk-name">${esc(r.name)}</span><span class="pk-stamp">${lengthHms(r.duration)}</span>` +
           `<span class="pk-small pk-when">${esc(when(r.finished))}</span></button><button class="pk-x" type="button" tabindex="-1" ` +
           `data-forget="${esc(r.id)}" aria-label="${esc(t("recent.remove", { name: r.name }))}" title="${esc(t("recent.remove_tip"))}">${ICON.x}</button></li>`,
@@ -724,12 +754,12 @@ function renderReady() {
       .join("");
 }
 
-const liveHtml = (f) =>
-  `<li><button class="pk-row" type="button" data-live="${f.id}" title="${esc(f.path)}">${rowBody(f)}</button></li>`;
+const liveHtml = (f, open = false) =>
+  `<li><button class="pk-row" type="button" data-live="${f.id}" title="${esc(f.path)}"${open ? ' aria-current="true"' : ""}>${rowBody(f)}</button></li>`;
 
 /* A batch on the start screen, under way or done since: how far it has
    got, all its files counted, and their length once every one is read. */
-function batchRowHtml() {
+function batchRowHtml(open = false) {
   const n = files.length,
     done = files.filter((f) => f.step === "done").length,
     over = files.filter((f) => !live(f)).length;
@@ -744,7 +774,7 @@ function batchRowHtml() {
       ? `<span class="pk-status pk-ok">${ICON.check}${esc(t("status.done"))}</span>`
       : `<span class="pk-status pk-num">${esc(t("batch.done_of", { done, n }))}</span>`;
   return (
-    `<li><button class="pk-row" type="button" data-batch title="${esc(files.map((x) => x.name).join("\n"))}">${ICON.folder}` +
+    `<li><button class="pk-row" type="button" data-batch title="${esc(files.map((x) => x.name).join("\n"))}"${open ? ' aria-current="true"' : ""}>${ICON.folder}` +
     `<span class="pk-name">${esc(fileCount(n))}</span><span class="pk-stamp">${length}</span>${status}</button></li>`
   );
 }
@@ -760,8 +790,9 @@ function updateLive(f) {
   const at = batch ? "[data-batch]" : `[data-live="${f.id}"]`,
     row = $("recent-list").querySelector(at);
   if (!row) return renderReady();
-  const focused = document.activeElement === row;
-  row.parentNode.outerHTML = batch ? batchRowHtml() : liveHtml(f);
+  const focused = document.activeElement === row,
+    open = row.getAttribute("aria-current") === "true";
+  row.parentNode.outerHTML = batch ? batchRowHtml(open) : liveHtml(f, open);
   if (focused) $("recent-list").querySelector(at).focus();
 }
 
@@ -825,7 +856,8 @@ async function forget(id) {
     await invoke("forget_recent", { id });
     const i = recent.findIndex((r) => r.id === id);
     recent = recent.filter((r) => r.id !== id);
-    renderReady();
+    // the side, which goes with the list's last row
+    render();
     // the keyboard on the row that took its place
     const rows = $("recent-list").querySelectorAll("[data-recent]");
     if (rows.length)
@@ -848,7 +880,8 @@ $("recent-list").onclick = (e) => {
   const x = e.target.closest("[data-forget]");
   if (x) return forget(x.dataset.forget);
   const b = e.target.closest("[data-recent], [data-live], [data-batch]");
-  if (!b) return;
+  if (!b || b.getAttribute("aria-current") === "true") return;
+  if (sideMode() === "open") leave();
   if (b.dataset.recent) return openRecent(b.dataset.recent);
   sel = b.dataset.live ? Number(b.dataset.live) : null;
   home = false;
@@ -898,6 +931,7 @@ $("clear-recent").onclick = async () => {
   }
 };
 $("choose").onclick = () => chooseFiles();
+$("side-choose").onclick = () => chooseFiles();
 $("ready-model").onclick = (e) => modelMenu(e.currentTarget, !e.detail);
 
 /* --------------------------------------------------------------- files -- */
@@ -1040,7 +1074,7 @@ async function finished(f) {
   }
   // a lone file finished while the start screen was shown is on the recent list now
   if (home && !batch) dropFile(f);
-  if (viewName() === "ready") renderReady();
+  if (viewName() === "ready" || sideMode() === "open") renderReady();
   if (plan && f.segments.length) await saveTo([f], plan.kind, plan.dir);
 }
 
@@ -1049,6 +1083,7 @@ function update(f, segs = []) {
   const v = viewName();
   if (v === "setup") return renderSetup();
   if (v === "ready") return updateLive(f);
+  if (sideMode(v) === "open") updateLive(f);
   if (v === "batch") return updateRow(f);
   if (v === "work" && f.id === sel) showMain(segs);
 }
@@ -1106,6 +1141,21 @@ function back() {
   }
   if (f && f.lone) dropFile(f);
   goHome();
+}
+
+/* What another of the side's rows leaves, as going back to the start and
+   choosing it there would: a file opened beside a batch closes, and so does
+   a lone file finished, stopped or failed, a finished transcript staying on
+   the recent list; one under way goes on, and a batch does too, unless it
+   is left done from its own screen. */
+function leave() {
+  const v = viewName(),
+    f = v === "work" ? current() : null;
+  closeMenu();
+  if (f && f.lone) dropFile(f);
+  else if (!batch) for (const x of files.filter((x) => !live(x))) dropFile(x);
+  else if (v === "batch" && !files.some(live)) closeFiles();
+  mainKey = "";
 }
 
 /* Back to the start. A lone file finished, stopped or failed is closed, a
