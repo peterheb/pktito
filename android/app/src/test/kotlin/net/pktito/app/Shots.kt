@@ -152,7 +152,7 @@ class Shots {
     @Composable
     private fun work(step: String, done: Double, rows: List<Seg> = segments, captions: Boolean = false, name: String = "wonderland_ch_01.flac",
                      position: Double = 0.0, playing: Boolean = false, error: String? = null,
-                     speed: Double = 1.0, volume: Double = 1.0, base: Timebase = Timebase(),
+                     speed: Double = 1.0, volume: Double = 1.0, muted: Boolean = false, base: Timebase = Timebase(),
                      find: Finder = Finder(), why: String? = null, locate: Boolean = false) =
         Work(
             name = name, step = step, done = done,
@@ -163,7 +163,7 @@ class Shots {
             pace = if (step == "transcribing") "57.9x real-time" else null,
             captions = captions, times = false, playable = step == "done" && why == null, playing = playing,
             position = position, list = rememberLazyListState(),
-            sound = Sound(speed, Player.SPEEDS, volume, false, {}, { _, _ -> }, {}), chosen = base,
+            sound = Sound(speed, Player.SPEEDS, volume, muted, {}, { _, _ -> }, {}), chosen = base,
             find = find, hits = if (step == "done") findIn(rows, find.query) else emptyList(), a = actions,
         )
 
@@ -291,6 +291,10 @@ class Shots {
     @Test fun speedMenuDark() = shot("speed", true, act = speedMenu) { work("done", 1.0) }
     // a speed other than 1× on play's ground, and the speaker's one wave under half the volume
     @Test fun doneSlowQuiet() = shot("done-1.5x-quiet", false) { work("done", 1.0, position = 30.0, speed = 1.5, volume = 0.3) }
+    // silent, muted or at none, the speaker lit, where there are keys and so a speaker
+    @Test fun doneMutedKeys() = shot("done-muted", false, keys = true) { work("done", 1.0, position = 30.0, muted = true) }
+    @Test fun doneMutedKeysDark() = shot("done-muted", true, keys = true) { work("done", 1.0, position = 30.0, muted = true) }
+    @Test fun doneNoneKeys() = shot("done-none", false, keys = true) { work("done", 1.0, position = 30.0, volume = 0.0) }
     @Test fun saveAsMenu() = shot("save-as", false, act = saveAs) { work("done", 1.0) }
     @Test fun saveAsMenuDark() = shot("save-as", true, act = saveAs) { work("done", 1.0) }
     @Test fun speedMenuKeys() = shot("speed", false, keys = true, act = speedMenu) { work("done", 1.0) }

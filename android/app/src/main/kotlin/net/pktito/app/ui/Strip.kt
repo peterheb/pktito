@@ -424,30 +424,35 @@ private fun Why(why: String, locate: (() -> Unit)?) {
  * The speaker, after the time (app.css, .pk-volbtn): it mutes, or muted or
  * at none brings the sound back. 25 dp tall in the times' 13, as the
  * slider is, so that their line stays as tall as at work, where they are
- * hidden.
+ * hidden. Silent, muted or at none, it is lit, its × in the strip's ground
+ * on the beak's orange: at 16 dp its three icons are too alike to tell
+ * silence by, and a mute that went unseen kept the S25 silent (Peter,
+ * 2026-10-27). The orange on the strip, and the × on it, 4.02:1 in light
+ * and 7.59 in dark, past the 3:1 a control's state needs.
  */
 @Composable
 private fun Speaker(sound: Sound, enabled: Boolean) {
     val p = pk
+    val silent = sound.muted || sound.volume == 0.0
     val v = if (sound.muted) 0.0 else sound.volume
     Box(
         Modifier
             .bleed(vertical = 6.dp)
             .alpha(if (enabled) 1f else 0.45f)
             .control(
-                CornerSm, onTerm = true, enabled = enabled,
-                label = stringResource(if (v == 0.0) R.string.volume_unmute else R.string.volume_mute),
+                CornerSm, if (silent) p.beak else Color.Transparent, onTerm = true, enabled = enabled,
+                label = stringResource(if (silent) R.string.volume_unmute else R.string.volume_mute),
                 onClick = sound.mute,
             )
             .padding(start = 6.dp, end = 6.dp, top = 4.dp, bottom = 5.dp),
     ) {
         Icon(
             when {
-                v == 0.0 -> Icons.volX
+                silent -> Icons.volX
                 v < 0.5 -> Icons.vol1
                 else -> Icons.vol2
             },
-            null, tint = p.termInk, modifier = Modifier.size(16.dp),
+            null, tint = if (silent) p.term else p.termInk, modifier = Modifier.size(16.dp),
         )
     }
 }
