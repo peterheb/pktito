@@ -343,7 +343,7 @@ fn frames(file: &mut File, len: u64) -> Option<Frames> {
         },
     };
     while let Some((frame, n)) = frame_at(&mut w, at, mpeg1, rate) {
-        if f.count % CHECK == 0 {
+        if f.count.is_multiple_of(CHECK) {
             f.marks.push(frame);
         }
         f.count += 1;
