@@ -1057,6 +1057,15 @@ html[data-chrome="win"] .pk-head {
   margin: 0;
   padding: 4px 6px 5px;
 }
+/* silent, muted or at 0: the speaker lit, its ✕ in the strip's colour on
+   the beak's. The icons alone, waves or a ✕ at 16 px, told too little:
+   Peter was left muted unawares on his phone (2026-10-27; the Android app
+   lights it the same way). 4.02:1 for the ✕ on the beak and the beak on
+   the strip in light, 7.59 in dark (tokens.css's --beak on --term). */
+.pk-volbtn.is-silent {
+  background-color: var(--beak);
+  color: var(--term);
+}
 .pk-vol-range {
   -webkit-appearance: none;
   appearance: none;

@@ -1762,6 +1762,7 @@ function showVolume() {
   $("vol").value = v;
   $("vol").style.setProperty("--v", `${v * 100}%`);
   $("mute").innerHTML = v === 0 ? ICON.volX : v < 0.5 ? ICON.vol1 : ICON.vol2;
+  $("mute").classList.toggle("is-silent", v === 0);
   $("mute").title = t(v === 0 ? "volume.unmute" : "volume.mute");
   $("mute").setAttribute("aria-label", $("mute").title);
 }
