@@ -755,10 +755,14 @@ html[data-chrome="win"] .pk-head {
    row and the list in a column of their own at its left, the side (app.js,
    sideMode): beside the drop zone while the list has anything in it, and
    beside a file or the batch open, whose row it marks; Choose stands in
-   there for the drop zone's. 300 px leaves the work 860, the narrowest it is
-   without a narrow window's rules (Find folds under 860): a window from
-   1160. A transcript's row puts its times under its name, which has the
-   side's width to itself. */
+   there for the drop zone's. A window from 920: the side at its least,
+   240, and the work at the 680 the window opens at; the side 300 from 980.
+   One column left the transcript's text at its 560 from a window of about
+   770, and everything past that empty beside it (436 px at 1160, where the
+   side first came; Peter, 2026-10-27). The work's narrow rules ask its own
+   width (.pk-work, a container), so beside the side it looks as a window
+   of its width does. A transcript's row puts its times under its name,
+   which has the side's width to itself. */
 .pk-side {
   display: contents;
 }
@@ -906,7 +910,11 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
 }
 
 /* ------------------------------------------------------------------ work -- */
+/* A container: the work's narrow rules (the rows' times above their text,
+   the edges closer in, Find folded) ask its width, which is the window's
+   in one column and the window's less the side's beside it (the side). */
 .pk-work {
+  container-type: inline-size;
   height: 100%;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -1955,10 +1963,10 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
     0 0 0 2px var(--hl),
     0 4px 0 0 var(--ink);
 }
-/* each row's time above its text up to 619 px: beside it, the times' column
-   left 51 characters a line at 577 px, and above it 68 (the window study,
-   2026-10-23) */
-@media (max-width: 619px) {
+/* each row's time above its text up to 619 px of the work (a window's
+   width in one column): beside it, the times' column left 51 characters a
+   line at 577 px, and above it 68 (the window study, 2026-10-23) */
+@container (max-width: 619px) {
   .pk-seg {
     grid-template-columns: 1fr;
     row-gap: 2px;
@@ -2007,6 +2015,15 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
     padding-left: 20px;
     padding-right: 20px;
   }
+  .pk-about-text {
+    padding: 24px 20px 28px;
+  }
+  .pk-about > .pk-back {
+    left: 8px;
+  }
+}
+/* and the work's, by its own width, which is the window's in one column */
+@container (max-width: 599px) {
   .pk-head {
     padding: 15px 16px;
   }
@@ -2024,12 +2041,6 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
   }
   .pk-transcript {
     padding: 0 16px;
-  }
-  .pk-about-text {
-    padding: 24px 20px 28px;
-  }
-  .pk-about > .pk-back {
-    left: 8px;
   }
 }
 
@@ -2106,9 +2117,9 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
   flex-basis: 280px;
   min-width: 190px;
 }
-/* folded to its icon where the header has no room for it, under 860px, and
-   opened by a click or the shortcut */
-@media (max-width: 859px) {
+/* folded to its icon where the header has no room for it, under 860 px of
+   the work, and opened by a click or the shortcut */
+@container (max-width: 859px) {
   .pk-find:not(:focus-within):not(.has-query) {
     flex: none;
     width: 32px;

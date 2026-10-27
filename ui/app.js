@@ -311,11 +311,15 @@ function viewName() {
 const shown = () => (about ? "about" : viewName());
 
 /* The start screen's top row and recent list as a column at the window's
-   left, the side, where the window is wide enough for it and the work
-   beside it at 860 px (app.css, the side): "home" beside the drop zone,
-   while the list has anything in it, and "open" beside a file or the batch;
-   "" for none. */
-const wide = matchMedia("(min-width: 1160px)");
+   left, the side, where the window holds it at its least beside the work at
+   the 680 px the window opens at, 920 (app.css, the side): "home" beside
+   the drop zone, while the list has anything in it, and "open" beside a
+   file or the batch; "" for none. */
+const SIDE = 300,
+  SIDE_MIN = 240,
+  SIDE_MAX = 480,
+  WORK_MIN = 680;
+const wide = matchMedia(`(min-width: ${SIDE_MIN + WORK_MIN}px)`);
 function sideMode(v = viewName()) {
   if (!wide.matches) return "";
   if (v === "work" || v === "batch") return "open";
@@ -325,11 +329,10 @@ function sideMode(v = viewName()) {
 /* The side's width: dragged at its edge, or fitted to its longest name by a
    double-click there, as a Finder column is; kept between runs
    (prefs.side, 0 for 300 px). Never under 240, where the model's button
-   meets the wordmark, nor past what leaves the work its 860 (Peter,
-   2026-10-27: a name a few pixels too long for 300). */
-const SIDE = 300,
-  SIDE_MIN = 240;
-const sideMax = () => Math.max(SIDE_MIN, innerWidth - 860);
+   meets the wordmark, nor over 480, nor past what leaves the work its 680
+   (Peter, 2026-10-27: a name a few pixels too long for 300). */
+const sideMax = () =>
+  Math.max(SIDE_MIN, Math.min(SIDE_MAX, innerWidth - WORK_MIN));
 const sideWidth = (w = prefs.side || SIDE) =>
   Math.round(Math.max(SIDE_MIN, Math.min(w, sideMax())));
 function showSide(w) {
