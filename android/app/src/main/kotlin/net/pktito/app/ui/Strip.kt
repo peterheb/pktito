@@ -92,10 +92,11 @@ fun stepped(speeds: List<Double>, now: Double, d: Int): Double =
  * A finger's strip (byFinger: no keyboard, so no trackpad, as on a phone
  * or a tablet) is a thumb's: play 48 dp, Android's least target, to the
  * desktop's 40; no speaker or slider, as the device's volume keys set the
- * level (Player.keysOnly); the ticks' lane 24 dp, where the times' line
- * had taken a thumb's taps under its 15 (the S25's mute, 2026-10-26); and
- * a drag on the waveform or the lane moves the playhead and the time with
- * the thumb, seeking where it is let go. 125 dp tall to the desktop's 116.
+ * level (Player.keysOnly); the ticks' lane 24 dp, 32 with ticks, where the
+ * times' line had taken a thumb's taps under its 15 (the S25's mute,
+ * 2026-10-26); and a drag on the waveform or the lane moves the playhead
+ * and the time with the thumb, seeking where it is let go. 125 dp tall to
+ * the desktop's 116.
  */
 @Composable
 fun Strip(
@@ -125,6 +126,14 @@ fun Strip(
     val silent = review && why != null
     val finger = byFinger()
     val button = if (finger) 48.dp else 40.dp
+    // while a search has ticks the waveform gives 8 dp to the gaps round them,
+    // 7 a side for 3, as the desktop's does (app.css, #strip.has-ticks): at 3
+    // the current tick, 3 dp longer each way than the others, met the bars
+    // above and the times' line below, and the desktop's lane read as crowded
+    // (Peter, 2026-10-27). The strip keeps its height, and play keeps to the
+    // waveform's middle.
+    val wave = if (ticks.isEmpty()) 64.dp else 56.dp
+    val gap = if (ticks.isEmpty()) 3.dp else 7.dp
     // where a thumb dragging on the waveform or the lane has the playhead, 0 to 1, until it lets go
     var scrub by remember { mutableStateOf<Double?>(null) }
     val seek by rememberUpdatedState(onSeek)
@@ -155,7 +164,7 @@ fun Strip(
         if (review && !silent)
             // play, and the speed at the foot, on the times' line (app.css, .pk-transport)
             Column(
-                Modifier.fillMaxHeight().padding(top = (64.dp - button) / 2),
+                Modifier.fillMaxHeight().padding(top = (wave - button) / 2),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
@@ -171,8 +180,8 @@ fun Strip(
                 Speed(sound, playable)
             }
         else if (!review)
-            Box(Modifier.padding(top = (64.dp - button) / 2)) { Ring(done, button) }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Box(Modifier.padding(top = (wave - button) / 2)) { Ring(done, button) }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(gap)) {
             val at = scrub ?: if (review) (if (duration > 0) position / duration else 0.0) else done
             Waveform(
                 peaks, at,
@@ -187,9 +196,10 @@ fun Strip(
                         else Modifier,
                     )
                     .then(dragged),
+                wave,
             )
             // the desktop's lane for a search's ticks, 9 dp, which keeps the strip its 116; a finger's, 18
-            Ticks(ticks, tickAt, onTick, finger, if (finger && review) seek else null, dragged)
+            Ticks(ticks, tickAt, onTick, finger, gap, if (finger && review) seek else null, dragged)
             if (silent) Why(why!!, locate)
             else TimesLine(
                 time = {
@@ -214,27 +224,27 @@ fun Strip(
 /**
  * A search's ticks in the lane under the waveform (app.css, .pk-ticks), each
  * match at its word's time, 2 dp of plume; the current one term-ink, 3 dp,
- * and taller by the lane's gaps, so that its shape tells it too. Drawn and
- * touched across the gaps, 15 dp, and a tap goes to the nearest tick within
- * 16 dp of it, the earlier where two are as near, as a click on the
+ * and 3 dp longer each way, so that its shape tells it too, 4 clear of the
+ * bars and of the times' line in gaps of 7 (Strip). Drawn and touched across
+ * the gaps, 23 dp, 15 with none to draw, and a tap goes to the nearest tick
+ * within 16 dp of it, the earlier where two are as near, as a click on the
  * desktop's does (f441c18): a tick is 9 wide there, and a finger is wider.
  * Over the times' line in touch: its controls reach 6 dp up into the lane
  * (bleed), and the line, after the lane, took the lower half of each tick
  * there; a tick tapped there muted the speaker (Peter's S25, 2026-10-26;
  * on the emulator, y 545 px of the lane's 516 to 558). A finger's lane
- * is 18 dp, 24 touched, at work too, so that the strip keeps its height;
- * in review a tap there with no tick near seeks there (miss), as one on
- * the waveform does, where the desktop's does nothing, and a drag along it
- * is the thumb's along the waveform (dragged): after the lane's own
- * modifiers, so that it has the lane's 24 dp, the bled ones too, which
- * lint's rule for a Modifier parameter, named modifier and first in the
- * chain, would take from it.
+ * is 18 dp, at work too, so that the strip keeps its height, and touched
+ * across 32, 24 with no ticks; in review a tap there with no tick near
+ * seeks there (miss), as one on the waveform does, where the desktop's
+ * does nothing, and a drag along it is the thumb's along the waveform
+ * (dragged): after the lane's own modifiers, so that it has all of the
+ * lane's height, the bled gaps too, which lint's rule for a Modifier
+ * parameter, named modifier and first in the chain, would take from it.
  */
 @Suppress("ModifierParameter")
 @Composable
-private fun Ticks(ticks: List<Double>, at: Int, onTick: (Int) -> Unit, finger: Boolean, miss: ((Double) -> Unit)?, dragged: Modifier) {
+private fun Ticks(ticks: List<Double>, at: Int, onTick: (Int) -> Unit, finger: Boolean, gap: Dp, miss: ((Double) -> Unit)?, dragged: Modifier) {
     val p = pk
-    val gap = 3.dp
     val tick by rememberUpdatedState(onTick)
     val missed by rememberUpdatedState(miss)
     Canvas(
@@ -260,7 +270,8 @@ private fun Ticks(ticks: List<Double>, at: Int, onTick: (Int) -> Unit, finger: B
         for ((k, t) in ticks.withIndex())
             if (k != at) drawLine(p.plume, Offset(t.toFloat() * size.width, g), Offset(t.toFloat() * size.width, size.height - g), 2.dp.toPx())
         ticks.getOrNull(at)?.let { t ->
-            drawLine(p.termInk, Offset(t.toFloat() * size.width, 0f), Offset(t.toFloat() * size.width, size.height), 3.dp.toPx())
+            val out = g - 3.dp.toPx()
+            drawLine(p.termInk, Offset(t.toFloat() * size.width, out), Offset(t.toFloat() * size.width, size.height - out), 3.dp.toPx())
         }
     }
 }
@@ -557,7 +568,7 @@ private fun Ring(done: Double, side: Dp) {
  * No outline yet: the empty strip's bars, 3 dp each.
  */
 @Composable
-fun Waveform(peaks: ByteArray?, at: Double, modifier: Modifier = Modifier) {
+fun Waveform(peaks: ByteArray?, at: Double, modifier: Modifier = Modifier, height: Dp = 64.dp) {
     val p = pk
     val range = remember(peaks) {
         if (peaks == null || peaks.isEmpty()) 0.0 to 255.0
@@ -568,7 +579,7 @@ fun Waveform(peaks: ByteArray?, at: Double, modifier: Modifier = Modifier) {
             lo to maxOf(hi, lo + 16)
         }
     }
-    Canvas(modifier.fillMaxWidth().height(64.dp)) {
+    Canvas(modifier.fillMaxWidth().height(height)) {
         val bar = 2.dp.toPx()
         val gap = 1.dp.toPx()
         val n = maxOf(1, floor((size.width + gap) / (bar + gap)).toInt())
