@@ -35,11 +35,13 @@ import net.pktito.app.ui.About
 import net.pktito.app.ui.Finder
 import net.pktito.app.ui.findIn
 import net.pktito.app.ui.ModelButton
+import net.pktito.app.ui.Opened
 import net.pktito.app.ui.PktitoTheme
 import net.pktito.app.ui.Ready
 import net.pktito.app.ui.ReadyActions
 import net.pktito.app.ui.Setup
 import net.pktito.app.ui.SetupActions
+import net.pktito.app.ui.Side
 import net.pktito.app.ui.Sound
 import net.pktito.app.ui.Timebase
 import net.pktito.app.ui.Work
@@ -92,6 +94,8 @@ class Shots {
             when {
                 tab == 1 -> "w1205dp-h753dp-xhdpi"
                 tab == 2 -> "w753dp-h1205dp-xhdpi"
+                // the least window with the side (MainActivity, sided)
+                tab == 3 -> "w840dp-h480dp-xhdpi"
                 land -> "w1100dp-h760dp-xhdpi"
                 // a phone on its side, the emulator's Pixel 5
                 short -> "w851dp-h393dp-xxhdpi"
@@ -113,7 +117,7 @@ class Shots {
             }
         }
         val dir = File("build/shots").apply { mkdirs() }
-        val size = if (tab == 1) "-tab-land" else if (tab == 2) "-tab-port" else if (land) "-land" else if (short) "-short" else if (window) "-window" else if (wide) "-wide" else ""
+        val size = if (tab == 1) "-tab-land" else if (tab == 2) "-tab-port" else if (tab == 3) "-840x480" else if (land) "-land" else if (short) "-short" else if (window) "-window" else if (wide) "-wide" else ""
         val file = File(dir, "$name${if (keys) "-keys" else ""}-${if (dark) "dark" else "light"}$size.png")
         val node = act?.invoke() ?: compose.onRoot()
         file.outputStream().use { node.captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it) }
@@ -146,12 +150,12 @@ class Shots {
         }
 
     @Composable
-    private fun work(step: String, done: Double, rows: List<Seg> = segments, captions: Boolean = false,
+    private fun work(step: String, done: Double, rows: List<Seg> = segments, captions: Boolean = false, name: String = "wonderland_ch_01.flac",
                      position: Double = 0.0, playing: Boolean = false, error: String? = null,
                      speed: Double = 1.0, volume: Double = 1.0, base: Timebase = Timebase(),
                      find: Finder = Finder(), why: String? = null, locate: Boolean = false) =
         Work(
-            name = "wonderland_ch_01.flac", step = step, done = done,
+            name = name, step = step, done = done,
             duration = if (step == "reading" || step == "loading") 0.0 else 640.505,
             peaks = if (step == "reading" || step == "loading") null else peaks,
             rows = rows, error = error, why = why, locate = if (locate) ({}) else null,
@@ -342,6 +346,42 @@ class Shots {
     @Test fun tabReadyLand() = shot("ready-recent", false, tab = 1) { Ready(recent, readyActions, models) }
     @Test fun tabReadyPort() = shot("ready-recent", false, tab = 2) { Ready(recent, readyActions, models) }
     @Test fun tabCaptionsLand() = shot("captions", false, tab = 1) { work("done", 1.0, cues, captions = true, position = 12.0) }
+    // the side, where the window has room for it: beside the drop zone, beside
+    // a transcript of the list, marked, and heading the list with one under
+    // way, its rows waiting, or stopped
+    private val opened = Opened("5", "wonderland_ch_01.flac", "done", 1.0)
+    @Test fun sideReady() = shot("side-ready", false, tab = 1) { Side(recent, readyActions, null, models) {} }
+    @Test fun sideReadyDark() = shot("side-ready", true, tab = 1) { Side(recent, readyActions, null, models) {} }
+    @Test fun sideDone() = shot("side-done", false, tab = 1) { Side(recent, readyActions, opened, models) { work("done", 1.0, position = 30.0, playing = true) } }
+    @Test fun sideDoneDark() = shot("side-done", true, tab = 1) { Side(recent, readyActions, opened, models) { work("done", 1.0, position = 30.0, playing = true) } }
+    @Test fun sideDoneKeys() = shot("side-done", false, keys = true, tab = 1) { Side(recent, readyActions, opened, models) { work("done", 1.0, position = 30.0, playing = true) } }
+    @Test fun sideFind() = shot("side-find", false, tab = 1) {
+        Side(recent, readyActions, opened, models) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
+    }
+    @Test fun sideTranscribing() = shot("side-transcribing", false, tab = 1) {
+        Side(recent, readyActions, Opened("6", "wonderland_ch_02.flac", "transcribing", 0.42), models) {
+            work("transcribing", 0.42, segments.take(6), name = "wonderland_ch_02.flac")
+        }
+    }
+    @Test fun sideTranscribingDark() = shot("side-transcribing", true, tab = 1) {
+        Side(recent, readyActions, Opened("6", "wonderland_ch_02.flac", "transcribing", 0.42), models) {
+            work("transcribing", 0.42, segments.take(6), name = "wonderland_ch_02.flac")
+        }
+    }
+    @Test fun sideStopped() = shot("side-stopped", false, tab = 1) {
+        Side(recent.take(2), readyActions, Opened("6", "wonderland_ch_02.flac", "stopped", 0.42), models) {
+            work("stopped", 0.42, segments.take(6), name = "wonderland_ch_02.flac")
+        }
+    }
+    @Test fun sideFirst() = shot("side-first", false, tab = 1) {
+        Side(emptyList(), readyActions, Opened("6", "wonderland_ch_01.flac", "transcribing", 0.42), models) {
+            work("transcribing", 0.42, segments.take(6))
+        }
+    }
+    @Test fun sideLeast() = shot("side-done", false, tab = 3) { Side(recent, readyActions, opened, models) { work("done", 1.0, position = 30.0, playing = true) } }
+    @Test fun sideLeastFind() = shot("side-find", false, tab = 3) {
+        Side(recent, readyActions, opened, models) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
+    }
     @Test fun error() = shot("error", false) {
         work("error", 0.0, emptyList(), error = "Can't read this file (Android has no decoder for audio/alac)")
     }

@@ -23,7 +23,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -53,11 +53,13 @@ import kotlinx.coroutines.withContext
 import net.pktito.app.ui.About
 import net.pktito.app.ui.Finder
 import net.pktito.app.ui.ModelButton
+import net.pktito.app.ui.Opened
 import net.pktito.app.ui.PktitoTheme
 import net.pktito.app.ui.Ready
 import net.pktito.app.ui.ReadyActions
 import net.pktito.app.ui.Setup
 import net.pktito.app.ui.SetupActions
+import net.pktito.app.ui.Side
 import net.pktito.app.ui.Sound
 import net.pktito.app.ui.Timebase
 import net.pktito.app.ui.Toast
@@ -279,7 +281,7 @@ class MainActivity : ComponentActivity() {
             if (t.running && t.segments.isNotEmpty() && last >= t.segments.size - 3)
                 list.animateScrollToItem(t.segments.size - 1)
         }
-        LaunchedEffect(review) {
+        LaunchedEffect(review, t.id) {
             if (review) list.scrollToItem(0)
         }
         // the row playing kept in sight
@@ -315,12 +317,115 @@ class MainActivity : ComponentActivity() {
         BackHandler(enabled = t.step.isNotEmpty() && finder.searching) { finder.clear() }
         BackHandler(enabled = about) { about = false }
 
-        Box(
+        val readyActions = ReadyActions(
+            choose = { open.launch(MEDIA) },
+            about = { about = true },
+            // another of the side's rows: the transcript open let go first
+            open = { id ->
+                if (t.step.isNotEmpty()) leave()
+                openRecent(id)
+            },
+            forget = { Recents.forget(this@MainActivity, it) },
+            clear = { Recents.clear(this@MainActivity) },
+        )
+        val model = @Composable {
+            ModelButton(
+                Models.offers, Models.model, Models.own?.name,
+                onPick = { o ->
+                    if (!o.have) download(o)
+                    else {
+                        Models.use(this@MainActivity, o.name)
+                        Models.refresh(this@MainActivity)
+                        toast = getString(R.string.models_using, Models.label(resources, o.key))
+                    }
+                },
+                onOwnFile = { pickModel.launch(arrayOf("*/*")) },
+            )
+        }
+        val work = @Composable {
+            Work(
+                name = t.name,
+                step = t.step,
+                done = t.done,
+                duration = t.duration,
+                peaks = t.peaks,
+                rows = rows,
+                error = t.error,
+                why = t.why,
+                locate = if (t.locate) ({ locate.launch(MEDIA) }) else null,
+                stats = if (review && t.segments.isNotEmpty() && t.transcribed > 0)
+                    getString(R.string.stats_transcribed, clock(t.transcribed), pace(t.done * t.duration, t.transcribed))
+                else null,
+                pace = if (t.step == "transcribing" && t.done > 0 && t.transcribed > 0) pace(t.done * t.duration, t.transcribed) else null,
+                captions = captions,
+                times = times,
+                playable = Player.ready,
+                playing = Player.playing,
+                position = Player.position,
+                list = list,
+                chosen = base.copy(video = t.fps),
+                find = finder,
+                hits = hits,
+                sound = Sound(
+                    speed = Player.speed,
+                    speeds = Player.SPEEDS,
+                    volume = Player.volume,
+                    muted = Player.muted,
+                    setSpeed = ::setSpeed,
+                    setVolume = { v, kept ->
+                        Player.changeVolume(v)
+                        if (kept) prefs.edit().putFloat("volume", v.toFloat()).apply()
+                    },
+                    // unmuting at none sets it to full, which is kept
+                    mute = {
+                        Player.toggleMute()
+                        prefs.edit().putFloat("volume", Player.volume.toFloat()).apply()
+                    },
+                ),
+                a = WorkActions(
+                    back = ::back,
+                    stop = { Engine.stop() },
+                    copy = ::copy,
+                    share = ::share,
+                    save = ::save,
+                    setTimes = {
+                        times = it
+                        prefs.edit().putBoolean("times", it).apply()
+                    },
+                    setCaptions = {
+                        captions = it
+                        prefs.edit().putBoolean("captions", it).apply()
+                    },
+                    play = { Player.toggle(this@MainActivity) },
+                    seek = { s, play ->
+                        Player.seek(this@MainActivity, s, play)
+                        finder.follow(hits, Player.position, true)
+                    },
+                    setBase = {
+                        base = it
+                        prefs.edit()
+                            .putBoolean("frames", it.frames)
+                            .putFloat("fps", it.fps.toFloat())
+                            .putBoolean("video_rate", it.videoRate)
+                            .apply()
+                    },
+                ),
+            )
+        }
+        BoxWithConstraints(
             Modifier
                 .fillMaxSize()
                 .background(pk.ground)
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
+            // the side (Side) where a list and what it opens fit side by side:
+            // Material's expanded width, 840 dp, which leaves the work 540,
+            // where its rows stack (Rows, under 620) and Find keeps the views
+            // line (Views, from 480); and 480 tall, which keeps a phone on its
+            // side one column (the emulator's Pixel 5, 851 by 393). The Tab S7
+            // FE has it on its side, 1205 by 753 less its bars, and not
+            // upright, 753 wide
+            val sided = maxWidth >= 840.dp && maxHeight >= 480.dp
             if (about)
                 About(version, onBack = { about = false }, onLink = ::link)
             else if (t.step.isEmpty() && setup)
@@ -342,99 +447,12 @@ class MainActivity : ComponentActivity() {
                         about = { about = true },
                     ),
                 )
+            else if (sided && (t.step.isNotEmpty() || Recents.items.isNotEmpty()))
+                Side(Recents.items, readyActions, if (t.step.isEmpty()) null else Opened(t.id, t.name, t.step, t.done), model, work)
             else if (t.step.isEmpty())
-                Ready(
-                    Recents.items,
-                    ReadyActions(
-                        choose = { open.launch(MEDIA) },
-                        about = { about = true },
-                        open = ::openRecent,
-                        forget = { Recents.forget(this@MainActivity, it) },
-                        clear = { Recents.clear(this@MainActivity) },
-                    ),
-                ) {
-                    ModelButton(
-                        Models.offers, Models.model, Models.own?.name,
-                        onPick = { o ->
-                            if (!o.have) download(o)
-                            else {
-                                Models.use(this@MainActivity, o.name)
-                                Models.refresh(this@MainActivity)
-                                toast = getString(R.string.models_using, Models.label(resources, o.key))
-                            }
-                        },
-                        onOwnFile = { pickModel.launch(arrayOf("*/*")) },
-                    )
-                }
+                Ready(Recents.items, readyActions, model)
             else
-                Work(
-                    name = t.name,
-                    step = t.step,
-                    done = t.done,
-                    duration = t.duration,
-                    peaks = t.peaks,
-                    rows = rows,
-                    error = t.error,
-                    why = t.why,
-                    locate = if (t.locate) ({ locate.launch(MEDIA) }) else null,
-                    stats = if (review && t.segments.isNotEmpty() && t.transcribed > 0)
-                        getString(R.string.stats_transcribed, clock(t.transcribed), pace(t.done * t.duration, t.transcribed))
-                    else null,
-                    pace = if (t.step == "transcribing" && t.done > 0 && t.transcribed > 0) pace(t.done * t.duration, t.transcribed) else null,
-                    captions = captions,
-                    times = times,
-                    playable = Player.ready,
-                    playing = Player.playing,
-                    position = Player.position,
-                    list = list,
-                    chosen = base.copy(video = t.fps),
-                    find = finder,
-                    hits = hits,
-                    sound = Sound(
-                        speed = Player.speed,
-                        speeds = Player.SPEEDS,
-                        volume = Player.volume,
-                        muted = Player.muted,
-                        setSpeed = ::setSpeed,
-                        setVolume = { v, kept ->
-                            Player.changeVolume(v)
-                            if (kept) prefs.edit().putFloat("volume", v.toFloat()).apply()
-                        },
-                        // unmuting at none sets it to full, which is kept
-                        mute = {
-                            Player.toggleMute()
-                            prefs.edit().putFloat("volume", Player.volume.toFloat()).apply()
-                        },
-                    ),
-                    a = WorkActions(
-                        back = ::back,
-                        stop = { Engine.stop() },
-                        copy = ::copy,
-                        share = ::share,
-                        save = ::save,
-                        setTimes = {
-                            times = it
-                            prefs.edit().putBoolean("times", it).apply()
-                        },
-                        setCaptions = {
-                            captions = it
-                            prefs.edit().putBoolean("captions", it).apply()
-                        },
-                        play = { Player.toggle(this@MainActivity) },
-                        seek = { s, play ->
-                            Player.seek(this@MainActivity, s, play)
-                            finder.follow(hits, Player.position, true)
-                        },
-                        setBase = {
-                            base = it
-                            prefs.edit()
-                                .putBoolean("frames", it.frames)
-                                .putFloat("fps", it.fps.toFloat())
-                                .putBoolean("video_rate", it.videoRate)
-                                .apply()
-                        },
-                    ),
-                )
+                work()
             toast?.let { Toast(it, Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp)) }
         }
     }
@@ -507,6 +525,8 @@ class MainActivity : ComponentActivity() {
     private fun start(uri: Uri) {
         // a recording opened or shared to pktito while About is up is shown at work
         about = false
+        // one chosen in the side, or shared, while a transcript is open lets it go first
+        if (Transcriber.step.isNotEmpty() && !Transcriber.running) leave()
         startForegroundService(
             Intent(this, TranscribeService::class.java)
                 .setData(uri)
@@ -552,13 +572,22 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun back() {
+        leave()
+        Transcriber.clear()
+    }
+
+    /**
+     * The transcript on the screen let go, as Back lets it go, its screen kept
+     * until the next one takes its place: another of the side's rows, or a
+     * recording chosen there or shared (app.js, leave).
+     */
+    private fun leave() {
         finder.clear()
         Player.release(this)
         // the copy of a shared recording whose transcript is not on the list,
         // stopped or failed, goes with it
         val id = Transcriber.id
         if (id.isNotEmpty() && Recents.items.none { it.id == id }) Recents.copyOf(this, id).delete()
-        Transcriber.clear()
     }
 
     /** A transcript of the recent list on the screen again (app.js, openRecent); one that cannot be read, said so. */

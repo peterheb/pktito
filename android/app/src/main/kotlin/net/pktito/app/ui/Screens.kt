@@ -69,6 +69,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -77,6 +78,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -114,7 +116,6 @@ class ReadyActions(
  */
 @Composable
 fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> Unit) {
-    val p = pk
     var asking by remember { mutableStateOf(false) }
     val listed = recent.isNotEmpty()
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = if (listed) Alignment.TopCenter else Alignment.Center) {
@@ -134,38 +135,107 @@ fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> 
                 .padding(horizontal = 20.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                WordmarkButton(a.about)
-                Spacer(Modifier.weight(1f))
-                model()
-            }
-            // its dashes 6.2:1 on the surface inside, 6.8 on the ground
-            // outside, past the 3:1 a boundary needs (app.css, .pk-ready-drop)
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .background(p.surface, Corner)
-                    .drawBehind {
-                        val w = 2.dp.toPx()
-                        drawRoundRect(
-                            p.inkMuted, Offset(w / 2, w / 2), size.copy(size.width - w, size.height - w),
-                            CornerRadius(Radius.radiusUi.toPx()),
-                            style = Stroke(w, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx()))),
-                        )
-                    }
-                    .padding(horizontal = 24.dp, vertical = 36.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Text(
-                    stringResource(R.string.ready_lead),
-                    style = Type.lead.copy(fontSize = 22.sp),
-                    color = p.ink,
-                    textAlign = TextAlign.Center,
-                )
-                PkButton(stringResource(R.string.choose), a.choose, kind = Kind.Primary, large = true)
-            }
+            TopRow(a, model)
+            Drop(a, Modifier.fillMaxWidth())
             if (listed) Recent(recent, a, onClear = { asking = true }, scrolls = !short, if (short) Modifier else Modifier.weight(1f))
+        }
+    }
+    if (asking)
+        AskClear(
+            onClear = {
+                asking = false
+                a.clear()
+            },
+            onCancel = { asking = false },
+        )
+}
+
+/** The start screen's top row: the wordmark, which opens About, and the model in use, its menu (ModelButton). */
+@Composable
+private fun TopRow(a: ReadyActions, model: @Composable () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        WordmarkButton(a.about)
+        Spacer(Modifier.weight(1f))
+        model()
+    }
+}
+
+/**
+ * The drop zone (app.css, .pk-ready-drop): the prompt and Choose in a dashed
+ * zone, its dashes 6.2:1 on the surface inside, 6.8 on the ground outside,
+ * past the 3:1 a boundary needs.
+ */
+@Composable
+private fun Drop(a: ReadyActions, modifier: Modifier) {
+    val p = pk
+    Column(
+        modifier
+            .background(p.surface, Corner)
+            .drawBehind {
+                val w = 2.dp.toPx()
+                drawRoundRect(
+                    p.inkMuted, Offset(w / 2, w / 2), size.copy(size.width - w, size.height - w),
+                    CornerRadius(Radius.radiusUi.toPx()),
+                    style = Stroke(w, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx()))),
+                )
+            }
+            .padding(horizontal = 24.dp, vertical = 36.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(
+            stringResource(R.string.ready_lead),
+            style = Type.lead.copy(fontSize = 22.sp),
+            color = p.ink,
+            textAlign = TextAlign.Center,
+        )
+        PkButton(stringResource(R.string.choose), a.choose, kind = Kind.Primary, large = true)
+    }
+}
+
+/** A transcript open beside the side, as its row there says it (LiveRow): how far it has got, by the desktop's steps. */
+class Opened(val id: String, val name: String, val step: String, val done: Double) {
+    val running: Boolean
+        get() = step == "loading" || step == "reading" || step == "transcribing"
+}
+
+/**
+ * A window with room for the work beside it (MainActivity, sided) keeps the
+ * start screen's top row and recent list in a column at its left, the side,
+ * as the desktop's does from 1160 px (app.css, the side): beside the drop
+ * zone while the list has anything in it (open, null), and beside the
+ * transcript open, whose row it marks, or heads the list with where the
+ * list does not have it (LiveRow); Choose a file… stands in there for the
+ * zone's. 300 dp, the desktop's 300 px. Another row there leaves the one
+ * open as Back would, and opens (ReadyActions.open). While a transcription
+ * runs, the rows and Choose wait for it, dimmed: Android transcribes one
+ * file at a time, and a phone has no way back from one under way either.
+ */
+@Composable
+fun Side(recent: List<Recents.Item>, a: ReadyActions, open: Opened?, model: @Composable () -> Unit, work: @Composable () -> Unit) {
+    val p = pk
+    var asking by remember { mutableStateOf(false) }
+    val running = open?.running == true
+    val live = open?.takeIf { o -> recent.none { it.id == o.id } }
+    Row(Modifier.fillMaxSize()) {
+        Column(
+            Modifier
+                .width(300.dp)
+                .fillMaxHeight()
+                // its edge, the desktop's border-right
+                .drawBehind { drawRect(p.sunk, Offset(size.width - 1.dp.toPx(), 0f), Size(1.dp.toPx(), size.height)) }
+                .padding(start = 20.dp, top = 20.dp, end = 16.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            TopRow(a, model)
+            if (open != null) PkButton(stringResource(R.string.choose), a.choose, Modifier.fillMaxWidth(), enabled = !running)
+            if (recent.isNotEmpty() || live != null)
+                Recent(recent, a, onClear = { asking = true }, scrolls = true, Modifier.weight(1f), top = 4.dp, open = open?.id, live = live, enabled = !running)
+        }
+        Box(Modifier.weight(1f).fillMaxHeight()) {
+            // the zone in the middle, 560 wide, 40 from either edge at the least
+            if (open == null) Drop(a, Modifier.align(Alignment.Center).padding(horizontal = 40.dp).widthIn(max = 560.dp).fillMaxWidth())
+            else work()
         }
     }
     if (asking)
@@ -187,10 +257,16 @@ fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> 
  * 440 dp wide, the desktop's narrowest window's (480 less its margins),
  * which leaves a name 250; on a phone, narrower, its length and date go
  * under its name, which keeps the width. scrolls: the list scrolls under
- * its heading, else it is all there, for a screen that scrolls (Ready).
+ * its heading, else it is all there, for a screen that scrolls (Ready). In
+ * the side, the row of the transcript open is marked (open), one the list
+ * does not have heads it (live), and while one is under way the rows and
+ * Clear wait (enabled); Clear goes with the last of the list's own.
  */
 @Composable
-private fun Recent(items: List<Recents.Item>, a: ReadyActions, onClear: () -> Unit, scrolls: Boolean, modifier: Modifier) {
+private fun Recent(
+    items: List<Recents.Item>, a: ReadyActions, onClear: () -> Unit, scrolls: Boolean, modifier: Modifier,
+    top: Dp = 8.dp, open: String? = null, live: Opened? = null, enabled: Boolean = true,
+) {
     val p = pk
     val rows = remember { mutableMapOf<String, FocusRequester>() }
     val now by rememberUpdatedState(items)
@@ -202,7 +278,7 @@ private fun Recent(items: List<Recents.Item>, a: ReadyActions, onClear: () -> Un
         now.getOrNull(minOf(i, now.size - 1))?.let { runCatching { rows[it.id]?.requestFocus() } }
         refocus = null
     }
-    Column(modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(modifier.padding(top = top), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
             Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -211,15 +287,17 @@ private fun Recent(items: List<Recents.Item>, a: ReadyActions, onClear: () -> Un
             // the list's one action, a ghost button as small as the heading,
             // its padding outside it so that its word ends over the dates,
             // in their grey (app.css, #clear-recent)
-            Text(
-                stringResource(R.string.recent_clear),
-                style = Type.ui.copy(fontSize = 13.sp),
-                color = p.inkMuted,
-                modifier = Modifier
-                    .bleed(8.dp, 11.dp)
-                    .control(Corner, label = stringResource(R.string.recent_clear_label), onClick = onClear)
-                    .padding(horizontal = 8.dp, vertical = 11.dp),
-            )
+            if (items.isNotEmpty())
+                Text(
+                    stringResource(R.string.recent_clear),
+                    style = Type.ui.copy(fontSize = 13.sp),
+                    color = p.inkMuted,
+                    modifier = Modifier
+                        .bleed(8.dp, 11.dp)
+                        .then(if (enabled) Modifier else Modifier.alpha(0.45f))
+                        .control(Corner, enabled = enabled, label = stringResource(R.string.recent_clear_label), onClick = onClear)
+                        .padding(horizontal = 8.dp, vertical = 11.dp),
+                )
         }
         BoxWithConstraints(if (scrolls) Modifier.weight(1f) else Modifier) {
             val oneLine = maxWidth >= 440.dp
@@ -230,7 +308,7 @@ private fun Recent(items: List<Recents.Item>, a: ReadyActions, onClear: () -> Un
                     onDispose { rows.remove(r.id) }
                 }
                 RecentRow(
-                    r, oneLine, focus,
+                    r, oneLine, focus, current = r.id == open, enabled = enabled,
                     onOpen = { a.open(r.id) },
                     onForget = { keys ->
                         if (keys) refocus = i
@@ -240,10 +318,12 @@ private fun Recent(items: List<Recents.Item>, a: ReadyActions, onClear: () -> Un
             }
             if (scrolls)
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    if (live != null) item(key = "live") { LiveRow(live) }
                     itemsIndexed(items, key = { _, r -> r.id }) { i, r -> row(i, r) }
                 }
             else
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    if (live != null) LiveRow(live)
                     items.forEachIndexed { i, r -> key(r.id) { row(i, r) } }
                 }
         }
@@ -253,9 +333,16 @@ private fun Recent(items: List<Recents.Item>, a: ReadyActions, onClear: () -> Un
 /** A recent row's name (app.css, .pk-row .pk-name). */
 private val rowName = Type.ui.copy(lineHeight = 1.3.em)
 
-/** onForget: true from the keyboard, which then goes on to the next row. */
+/**
+ * onForget: true from the keyboard, which then goes on to the next row. The
+ * transcript open beside the side (current) is on the surface, as the
+ * desktop's row with aria-current, and a tap there is the one already open.
+ */
 @Composable
-private fun RecentRow(r: Recents.Item, oneLine: Boolean, focus: FocusRequester, onOpen: () -> Unit, onForget: (keys: Boolean) -> Unit) {
+private fun RecentRow(
+    r: Recents.Item, oneLine: Boolean, focus: FocusRequester, current: Boolean, enabled: Boolean,
+    onOpen: () -> Unit, onForget: (keys: Boolean) -> Unit,
+) {
     val p = pk
     var menu by remember { mutableStateOf(false) }
     val hover = remember { MutableInteractionSource() }
@@ -266,11 +353,15 @@ private fun RecentRow(r: Recents.Item, oneLine: Boolean, focus: FocusRequester, 
     val stamp = Type.stamp.copy(fontFeatureSettings = "tnum")
     // the row's hover is its box's, which holds the × too: on the × the row
     // would lose it, and the × with it
-    Box(Modifier.fillMaxWidth().hoverable(hover)) {
+    Box(Modifier.fillMaxWidth().then(if (enabled) Modifier else Modifier.alpha(0.45f)).hoverable(hover)) {
         Row(
             Modifier
                 .focusRequester(focus)
-                .control(Corner, onLongClick = { menu = true }, onClick = onOpen)
+                .control(
+                    Corner, if (current) p.surface else Color.Transparent, enabled = enabled,
+                    onLongClick = { menu = true }, onClick = { if (!current) onOpen() },
+                )
+                .then(if (current) Modifier.semantics { selected = true } else Modifier)
                 .onKeyEvent { e ->
                     val del = e.type == KeyEventType.KeyDown && (e.key == Key.Delete || e.key == Key.Backspace)
                     if (del) onForget(true)
@@ -303,7 +394,7 @@ private fun RecentRow(r: Recents.Item, oneLine: Boolean, focus: FocusRequester, 
         }
         // its × over its date under a mouse, as the desktop's (app.css,
         // .pk-x), out of the keys' way: Delete is theirs
-        if (hovered)
+        if (hovered && enabled)
             Box(
                 Modifier
                     .align(Alignment.CenterEnd)
@@ -317,6 +408,44 @@ private fun RecentRow(r: Recents.Item, oneLine: Boolean, focus: FocusRequester, 
             Item(stringResource(R.string.recent_remove_item), null, note = AnnotatedString(stringResource(R.string.recent_remove_note))) {
                 menu = false
                 onForget(false)
+            }
+        }
+    }
+}
+
+/**
+ * The transcript open beside the side that the list does not have (app.js,
+ * liveHtml): under way, stopped or failed, or taken off the list; its name,
+ * and under it how far it has got (rowBody), on the open row's surface.
+ */
+@Composable
+private fun LiveRow(o: Opened) {
+    val p = pk
+    val pct = (o.done * 100).toInt()
+    val (status, ink) = when (o.step) {
+        "loading" -> stringResource(R.string.status_loading) to p.inkMuted
+        "reading" -> stringResource(R.string.status_reading) to p.inkMuted
+        "transcribing" -> stringResource(R.string.status_transcribing, pct) to p.inkMuted
+        "stopped" -> stringResource(R.string.status_stopped_at, pct) to p.inkMuted
+        "done" -> stringResource(R.string.status_done) to p.ok
+        else -> stringResource(R.string.status_failed) to p.err
+    }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .background(p.surface, Corner)
+            .semantics(mergeDescendants = true) { selected = true }
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(Icons.file, null, tint = p.ink, modifier = Modifier.size(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text(o.name, style = rowName, color = p.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (o.step == "done") Icon(Icons.check, null, tint = ink, modifier = Modifier.size(14.dp))
+                Text(status, style = Type.small, color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
