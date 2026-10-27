@@ -139,6 +139,8 @@ pub struct Prefs {
     pub speed: f64,
     /// Playback's volume, 0 to 1.
     pub volume: f64,
+    /// A wide window's recent list's width in pixels; 0 for its default.
+    pub side: f64,
 }
 
 impl Default for Prefs {
@@ -152,6 +154,7 @@ impl Default for Prefs {
             video_rate: true,
             speed: 1.0,
             volume: 1.0,
+            side: 0.0,
         }
     }
 }

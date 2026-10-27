@@ -142,6 +142,8 @@
   "recent.remove_tip": "Remove from Recent; the file stays",
   "recent.gone": "This transcript was deleted",
   "recent.unreadable": "Can't read this transcript",
+  "side.width": "Width of the recent list",
+  "side.width_tip": "Drag to resize; double-click to fit the names",
   "ask.clear_title": "Clear the recent list?",
   "ask.clear_text": "All recent transcripts will be permanently deleted. Your original audio and video files, and any transcripts you saved, are not affected.",
   "ask.clear": "Clear",

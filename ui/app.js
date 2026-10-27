@@ -322,11 +322,35 @@ function sideMode(v = viewName()) {
   return v === "ready" && (recent.length || files.length) ? "home" : "";
 }
 
+/* The side's width: dragged at its edge, or fitted to its longest name by a
+   double-click there, as a Finder column is; kept between runs
+   (prefs.side, 0 for 300 px). Never under 240, where the model's button
+   meets the wordmark, nor past what leaves the work its 860 (Peter,
+   2026-10-27: a name a few pixels too long for 300). */
+const SIDE = 300,
+  SIDE_MIN = 240;
+const sideMax = () => Math.max(SIDE_MIN, innerWidth - 860);
+const sideWidth = (w = prefs.side || SIDE) =>
+  Math.round(Math.max(SIDE_MIN, Math.min(w, sideMax())));
+function showSide(w) {
+  const px = sideWidth(w),
+    edge = $("side-edge");
+  document.documentElement.style.setProperty("--side", `${px}px`);
+  edge.setAttribute("aria-valuenow", px);
+  edge.setAttribute("aria-valuemin", SIDE_MIN);
+  edge.setAttribute("aria-valuemax", sideMax());
+  return px;
+}
+addEventListener("resize", () => {
+  if (document.documentElement.dataset.side) showSide();
+});
+
 function render() {
   const v = viewName(),
     side = sideMode(v);
   if (side) document.documentElement.dataset.side = side;
   else delete document.documentElement.dataset.side;
+  if (side) showSide();
   for (const id of ["setup", "ready", "batch", "work"])
     $(id).hidden = id !== v && !(id === "ready" && side === "open");
   if (v !== "work") pausePlayback();
@@ -933,6 +957,69 @@ $("clear-recent").onclick = async () => {
 $("choose").onclick = () => chooseFiles();
 $("side-choose").onclick = () => chooseFiles();
 $("ready-model").onclick = (e) => modelMenu(e.currentTarget, !e.detail);
+
+/* the side's edge: held, it follows the pointer a frame at a time, and the
+   width is kept when it is let go */
+$("side-edge").addEventListener("pointerdown", (e) => {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  const edge = e.currentTarget,
+    from = e.clientX,
+    was = sideWidth();
+  let w = was,
+    frame = 0;
+  edge.setPointerCapture(e.pointerId);
+  edge.classList.add("is-held");
+  document.documentElement.classList.add("is-sizing");
+  const move = (m) => {
+    w = was + m.clientX - from;
+    frame ||= requestAnimationFrame(() => {
+      frame = 0;
+      showSide(w);
+    });
+  };
+  const done = () => {
+    edge.removeEventListener("pointermove", move);
+    edge.removeEventListener("pointerup", done);
+    edge.removeEventListener("pointercancel", done);
+    cancelAnimationFrame(frame);
+    edge.classList.remove("is-held");
+    document.documentElement.classList.remove("is-sizing");
+    const px = showSide(w);
+    if (px !== was) setPref("side", px);
+  };
+  edge.addEventListener("pointermove", move);
+  edge.addEventListener("pointerup", done);
+  edge.addEventListener("pointercancel", done);
+});
+/* a double-click: the width the longest name needs, wider or narrower,
+   each name's own width against the room its row gives it */
+$("side-edge").addEventListener("dblclick", () => {
+  let over = -Infinity;
+  for (const el of $("recent-list").querySelectorAll(".pk-name")) {
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    over = Math.max(
+      over,
+      Math.ceil(r.getBoundingClientRect().width) - el.clientWidth,
+    );
+  }
+  if (over > -Infinity) setPref("side", showSide(sideWidth() + over));
+});
+/* from the keyboard: the arrows 16 px a press, Home and End its least and
+   most */
+$("side-edge").addEventListener("keydown", (e) => {
+  const w = sideWidth(),
+    to = {
+      ArrowLeft: w - 16,
+      ArrowRight: w + 16,
+      Home: SIDE_MIN,
+      End: sideMax(),
+    }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  setPref("side", showSide(to));
+});
 
 /* --------------------------------------------------------------- files -- */
 

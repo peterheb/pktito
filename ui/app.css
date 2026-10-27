@@ -786,6 +786,7 @@ html[data-side] .pk-ready {
   gap: 0;
 }
 html[data-side] .pk-side {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -796,6 +797,50 @@ html[data-side] .pk-side {
 html[data-side] .pk-recent {
   margin-top: 4px;
   flex: 1 1 auto;
+}
+/* The list is the side's one scroll. Where scrollbars take room (macOS set
+   to show them, Windows), the list's hung beside its rows 19 px past their
+   column, 3 more than the side's padding, and the side beside a file, fixed
+   at its width, scrolled across and then down for it: three scrollbars
+   (Peter's Mac, 2026-10-27). The list's reach is held to the padding, and
+   the side never scrolls. */
+html[data-side] #ready {
+  overflow: hidden;
+}
+html[data-side] .pk-recent ul {
+  margin-right: calc(-4px - min(var(--sb, 0px), 12px));
+}
+/* its edge, which a drag moves and a double-click fits to the longest
+   name (app.js, the side's width): 7 px over the line, the line lit in the
+   accent while it is pointed at or held, and in the focus ring's colour
+   when the keyboard is on it */
+.pk-side-edge {
+  display: none;
+}
+html[data-side] .pk-side-edge {
+  display: block;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -1px;
+  width: 7px;
+  z-index: 2;
+  cursor: col-resize;
+  touch-action: none;
+}
+html[data-side] .pk-side-edge:is(:hover, .is-held) {
+  background: linear-gradient(var(--plume), var(--plume)) right / 3px 100%
+    no-repeat;
+}
+html[data-side] .pk-side-edge:focus-visible {
+  outline: none;
+  background: linear-gradient(var(--focus), var(--focus)) right / 2px 100%
+    no-repeat;
+}
+html.is-sizing,
+html.is-sizing * {
+  cursor: col-resize !important;
+  user-select: none;
 }
 html[data-side] .pk-ready-drop {
   align-self: center;
