@@ -1121,9 +1121,9 @@ html[data-chrome="win"] .pk-head {
 }
 /* a match's tick, 2 px drawn in a target 9 px wide that reaches down to the
    times: 7 px tall alone was hard to hit (the Windows test, 2026-10-22);
-   the current one lighter, wider, and taller by the lane's gaps above and
-   below, so that its shape tells it too: its colour is 1.6:1 against the
-   others' (the tokens' contrast, 2026-10-22) */
+   the current one lighter, wider, and 3 px taller above and below, so that
+   its shape tells it too: its colour is 1.6:1 against the others' (the
+   tokens' contrast, 2026-10-22) */
 .pk-ticks {
   position: relative;
   height: 9px;
@@ -1148,6 +1148,20 @@ html[data-chrome="win"] .pk-head {
   bottom: -3px;
   background-image: linear-gradient(var(--term-ink), var(--term-ink));
   background-size: 3px 100%;
+}
+/* While a search has ticks the waveform gives 8 px to the gaps round them,
+   4 a side: at 3 the current tick, 3 px longer each way, met the bars above
+   and the times below, and the lane read as crowded (Peter, 2026-10-27).
+   The strip keeps its height, so the transcript does not move when a search
+   finds something, and play keeps to the waveform's middle. */
+#strip.has-ticks .pk-wave {
+  height: 56px;
+}
+#strip.has-ticks .pk-lane {
+  gap: 7px;
+}
+#strip.has-ticks .pk-transport {
+  padding-top: 8px;
 }
 /* bars 2 px wide a pixel apart, as app.js's BAR counts them; the playhead
    a pixel wider each side, over the gaps, so that it moves nothing */

@@ -2258,6 +2258,12 @@ function findCount() {
         )
         .join("")
     : "";
+  // the waveform a little shorter while there are ticks (app.css), its bars
+  // drawn again to its height
+  const strip = $("strip"),
+    was = strip.classList.contains("has-ticks");
+  if (strip.classList.toggle("has-ticks", !!dur && hits.length > 0) !== was)
+    drawMainWave();
 }
 
 function clearFind() {
