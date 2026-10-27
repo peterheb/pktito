@@ -82,6 +82,7 @@ Two families, shipped as files (`ui/fonts`, and the site's `fonts/`) with their 
 About lies over whichever screen opened it, and the Privacy and license sheets over About. The ask dialog, the drop overlay, menus and the toast come and go over any screen.
 
 - **Size.** The window opens at 680 × 800 (portrait, about 65 characters of transcript a line and 20 lines) and is at least `window-min` (480 px) each way.
+- **Side.** From 920 px wide, the start screen's top row and its recent list keep a column at the window's left, the side, beside the drop zone or the file or batch open, the work. 920 is the side at its narrowest, 240, beside the 680 the window opens at. Under that, or at the start with nothing on the list, there is no side. The side is 300 px wide. Dragging its edge sets it anywhere from 240 to 480, never leaving the work under 680, and a double-click there fits the longest name, as a Finder column does. The work's narrow rules follow its own width, not the window's, so beside the side it looks as a window of its width would.
 - **Title bar.** Each screen's header row is the title bar, and its empty space drags the window:
   - macOS: the system's traffic lights at its left end, with no title bar drawn and no lights in full screen.
   - Windows: the app draws minimize, maximize and close at its right to Windows 11's measure (46 × 32, Segoe Fluent Icons, close red, dimmed while the window is inactive), with the system menu on Alt+Space.
