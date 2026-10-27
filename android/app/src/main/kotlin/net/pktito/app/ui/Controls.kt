@@ -427,6 +427,16 @@ fun hasKeys(): Boolean {
     return c.keyboard == Configuration.KEYBOARD_QWERTY && c.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_NO
 }
 
+/**
+ * Whether the screen is a finger's: no keyboard, and so no trackpad either,
+ * as on a phone or a tablet, where the Googlebook has both, and a tablet's
+ * keyboard cover a trackpad with its keys. The input devices cannot say it:
+ * a Tab S7 FE with no cover on lists sec_touchpad, a mouse among its
+ * sources (2026-10-27). A finger's strip is a thumb's (Strip).
+ */
+@Composable
+fun byFinger(): Boolean = !hasKeys()
+
 /** A shortcut beside its item, Ctrl+S, in the type of the file under it (app.css, .pk-kbd). */
 @Composable
 fun Kbd(keys: String) {

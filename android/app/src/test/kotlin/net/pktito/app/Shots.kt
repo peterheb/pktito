@@ -12,7 +12,12 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isPopup
@@ -80,11 +85,13 @@ class Shots {
      */
     private fun shot(
         name: String, dark: Boolean, wide: Boolean = false, keys: Boolean = false, narrow: Boolean = false,
-        land: Boolean = false, window: Boolean = false, short: Boolean = false,
+        land: Boolean = false, window: Boolean = false, short: Boolean = false, tab: Int = 0, targets: Boolean = false,
         act: (() -> SemanticsNodeInteraction)? = null, content: @Composable () -> Unit,
     ) {
         RuntimeEnvironment.setQualifiers(
             when {
+                tab == 1 -> "w1205dp-h753dp-xhdpi"
+                tab == 2 -> "w753dp-h1205dp-xhdpi"
                 land -> "w1100dp-h760dp-xhdpi"
                 // a phone on its side, the emulator's Pixel 5
                 short -> "w851dp-h393dp-xxhdpi"
@@ -106,10 +113,26 @@ class Shots {
             }
         }
         val dir = File("build/shots").apply { mkdirs() }
-        val size = if (land) "-land" else if (short) "-short" else if (window) "-window" else if (wide) "-wide" else ""
+        val size = if (tab == 1) "-tab-land" else if (tab == 2) "-tab-port" else if (land) "-land" else if (short) "-short" else if (window) "-window" else if (wide) "-wide" else ""
         val file = File(dir, "$name${if (keys) "-keys" else ""}-${if (dark) "dark" else "light"}$size.png")
         val node = act?.invoke() ?: compose.onRoot()
         file.outputStream().use { node.captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it) }
+        // what can be touched, and where, for a picture of the targets: px in the root
+        if (targets) {
+            val touched = hasClickAction() or SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo) or
+                hasTestTag("wave") or hasTestTag("lane") or hasTestTag("strip")
+            val nodes = compose.onAllNodes(touched, useUnmergedTree = true).fetchSemanticsNodes()
+            File(dir, file.name.removeSuffix(".png") + ".json").writeText(
+                nodes.joinToString(",\n", "[", "]") { n ->
+                    val c = n.config
+                    val label = c.getOrNull(SemanticsProperties.TestTag)
+                        ?: c.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull()
+                        ?: c.getOrNull(SemanticsProperties.Text)?.firstOrNull()?.text ?: ""
+                    val b = n.boundsInRoot
+                    "{\"label\":\"${label.replace("\"", "")}\",\"l\":${b.left},\"t\":${b.top},\"r\":${b.right},\"b\":${b.bottom}}"
+                },
+            )
+        }
     }
 
     /** A search for query, its field open on a phone if open, on the match k (-1: the one the playhead last passed). */
@@ -308,6 +331,17 @@ class Shots {
     @Test fun doneChangedNarrow() = shot("done-changed-360", false, narrow = true) { work("done", 1.0, position = 30.0, why = changed, locate = true) }
     @Test fun doneCant() = shot("done-cant", false) { work("done", 1.0, why = "Android can't play this file") }
     @Test fun doneNarrowFrames() = shot("done-360-frames", false, narrow = true) { work("done", 1.0, position = 30.0, base = Timebase(frames = true, video = 29.97)) }
+    // the strip's targets with a search's ticks: a finger's (no keys) and the desktop's (keys), a phone's and a tablet's
+    @Test fun targetsFinger() = shot("targets", false, targets = true) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
+    @Test fun targetsKeys() = shot("targets", false, keys = true, targets = true) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
+    @Test fun targetsFingerTab() = shot("targets", false, tab = 1, targets = true) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
+    @Test fun targetsKeysTab() = shot("targets", false, keys = true, tab = 1, targets = true) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
+    @Test fun tabDoneLand() = shot("done", false, tab = 1) { work("done", 1.0, position = 30.0, playing = true) }
+    @Test fun tabDonePort() = shot("done", false, tab = 2) { work("done", 1.0, position = 30.0, playing = true) }
+    @Test fun tabFindLand() = shot("find", false, tab = 1) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
+    @Test fun tabReadyLand() = shot("ready-recent", false, tab = 1) { Ready(recent, readyActions, models) }
+    @Test fun tabReadyPort() = shot("ready-recent", false, tab = 2) { Ready(recent, readyActions, models) }
+    @Test fun tabCaptionsLand() = shot("captions", false, tab = 1) { work("done", 1.0, cues, captions = true, position = 12.0) }
     @Test fun error() = shot("error", false) {
         work("error", 0.0, emptyList(), error = "Can't read this file (Android has no decoder for audio/alac)")
     }

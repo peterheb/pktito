@@ -48,6 +48,19 @@ object Player {
     val SPEEDS = listOf(0.75, 1.0, 1.25, 1.5, 1.75, 2.0)
     private var restored = false
 
+    /**
+     * The device's volume keys alone set the level, where the strip has no
+     * speaker or slider (a finger's, Strip): playback at full, the level
+     * kept, and mute, for a screen that shows them. A level of the app's
+     * under the device's had pktito silent with the phone's turned up (the
+     * S25's mute, 2026-10-26).
+     */
+    var keysOnly = false
+        set(v) {
+            field = v
+            mp?.let(::heard)
+        }
+
     /** The speed and volume the last run left, once a run: a screen made anew keeps what this one has. */
     fun restore(speed: Double, volume: Double) {
         if (restored) return
@@ -253,7 +266,7 @@ object Player {
     }
 
     private fun heard(p: MediaPlayer) {
-        val v = if (muted) 0f else volume.toFloat()
+        val v = if (keysOnly) 1f else if (muted) 0f else volume.toFloat()
         p.setVolume(v, v)
     }
 

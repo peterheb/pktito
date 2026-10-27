@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
@@ -43,6 +44,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -86,6 +88,14 @@ fun stepped(speeds: List<Double>, now: Double, d: Int): Double =
  * no play, its waveform the whole width, and why in the times' place,
  * with Locate… where the file can be found again; a tap on the waveform
  * still moves the playhead (Peter, 2026-10-26: "Just no play button").
+ *
+ * A finger's strip (byFinger: no keyboard, so no trackpad, as on a phone
+ * or a tablet) is a thumb's: play 48 dp, Android's least target, to the
+ * desktop's 40; no speaker or slider, as the device's volume keys set the
+ * level (Player.keysOnly); the ticks' lane 24 dp, where the times' line
+ * had taken a thumb's taps under its 15 (the S25's mute, 2026-10-26); and
+ * a drag on the waveform or the lane moves the playhead and the time with
+ * the thumb, seeking where it is let go. 125 dp tall to the desktop's 116.
  */
 @Composable
 fun Strip(
@@ -113,10 +123,28 @@ fun Strip(
 ) {
     val p = pk
     val silent = review && why != null
+    val finger = byFinger()
+    val button = if (finger) 48.dp else 40.dp
+    // where a thumb dragging on the waveform or the lane has the playhead, 0 to 1, until it lets go
+    var scrub by remember { mutableStateOf<Double?>(null) }
+    val seek by rememberUpdatedState(onSeek)
+    val dragged = if (!finger || !review) Modifier
+    else Modifier.pointerInput(Unit) {
+        fun at(x: Float) = (x / size.width).toDouble().coerceIn(0.0, 1.0)
+        detectHorizontalDragGestures(
+            onDragStart = { scrub = at(it.x) },
+            onDragEnd = {
+                scrub?.let { seek(it) }
+                scrub = null
+            },
+            onDragCancel = { scrub = null },
+        ) { c, _ -> scrub = at(c.position.x) }
+    }
     Row(
         modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
+            .testTag("strip")
             .background(p.term, Corner)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         // 24 between play and the waveform, the desktop's (app.css, #strip):
@@ -127,7 +155,7 @@ fun Strip(
         if (review && !silent)
             // play, and the speed at the foot, on the times' line (app.css, .pk-transport)
             Column(
-                Modifier.fillMaxHeight().padding(top = 12.dp),
+                Modifier.fillMaxHeight().padding(top = (64.dp - button) / 2),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
@@ -135,40 +163,43 @@ fun Strip(
                     Modifier
                         .alpha(if (playable) 1f else 0.45f)
                         .control(Corner, p.termLine, onTerm = true, enabled = playable, label = playLabel, onClick = onPlay)
-                        .size(40.dp),
+                        .size(button),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(if (playing) Icons.pause else Icons.play, null, tint = p.termInk, modifier = Modifier.size(20.dp))
+                    Icon(if (playing) Icons.pause else Icons.play, null, tint = p.termInk, modifier = Modifier.size(if (finger) 24.dp else 20.dp))
                 }
                 Speed(sound, playable)
             }
         else if (!review)
-            Box(Modifier.padding(top = 12.dp)) { Ring(done) }
+            Box(Modifier.padding(top = (64.dp - button) / 2)) { Ring(done, button) }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            val at = if (review) (if (duration > 0) position / duration else 0.0) else done
+            val at = scrub ?: if (review) (if (duration > 0) position / duration else 0.0) else done
             Waveform(
                 peaks, at,
                 Modifier
+                    .testTag("wave")
                     .alpha(if (review && !playable && !silent) 0.45f else 1f)
                     .then(
                         if (review)
                             Modifier.pointerInput(Unit) {
-                                detectTapGestures { o -> onSeek((o.x / size.width).toDouble().coerceIn(0.0, 1.0)) }
+                                detectTapGestures { o -> seek((o.x / size.width).toDouble().coerceIn(0.0, 1.0)) }
                             }
                         else Modifier,
-                    ),
+                    )
+                    .then(dragged),
             )
-            // the desktop's lane for a search's ticks, 9 dp, which keeps the strip its 116
-            Ticks(ticks, tickAt, onTick)
+            // the desktop's lane for a search's ticks, 9 dp, which keeps the strip its 116; a finger's, 18
+            Ticks(ticks, tickAt, onTick, finger, if (finger && review) seek else null, dragged)
             if (silent) Why(why!!, locate)
             else TimesLine(
                 time = {
-                    if (review) Time(left, base, position, onBase)
+                    // a dragged playhead's time, where the thumb would let it go
+                    if (review) Time(scrub?.let { base.at(it * duration) } ?: left, base, position, onBase)
                     else Text(left, style = Tstamp, color = p.termInk, maxLines = 1)
                 },
-                speaker = { if (review) Speaker(sound, playable) },
+                speaker = { if (review && !finger) Speaker(sound, playable) },
                 slider = {
-                    if (review)
+                    if (review && !finger)
                         Level(
                             if (sound.muted) 0.0 else sound.volume, playable, stringResource(R.string.volume_label), sound.setVolume,
                             Modifier.bleed(vertical = 6.dp).alpha(if (playable) 1f else 0.45f),
@@ -189,27 +220,36 @@ fun Strip(
  * Over the times' line in touch: its controls reach 6 dp up into the lane
  * (bleed), and the line, after the lane, took the lower half of each tick
  * there; a tick tapped there muted the speaker (Peter's S25, 2026-10-26;
- * on the emulator, y 545 px of the lane's 516 to 558).
+ * on the emulator, y 545 px of the lane's 516 to 558). A finger's lane
+ * is 18 dp, 24 touched, at work too, so that the strip keeps its height;
+ * in review a tap there with no tick near seeks there (miss), as one on
+ * the waveform does, where the desktop's does nothing, and a drag along it
+ * is the thumb's along the waveform (dragged).
  */
 @Composable
-private fun Ticks(ticks: List<Double>, at: Int, onTick: (Int) -> Unit) {
+private fun Ticks(ticks: List<Double>, at: Int, onTick: (Int) -> Unit, finger: Boolean, miss: ((Double) -> Unit)?, dragged: Modifier) {
     val p = pk
     val gap = 3.dp
+    val tick by rememberUpdatedState(onTick)
+    val missed by rememberUpdatedState(miss)
     Canvas(
         Modifier
             .zIndex(1f)
             .fillMaxWidth()
+            .testTag("lane")
             .bleed(vertical = gap)
-            .height(9.dp + gap * 2)
+            .height((if (finger) 18.dp else 9.dp) + gap * 2)
             .then(
-                if (ticks.isEmpty()) Modifier
+                if (ticks.isEmpty() && miss == null) Modifier
                 else Modifier.pointerInput(ticks) {
                     detectTapGestures { o ->
                         val k = ticks.indices.minByOrNull { abs(ticks[it] * size.width - o.x) }
-                        if (k != null && abs(ticks[k] * size.width - o.x) <= 16.dp.toPx()) onTick(k)
+                        if (k != null && abs(ticks[k] * size.width - o.x) <= 16.dp.toPx()) tick(k)
+                        else missed?.invoke((o.x / size.width).toDouble().coerceIn(0.0, 1.0))
                     }
                 },
-            ),
+            )
+            .then(dragged),
     ) {
         val g = gap.toPx()
         for ((k, t) in ticks.withIndex())
@@ -463,12 +503,12 @@ private fun Level(v: Double, enabled: Boolean, label: String, onChange: (Double,
  * .pk-prog).
  */
 @Composable
-private fun Ring(done: Double) {
+private fun Ring(done: Double, side: Dp) {
     val p = pk
     val d = done.toFloat().coerceIn(0f, 1f)
     Box(
         Modifier
-            .size(40.dp)
+            .size(side)
             .drawBehind {
                 val r = Radius.radiusUi.toPx()
                 val inset = 3.dp.toPx()

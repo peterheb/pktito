@@ -9,6 +9,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,6 +63,7 @@ import net.pktito.app.ui.Timebase
 import net.pktito.app.ui.Toast
 import net.pktito.app.ui.Work
 import net.pktito.app.ui.WorkActions
+import net.pktito.app.ui.byFinger
 import net.pktito.app.ui.clock
 import net.pktito.app.ui.findIn
 import net.pktito.app.ui.pk
@@ -124,6 +127,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // the volume keys set playback's level while pktito is in front, playing
+        // or not, as a player's do: on a finger's screen they are its only one
+        volumeControlStream = AudioManager.STREAM_MUSIC
         times = prefs.getBoolean("times", false)
         captions = prefs.getBoolean("captions", false)
         base = Timebase(
@@ -198,6 +204,9 @@ class MainActivity : ComponentActivity() {
     private fun App() {
         val t = Transcriber
         val list = rememberLazyListState()
+        // a finger's strip has no speaker or slider: the device's volume keys alone (Player.keysOnly)
+        val finger = byFinger()
+        SideEffect { Player.keysOnly = finger }
         val review = t.step == "done" || t.step == "stopped"
         val rows = if (captions && review) t.cues ?: emptyList() else t.segments
         // a search's matches in the rows shown, a finished transcript's only
