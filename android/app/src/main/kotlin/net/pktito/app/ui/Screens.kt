@@ -598,7 +598,8 @@ fun Work(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Text(name, style = Type.ui, color = p.ink, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                if (running) Spinner()
+                // until the ring has progress: reading, the model loading, the first chunk (Spinner)
+                if (running && !(step == "transcribing" && done > 0)) Spinner()
             }
             if (running)
                 PkButton(stringResource(R.string.stop), a.stop, kind = Kind.Ghost)

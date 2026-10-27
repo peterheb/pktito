@@ -242,7 +242,14 @@ fun Wordmark(modifier: Modifier = Modifier, size: TextUnit = 20.sp) {
     }
 }
 
-/** Beside the file's name while it is at work: a ring in sunk, a quarter of it ink-muted, turning. */
+/**
+ * Beside the file's name while it is at work until its progress shows: a
+ * ring in sunk, a quarter of it ink-muted, turning. Not through the whole
+ * job: a frame each 16 ms is the CPU's and the battery's, taken from the
+ * engine, and on the Pi 5 the desktop's 60 fps spinner took three quarters
+ * of a core from its four threads, chapter 1 at 8.0x to the CLI's 13.4x,
+ * 14.2x without it (pktito-app 364d3f0; design/README.md, Motion).
+ */
 @Composable
 fun Spinner(modifier: Modifier = Modifier) {
     val p = pk
