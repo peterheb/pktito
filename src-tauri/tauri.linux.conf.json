@@ -7,6 +7,7 @@
         "recommends": ["xdg-utils"],
         "desktopTemplate": "linux/pktito.desktop",
         "files": {
+          "/usr/bin/pktito": "linux/pktito",
           "/usr/share/mime/packages/pktito.xml": "linux/pktito-mime.xml",
           "/usr/share/icons/hicolor/16x16/mimetypes/application-x-pktito-model.png": "icons/model/16x16.png",
           "/usr/share/icons/hicolor/24x24/mimetypes/application-x-pktito-model.png": "icons/model/24x24.png",
