@@ -514,7 +514,11 @@ fun Work(
                 locate = locate,
             )
         if (review && rows.isNotEmpty())
-            Views(captions, a.setCaptions, find, hits, Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp))
+            // a step while it plays takes the playhead to its match (Finder.step)
+            Views(
+                captions, a.setCaptions, find, hits, if (playing) ({ t: Double -> a.seek(t, false) }) else null,
+                Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
+            )
         val msg = when {
             error != null -> error
             step == "stopped" -> stringResource(R.string.status_stopped_at, (done * 100).toInt())
@@ -543,7 +547,7 @@ fun Work(
  * the search is let go, as a phone's find in page does.
  */
 @Composable
-private fun Views(captions: Boolean, setCaptions: (Boolean) -> Unit, find: Finder, hits: List<Hit>, modifier: Modifier) {
+private fun Views(captions: Boolean, setCaptions: (Boolean) -> Unit, find: Finder, hits: List<Hit>, seek: ((Double) -> Unit)?, modifier: Modifier) {
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val room = maxWidth >= 480.dp
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -552,8 +556,8 @@ private fun Views(captions: Boolean, setCaptions: (Boolean) -> Unit, find: Finde
                 Spacer(Modifier.weight(1f))
             }
             when {
-                room -> FindField(find, hits, find::clear, Modifier.width(if (find.query.isNotBlank()) 280.dp else 200.dp))
-                find.open -> FindField(find, hits, find::clear, Modifier.weight(1f))
+                room -> FindField(find, hits, seek, find::clear, Modifier.width(if (find.query.isNotBlank()) 280.dp else 200.dp))
+                find.open -> FindField(find, hits, seek, find::clear, Modifier.weight(1f))
                 else -> IconBtn(Icons.search, stringResource(R.string.find_label), find::focus, kind = Kind.Ghost)
             }
         }

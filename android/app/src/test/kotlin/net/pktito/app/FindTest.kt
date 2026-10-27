@@ -36,6 +36,20 @@ class FindTest {
     }
 
     @Test
+    fun aStepWhilePlayingSeeks() {
+        val f = Finder()
+        f.settle(hits, 0.0)
+        val seeks = ArrayList<Double>()
+        f.step(hits, 1) { seeks += it }
+        assertEquals("playing: the playhead to the match", listOf(44.96), seeks)
+        assertEquals(1, f.at)
+        f.step(hits, -1, null)
+        f.step(hits, -1, null)
+        assertEquals("at rest: only the reader, round the end", 6, f.at)
+        assertEquals(listOf(44.96), seeks)
+    }
+
+    @Test
     fun aTickKeepsItsOwn() {
         // two matches in one word share its time; the tick tapped is the one
         val twins = listOf(Hit(0, 0, 2, 10.0), Hit(0, 3, 5, 10.0), Hit(1, 0, 2, 20.0))

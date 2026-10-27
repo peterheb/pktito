@@ -175,9 +175,19 @@ class Finder {
         moved++
     }
 
-    /** The next match, or the one before, round the end (app.js, stepHit). */
-    fun step(hits: List<Hit>, d: Int) {
-        if (hits.isNotEmpty()) go(hits, (at + d + hits.size) % hits.size)
+    /**
+     * The next match, or the one before, round the end (app.js, stepHit):
+     * while it plays (seek, not null) with the playhead taken to it, as a
+     * tick takes it, so that the reader follows the playhead from there; at
+     * rest only the reader moves, and the playhead keeps the listener's
+     * place (Peter, 2026-10-27). The seek first, which puts the reader on the
+     * match it last passed, then this one, where two share its time.
+     */
+    fun step(hits: List<Hit>, d: Int, seek: ((Double) -> Unit)? = null) {
+        if (hits.isEmpty()) return
+        val k = (at + d + hits.size) % hits.size
+        seek?.invoke(hits[k].time)
+        go(hits, k)
     }
 
     /** The field, with its keys. */
@@ -203,10 +213,11 @@ class Finder {
  * while there is something, its count and the previous and next match,
  * dimmed with fewer than two, then the way to close it. Enter is the next
  * match and Shift+Enter the one before, as is the keyboard's search key;
- * Esc closes it from the screen's keys (MainActivity), as Back does.
+ * Esc closes it from the screen's keys (MainActivity), as Back does. While
+ * the recording plays, a step takes the playhead with it (seek: Finder.step).
  */
 @Composable
-fun FindField(f: Finder, hits: List<Hit>, onClose: () -> Unit, modifier: Modifier = Modifier) {
+fun FindField(f: Finder, hits: List<Hit>, seek: ((Double) -> Unit)?, onClose: () -> Unit, modifier: Modifier = Modifier) {
     val p = pk
     val focus = remember { FocusRequester() }
     val manager = LocalFocusManager.current
@@ -242,14 +253,14 @@ fun FindField(f: Finder, hits: List<Hit>, onClose: () -> Unit, modifier: Modifie
             textStyle = Type.ui.copy(fontWeight = FontWeight.W400, color = p.ink),
             cursorBrush = SolidColor(p.ink),
             keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { f.step(hits, 1) }),
+            keyboardActions = KeyboardActions(onSearch = { f.step(hits, 1, seek) }),
             modifier = Modifier
                 .weight(1f)
                 .focusRequester(focus)
                 .onFocusChanged { f.typing = it.isFocused }
                 .onPreviewKeyEvent { e ->
                     val enter = e.key == Key.Enter || e.key == Key.NumPadEnter
-                    if (enter && e.type == KeyEventType.KeyDown) f.step(hits, if (e.isShiftPressed) -1 else 1)
+                    if (enter && e.type == KeyEventType.KeyDown) f.step(hits, if (e.isShiftPressed) -1 else 1, seek)
                     enter
                 }
                 .semantics { contentDescription = label },
@@ -269,8 +280,8 @@ fun FindField(f: Finder, hits: List<Hit>, onClose: () -> Unit, modifier: Modifie
                 maxLines = 1,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             )
-            Step(Icons.up, stringResource(R.string.find_previous), hits.size >= 2) { f.step(hits, -1) }
-            Step(Icons.down, stringResource(R.string.find_next), hits.size >= 2) { f.step(hits, 1) }
+            Step(Icons.up, stringResource(R.string.find_previous), hits.size >= 2) { f.step(hits, -1, seek) }
+            Step(Icons.down, stringResource(R.string.find_next), hits.size >= 2) { f.step(hits, 1, seek) }
         }
         if (has || f.open) Step(Icons.x, stringResource(R.string.find_close), true, onClose)
     }
