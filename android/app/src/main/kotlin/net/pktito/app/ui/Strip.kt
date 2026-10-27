@@ -216,7 +216,8 @@ fun Strip(
  * match at its word's time, 2 dp of plume; the current one term-ink, 3 dp,
  * and taller by the lane's gaps, so that its shape tells it too. Drawn and
  * touched across the gaps, 15 dp, and a tap goes to the nearest tick within
- * 16 dp of it: the desktop's target is 9 px wide, and a finger is wider.
+ * 16 dp of it, the earlier where two are as near, as a click on the
+ * desktop's does (f441c18): a tick is 9 wide there, and a finger is wider.
  * Over the times' line in touch: its controls reach 6 dp up into the lane
  * (bleed), and the line, after the lane, took the lower half of each tick
  * there; a tick tapped there muted the speaker (Peter's S25, 2026-10-26;
@@ -224,8 +225,12 @@ fun Strip(
  * is 18 dp, 24 touched, at work too, so that the strip keeps its height;
  * in review a tap there with no tick near seeks there (miss), as one on
  * the waveform does, where the desktop's does nothing, and a drag along it
- * is the thumb's along the waveform (dragged).
+ * is the thumb's along the waveform (dragged): after the lane's own
+ * modifiers, so that it has the lane's 24 dp, the bled ones too, which
+ * lint's rule for a Modifier parameter, named modifier and first in the
+ * chain, would take from it.
  */
+@Suppress("ModifierParameter")
 @Composable
 private fun Ticks(ticks: List<Double>, at: Int, onTick: (Int) -> Unit, finger: Boolean, miss: ((Double) -> Unit)?, dragged: Modifier) {
     val p = pk
