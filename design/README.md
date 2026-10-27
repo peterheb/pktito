@@ -77,7 +77,7 @@ Two families, shipped as files (`ui/fonts`, and the site's `fonts/`) with their 
 - setup: choose a model, its download, or the download stopped
 - start: a drop zone, "Drop audio or video here" and Choose files… on `surface` inside a 2 px dashed `ink-muted` edge, and the recent list
 - one file's transcript
-- a batch: the files dropped together, each row with its progress, opening its transcript, and Save all
+- a batch: the files dropped together, how far it has got and its pace so far (over the rows' lengths, in their type), each row with its progress, opening its transcript, and Save all
 
 About lies over whichever screen opened it, and the Privacy and license sheets over About. The ask dialog, the drop overlay, menus and the toast come and go over any screen.
 

@@ -1363,7 +1363,8 @@ function updateRow(f) {
 }
 
 /* How far the batch has got, and what Save all does with the rest as it
-   finishes; Stop and the spinner while any of it is to come. */
+   finishes; its pace so far; Stop and the spinner while any of it is to
+   come. */
 function batchHead() {
   const going = files.some(live),
     p = going && batchSave;
@@ -1375,10 +1376,25 @@ function batchHead() {
       done: files.filter((f) => f.step === "done").length,
       n: files.length,
     }) + saving;
+  $("batch-pace").textContent = batchPace();
   $("batch-spin").hidden = $("batch-stop").hidden = !going;
   $("save-all").disabled = !files.some(
     (f) => live(f) || (f.step === "done" && f.segments.length),
   );
+}
+
+/* The audio the batch's files have had transcribed over the time that took,
+   as the strip's pace says of one (updateRunning): the file under way so
+   far and those done, so that it doesn't start again with each file. */
+function batchPace() {
+  let audio = 0,
+    secs = 0;
+  for (const f of files)
+    if ((f.step === "transcribing" || f.step === "done") && f.transcribed > 0) {
+      audio += f.done * f.duration;
+      secs += f.transcribed;
+    }
+  return secs > 0 ? realTime(audio, secs) : "";
 }
 
 $("queue").addEventListener("click", (e) => {

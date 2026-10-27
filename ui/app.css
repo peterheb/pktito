@@ -1043,8 +1043,23 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
   gap: 4px;
   min-height: 0;
 }
-.pk-batch-files .pk-small {
+/* how far the batch has got, and over the rows' lengths, in their type, its
+   pace so far: what the strip says of one file, said of them all */
+.pk-tally {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
   padding: 0 12px;
+}
+.pk-tally .pk-stamp {
+  line-height: 1.45;
+}
+/* Chromium (WebView2) sets the mono line on its baseline 1 px lower than
+   the tally's, so the row grew a pixel as the first pace came and the rows
+   under it moved; an empty pace keeps its line */
+.pk-tally .pk-stamp:empty::before {
+  content: "\00a0";
 }
 /* room inside the scroll for a row's focus ring */
 .pk-batch-files ul {
