@@ -2172,6 +2172,8 @@ function wordAt(s, offset) {
 function runFind() {
   const f = current();
   if (!f || modeOf(f) !== "review") return;
+  // the time of the match the reader is on, before the search changes
+  const was = hitTimes[hitAt];
   query = $("find").value.trim();
   const tr = $("transcript"),
     top = tr.scrollTop,
@@ -2189,12 +2191,15 @@ function runFind() {
       k = wordAt(s, Number(h.dataset.at));
     return k >= 0 ? s.words[k].start : s.start;
   });
-  // the match the playhead last passed, so that a search typed as it plays
-  // or rests mid-recording starts where the listener is; the first when it
-  // has passed none
+  // the match the reader was on while it is still one, so that a search
+  // typed on keeps its place, as Android's does; otherwise the match the
+  // playhead last passed, so that a search typed as it plays or rests
+  // mid-recording starts where the listener is; the first when it has
+  // passed none
   hitAt = -1;
   passed = passedAt(f.pos);
-  if (hits.length) goHit(Math.max(0, passed));
+  const kept = hitTimes.indexOf(was);
+  if (hits.length) goHit(kept >= 0 ? kept : Math.max(0, passed));
   findCount();
 }
 
@@ -2275,11 +2280,24 @@ $("find-next").onclick = (e) => {
   e.preventDefault();
   stepHit(1);
 };
-/* a tick: its match, and the playhead there */
+/* a tick: its match, and the playhead there. A click on the lane takes the
+   tick nearest it within 16 px, as Android's lane does: ticks are 9 px
+   wide and overlap where matches are close, and the one drawn over took a
+   click meant for the nearer (2 px right of one, the next 3 px further). */
 $("ticks").addEventListener("click", (e) => {
-  const k = e.target.closest("[data-k]");
-  if (!k) return;
-  const i = Number(k.dataset.k);
+  const f = current(),
+    r = e.currentTarget.getBoundingClientRect();
+  if (!f || !f.duration) return;
+  let i = -1,
+    near = 16;
+  hitTimes.forEach((t, k) => {
+    const d = Math.abs(r.left + (t / f.duration) * r.width - e.clientX);
+    if (d < near) {
+      near = d;
+      i = k;
+    }
+  });
+  if (i < 0) return;
   seek(hitTimes[i], false);
   // after the seek, which puts the reader on the match it last passed: a
   // tick's own, where two share its time
