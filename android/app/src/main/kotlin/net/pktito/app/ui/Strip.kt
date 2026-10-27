@@ -433,7 +433,9 @@ private fun Why(why: String, locate: (() -> Unit)?) {
  * on the beak's orange: at 16 dp its three icons are too alike to tell
  * silence by, and a mute that went unseen kept the S25 silent (Peter,
  * 2026-10-27). The orange on the strip, and the × on it, 4.02:1 in light
- * and 7.59 in dark, past the 3:1 a control's state needs.
+ * and 7.59 in dark, past the 3:1 a control's state needs. Filled, where the
+ * × alone in orange passed as well: a mute that is on deserves it (Peter,
+ * 2026-10-27), the one area the beak fills (design/tokens.json).
  */
 @Composable
 private fun Speaker(sound: Sound, enabled: Boolean) {
