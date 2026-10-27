@@ -6,6 +6,13 @@
 //! long (pinfer's core/SCHED.md, Windows). The display still sleeps, and a
 //! closed lid or the power button still puts the computer to sleep: only
 //! idle sleep waits for the job.
+//!
+//! On Windows the job is also kept out of power throttling, which runs the
+//! threads of a window minimized or out of sight, and on battery those of
+//! a foreground app left without input (Windows 11 24H2), on efficient
+//! cores at their most efficient speed: a job started and walked away from.
+//! pinfer measured a windowless process at 1.2 tokens a second left to the
+//! system and 30.6 kept out of it (pinfer's core/SCHED.md).
 
 use std::marker::PhantomData;
 
@@ -16,10 +23,10 @@ pub struct Awake {
     _here: PhantomData<*const ()>,
 }
 
-/// Keep the computer awake until the result is dropped. `why` is the reason
-/// where the system shows one: macOS's `pmset -g assertions`, Linux's
-/// `systemd-inhibit --list`. Where the system can't be asked, nothing
-/// happens and the job goes on.
+/// Keep the computer awake, and on Windows the job out of power throttling,
+/// until the result is dropped. `why` is the reason where the system shows
+/// one: macOS's `pmset -g assertions`, Linux's `systemd-inhibit --list`.
+/// Where the system can't be asked, nothing happens and the job goes on.
 pub fn awake(why: &str) -> Awake {
     Awake {
         _held: os::hold(why),
@@ -29,23 +36,63 @@ pub fn awake(why: &str) -> Awake {
 
 #[cfg(target_os = "windows")]
 mod os {
+    use std::ffi::c_void;
+
     #[link(name = "kernel32")]
     extern "system" {
         fn SetThreadExecutionState(flags: u32) -> u32;
+        fn GetCurrentProcess() -> *mut c_void;
+        fn SetProcessInformation(
+            process: *mut c_void,
+            class: i32,
+            info: *const c_void,
+            size: u32,
+        ) -> i32;
     }
     const ES_CONTINUOUS: u32 = 0x8000_0000;
     const ES_SYSTEM_REQUIRED: u32 = 0x0000_0001;
+    const PROCESS_POWER_THROTTLING: i32 = 4; // ProcessPowerThrottling
+    const EXECUTION_SPEED: u32 = 0x1; // PROCESS_POWER_THROTTLING_EXECUTION_SPEED
 
-    /// The system required, not the display.
+    /// PROCESS_POWER_THROTTLING_STATE
+    #[repr(C)]
+    struct Throttling {
+        version: u32,
+        control: u32,
+        state: u32,
+    }
+
+    /// Execution speed's throttling for the whole process, the engine's
+    /// threads with the rest: taken in hand and off (EXECUTION_SPEED), or
+    /// left to the system again (0).
+    fn throttling(control: u32) {
+        let t = Throttling {
+            version: 1,
+            control,
+            state: 0,
+        };
+        unsafe {
+            SetProcessInformation(
+                GetCurrentProcess(),
+                PROCESS_POWER_THROTTLING,
+                &t as *const Throttling as *const c_void,
+                std::mem::size_of::<Throttling>() as u32,
+            )
+        };
+    }
+
+    /// The system required, not the display, and the process unthrottled.
     pub struct Hold;
 
     pub fn hold(_why: &str) -> Hold {
         unsafe { SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED) };
+        throttling(EXECUTION_SPEED);
         Hold
     }
 
     impl Drop for Hold {
         fn drop(&mut self) {
+            throttling(0);
             unsafe { SetThreadExecutionState(ES_CONTINUOUS) };
         }
     }
