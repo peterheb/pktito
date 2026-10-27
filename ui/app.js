@@ -170,13 +170,22 @@ let about = false; // About is shown, over the screen that opened it
 /* ---------------------------------------------------------- formatting -- */
 
 const two = (n) => String(n).padStart(2, "0");
-function hms(s) {
+/* hh:mm:ss, with the hours' digits that say something of the longest time
+   shown with it (len): none under an hour (10:40), one under ten (1:05:00),
+   so that a file's rows keep one width and the hours are not a wall of
+   zeros (Peter, 2026-10-25). Without len, all of them. */
+function hms(s, len = 36000) {
   s = Math.max(0, Math.floor(s));
-  return `${two(Math.floor(s / 3600))}:${two(Math.floor(s / 60) % 60)}:${two(s % 60)}`;
+  const h = Math.floor(s / 3600),
+    ms = `${two(Math.floor(s / 60) % 60)}:${two(s % 60)}`,
+    top = Math.max(len, s);
+  return top >= 36000 ? `${two(h)}:${ms}` : top >= 3600 ? `${h}:${ms}` : ms;
 }
-function stamp(s) {
+/* a length shown on its own, with its own hours */
+const lengthHms = (d) => hms(d, d);
+function stamp(s, len) {
   const cs = Math.max(0, Math.round(s * 100));
-  return `${hms(Math.floor(cs / 100))}.${two(cs % 100)}`;
+  return `${hms(Math.floor(cs / 100), len)}.${two(cs % 100)}`;
 }
 function msTime(s, sep) {
   const ms = Math.max(0, Math.round(s * 1000));
@@ -247,12 +256,14 @@ const rateLabel = (r) => String(Math.round(exactRate(r) * 1000) / 1000);
    chosen is to count a video's too */
 const ownRate = (f) => !!f && f.fps > 0 && prefs.video_rate !== false;
 const rateOf = (f) => (ownRate(f) ? f.fps : prefs.fps > 0 ? prefs.fps : 24);
-/* a time as the strip and the transcript show it: seconds and hundredths, or frames */
+/* a time as the strip and the transcript show it: seconds and hundredths,
+   the hours as the file's length has them, or frames, whose timecode is
+   always hh:mm:ss:ff, as an editor's is */
 const tc = (t, f = current()) =>
-  prefs.frames ? timecode(t, rateOf(f)) : stamp(t);
+  prefs.frames ? timecode(t, rateOf(f)) : stamp(t, (f && f.duration) || 0);
 /* a file's length as the strip shows it */
 const lengthOf = (f) =>
-  prefs.frames ? timecode(f.duration, rateOf(f)) : hms(f.duration);
+  prefs.frames ? timecode(f.duration, rateOf(f)) : lengthHms(f.duration);
 
 const baseName = (p) => p.split(/[\\/]/).pop();
 const stemOf = (p) => baseName(p).replace(/\.[^.]+$/, "");
@@ -706,7 +717,7 @@ function renderReady() {
       .map(
         (r) =>
           `<li class="pk-qi"><button class="pk-row" type="button" data-recent="${esc(r.id)}" title="${esc(r.path)}" aria-keyshortcuts="Delete">` +
-          `${ICON.file}<span class="pk-name">${esc(r.name)}</span><span class="pk-stamp">${hms(r.duration)}</span>` +
+          `${ICON.file}<span class="pk-name">${esc(r.name)}</span><span class="pk-stamp">${lengthHms(r.duration)}</span>` +
           `<span class="pk-small pk-when">${esc(when(r.finished))}</span></button><button class="pk-x" type="button" tabindex="-1" ` +
           `data-forget="${esc(r.id)}" aria-label="${esc(t("recent.remove", { name: r.name }))}" title="${esc(t("recent.remove_tip"))}">${ICON.x}</button></li>`,
       )
@@ -724,7 +735,7 @@ function batchRowHtml() {
     over = files.filter((f) => !live(f)).length;
   const f = files.find((x) => x.step === "transcribing");
   const length = files.every((x) => x.duration != null)
-    ? hms(files.reduce((t, x) => t + x.duration, 0))
+    ? lengthHms(files.reduce((t, x) => t + x.duration, 0))
     : "";
   const status = files.some(live)
     ? `<span class="pk-bar pk-mini"><i style="width:${(((over + (f ? f.done : 0)) / n) * 100).toFixed(1)}%"></i></span>` +
@@ -1163,7 +1174,7 @@ function rowBody(f) {
     status = `<span class="pk-status pk-err"${detailOf(f) ? ` title="${esc(detailOf(f))}"` : ""}>${esc(failure(f))}</span>`;
   return (
     `${f.kind === "video" ? ICON.film : ICON.music}<span class="pk-name">${esc(f.name)}</span>` +
-    `<span class="pk-stamp">${f.duration == null ? "" : hms(f.duration)}</span>${status}`
+    `<span class="pk-stamp">${f.duration == null ? "" : lengthHms(f.duration)}</span>${status}`
   );
 }
 
@@ -2040,7 +2051,7 @@ function timeMenu(anchor, keys) {
   const chip = (value, label, on) =>
     `<button class="pk-rate${on ? " is-on" : ""}" type="button" data-rate="${value}" aria-pressed="${on}">${label}</button>`;
   const html =
-    choice(false, esc(t("times.seconds")), stamp(now)) +
+    choice(false, esc(t("times.seconds")), stamp(now, f.duration || 0)) +
     choice(
       true,
       esc(t("times.frames")),
