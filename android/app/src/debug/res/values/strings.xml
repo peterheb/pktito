@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- the debug build's name in the launcher, beside Play's pktito -->
+<resources>
+    <string name="app_name">pktito dev</string>
+</resources>

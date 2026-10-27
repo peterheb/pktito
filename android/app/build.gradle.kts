@@ -48,6 +48,13 @@ android {
     }
 
     buildTypes {
+        // an app of its own beside Play's (net.pktito.app.dev, "pktito dev"
+        // in src/debug), so a prerelease installs over adb without
+        // replacing what Play keeps updated: the two are signed by different
+        // keys, and a package name takes one signer
+        debug {
+            applicationIdSuffix = ".dev"
+        }
         // R8's shrinking and its rules (proguard-rules.pro), signed by the
         // upload key where there is one
         release {
