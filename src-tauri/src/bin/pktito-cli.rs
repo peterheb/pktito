@@ -60,7 +60,7 @@ fn run(args: &[String]) -> Result<i32, String> {
     match args.first().map(String::as_str) {
         None | Some("-h" | "--help" | "help") => {
             print!("{USAGE}");
-            return Ok(if args.is_empty() { 2 } else { 0 });
+            return Ok(0);
         }
         Some("--version") => {
             println!("pktito-cli {}", env!("CARGO_PKG_VERSION"));
