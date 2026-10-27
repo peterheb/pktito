@@ -29,7 +29,7 @@ android {
         minSdk = 29
         targetSdk = 36
         versionCode = 1
-        versionName = "0.9.2"
+        versionName = "0.9.3"
         // the two native.sh builds the library for: without this AndroidX's
         // graphics-path library (Compose's) brought armeabi-v7a and x86 too,
         // and a 32-bit phone that Play offered the app to would have had
