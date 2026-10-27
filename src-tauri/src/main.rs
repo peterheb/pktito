@@ -7,7 +7,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use pktito_app::strings::{t, Problem};
-use pktito_app::{audio, decode, download, format, model, pktito, recent, strings, transcribe};
+use pktito_app::{
+    audio, awake, decode, download, format, model, pktito, recent, strings, transcribe,
+};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -438,6 +440,9 @@ async fn transcribe(app: AppHandle, id: u32, path: String) -> Result<(), Problem
 }
 
 fn job(app: &AppHandle, id: u32, path: &Path) {
+    // the computer awake from the file's reading to its transcript's end,
+    // let go on this thread when the job returns (awake.rs)
+    let _awake = awake::awake("pktito is transcribing");
     let state = app.state::<AppState>();
     let send = |ev: JobEvent| {
         let _ = app.emit("job", JobEvent { id, ..ev });

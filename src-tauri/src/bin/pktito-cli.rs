@@ -5,7 +5,7 @@
 //! same bytes. It comes with the app, beside the window's program: the
 //! bundles carry every program in src/bin.
 
-use pktito_app::{decode, download, format, model, pktito, transcribe};
+use pktito_app::{awake, decode, download, format, model, pktito, transcribe};
 use std::fs;
 use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
@@ -125,6 +125,8 @@ fn run(args: &[String]) -> Result<i32, String> {
 /// Each file transcribed and written: on to the next after one that fails,
 /// which says why; 1 if any did.
 fn transcribe_all(o: &Opts) -> Result<i32, String> {
+    // the computer awake until the last file is written (awake.rs)
+    let _awake = awake::awake("pktito-cli is transcribing");
     let path = model_path(o.model.as_deref())?;
     let model = pktito::Model::load(&path)?;
     let mut asr = pktito::Asr::new(&model, o.threads)?;
@@ -226,6 +228,8 @@ fn bench_files(paths: &[String]) -> Result<Vec<PathBuf>, String> {
 /// the OS's or ffmpeg's, not pktito, and it is a small part. A file that
 /// can't be read is said and left out; 1 if any was.
 fn bench_all(o: &Opts) -> Result<i32, String> {
+    // awake through the timing too: a sleep in the middle would be timed
+    let _awake = awake::awake("pktito-cli is timing a transcription");
     let files = bench_files(&o.files)?;
     let path = model_path(o.model.as_deref())?;
     let model = pktito::Model::load(&path)?;
