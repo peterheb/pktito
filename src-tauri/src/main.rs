@@ -36,6 +36,10 @@ struct AppState {
     /// the lock is held for both, so that none falls between.
     opened: Mutex<Vec<String>>,
     page_ready: AtomicBool,
+    /// On Linux, the server the player's audio comes from, from the first
+    /// file played (serve.rs).
+    #[cfg(target_os = "linux")]
+    serve: Mutex<Option<pktito_app::serve::Server>>,
 }
 
 const VIDEO: &[&str] = &["mp4", "m4v", "mov", "webm", "mkv", "wmv", "avi", "3gp"];
@@ -658,18 +662,23 @@ fn open_recent(app: AppHandle, id: String) -> Result<Opened, Problem> {
     })
 }
 
-/// A cached transcript's audio, its bytes, for the window on Linux, whose
-/// WebKitGTK player can't read media by the asset protocol (app.js,
-/// audioSrc). Only a WAV in the audio cache.
+/// Where the window's player gets a cached transcript's audio on Linux: the
+/// app's own server on 127.0.0.1, since WebKitGTK's player can't read media
+/// by the asset protocol (serve.rs). Only a WAV in the audio cache.
+#[cfg(target_os = "linux")]
 #[tauri::command]
-fn audio_bytes(app: AppHandle, path: String) -> Result<tauri::ipc::Response, Problem> {
+fn audio_url(app: AppHandle, state: State<'_, AppState>, path: String) -> Result<String, Problem> {
     let p = PathBuf::from(&path);
     let dir = audio_dir(&app)?;
     if p.parent() != Some(dir.as_path()) || p.extension().map_or(true, |e| e != "wav") {
         return Err(Problem::new("play.cant"));
     }
-    let bytes = std::fs::read(&p).map_err(|e| Problem::new("play.cant").detail(e))?;
-    Ok(tauri::ipc::Response::new(bytes))
+    let mut serve = state.serve.lock().unwrap();
+    if serve.is_none() {
+        let s = pktito_app::serve::Server::start();
+        *serve = Some(s.map_err(|e| Problem::new("play.cant").detail(e))?);
+    }
+    Ok(serve.as_ref().unwrap().url(&p))
 }
 
 /// A recent transcript's audio, read again from its original once the cache
@@ -1722,7 +1731,8 @@ fn main() {
             recent_list,
             open_recent,
             reload_audio,
-            audio_bytes,
+            #[cfg(target_os = "linux")]
+            audio_url,
             clear_recent,
             save_text,
             save_many,

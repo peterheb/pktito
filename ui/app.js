@@ -1822,24 +1822,18 @@ function loadAudio(f) {
 }
 
 /* The player's source: the cached audio's file by the asset protocol, or on
-   Linux its bytes over IPC as a blob. WebKitGTK's player can't read media by
-   the asset protocol ("Loading failed, error: FormatError", while GStreamer
-   played the file: the Omarchy test, 2026-10-25). */
-let blobUrl = null,
-  coming = null; // the file whose bytes are on their way
+   Linux by HTTP from the app's own server on 127.0.0.1, since WebKitGTK's
+   player can't read media by the asset protocol (serve.rs). */
+let coming = null; // the file whose address is on its way
 function audioSrc(f) {
-  if (blobUrl) URL.revokeObjectURL(blobUrl);
-  blobUrl = null;
   if (!f.audio) return player.removeAttribute("src");
   if (!isLinux()) return (player.src = T.core.convertFileSrc(f.audio));
   const id = f.id;
   coming = id;
-  invoke("audio_bytes", { path: f.audio }).then(
-    (bytes) => {
+  invoke("audio_url", { path: f.audio }).then(
+    (url) => {
       if (coming === id) coming = null;
-      if (playId !== id) return;
-      blobUrl = URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
-      player.src = blobUrl;
+      if (playId === id) player.src = url;
     },
     (e) => {
       if (coming === id) coming = null;
@@ -1884,14 +1878,7 @@ function playFrom(pos) {
       .play()
       .catch((e) => toast(t("play.cant"), { err: true, detail: e.message }));
   const mine = ++playToken;
-  // on Linux always the seek, which flushes the player: WebKitGTK's played a
-  // few seconds from about a minute in (2 MiB of the WAV) before the start,
-  // from a blob, when asked to play where it already was (the Omarchy test)
-  if (
-    !isLinux() &&
-    Math.abs(player.currentTime - pos) < 0.01 &&
-    !player.seeking
-  )
+  if (Math.abs(player.currentTime - pos) < 0.01 && !player.seeking)
     return start();
   player.currentTime = pos;
   const go = () => {
