@@ -579,13 +579,14 @@ fun Work(
     val review = step == "done" || step == "stopped"
     Column(Modifier.fillMaxSize()) {
         // the header's buttons in the middle of its 62 dp (app.css, .pk-head),
-        // the way back's 8 dp into its padding, so that its arrow is drawn
-        // near the strip's edge and its button's padding is outside it
+        // the way back's arrow on the cards' line, 16 dp from the screen's
+        // edge, its button's padding outside it: the arrow's ink is 14 dp into
+        // its 40 (11 to the 18 dp icon, and 3 in that), so the button is at 2
         Row(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = 62.dp)
-                .padding(start = if (running) 16.dp else 8.dp, end = 16.dp, top = 11.dp, bottom = 11.dp),
+                .padding(start = if (running) 16.dp else 2.dp, end = 16.dp, top = 11.dp, bottom = 11.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -638,7 +639,9 @@ fun Work(
                     // last passed: a tick's own, where two share its time
                     find.go(hits, k)
                 },
-                modifier = Modifier.padding(horizontal = 16.dp),
+                // 16 under the header's buttons, the one gap between the
+                // screen's blocks (Peter, 2026-10-27): their 11 and 5
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 5.dp),
                 why = why,
                 locate = locate,
             )
@@ -753,10 +756,13 @@ private fun Rows(
     val marks = remember(hits) { hits.withIndex().groupBy { it.value.row } }
     // the text selected, if any (SegRow)
     val selection = rememberSelectionState()
-    BoxWithConstraints(modifier.fillMaxWidth()) {
+    // the list from one gap under the views line, its rows scrolling under
+    // that edge, not up to the line, where the playing row's card had met the
+    // search's field (Peter, the S25, 2026-10-27)
+    BoxWithConstraints(modifier.fillMaxWidth().padding(top = 16.dp)) {
         val wide = maxWidth >= 620.dp
         SelectionContainer(selection) {
-            LazyColumn(state = list, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp)) {
+            LazyColumn(state = list, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
                 itemsIndexed(rows) { i, s ->
                     val now = i == current
                     val word = if (now) s.words.indexOfLast { it.start <= position + 1e-3 } else -1

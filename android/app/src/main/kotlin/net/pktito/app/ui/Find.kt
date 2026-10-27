@@ -240,7 +240,10 @@ fun FindField(f: Finder, hits: List<Hit>, seek: ((Double) -> Unit)?, onClose: ()
             .height(40.dp)
             .then(if (f.typing) Modifier.border(2.dp, p.focus, Corner) else Modifier)
             .background(p.sunk, Corner)
-            .padding(start = 10.dp, end = 4.dp),
+            // the glass's ink and the x's on the content line, 16 dp in, as
+            // the strip's play and the rows' words are (Peter, 2026-10-27):
+            // the glass's is 4/3 dp into its 16, the x's 34/3 into its 32
+            .padding(start = (16f - 4f / 3).dp, end = (16f - 34f / 3).dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -278,7 +281,11 @@ fun FindField(f: Finder, hits: List<Hit>, seek: ((Double) -> Unit)?, onClose: ()
                 style = Type.stamp.copy(fontSize = 13.sp, fontFeatureSettings = "tnum"),
                 color = p.inkMuted,
                 maxLines = 1,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                // as far from the first arrow as the arrows are from one
+                // another: the 34/3 dp a button keeps round its glyph, after it
+                modifier = Modifier
+                    .padding(end = (34f / 3).dp)
+                    .semantics { liveRegion = LiveRegionMode.Polite },
             )
             Step(Icons.up, stringResource(R.string.find_previous), hits.size >= 2) { f.step(hits, -1, seek) }
             Step(Icons.down, stringResource(R.string.find_next), hits.size >= 2) { f.step(hits, 1, seek) }
