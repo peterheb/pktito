@@ -785,23 +785,26 @@ const liveHtml = (f, open = false) =>
   `<li><button class="pk-row" type="button" data-live="${f.id}" title="${esc(f.path)}"${open ? ' aria-current="true"' : ""}>${rowBody(f)}</button></li>`;
 
 /* A batch on the start screen, under way or done since: how far it has
-   got, all its files counted, and their length once every one is read. */
+   got, all its files counted, and their length once every one is read. A
+   transcript opened from the list beside it is no part of it (Peter,
+   2026-10-27: a batch of two counted three, its bar with them). */
 function batchRowHtml(open = false) {
-  const n = files.length,
-    done = files.filter((f) => f.step === "done").length,
-    over = files.filter((f) => !live(f)).length;
-  const f = files.find((x) => x.step === "transcribing");
-  const length = files.every((x) => x.duration != null)
-    ? lengthHms(files.reduce((t, x) => t + x.duration, 0))
+  const of = files.filter((x) => !x.lone),
+    n = of.length,
+    done = of.filter((f) => f.step === "done").length,
+    over = of.filter((f) => !live(f)).length;
+  const f = of.find((x) => x.step === "transcribing");
+  const length = of.every((x) => x.duration != null)
+    ? lengthHms(of.reduce((t, x) => t + x.duration, 0))
     : "";
-  const status = files.some(live)
+  const status = of.some(live)
     ? `<span class="pk-bar pk-mini"><i style="width:${(((over + (f ? f.done : 0)) / n) * 100).toFixed(1)}%"></i></span>` +
       `<span class="pk-status pk-num">${esc(t("batch.transcribing", { i: Math.min(n, over + 1), n }))}</span>`
     : done === n
       ? `<span class="pk-status pk-ok">${ICON.check}${esc(t("status.done"))}</span>`
       : `<span class="pk-status pk-num">${esc(t("batch.done_of", { done, n }))}</span>`;
   return (
-    `<li><button class="pk-row" type="button" data-batch title="${esc(files.map((x) => x.name).join("\n"))}"${open ? ' aria-current="true"' : ""}>${ICON.folder}` +
+    `<li><button class="pk-row" type="button" data-batch title="${esc(of.map((x) => x.name).join("\n"))}"${open ? ' aria-current="true"' : ""}>${ICON.folder}` +
     `<span class="pk-name">${esc(fileCount(n))}</span><span class="pk-stamp">${length}</span>${status}</button></li>`
   );
 }
