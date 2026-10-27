@@ -948,8 +948,9 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* beside the name while the file is at work, from the moment it starts:
-   the strip says nothing until the audio is read */
+/* beside the name from the moment the file starts until its ring shows
+   progress: the strip says nothing until the audio is read (app.js,
+   updateRunning) */
 .pk-spin {
   flex: none;
   width: 14px;

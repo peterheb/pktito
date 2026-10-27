@@ -124,7 +124,7 @@ Motion in pktito follows the audio or answers a hand. Nothing moves to decorate.
 - In the app:
   - Progress moves along the waveform, and the transcript appears as each part finishes.
   - In playback the playhead moves, the playing word is underlined, and the transcript scrolls to keep the playing sentence in view.
-  - A spinner beside the file's name marks a file at work.
+  - A spinner beside the file's name marks a file at work until its progress shows, and one beside a batch's title while none of its rows moves. Then the progress says it, and nothing turns through a long job: on a Pi 5 the spinner's frames took three quarters of a core from the transcription.
   - The mascot turns and hops when it's dragged or clicked.
 - Controls answer hover and press with the tint (see Color), and press moves a button 1 px.
 - The site has no animation beyond that: a link's arrow moves 3 px on hover.

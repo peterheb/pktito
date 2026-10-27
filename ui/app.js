@@ -1363,8 +1363,7 @@ function updateRow(f) {
 }
 
 /* How far the batch has got, and what Save all does with the rest as it
-   finishes; its pace so far; Stop and the spinner while any of it is to
-   come. */
+   finishes; its pace so far; Stop while any of it is to come. */
 function batchHead() {
   const going = files.some(live),
     p = going && batchSave;
@@ -1377,7 +1376,11 @@ function batchHead() {
       n: files.length,
     }) + saving;
   $("batch-pace").textContent = batchPace();
-  $("batch-spin").hidden = $("batch-stop").hidden = !going;
+  $("batch-stop").hidden = !going;
+  // the spinner while no row's progress moves, as beside a file's name
+  // (updateRunning): between files, not through each one
+  $("batch-spin").hidden =
+    !going || files.some((f) => f.step === "transcribing" && f.done > 0);
   $("save-all").disabled = !files.some(
     (f) => live(f) || (f.step === "done" && f.segments.length),
   );
@@ -1443,6 +1446,14 @@ function modeOf(f) {
   if (busy(f)) return "running";
   return f.step === "error" ? "error" : "review";
 }
+
+/* The spinner beside the name: from the file's start until its ring has
+   progress to show, and not through the rest of the job. Its frames, drawn
+   by WebKit, the window and the desktop's compositor, took three quarters
+   of a core from the transcription on a Pi 5: chapter 1 at 8.0x real time
+   to the command line's 13.4x (Peter's Pi, 2026-10-27, a 1066 px window). */
+const spins = (f, mode) =>
+  mode === "running" && !(f.step === "transcribing" && f.done > 0);
 
 /* Where the file is and what made its transcript, for its name's tooltip:
    the window keeps both out of sight. */
@@ -1543,8 +1554,7 @@ function updateHead(f, mode) {
   $("copy").title = t(prefs.captions ? "copy.captions" : "copy.text");
   $("copy").setAttribute("aria-label", $("copy").title);
   $("copy").disabled = !has;
-  // at work: from the file's start until its last words, before its first too
-  $("spin").hidden = mode !== "running";
+  $("spin").hidden = !spins(f, mode);
   // saving is what a finished transcript is for
   $("save-as").classList.add("pk-btn-primary");
   $("save-as").hidden = !review;
@@ -1570,6 +1580,7 @@ function updateRunning(f) {
   const going = f.step === "transcribing";
   $("pct").textContent = `${percent(going ? f.done : 0)}%`;
   $("prog").style.setProperty("--done", `${(going ? f.done : 0) * 100}%`);
+  $("spin").hidden = !spins(f, "running");
   // under the waveform the step, and once the first audio is done, the pace so far
   $("pace").textContent =
     f.step === "reading"
