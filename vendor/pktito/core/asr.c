@@ -115,7 +115,7 @@ pk_asr *pk_asr_new(const pk_model *m, int threads) {
     a->nth = pk_pool_threads(a->pool);
     a->wide = a->nth;
     a->fast = threads > 0 ? a->nth : pk_os_fast_cores();
-    a->tune = a->fast > 0 && a->fast < a->nth;
+    a->tune = a->fast > 0 && a->fast < a->nth ? PK_TUNE_AT : 0;
     return a;
 }
 
@@ -147,10 +147,12 @@ long pk_asr_run(pk_asr *a, const float *x, size_t n, const pk_tok **toks) {
         return 0;
     if (T0 > UINT32_MAX / 4 || reserve(a, T0))
         return -1;
+    pk_os_throttle was = pk_os_unthrottle();  /* this thread runs a share of every job */
     PROF(PK_P_MEL, pk_mel(a, x, n));
     uint32_t Te = pk_encode(a, (uint32_t)T0);
     long nt;
     PROF(PK_P_DEC, nt = pk_decode(a, Te));
+    pk_os_rethrottle(was);
     *toks = a->toks;
     return nt;
 }

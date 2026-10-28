@@ -224,6 +224,8 @@ double pk_os_now(void) {
 }
 
 void pk_os_stdio(void) {}
+pk_os_throttle pk_os_unthrottle(void) { return (pk_os_throttle){ 0, 0 }; }
+void pk_os_rethrottle(pk_os_throttle was) { (void)was; }
 
 #elif defined(PK_WINDOWS)
 
@@ -305,6 +307,39 @@ static int cores(int fastest) {
 int pk_os_cores(void) { return cores(0); }
 int pk_os_fast_cores(void) { return cores(1); }
 
+/* Windows gives a process with no window - one run over ssh, a service -
+ * EcoQoS by its own heuristics, and confines its threads to the cores it
+ * calls efficient, on a Snapdragon X Elite 4 of its 12 identical cores.
+ * `pktito-c bench` over ssh there had its 8 threads on those 4 a few
+ * seconds in, the screen off or on: 8.9 to 11.4 s for ten minutes of
+ * audio, against 5.8 to 6.4 s with them opted out, where an app with a
+ * window never packed on AC (backend/neon-dp/CLIMB.md, 2026-10-27);
+ * pinfer's pool went the same way (its core/SCHED.md). A Snapdragon 7c,
+ * whose classes name its A76s, ran the same over ssh with it and without.
+ * The library's threads opt out one at a time, each worker for good and
+ * the caller's for the call that runs on it, which leaves the rest of a
+ * host's process as it was. A thread's state is two masks, both 0 - the
+ * system's to decide - until something sets them, and that is what a
+ * thread whose Windows cannot say is put back to. A Windows older than 10
+ * 1709, without ThreadPowerThrottling, refuses every call, and nothing
+ * changes. */
+pk_os_throttle pk_os_unthrottle(void) {
+    HANDLE t = GetCurrentThread();
+    THREAD_POWER_THROTTLING_STATE s = { THREAD_POWER_THROTTLING_CURRENT_VERSION, 0, 0 };
+    pk_os_throttle was = { 0, 0 };
+    if (GetThreadInformation(t, ThreadPowerThrottling, &s, sizeof s))
+        was = (pk_os_throttle){ s.ControlMask, s.StateMask };
+    s.ControlMask = THREAD_POWER_THROTTLING_EXECUTION_SPEED;
+    s.StateMask = 0;
+    SetThreadInformation(t, ThreadPowerThrottling, &s, sizeof s);
+    return was;
+}
+
+void pk_os_rethrottle(pk_os_throttle was) {
+    THREAD_POWER_THROTTLING_STATE s = { THREAD_POWER_THROTTLING_CURRENT_VERSION, was.control, was.state };
+    SetThreadInformation(GetCurrentThread(), ThreadPowerThrottling, &s, sizeof s);
+}
+
 double pk_os_now(void) {
     static LARGE_INTEGER hz;
     LARGE_INTEGER t;
@@ -384,6 +419,8 @@ double pk_os_now(void) {
 }
 
 void pk_os_stdio(void) {}
+pk_os_throttle pk_os_unthrottle(void) { return (pk_os_throttle){ 0, 0 }; }
+void pk_os_rethrottle(pk_os_throttle was) { (void)was; }
 
 #endif
 

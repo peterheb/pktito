@@ -82,7 +82,7 @@ typedef struct pk_asr pk_asr;
 
 /* A transcriber with `threads` threads in all (0: one a core). NULL if
  * memory or a thread cannot be had. With 0, on a chip whose cores are of
- * two kinds, the first recording of 8 s or more times the encoder on every
+ * two kinds, the second recording of 8 s or more times the encoder on every
  * core and on the fast kind alone, and the transcriber keeps the faster;
  * pk_asr_threads says how many it runs on. */
 pk_asr *pk_asr_new(const pk_model *m, int threads);
@@ -103,7 +103,12 @@ typedef struct {
  *
  * The encoder's attention costs grow with the square of the length, and
  * its working memory with the length: a minute is about 60 MB. Long
- * recordings are pk_chunks' business. */
+ * recordings are pk_chunks' business.
+ *
+ * The calling thread does a share of the work. On Windows it is out of the
+ * power throttling the system gives a process without a window for the
+ * call, as the transcriber's own threads are for good, and leaves as it
+ * came (core/os.h). */
 long pk_asr_run(pk_asr *a, const float *x, size_t n, const pk_tok **toks);
 
 /* The text of n tokens, UTF-8 and NUL-terminated in out[cap]: SentencePiece's
@@ -149,7 +154,8 @@ void    pk_vad_free(pk_vad *v);
 #define PK_VAD_SAMPLES 512      /* a frame: 32 ms at 16 kHz */
 
 /* P(speech) for the next frame, or for n consecutive frames x[n * 512] ->
- * probs[n] (the same bits, several times quicker). */
+ * probs[n] (the same bits, several times quicker; on Windows out of power
+ * throttling for the call, as pk_asr_run is). */
 float pk_vad_prob(pk_vad *v, const float *frame);
 void  pk_vad_probs(pk_vad *v, const float *x, size_t n, float *probs);
 
