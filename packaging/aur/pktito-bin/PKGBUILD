@@ -13,7 +13,8 @@ url="https://pktito.net"
 license=(MIT OFL-1.1)
 depends=(
   # what pktito-app links
-  webkit2gtk-4.1 gtk3 libsoup3 glib2 cairo gdk-pixbuf2 dbus gcc-libs glibc
+  # (libgcc, not gcc-libs: its libgcc_s alone; gcc-libs is now 13 runtimes)
+  webkit2gtk-4.1 gtk3 libsoup3 glib2 cairo gdk-pixbuf2 dbus libgcc glibc
   # its icons' theme
   hicolor-icon-theme
   # reading audio and video: Linux has no one media library
