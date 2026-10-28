@@ -240,9 +240,9 @@ copyright notices stay as they are.
 ## Building
 
 Rust, the Tauri CLI (`cargo install tauri-cli --version "^2" --locked`) and
-a C compiler: Xcode's command line tools on macOS, MSYS2's MinGW-w64 gcc on
-Windows (with Rust's `x86_64-pc-windows-gnu` toolchain), gcc or clang on
-Linux.
+a C compiler: Xcode's command line tools on macOS,
+[llvm-mingw](https://github.com/mstorsjo/llvm-mingw)'s clang on Windows
+(below), gcc or clang on Linux.
 
 ```sh
 cargo tauri dev             # run it
@@ -255,22 +255,34 @@ prettier@3.6.2 --write .` at the top before a commit (`--check` says whether
 either is due). `.prettierignore` leaves out what scripts write and the
 design system's own files.
 
-Windows on Arm builds on x64 Windows, cross-compiled: rustup's
-`stable-x86_64-pc-windows-gnullvm` toolchain with the
-`aarch64-pc-windows-gnullvm` target, and [llvm-mingw](https://github.com/mstorsjo/llvm-mingw)'s
-`bin` on `PATH` (its clang compiles and links; `src-tauri/.cargo/config.toml`
-names it and links everything statically). The exe needs only Windows' own
-DLLs and the Arm64 `WebView2Loader.dll` beside it.
+Windows builds on x64 Windows with rustup's
+`stable-x86_64-pc-windows-gnullvm` toolchain and llvm-mingw's `bin` on
+`PATH` (its clang compiles and links; `src-tauri/.cargo/config.toml` names
+it and links everything statically): `x86_64-pc-windows-gnullvm` for x64,
+and the `aarch64-pc-windows-gnullvm` target, cross-compiled, for Windows on
+Arm. Each exe needs only Windows' own DLLs and its architecture's
+`WebView2Loader.dll` beside it.
 
 ```sh
+cargo +stable-x86_64-pc-windows-gnullvm build --release --target x86_64-pc-windows-gnullvm
 cargo +stable-x86_64-pc-windows-gnullvm build --release --target aarch64-pc-windows-gnullvm
 ```
 
-Its installer names the DLL as a resource: tauri-bundler 2.10.4 adds
+Each installer names the DLL as a resource: tauri-bundler 2.10.4 adds
 `WebView2Loader.dll` only for targets ending in `-gnu`, and without it the
-installed app does not start.
+installed app does not start. tauri-build copies it into the target's
+folder, but only after it has checked the resources, so a first build in a
+fresh folder fails on the DLL not being there yet: copy it in from
+webview2-com-sys, which carries Microsoft's loader for each architecture
+(its version is Cargo.lock's), `x64` or `arm64`:
+
+```powershell
+Copy-Item (Resolve-Path "$env:USERPROFILE\.cargo\registry\src\index.crates.io-*\webview2-com-sys-0.39.1\x64\WebView2Loader.dll") src-tauri\target\x86_64-pc-windows-gnullvm\release\
+```
 
 ```sh
+cargo tauri build --target x86_64-pc-windows-gnullvm --bundles nsis --config \
+  '{"bundle":{"resources":{"target/x86_64-pc-windows-gnullvm/release/WebView2Loader.dll":"WebView2Loader.dll"}}}'
 cargo tauri build --target aarch64-pc-windows-gnullvm --bundles nsis --config \
   '{"bundle":{"resources":{"target/aarch64-pc-windows-gnullvm/release/WebView2Loader.dll":"WebView2Loader.dll"}}}'
 ```
