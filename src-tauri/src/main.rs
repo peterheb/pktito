@@ -1369,7 +1369,8 @@ fn main_window(app: &tauri::App) -> tauri::Result<tauri::WebviewWindow> {
 static PLACED: Mutex<Option<(f64, f64)>> = Mutex::new(None);
 
 /// The window, sized by fit_size before it is shown, in the middle of the
-/// monitor's work area. tauri.conf.json makes it hidden until then.
+/// monitor's work area; on Linux where the desktop puts it. tauri.conf.json
+/// makes it hidden until then.
 fn place_window(w: &tauri::WebviewWindow, saved: Option<[f64; 2]>) {
     let monitor = w
         .current_monitor()
@@ -1392,6 +1393,12 @@ fn place_window(w: &tauri::WebviewWindow, saved: Option<[f64; 2]>) {
     let (width, height) = fit_size(saved, room);
     *PLACED.lock().unwrap() = Some((width, height));
     let _ = w.set_size(tauri::LogicalSize::new(width, height));
+    // Not on Linux, where the desktop places a new window: Wayland lets no
+    // app place its own, and an X server can report a screen other than the
+    // one shown. WSLg's X gave a 2880 by 1620 panel's physical pixels while
+    // Windows showed 1920 by 1080 of them at 150%, and the window, centred
+    // on the first, opened mostly off the second (snappy, 2026-10-27).
+    #[cfg(not(target_os = "linux"))]
     let _ = w.center();
     let _ = w.show();
 }
