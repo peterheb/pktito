@@ -76,7 +76,7 @@ class Shots {
     private val segments = Transcriber.parse(String(resource("alice-segments.json")))
     private val cues = Transcriber.parseCues(String(resource("alice-cues.json")), segments.flatMap { it.words })
     private val peaks = resource("alice-peaks.bin")
-    private val actions = WorkActions({}, {}, {}, {}, {}, {}, {}, {}, { _, _ -> }, {})
+    private val actions = WorkActions({}, {}, {}, {}, {}, {}, {}, { _, _ -> }, {})
 
     /**
      * The screen, or what act leads to on it (a menu, its own window); with
@@ -279,8 +279,8 @@ class Shots {
     @Test fun doneDark() = shot("done", true) { work("done", 1.0, position = 30.0, playing = true) }
     @Test fun doneWide() = shot("done", false, wide = true) { work("done", 1.0, position = 30.0, playing = true) }
     @Test fun doneWideDark() = shot("done", true, wide = true) { work("done", 1.0, position = 30.0, playing = true) }
-    private val saveAs = {
-        compose.onNodeWithText("Save as").performClick()
+    private val shareMenu = {
+        compose.onNodeWithText("Share").performClick()
         compose.onNode(isPopup())
     }
     private val speedMenu = {
@@ -295,11 +295,11 @@ class Shots {
     @Test fun doneMutedKeys() = shot("done-muted", false, keys = true) { work("done", 1.0, position = 30.0, muted = true) }
     @Test fun doneMutedKeysDark() = shot("done-muted", true, keys = true) { work("done", 1.0, position = 30.0, muted = true) }
     @Test fun doneNoneKeys() = shot("done-none", false, keys = true) { work("done", 1.0, position = 30.0, volume = 0.0) }
-    @Test fun saveAsMenu() = shot("save-as", false, act = saveAs) { work("done", 1.0) }
-    @Test fun saveAsMenuDark() = shot("save-as", true, act = saveAs) { work("done", 1.0) }
+    @Test fun shareMenu() = shot("share", false, act = shareMenu) { work("done", 1.0) }
+    @Test fun shareMenuDark() = shot("share", true, act = shareMenu) { work("done", 1.0) }
     @Test fun speedMenuKeys() = shot("speed", false, keys = true, act = speedMenu) { work("done", 1.0) }
-    @Test fun saveAsMenuKeys() = shot("save-as", false, keys = true, act = saveAs) { work("done", 1.0) }
-    @Test fun saveAsMenuKeysDark() = shot("save-as", true, keys = true, act = saveAs) { work("done", 1.0) }
+    @Test fun shareMenuKeys() = shot("share", false, keys = true, act = shareMenu) { work("done", 1.0) }
+    @Test fun shareMenuKeysDark() = shot("share", true, keys = true, act = shareMenu) { work("done", 1.0) }
     @Test fun captions() = shot("captions", false) { work("done", 1.0, cues, captions = true, position = 12.0) }
     @Test fun captionsDark() = shot("captions", true) { work("done", 1.0, cues, captions = true, position = 12.0) }
     // a cue's range on a phone at 360 in frames, its longest; a laptop's window keeps start over end

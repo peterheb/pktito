@@ -388,7 +388,7 @@ fun Menu(expanded: Boolean, onDismiss: () -> Unit, gap: Dp = 6.dp, wide: Boolean
  * A menu's item (app.css, .pk-mi): what it does, under it in mono the file
  * it makes, or in its words what it is (note, .pk-sub, as the model menu
  * has it), and 16 dp after its words, on their line, the key that does it
- * too where there are keys (hint: Kbd or KeyCap), or the check of the one
+ * too where there are keys (hint: KeyCap), or the check of the one
  * chosen of a menu's choices (selected, not null for a choice).
  */
 @Composable
@@ -443,12 +443,6 @@ fun hasKeys(): Boolean {
  */
 @Composable
 fun byFinger(): Boolean = !hasKeys()
-
-/** A shortcut beside its item, Ctrl+S, in the type of the file under it (app.css, .pk-kbd). */
-@Composable
-fun Kbd(keys: String) {
-    Text(keys, style = Type.stamp.copy(lineHeight = 1.em), color = pk.inkMuted, maxLines = 1, softWrap = false)
-}
 
 /**
  * A key to press beside its item, on a key's tone step: a lone < or > in the

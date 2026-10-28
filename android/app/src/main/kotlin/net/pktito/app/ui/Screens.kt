@@ -520,8 +520,7 @@ class WorkActions(
     val back: () -> Unit,
     val stop: () -> Unit,
     val copy: () -> Unit,
-    val share: () -> Unit,
-    val save: (ext: String) -> Unit,
+    val share: (ext: String) -> Unit,
     val setTimes: (Boolean) -> Unit,
     val setCaptions: (Boolean) -> Unit,
     val play: () -> Unit,
@@ -529,12 +528,12 @@ class WorkActions(
     val setBase: (Timebase) -> Unit,
 )
 
-/** The formats Save as offers, the desktop's, in its order, and the letter that saves one with Ctrl (and Shift). */
-class Format(val ext: String, val label: Int, val withTimes: Int = label, val key: String? = null, val shift: Boolean = false)
+/** The formats Share offers, the desktop's Save as's, in its order. */
+class Format(val ext: String, val label: Int, val withTimes: Int = label)
 
 val FORMATS = listOf(
-    Format("txt", R.string.format_txt, R.string.format_txt_times, key = "S"),
-    Format("srt", R.string.format_srt, key = "S", shift = true),
+    Format("txt", R.string.format_txt, R.string.format_txt_times),
+    Format("srt", R.string.format_srt),
     Format("vtt", R.string.format_vtt),
     Format("md", R.string.format_md, R.string.format_md_times),
     Format("json", R.string.format_json),
@@ -543,7 +542,7 @@ val FORMATS = listOf(
 /**
  * One file at work and then its transcript (ui/index.html, #work): the
  * header with the way back, the name, and what can be done with it (at
- * work only Stop; Copy, Share and Save as once it is done), the strip, the
+ * work only Stop; Copy and Share once it is done), the strip, the
  * choice of sentences or captions, a line for what went wrong, and the rows.
  */
 @Composable
@@ -605,8 +604,7 @@ fun Work(
                 PkButton(stringResource(R.string.stop), a.stop, kind = Kind.Ghost)
             if (review && rows.isNotEmpty()) {
                 IconBtn(Icons.copy, stringResource(if (captions) R.string.copy_captions else R.string.copy_text), a.copy)
-                IconBtn(Icons.share, stringResource(R.string.share), a.share)
-                SaveAs(name, times, a)
+                ShareAs(name, times, a)
             }
         }
         if (step != "error")
@@ -697,35 +695,32 @@ private fun Views(captions: Boolean, setCaptions: (Boolean) -> Unit, find: Finde
     }
 }
 
-/** Save as, the plume button a finished transcript is for, and its menu of formats. */
+/**
+ * Share, the plume button a finished transcript is for, and its menu of
+ * formats, the desktop's Save as's: each sends the transcript as a file of
+ * its kind to the app picked in the system's share sheet, which has Save
+ * file too (MainActivity.share). Where the desktop's button saves, a
+ * phone's shares: on one a transcript goes to another app, Drive or a chat
+ * or mail, far more often than to a folder. Ctrl+S still saves, where there
+ * are keys.
+ */
 @Composable
-private fun SaveAs(name: String, times: Boolean, a: WorkActions) {
+private fun ShareAs(name: String, times: Boolean, a: WorkActions) {
     var open by remember { mutableStateOf(false) }
     val stem = name.substringBeforeLast('.').ifEmpty { name }
-    val keys = hasKeys()
     Box {
-        PkButton(stringResource(R.string.save_as), { open = true }, kind = Kind.Primary, trailing = Icons.down)
+        PkButton(stringResource(R.string.share), { open = true }, kind = Kind.Primary, trailing = Icons.down)
         Menu(open, { open = false }) {
-            for (f in FORMATS) {
-                val shortcut = f.key?.takeIf { keys }?.let { kbd(it, f.shift) }
-                Item(
-                    stringResource(if (times) f.withTimes else f.label), "$stem.${f.ext}",
-                    hint = shortcut?.let { { Kbd(it) } },
-                ) {
+            for (f in FORMATS)
+                Item(stringResource(if (times) f.withTimes else f.label), "$stem.${f.ext}") {
                     open = false
-                    a.save(f.ext)
+                    a.share(f.ext)
                 }
-            }
             MenuLine()
             Check(stringResource(R.string.save_times), times, a.setTimes)
         }
     }
 }
-
-/** A shortcut's keys as the desktop writes them off macOS: Ctrl+S, Ctrl+Shift+S (app.js, kbd). */
-@Composable
-fun kbd(key: String, shift: Boolean = false): String =
-    stringResource(R.string.key_ctrl) + "+" + (if (shift) stringResource(R.string.key_shift) + "+" else "") + key
 
 /**
  * The transcript's rows (app.css, .pk-seg): each sentence's time, or a cue's

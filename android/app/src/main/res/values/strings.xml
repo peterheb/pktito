@@ -14,7 +14,9 @@
     <string name="copied">Copied</string><!-- copy.done -->
     <string name="copied_captions">Copied captions</string><!-- copy.done_captions -->
     <string name="share">Share</string>
-    <string name="save_as">Save as</string><!-- save.as -->
+    <!-- the share sheet's first choice, under the app's name: the format shared, saved instead; "Save to device" was cut to "Save to devi…" there (Android 13 and 16) -->
+    <string name="save_file">Save file</string>
+    <string name="share_failed">Couldn\'t share %1$s</string>
     <string name="save_times">Timestamps in .txt and .md</string><!-- save.times -->
     <string name="saved">Saved %1$s</string><!-- save.saved -->
     <string name="save_failed">Couldn\'t save %1$s</string><!-- save.failed -->
@@ -42,8 +44,6 @@
     <string name="volume_label">Volume</string><!-- volume.label -->
     <string name="volume_mute">Mute</string><!-- volume.mute -->
     <string name="volume_unmute">Unmute</string><!-- volume.unmute -->
-    <string name="key_ctrl">Ctrl</string><!-- key.ctrl -->
-    <string name="key_shift">Shift</string><!-- key.shift -->
     <string name="times_tip">Seconds or frames</string><!-- times.tip -->
     <string name="times_seconds">Seconds</string><!-- times.seconds -->
     <string name="times_frames">Frames</string><!-- times.frames -->

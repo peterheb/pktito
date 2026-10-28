@@ -8,11 +8,13 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.LabeledIntent
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Parcelable
 import android.provider.OpenableColumns
 import android.util.Log
 import android.view.KeyEvent
@@ -42,9 +44,12 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.core.content.IntentCompat
 import androidx.core.os.BundleCompat
+import java.io.File
 import java.util.Locale
+import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -105,7 +110,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private val prefs by lazy { getSharedPreferences("pktito", MODE_PRIVATE) }
-    /** Save as's choice: each sentence's time before it in .txt and .md. */
+    /** Share's choice, and Ctrl+S's: each sentence's time before it in .txt and .md. */
     private var times by mutableStateOf(false)
     /** The transcript as its subtitle track's cues, not its sentences. */
     private var captions by mutableStateOf(false)
@@ -121,6 +126,8 @@ class MainActivity : ComponentActivity() {
     }
     /** The format being saved while the system's dialog is up. */
     private var saving: String? = null
+    /** What the share sheet's Save file carries back, good for the share it came with alone (share). */
+    private var shareToken: String? = null
     /** A recording opened or shared before there was a model to transcribe it with: transcribed once there is. */
     private var waiting by mutableStateOf<Uri?>(null)
     /** The search of the transcript on the screen. */
@@ -141,6 +148,9 @@ class MainActivity : ComponentActivity() {
         )
         Player.restore(prefs.getFloat("speed", 1f).toDouble(), prefs.getFloat("volume", 1f).toDouble())
         saving = savedInstanceState?.getString("saving")
+        shareToken = savedInstanceState?.getString("share_token")
+        // the files shared before this launch, which their apps have had
+        if (savedInstanceState == null) File(cacheDir, SHARED).deleteRecursively()
         about = savedInstanceState?.getBoolean("about") ?: false
         savedInstanceState?.getString("find")?.let {
             finder.query = it
@@ -166,9 +176,21 @@ class MainActivity : ComponentActivity() {
     /**
      * A recording opened with pktito, or shared to it: transcribed, unless
      * one is under way; kept until there is a model, as the desktop keeps
-     * files dropped on its setup screen.
+     * files dropped on its setup screen. Or the share sheet's Save file
+     * (share), for the transcript shared.
      */
     private fun opened(i: Intent) {
+        if (i.action == ACTION_SAVE) {
+            val ext = i.getStringExtra(EXTRA_FORMAT)
+            val token = i.getStringExtra(EXTRA_TOKEN)
+            // the activity is exported, for Open with and Share: the token
+            // says this is the sheet the app opened, and for this transcript
+            if (ext != null && ext in MIME && token != null && token == shareToken && Transcriber.transcript != null) {
+                shareToken = null
+                save(ext)
+            }
+            return
+        }
         val uri = when (i.action) {
             Intent.ACTION_VIEW -> i.data
             Intent.ACTION_SEND -> IntentCompat.getParcelableExtra(i, Intent.EXTRA_STREAM, Uri::class.java)
@@ -188,6 +210,7 @@ class MainActivity : ComponentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString("saving", saving)
+        outState.putString("share_token", shareToken)
         outState.putBoolean("about", about)
         outState.putParcelable("waiting", waiting)
         outState.putString("find", finder.query)
@@ -387,7 +410,6 @@ class MainActivity : ComponentActivity() {
                     stop = { Engine.stop() },
                     copy = ::copy,
                     share = ::share,
-                    save = ::save,
                     setTimes = {
                         times = it
                         prefs.edit().putBoolean("times", it).apply()
@@ -584,6 +606,8 @@ class MainActivity : ComponentActivity() {
     private fun leave() {
         finder.clear()
         Player.release(this)
+        // a share sheet's Save file was this transcript's
+        shareToken = null
         // the copy of a shared recording whose transcript is not on the list,
         // stopped or failed, goes with it
         val id = Transcriber.id
@@ -617,19 +641,58 @@ class MainActivity : ComponentActivity() {
             toast = getString(if (captions) R.string.copied_captions else R.string.copied)
     }
 
-    private fun share() {
-        val text = text("txt", times) ?: return
+    /**
+     * The transcript as a file of a format, named for its recording, to the
+     * app picked in the system's share sheet: Drive, a chat and mail each
+     * take a file by its name. The sheet's first choice is Save file,
+     * the system's Save dialog for the same format, which comes back as
+     * ACTION_SAVE (opened): an activity of the app's put before the sheet's
+     * apps (EXTRA_INITIAL_INTENTS), which every Android's sheet has taken,
+     * where an action of the sheet's own (EXTRA_CHOOSER_CUSTOM_ACTIONS)
+     * needs Android 14 and a sheet that reads it, and One UI's is Samsung's.
+     */
+    private fun share(ext: String) {
+        val text = text(ext, times) ?: return
+        // a recording's name with a / in it still names one file
+        val name = fileName(ext).replace('/', '_')
+        val uri = try {
+            val file = File(File(cacheDir, SHARED).apply { mkdirs() }, name)
+            file.writeText(text)
+            FileProvider.getUriForFile(this, "$packageName.files", file)
+        } catch (e: Exception) {
+            Log.w(TAG, "sharing $name", e)
+            toast = getString(R.string.share_failed, name)
+            return
+        }
         val send = Intent(Intent.ACTION_SEND)
-            .setType("text/plain")
-            .putExtra(Intent.EXTRA_SUBJECT, Transcriber.name)
-            .putExtra(Intent.EXTRA_TEXT, text)
-        startActivity(Intent.createChooser(send, null))
+            .setType(MIME.getValue(ext))
+            .putExtra(Intent.EXTRA_STREAM, uri)
+            .putExtra(Intent.EXTRA_SUBJECT, name)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        // the sheet's preview of the file, and the app it goes to's grant to read it
+        send.clipData = ClipData.newRawUri(name, uri)
+        val token = UUID.randomUUID().toString()
+        shareToken = token
+        val toDevice = Intent(this, MainActivity::class.java)
+            .setAction(ACTION_SAVE)
+            .putExtra(EXTRA_FORMAT, ext)
+            .putExtra(EXTRA_TOKEN, token)
+        val chooser = Intent.createChooser(send, null).putExtra(
+            Intent.EXTRA_INITIAL_INTENTS,
+            arrayOf<Parcelable>(LabeledIntent(toDevice, packageName, R.string.save_file, R.mipmap.ic_launcher)),
+        )
+        startActivity(chooser)
     }
 
     private fun save(ext: String) {
         saving = ext
+        create.launch(MIME.getValue(ext) to fileName(ext))
+    }
+
+    /** The transcript's file in a format: its recording's name, the format's extension for its own (the desktop's Save as). */
+    private fun fileName(ext: String): String {
         val stem = Transcriber.name.substringBeforeLast('.').ifEmpty { Transcriber.name }
-        create.launch(MIME.getValue(ext) to "$stem.$ext")
+        return "$stem.$ext"
     }
 
     private fun write(uri: Uri) {
@@ -655,7 +718,7 @@ class MainActivity : ComponentActivity() {
         const val TAG = "pktito"
         /** what the system's picker offers */
         val MEDIA = arrayOf("audio/*", "video/*")
-        /** what each format is, for the system's Save dialog */
+        /** what each format is, for the system's Save dialog and the app a share goes to */
         val MIME = mapOf(
             "txt" to "text/plain",
             "srt" to "application/x-subrip",
@@ -663,6 +726,12 @@ class MainActivity : ComponentActivity() {
             "md" to "text/markdown",
             "json" to "application/json",
         )
+        /** the share sheet's Save file, back to the app (share), with the format and its share's token */
+        const val ACTION_SAVE = "net.pktito.app.action.SAVE"
+        const val EXTRA_FORMAT = "net.pktito.app.extra.FORMAT"
+        const val EXTRA_TOKEN = "net.pktito.app.extra.TOKEN"
+        /** the cache's folder of shared files, which FileProvider serves (res/xml/shared.xml) */
+        const val SHARED = "shared"
     }
 }
 
