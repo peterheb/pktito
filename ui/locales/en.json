@@ -211,6 +211,7 @@
   "play.reading": "Reading the audio…",
   "play.moved": "Can't play: the original file was moved or deleted",
   "play.changed": "Can't play: the original file has changed since it was transcribed",
+  "play.no_gstreamer": "Can't play: GStreamer, which plays the audio here, lacks {what}. Install gst-plugins-base and gst-plugins-good (Arch), or gstreamer1.0-plugins-base and gstreamer1.0-plugins-good (Debian, Ubuntu)",
   "speed.label": "Playback speed, {s} times",
   "speed.group": "Playback speed",
   "speed.slower": "Slower",

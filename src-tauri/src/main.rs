@@ -637,7 +637,8 @@ fn open_recent(app: AppHandle, id: String) -> Result<Opened, Problem> {
 
 /// Where the window's player gets a cached transcript's audio on Linux: the
 /// app's own server on 127.0.0.1, since WebKitGTK's player can't read media
-/// by the asset protocol (serve.rs). Only a WAV in the audio cache.
+/// by the asset protocol (serve.rs). Only a WAV in the audio cache, and none
+/// while GStreamer lacks what the player needs (gstreamer_missing).
 #[cfg(target_os = "linux")]
 #[tauri::command]
 fn audio_url(app: AppHandle, state: State<'_, AppState>, path: String) -> Result<String, Problem> {
@@ -646,12 +647,77 @@ fn audio_url(app: AppHandle, state: State<'_, AppState>, path: String) -> Result
     if p.parent() != Some(dir.as_path()) || p.extension().map_or(true, |e| e != "wav") {
         return Err(Problem::new("play.cant"));
     }
+    let missing = gstreamer_missing();
+    if !missing.is_empty() {
+        return Err(Problem::new("play.no_gstreamer").with("what", missing.join(", ")));
+    }
     let mut serve = state.serve.lock().unwrap();
     if serve.is_none() {
         let s = pktito_app::serve::Server::start();
         *serve = Some(s.map_err(|e| Problem::new("play.cant").detail(e))?);
     }
     Ok(serve.as_ref().unwrap().url(&p))
+}
+
+/// The GStreamer elements WebKitGTK's player needs for the cached WAV that
+/// this system lacks, asked of GStreamer itself, once. Arch leaves its
+/// plugins optional, and the window hung when its player was handed a
+/// transcript's audio without them (the Omarchy VM, 2026-10-25: "GStreamer
+/// element autoaudiosink not found"); the play button says what's missing
+/// instead. libgstreamer is opened here, not linked: WebKitGTK brings it,
+/// and its absence is one more thing to say. On a Pi 5 with the base
+/// plugins alone this gives wavparse and autoaudiosink, the good plugins'.
+#[cfg(target_os = "linux")]
+fn gstreamer_missing() -> &'static [&'static str] {
+    use std::ffi::{c_char, c_int, c_void, CStr};
+    use std::ptr::null_mut;
+    use std::sync::OnceLock;
+    static MISSING: OnceLock<Vec<&'static str>> = OnceLock::new();
+    const NEEDS: [&CStr; 5] = [
+        c"playbin",
+        c"wavparse",
+        c"autoaudiosink",
+        c"audioconvert",
+        c"audioresample",
+    ];
+    extern "C" {
+        fn dlopen(name: *const c_char, flags: c_int) -> *mut c_void;
+        fn dlsym(handle: *mut c_void, name: *const c_char) -> *mut c_void;
+    }
+    const RTLD_NOW: c_int = 2;
+    MISSING.get_or_init(|| unsafe {
+        let gst = dlopen(c"libgstreamer-1.0.so.0".as_ptr(), RTLD_NOW);
+        let sym = |name: &CStr| match gst.is_null() {
+            true => null_mut(),
+            false => dlsym(gst, name.as_ptr()),
+        };
+        let (init, find, unref) = (
+            sym(c"gst_init_check"),
+            sym(c"gst_element_factory_find"),
+            sym(c"gst_object_unref"),
+        );
+        if init.is_null() || find.is_null() || unref.is_null() {
+            return vec!["GStreamer"];
+        }
+        let init: extern "C" fn(*mut c_int, *mut c_void, *mut c_void) -> c_int =
+            std::mem::transmute(init);
+        let find: extern "C" fn(*const c_char) -> *mut c_void = std::mem::transmute(find);
+        let unref: extern "C" fn(*mut c_void) = std::mem::transmute(unref);
+        if init(null_mut(), null_mut(), null_mut()) == 0 {
+            return vec!["GStreamer"];
+        }
+        NEEDS
+            .iter()
+            .filter(|name| {
+                let factory = find(name.as_ptr());
+                if !factory.is_null() {
+                    unref(factory);
+                }
+                factory.is_null()
+            })
+            .map(|name| name.to_str().unwrap_or("?"))
+            .collect()
+    })
 }
 
 /// A recent transcript's audio, read again from its original once the cache
