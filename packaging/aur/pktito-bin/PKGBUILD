@@ -1,0 +1,37 @@
+# Maintainer: Peter Hebert <peter dot hebert at pktito dot net>
+#
+# pktito's own release, repackaged: the .deb pktito.net serves for every
+# Linux install, built on Ubuntu 22.04 so that it needs glibc 2.34 and no
+# more. The app, pktito-cli and the `pktito` command, in one package.
+
+pkgname=pktito-bin
+pkgver=0.9.3
+pkgrel=1
+pkgdesc="Speech to text on this computer, with NVIDIA's Parakeet models: the app and pktito-cli"
+arch=(x86_64 aarch64)
+url="https://pktito.net"
+license=(MIT OFL-1.1)
+depends=(
+  # what pktito-app links
+  webkit2gtk-4.1 gtk3 libsoup3 glib2 cairo gdk-pixbuf2 dbus gcc-libs glibc
+  # its icons' theme
+  hicolor-icon-theme
+  # reading audio and video: Linux has no one media library
+  ffmpeg
+  # WebKitGTK's playback of a transcript's audio: without them it can't play
+  gst-plugins-base gst-plugins-good
+)
+optdepends=('xdg-utils: opening links and showing saved files')
+provides=(pktito pktito-cli)
+conflicts=(pktito pktito-cli)
+options=(!strip !debug)
+source_x86_64=("https://pktito.net/download/$pkgver/pktito_${pkgver}_amd64.deb")
+source_aarch64=("https://pktito.net/download/$pkgver/pktito_${pkgver}_arm64.deb")
+sha256sums_x86_64=('4eee6e6e9f258a780e7dfb1fe960409cc98f5a51d3636e89d376f77fc9aae13f')
+sha256sums_aarch64=('bd8a8004ff957b906419a5452c203222a1a4fb3d05e77b4b39b1f7ceb973214d')
+
+package() {
+  bsdtar -xf data.tar.* -C "$pkgdir"
+  # the licenses where Arch looks, and left where About reads them
+  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" "$pkgdir"/usr/lib/pktito/licenses/*
+}
