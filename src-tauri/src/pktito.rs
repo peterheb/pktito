@@ -1,7 +1,8 @@
 //! pktito's C API (vendor/pktito/core/pktito.h), and safe wrappers for the
-//! parts the app uses: a model, a transcriber, the VAD's chunking, captions.
+//! parts the app uses: a model, a transcriber and its transcription of a
+//! whole recording, captions.
 
-use std::ffi::{c_char, c_int, c_long, CStr, CString};
+use std::ffi::{c_char, c_int, c_long, c_void, CStr, CString};
 use std::path::Path;
 use std::ptr;
 
@@ -13,11 +14,6 @@ pub struct RawModel {
 pub struct RawAsr {
     _private: [u8; 0],
 }
-#[repr(C)]
-pub struct RawVad {
-    _private: [u8; 0],
-}
-
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
 pub struct Tok {
@@ -37,41 +33,35 @@ pub struct Word {
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
-struct SegParams {
-    threshold: f64,
-    neg_threshold: f64,
-    min_speech_ms: f64,
-    max_speech_s: f64,
-    min_silence_ms: f64,
-    speech_pad_ms: f64,
-    min_silence_at_max_speech_ms: f64,
-    use_max_poss_sil_at_max_speech: c_int,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Default)]
 pub struct Span {
     pub start: i64,
     pub end: i64,
 }
 
-/// A chunk of a recording, in samples, and Silero's speech segments in it,
-/// cut to its edges.
-#[derive(Clone, Default)]
-pub struct Chunk {
-    pub start: i64,
-    pub end: i64,
-    pub speech: Vec<Span>,
+/// A chunk as pk_asr_transcribe hands it over (pk_chunk_out)
+#[repr(C)]
+struct ChunkOut {
+    i: usize,
+    n: usize,
+    at: Span,
+    toks: *const Tok,
+    count: c_long,
+    retried: c_int,
+    done: i64,
+    total: i64,
 }
 
-impl Chunk {
-    /// The samples of [from, to) that Silero heard as speech.
-    pub fn heard(&self, from: i64, to: i64) -> i64 {
-        self.speech
-            .iter()
-            .map(|s| (s.end.min(to) - s.start.max(from)).max(0))
-            .sum()
-    }
+/// A chunk of a recording, transcribed: its samples in the recording, its
+/// tokens (frames from its start, a retried stretch's among them), whether
+/// it is the last, and the samples of the chunks done so far, of all of
+/// them.
+pub struct Done<'a> {
+    pub start: i64,
+    pub end: i64,
+    pub toks: &'a [Tok],
+    pub last: bool,
+    pub done: i64,
+    pub total: i64,
 }
 
 #[repr(C)]
@@ -95,8 +85,6 @@ pub struct Cue {
     pub end: i64,
 }
 
-const VAD_SAMPLES: usize = 512;
-
 extern "C" {
     fn pk_model_load(path: *const c_char, err: *mut c_char, errlen: usize) -> *mut RawModel;
     fn pk_model_free(m: *mut RawModel);
@@ -105,33 +93,20 @@ extern "C" {
     fn pk_model_frame_seconds(m: *const RawModel) -> f64;
     fn pk_asr_new(m: *const RawModel, threads: c_int) -> *mut RawAsr;
     fn pk_asr_free(a: *mut RawAsr);
-    fn pk_asr_run(a: *mut RawAsr, x: *const f32, n: usize, toks: *mut *const Tok) -> c_long;
+    // o NULL: pktito's defaults, chunks of 30 s at most and the retry
+    fn pk_asr_transcribe(
+        a: *mut RawAsr,
+        x: *const f32,
+        n: usize,
+        o: *const c_void,
+        f: unsafe extern "C" fn(*mut c_void, *const ChunkOut) -> c_int,
+        arg: *mut c_void,
+    ) -> c_int;
     fn pk_asr_threads(a: *const RawAsr) -> c_int;
     fn pk_text(m: *const RawModel, t: *const Tok, n: usize, out: *mut c_char, cap: usize) -> usize;
     fn pk_words(m: *const RawModel, t: *const Tok, n: usize, out: *mut Word) -> usize;
     fn pk_backend() -> *const c_char;
     fn pk_compiler() -> *const c_char;
-    fn pk_vad_new(m: *const RawModel) -> *mut RawVad;
-    fn pk_vad_free(v: *mut RawVad);
-    fn pk_vad_probs(v: *mut RawVad, x: *const f32, n: usize, probs: *mut f32);
-    fn pk_seg_defaults(p: *mut SegParams);
-    fn pk_segments(
-        probs: *const f32,
-        n: usize,
-        rate: c_int,
-        n_samples: i64,
-        p: *const SegParams,
-        out: *mut Span,
-        cap: usize,
-    ) -> usize;
-    fn pk_chunks(
-        x: *const f32,
-        speech: *const Span,
-        n_speech: usize,
-        total: i64,
-        max_len: i64,
-        out: *mut Span,
-    ) -> usize;
     fn pk_captions(
         w: *const CapWord,
         n: usize,
@@ -266,78 +241,6 @@ impl Model {
         out
     }
 
-    /// Where a recording of n samples is cut, as `pktito` cuts it: whole if it
-    /// fits in max_chunk seconds and has speech, else at the middle of its
-    /// silences (Silero's VAD), every chunk max_chunk seconds at most; what
-    /// lies between the speech is chunks too, but where it is silent or
-    /// shorter than 3 s (pk_chunks). Each with the samples of it Silero's
-    /// segments cover.
-    pub fn chunks(&self, x: &[f32], max_chunk: f64) -> Result<Vec<Chunk>, String> {
-        let rate = self.rate();
-        let max_len = (max_chunk * rate as f64) as i64;
-        if x.is_empty() {
-            return Ok(Vec::new());
-        }
-        let frames = x.len().div_ceil(VAD_SAMPLES);
-        let mut pad = vec![0f32; frames * VAD_SAMPLES];
-        pad[..x.len()].copy_from_slice(x);
-        let mut probs = vec![0f32; frames];
-        unsafe {
-            let v = pk_vad_new(self.raw);
-            if v.is_null() {
-                return Err("out of memory".into());
-            }
-            pk_vad_probs(v, pad.as_ptr(), frames, probs.as_mut_ptr());
-            pk_vad_free(v);
-        }
-        drop(pad);
-        let mut sp = SegParams::default();
-        unsafe { pk_seg_defaults(&mut sp) };
-        // segments no longer than a chunk less the padding Silero puts round them
-        sp.max_speech_s = max_chunk - 2.0 * sp.speech_pad_ms / 1000.0 - 0.1;
-        let cap = 2 * frames + 1;
-        let mut seg = vec![Span::default(); cap];
-        let ns = unsafe {
-            pk_segments(
-                probs.as_ptr(),
-                frames,
-                rate as c_int,
-                x.len() as i64,
-                &sp,
-                seg.as_mut_ptr(),
-                cap,
-            )
-        };
-        let mut out = vec![Span::default(); 2 * ns + 2 + x.len() / max_len as usize];
-        let nc = unsafe {
-            pk_chunks(
-                x.as_ptr(),
-                seg.as_ptr(),
-                ns,
-                x.len() as i64,
-                max_len,
-                out.as_mut_ptr(),
-            )
-        };
-        out.truncate(nc);
-        let speech = &seg[..ns];
-        Ok(out
-            .iter()
-            .map(|c| Chunk {
-                start: c.start,
-                end: c.end,
-                speech: speech
-                    .iter()
-                    .filter(|s| s.end > c.start && s.start < c.end)
-                    .map(|s| Span {
-                        start: s.start.max(c.start),
-                        end: s.end.min(c.end),
-                    })
-                    .collect(),
-            })
-            .collect())
-    }
-
     pub fn raw(&self) -> *const RawModel {
         self.raw
     }
@@ -366,17 +269,68 @@ impl Asr {
         Ok(Asr { raw })
     }
 
-    /// The tokens of 16 kHz mono samples heard as one utterance.
-    pub fn run(&mut self, x: &[f32]) -> Result<Vec<Tok>, String> {
-        let mut toks: *const Tok = ptr::null();
-        let n = unsafe { pk_asr_run(self.raw, x.as_ptr(), x.len(), &mut toks) };
-        if n < 0 {
-            return Err("out of memory while transcribing".into());
+    /// 16 kHz mono samples of any length transcribed as pktito transcribes
+    /// a recording (pk_asr_transcribe): Silero's chunks, each one's search
+    /// beside the next one's encoder, and the stretches the model wrote no
+    /// word for heard again. each(chunk) has the chunks in order as they
+    /// are done, and returns true to stop there. Whether every chunk was
+    /// done.
+    pub fn transcribe<F: FnMut(&Done) -> bool>(
+        &mut self,
+        x: &[f32],
+        each: F,
+    ) -> Result<bool, String> {
+        struct Call<F> {
+            each: F,
+            panic: Option<Box<dyn std::any::Any + Send>>,
         }
-        if n == 0 || toks.is_null() {
-            return Ok(Vec::new());
+        unsafe extern "C" fn chunk<F: FnMut(&Done) -> bool>(
+            arg: *mut c_void,
+            c: *const ChunkOut,
+        ) -> c_int {
+            let (call, c) = unsafe { (&mut *(arg as *mut Call<F>), &*c) };
+            let toks = if c.count > 0 {
+                unsafe { std::slice::from_raw_parts(c.toks, c.count as usize) }
+            } else {
+                &[]
+            };
+            let done = Done {
+                start: c.at.start,
+                end: c.at.end,
+                toks,
+                last: c.i + 1 == c.n,
+                done: c.done,
+                total: c.total,
+            };
+            // a panic can't unwind through C: it stops the run, and goes on
+            // from transcribe()
+            match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| (call.each)(&done))) {
+                Ok(stop) => stop as c_int,
+                Err(p) => {
+                    call.panic = Some(p);
+                    1
+                }
+            }
         }
-        Ok(unsafe { std::slice::from_raw_parts(toks, n as usize) }.to_vec())
+        let mut call = Call { each, panic: None };
+        let rc = unsafe {
+            pk_asr_transcribe(
+                self.raw,
+                x.as_ptr(),
+                x.len(),
+                ptr::null(),
+                chunk::<F>,
+                &mut call as *mut Call<F> as *mut c_void,
+            )
+        };
+        if let Some(p) = call.panic {
+            std::panic::resume_unwind(p);
+        }
+        match rc {
+            0 => Ok(true),
+            1 => Ok(false),
+            _ => Err("out of memory while transcribing".into()),
+        }
     }
 
     /// The threads its passes run on: one a core, or on a chip of two kinds

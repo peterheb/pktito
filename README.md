@@ -124,8 +124,8 @@ speech is within 4 dB of the recording's, so that a voice in the
 background stays out. The
 English model, NeMo's own included, drops the LibriVox notices, credits
 and titles at the start of seven of AliceBench's chapters as they are
-cut, and these give them back (`src-tauri/src/transcribe.rs`,
-`RETRY_SPEECH_S`). Each finished transcript stays on the recent list, the 50
+cut, and these give them back (pktito's `pk_asr_transcribe`,
+`vendor/pktito/core/transcribe.c`). Each finished transcript stays on the recent list, the 50
 newest in the app's data folder, with its audio as pktito heard it: a 16 kHz
 16-bit WAV in the cache, so that playback lines up with the timestamps
 whatever the original's format, and whether or not the webview could play
