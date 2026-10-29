@@ -23,6 +23,7 @@ const CORE: &[&str] = &[
     "decoder.c",
     "tokens.c",
     "asr.c",
+    "transcribe.c",
     "vad.c",
     "segment.c",
     "wav.c",
