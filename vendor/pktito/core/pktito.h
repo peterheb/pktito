@@ -17,7 +17,9 @@
  *                pk_segments      get_speech_timestamps' segments from them
  *   chunks       pk_chunks        a long recording cut at its silences into
  *                                 pieces the encoder takes whole, its
- *                                 silence left out
+ *                                 silence left out; pk_asr_run_chunks
+ *                                 transcribes them, each chunk's decoder
+ *                                 beside the next one's encoder
  *   captions     pk_captions      words with times to a subtitle track's cues
  *
  * A model is read-only once loaded and may be shared by any number of
@@ -44,7 +46,8 @@ typedef struct pk_model pk_model;
  * UTF-8 on every system: on Windows it is opened as UTF-16, so a model in
  * a user folder whose name is past ASCII loads whatever the process's
  * code page, and bytes that are not UTF-8 are refused, never read in the
- * code page instead. */
+ * code page instead. The checks run on the calling thread, which on
+ * Windows is out of power throttling for the call, as for a pk_asr_run. */
 pk_model *pk_model_load(const char *path, char *err, size_t errlen);
 
 /* The same from a copy the caller holds - a file embedded in a binary, or
@@ -89,6 +92,20 @@ pk_asr *pk_asr_new(const pk_model *m, int threads);
 void    pk_asr_free(pk_asr *a);
 int     pk_asr_threads(const pk_asr *a);
 
+/* The fast mode, off until asked for: the encoder's activations in blocks
+ * of 64 inputs, not 32, wherever an input is whole blocks of 64 (every one
+ * of Parakeet's). For a caller who wants the speed more than the
+ * transcript nearest float32's: WER is level, a few more transcripts differ
+ * from float32's (49 of FLEURS' 360 against 45), and on the boards
+ * measured a run is 3.9 to 7.3% faster where the int8 product is a dot
+ * product (SDOT, VPDPBUSD), 5.5% on a Pi 4 and 3.2 to 3.4% on a Pi 3 with
+ * the ARMv8.0 loop, and 1 to 3% with x86's VPMADDUBSW (README, "Why int8";
+ * backend/avx2/CLIMB.md and backend/neon/CLIMB.md, 2026-10-29). AMX's
+ * pipeline takes blocks of 32 alone, and in the mode the amx-int8 build
+ * runs its zmm tile, unmeasured. From the next call on; every backend
+ * computes the same bits in either mode. */
+void    pk_asr_set_fast_mode(pk_asr *a, int on);
+
 /* One token of a transcript: a piece of the vocabulary, the encoder frame
  * it was emitted at, and the number of frames TDT says it lasts. */
 typedef struct {
@@ -110,6 +127,24 @@ typedef struct {
  * call, as the transcriber's own threads are for good, and leaves as it
  * came (core/os.h). */
 long pk_asr_run(pk_asr *a, const float *x, size_t n, const pk_tok **toks);
+
+/* A stretch of a recording, in samples; end is exclusive. */
+typedef struct { int64_t start, end; } pk_seg;
+
+/* pk_asr_run over a recording's chunks c[0..n) of x (pk_chunks), in order:
+ * fn(arg, i, toks, count) for each, with chunk i's tokens as pk_asr_run
+ * would return them, the same bits, lasting until fn returns. Each chunk's
+ * decoder runs beside the next chunk's encoder, on a thread of its own, so
+ * that only the last one's is waited for, and fn has a chunk once the next
+ * one's encoder is done: 1.2 to 5.6% less time than through pk_asr_run a
+ * chunk at a time where there are more than four cores, and about the
+ * same on four (core/asr.c). The working memory is the longest
+ * chunk's, as that loop's is, and a second chunk's joint half, 1 MB at
+ * 30 s. Returns 0, or -1 if memory runs out (fn has then seen the chunks
+ * before). */
+typedef void (*pk_chunk_fn)(void *arg, size_t i, const pk_tok *toks, long count);
+int pk_asr_run_chunks(pk_asr *a, const float *x, const pk_seg *c, size_t n, pk_chunk_fn fn,
+                      void *arg);
 
 /* The text of n tokens, UTF-8 and NUL-terminated in out[cap]: SentencePiece's
  * decoding with NeMo's one change to it, the space before punctuation taken
@@ -173,9 +208,6 @@ typedef struct {
 } pk_seg_params;
 
 void pk_seg_defaults(pk_seg_params *p);
-
-/* A stretch of a recording, in samples; end is exclusive. */
-typedef struct { int64_t start, end; } pk_seg;
 
 /* get_speech_timestamps_from_probs (silero_vad/utils_vad.py, v6.2.3): the
  * speech in n frames' probabilities. Returns how many segments there are;

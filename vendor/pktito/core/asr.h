@@ -21,8 +21,8 @@
 /* make PROFILE=1: wall time in each stage of a transcription, read on the
  * calling thread around whole passes, never inside a kernel, and printed by
  * `pktito-c bench`. */
-enum { PK_P_MEL, PK_P_SUB, PK_P_POS, PK_P_NORM, PK_P_QUANT, PK_P_FF, PK_P_QKV, PK_P_REPACK,
-       PK_P_ATT, PK_P_ATTO, PK_P_CONV, PK_P_DW, PK_P_DEC, PK_NPROF };
+enum { PK_P_MEL, PK_P_SUB, PK_P_POS, PK_P_NORM, PK_P_QUANT, PK_P_FF, PK_P_QKV, PK_P_ATT,
+       PK_P_ATTO, PK_P_CONV, PK_P_DW, PK_P_DEC, PK_NPROF };
 #ifdef PK_PROFILE
 extern double pk_prof[PK_NPROF];
 double pk_prof_now(void);
@@ -38,7 +38,7 @@ typedef struct {
     float  *qu, *qv;                 /* a block of queries plus each position bias */
     float  *sc, *bd;                 /* its scores, and their position half */
     float  *mel;                     /* a block of power spectra, and the FFT's scratch */
-    float  *row;                     /* a frame of the feed-forward's hidden activations */
+    float  *row;                     /* a frame of a layer norm's output, or of the hidden's */
 } pk_thread_ws;
 
 struct pk_asr {
@@ -51,6 +51,9 @@ struct pk_asr {
      * layers on each (encoder.c, layers), `wide` the threads the passes
      * run on. */
     int fast, wide, tune;
+    /* The caller's fast mode (pk_asr_set_fast_mode): the encoder's
+     * activations in blocks of 64 where an input allows, not 32 */
+    int qb64;
 
     size_t cap;                      /* feature frames the buffers below hold */
     void  *mem;
@@ -65,11 +68,12 @@ struct pk_asr {
     float *q, *o;                    /* [Te][D] */
     float *pe, *p;                   /* [2Te-1][D]: positions, and their projection */
     float *kp, *vp, *pp;             /* K, V and P per head, as pk_k_gemm_f32 panels */
-    pk_act act, ape;                 /* int8 activations; the positions' */
+    pk_act act, ape, hid;            /* int8 activations; the positions'; the feed-forward's hidden */
     pk_thread_ws *tws;
 
     /* the decoder */
-    float *fproj;                    /* [Te][J]: the joint's encoder half */
+    float *fproj[2];                 /* [Te][J]: the joint's encoder half, a chunk's and the next's */
+    int dsplit;                      /* the search's widest products split over the pool */
     float *dx, *gates, *dh, *dc, *gp, *z, *logit;
     pk_act dact;
     pk_tok *toks;
@@ -80,9 +84,16 @@ struct pk_asr {
  * Te frames, which it returns. */
 uint32_t pk_encode(pk_asr *a, uint32_t T0);
 
-/* TDT's greedy search over Te encoder frames in a->x: a->toks. Returns the
- * token count, or -1 if memory runs out. */
-long pk_decode(pk_asr *a, uint32_t Te);
+/* The joint's encoder half of Te encoder frames in a->x, every frame at
+ * once: f[Te][J] */
+void pk_joint_frames(pk_asr *a, uint32_t Te, float *f);
+
+/* TDT's greedy search over Te frames whose joint half is f: a->toks.
+ * Returns the token count, or -1 if memory runs out. With split, its
+ * widest products go over the pool's first threads, from the thread that
+ * runs its jobs; without, the search runs on a thread of its own beside
+ * them (pk_pool_aside), each product whole. */
+long pk_decode(pk_asr *a, uint32_t Te, const float *f, int split);
 
 /* Encoder frames T0 feature frames make: three halvings, each rounding up. */
 static inline uint32_t pk_enc_frames(uint32_t T0) {
