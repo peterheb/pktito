@@ -239,6 +239,7 @@ class Shots {
     }
     @Test fun manage() = shot("manage", false, act = manageUp) { manageModels() }
     @Test fun manageDark() = shot("manage", true, act = manageUp) { manageModels() }
+    @Test fun manageNarrow() = shot("manage-360", false, narrow = true, act = manageUp) { manageModels() }
     @Test fun manageDownloading() = shot("manage-downloading", false, act = manageUp) {
         manageModels(d = Download("parakeet-tdt-0.6b-v3", "downloading", 262_144_000, 647_552_644, 11.8e6, "models.pktito.net", null, retry = false, trying = false))
     }

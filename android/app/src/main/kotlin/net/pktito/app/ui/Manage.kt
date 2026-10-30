@@ -19,9 +19,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -58,8 +60,13 @@ class ManageActions(
     val close: () -> Unit,
 )
 
-/** One thing the app keeps: its words, what it takes, its button's, and the question before the button does it (none for Stop). */
+/**
+ * One thing the app keeps: what it is (key: its kind and its name, "have:",
+ * "part:" or "own:"), its words, what it takes, its button's, and the
+ * question before the button does it (none for Stop).
+ */
 private class Kept(
+    val key: String,
     val title: String,
     val note: AnnotatedString,
     val bytes: Long,
@@ -104,7 +111,10 @@ fun Manage(
 ) {
     val p = pk
     val res = LocalResources.current
-    var asking by remember { mutableStateOf<Kept?>(null) }
+    // the row whose question is up, by its key, kept through a turn of the
+    // screen or a fold, which make the screen anew (the pkfold emulator,
+    // 2026-10-30: the question went, Manage models stayed)
+    var asking by rememberSaveable { mutableStateOf<String?>(null) }
     val delete = stringResource(R.string.manage_delete)
     val ownBytes = remember(own) { own?.length() ?: 0L }
     val rows = buildList {
@@ -122,19 +132,19 @@ fun Manage(
                     }
                     add(
                         Kept(
-                            label, note(res, "${o.name} · ${res.getString(R.string.manage_size, mb(o.bytes))}", inUse, p.ok), o.bytes, delete,
+                            "have:${o.name}", label, note(res, "${o.name} · ${res.getString(R.string.manage_size, mb(o.bytes))}", inUse, p.ok), o.bytes, delete,
                             !(running && (inUse || o.file.path == loaded)),
                             res.getString(R.string.manage_ask_title, label) to text,
                         ) { a.delete(o) },
                     )
                 }
                 d != null && d.going ->
-                    add(Kept(label, AnnotatedString(res.getString(R.string.manage_downloading, mb(d.got), mb(d.total))), d.got, res.getString(R.string.stop), true, null, a.stop))
+                    add(Kept("part:${o.name}", label, AnnotatedString(res.getString(R.string.manage_downloading, mb(d.got), mb(d.total))), d.got, res.getString(R.string.stop), true, null, a.stop))
                 d != null || o.partial > 0 -> {
                     val got = d?.got ?: o.partial
                     val ask = res.getString(R.string.manage_ask_part_title) to res.getString(R.string.manage_ask_part_text, mb(got), label)
                     add(
-                        Kept(label, AnnotatedString(res.getString(R.string.manage_paused, mb(got), mb(o.bytes))), got, delete, true, ask) {
+                        Kept("part:${o.name}", label, AnnotatedString(res.getString(R.string.manage_paused, mb(got), mb(o.bytes))), got, delete, true, ask) {
                             if (d != null) a.stop() else a.deletePart(o)
                         },
                     )
@@ -148,7 +158,7 @@ fun Manage(
             else res.getString(R.string.manage_ask_own_last, mb(ownBytes))
             add(
                 Kept(
-                    own.name, note(res, res.getString(R.string.manage_size, mb(ownBytes)), true, p.ok), ownBytes, delete, !running,
+                    "own:${own.name}", own.name, note(res, res.getString(R.string.manage_size, mb(ownBytes)), true, p.ok), ownBytes, delete, !running,
                     res.getString(R.string.manage_ask_own_title, own.name) to text, a.deleteOwn,
                 ),
             )
@@ -160,7 +170,7 @@ fun Manage(
     val start = remember { FocusRequester() }
     val keys = hasKeys()
     val panel = @Composable { top: Dp ->
-        Panel(rows, rows.sumOf { it.bytes }, free, top, start, first, onAct = { if (it.ask != null) asking = it else it.onAct() }, a.close)
+        Panel(rows, rows.sumOf { it.bytes }, free, top, start, first, onAct = { if (it.ask != null) asking = it.key else it.onAct() }, a.close)
     }
     if (compact)
         ModalBottomSheet(
@@ -186,8 +196,10 @@ fun Manage(
             withFrameNanos { }
             runCatching { start.requestFocus() }
         }
-    asking?.let { k ->
-        val (title, text) = k.ask ?: return@let
+    val k = rows.find { it.key == asking }
+    // a row gone while its question was up (a download that ended) takes it with it
+    if (asking != null && k?.ask == null) SideEffect { asking = null }
+    k?.ask?.let { (title, text) ->
         Confirm(title, text, delete, onYes = {
             asking = null
             k.onAct()
@@ -195,12 +207,16 @@ fun Manage(
     }
 }
 
-/** A row's second line, and In use after it in green where it is the one in use. */
+/**
+ * A row's second line, and In use after it in green where it is the one in
+ * use, its two words on one line: at 337 dp (a folded phone's cover, the
+ * pkfold emulator) the line broke between them.
+ */
 private fun note(res: Resources, text: String, inUse: Boolean, ok: Color) = buildAnnotatedString {
     append(text)
     if (inUse) {
         append(" · ")
-        withStyle(SpanStyle(color = ok)) { append(res.getString(R.string.manage_in_use)) }
+        withStyle(SpanStyle(color = ok)) { append(res.getString(R.string.manage_in_use).replace(' ', '\u00A0')) }
     }
 }
 

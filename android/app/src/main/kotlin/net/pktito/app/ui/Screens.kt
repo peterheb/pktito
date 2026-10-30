@@ -41,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -115,7 +116,7 @@ class ReadyActions(
  */
 @Composable
 fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> Unit) {
-    var asking by remember { mutableStateOf(false) }
+    var asking by rememberSaveable { mutableStateOf(false) }
     val listed = recent.isNotEmpty()
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = if (listed) Alignment.TopCenter else Alignment.Center) {
         // room for three rows under the zone's 330 dp, or the whole scrolls
@@ -213,7 +214,7 @@ class Opened(val id: String, val name: String, val step: String, val done: Doubl
 @Composable
 fun Side(recent: List<Recents.Item>, a: ReadyActions, open: Opened?, model: @Composable () -> Unit, work: @Composable () -> Unit) {
     val p = pk
-    var asking by remember { mutableStateOf(false) }
+    var asking by rememberSaveable { mutableStateOf(false) }
     val running = open?.running == true
     val live = open?.takeIf { o -> recent.none { it.id == o.id } }
     Row(Modifier.fillMaxSize()) {
