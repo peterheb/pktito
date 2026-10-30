@@ -25,9 +25,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -438,7 +441,13 @@ class MainActivity : ComponentActivity() {
             Modifier
                 .fillMaxSize()
                 .background(pk.ground)
-                .windowInsetsPadding(WindowInsets.safeDrawing),
+                // the window less its bars, not the keyboard: the side is the
+                // window's, and a keyboard taking it away would put the work
+                // in a column of its own under the field it was opened for,
+                // which would lose the keys and close the keyboard (the Tab
+                // S7 FE on its side, 753 dp tall less a keyboard's 300 or so,
+                // 2026-10-30: Find took no tap)
+                .windowInsetsPadding(WindowInsets.safeDrawing.exclude(WindowInsets.ime)),
         ) {
             // the side (Side) where a list and what it opens fit side by side:
             // Material's expanded width, 840 dp, which leaves the work 540,
@@ -448,34 +457,37 @@ class MainActivity : ComponentActivity() {
             // FE has it on its side, 1205 by 753 less its bars, and not
             // upright, 753 wide
             val sided = maxWidth >= 840.dp && maxHeight >= 480.dp
-            if (about)
-                About(version, onBack = { about = false }, onLink = ::link)
-            else if (t.step.isEmpty() && setup)
-                Setup(
-                    Models.offers, Models.model, Downloads.state, Models.copying, if (waiting != null) 1 else 0,
-                    SetupActions(
-                        download = ::download,
-                        use = {
-                            Models.use(this@MainActivity, it.name)
-                            Models.refresh(this@MainActivity)
-                        },
-                        pause = { Downloads.pause(this@MainActivity) },
-                        cancel = {
-                            if (Models.copying != null) Models.stopCopying() else Downloads.cancel(this@MainActivity)
-                        },
-                        retry = { Downloads.retry(this@MainActivity) },
-                        ownFile = { pickModel.launch(arrayOf("*/*")) },
-                        link = ::link,
-                        about = { about = true },
-                    ),
-                )
-            else if (sided && (t.step.isNotEmpty() || Recents.items.isNotEmpty()))
-                Side(Recents.items, readyActions, if (t.step.isEmpty()) null else Opened(t.id, t.name, t.step, t.done), model, work)
-            else if (t.step.isEmpty())
-                Ready(Recents.items, readyActions, model)
-            else
-                work()
-            toast?.let { Toast(it, Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp)) }
+            // the keyboard's room, inside the side's decision
+            Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.ime)) {
+                if (about)
+                    About(version, onBack = { about = false }, onLink = ::link)
+                else if (t.step.isEmpty() && setup)
+                    Setup(
+                        Models.offers, Models.model, Downloads.state, Models.copying, if (waiting != null) 1 else 0,
+                        SetupActions(
+                            download = ::download,
+                            use = {
+                                Models.use(this@MainActivity, it.name)
+                                Models.refresh(this@MainActivity)
+                            },
+                            pause = { Downloads.pause(this@MainActivity) },
+                            cancel = {
+                                if (Models.copying != null) Models.stopCopying() else Downloads.cancel(this@MainActivity)
+                            },
+                            retry = { Downloads.retry(this@MainActivity) },
+                            ownFile = { pickModel.launch(arrayOf("*/*")) },
+                            link = ::link,
+                            about = { about = true },
+                        ),
+                    )
+                else if (sided && (t.step.isNotEmpty() || Recents.items.isNotEmpty()))
+                    Side(Recents.items, readyActions, if (t.step.isEmpty()) null else Opened(t.id, t.name, t.step, t.done), model, work)
+                else if (t.step.isEmpty())
+                    Ready(Recents.items, readyActions, model)
+                else
+                    work()
+                toast?.let { Toast(it, Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp)) }
+            }
         }
     }
 
