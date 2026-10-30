@@ -94,7 +94,7 @@ pub fn choose_file(data: &Path, path: &Path) -> Result<(), String> {
 
 /// Whether a and b are one file: the same path, or the same once each is
 /// canonical (through links and .., and on Windows in its \\?\ form)
-fn same_file(a: &Path, b: &Path) -> bool {
+pub fn same_file(a: &Path, b: &Path) -> bool {
     a == b || matches!((fs::canonicalize(a), fs::canonicalize(b)), (Ok(x), Ok(y)) if x == y)
 }
 
@@ -199,6 +199,29 @@ pub fn partial(dir: &Path, e: &Entry) -> u64 {
     fs::metadata(part_in(dir, e))
         .map(|m| m.len().min(e.bytes))
         .unwrap_or(0)
+}
+
+/// Delete e's downloaded file, to free its room. The catalog model in use,
+/// if it was e, becomes another one that is downloaded, or none; the model
+/// now in use, when that put another catalog model in its place (a file of
+/// the user's own, set, stays in use instead).
+pub fn delete(data: &Path, e: &Entry) -> Result<Option<&'static Entry>, String> {
+    let dir = data.join("models");
+    let file = file_in(&dir, e);
+    match fs::remove_file(&file) {
+        Err(err) if err.kind() != io::ErrorKind::NotFound => {
+            return Err(format!("{err}\n{}", file.display()))
+        }
+        _ => {}
+    }
+    let mut s = load_settings(data);
+    if s.model.as_deref() != Some(e.name) {
+        return Ok(None);
+    }
+    let next = CATALOG.iter().find(|x| x.name != e.name && have(&dir, x));
+    s.model = next.map(|x| x.name.to_string());
+    save_settings(data, &s)?;
+    Ok(next.filter(|_| s.model_file.is_none()))
 }
 
 /// A file's address names its contents: under the first twelve digits of its
@@ -595,6 +618,55 @@ mod tests {
         let own = data.join("elsewhere").join("tuned.pkf");
         choose_file(&data, &own).unwrap();
         assert_eq!(load_settings(&data).model_file, Some(own));
+        let _ = fs::remove_dir_all(&data);
+    }
+
+    /// e downloaded into data's models, as have() tells it: a file of its
+    /// size, sparse, so that none of it is written
+    fn downloaded(data: &Path, e: &Entry) {
+        let dir = data.join("models");
+        fs::create_dir_all(&dir).unwrap();
+        File::create(file_in(&dir, e))
+            .unwrap()
+            .set_len(e.bytes)
+            .unwrap();
+        assert!(have(&dir, e));
+    }
+
+    #[test]
+    fn deleting_the_model_in_use_puts_another_downloaded_one_in_its_place() {
+        let data = scratch("delete");
+        let (v2, v3) = (&CATALOG[0], &CATALOG[1]);
+        downloaded(&data, v2);
+        downloaded(&data, v3);
+        choose_file(&data, &file_in(&data.join("models"), v2)).unwrap();
+        assert_eq!(delete(&data, v2).unwrap().map(|e| e.name), Some(v3.name));
+        assert!(!have(&data.join("models"), v2));
+        assert_eq!(load_settings(&data).model.as_deref(), Some(v3.name));
+        // the last one: none in use, and the window back to choosing one
+        assert!(delete(&data, v3).unwrap().is_none());
+        let s = load_settings(&data);
+        assert_eq!((usable(&data, &s), s.model), (None, None));
+        let _ = fs::remove_dir_all(&data);
+    }
+
+    #[test]
+    fn deleting_a_model_not_in_use_leaves_the_one_in_use() {
+        let data = scratch("delete-other");
+        let (v2, v3) = (&CATALOG[0], &CATALOG[1]);
+        downloaded(&data, v2);
+        downloaded(&data, v3);
+        choose_file(&data, &file_in(&data.join("models"), v2)).unwrap();
+        assert!(delete(&data, v3).unwrap().is_none());
+        assert_eq!(load_settings(&data).model.as_deref(), Some(v2.name));
+        // a file of the user's own in use: the catalog model under it gives
+        // way, and the window has no change to tell
+        let own = data.join("tuned.pkf");
+        fs::write(&own, b"its bytes").unwrap();
+        choose_file(&data, &own).unwrap();
+        assert!(delete(&data, v2).unwrap().is_none());
+        let s = load_settings(&data);
+        assert_eq!((s.model, s.model_file), (None, Some(own)));
         let _ = fs::remove_dir_all(&data);
     }
 

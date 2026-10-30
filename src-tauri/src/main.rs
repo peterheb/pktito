@@ -126,6 +126,11 @@ struct Status {
     platform: &'static str,
     /// Running from the Microsoft Store's package (store_edition).
     store: bool,
+    /// The file manager can show the models' folder, which the model menu
+    /// offers: not from the Store's package, whose storage Explorer outside
+    /// it does not show. Where it can't, the menu offers Manage models, the
+    /// app's own list of them to delete (delete_model).
+    reveal: bool,
     media: &'static [&'static str],
     video: &'static [&'static str],
 }
@@ -194,6 +199,7 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, Problem>
         backend: pktito::backend(),
         platform: std::env::consts::OS,
         store: store_edition(),
+        reveal: !store_edition(),
         media: decode::MEDIA,
         video: VIDEO,
     })
@@ -273,20 +279,83 @@ fn pause_download(state: State<'_, AppState>) {
 /// Stop the download and delete what it had.
 #[tauri::command]
 fn cancel_download(app: AppHandle, state: State<'_, AppState>) -> Result<(), Problem> {
-    let slot = state.download.lock().unwrap();
-    let Some(j) = slot.as_ref() else {
-        return Ok(());
-    };
+    match state.download.lock().unwrap().as_ref() {
+        Some(j) => cancel(&app, j),
+        None => Ok(()),
+    }
+}
+
+/// j stopped and what it had deleted: by its thread, which says so, while it
+/// runs; else here.
+fn cancel(app: &AppHandle, j: &download::Job) -> Result<(), Problem> {
     if j.alive() {
         // its thread deletes what it had, and says so
         j.ctl.cancel.store(true, Ordering::Relaxed);
         return Ok(());
     }
     let e = model::entry(&j.name()).ok_or("no such model")?;
-    let _ = fs::remove_file(model::part_in(&data_dir(&app)?.join("models"), e));
+    let _ = fs::remove_file(model::part_in(&data_dir(app)?.join("models"), e));
     j.set_step("cancelled");
     let _ = app.emit("download", j.state());
     Ok(())
+}
+
+/// Manage models' Delete (status.reveal): a catalog model's downloaded file,
+/// or with part what a download of it that stopped kept, as Cancel deletes
+/// it. Deleting the model in use puts another downloaded one in its place,
+/// whose name comes back for the window to say so, or none, and the window
+/// goes back to choosing one (model::delete). The engine lets go of the file
+/// first: Windows deletes no file that is mapped, and macOS and Linux free
+/// its room only once nothing maps it. A transcription holds the engine, and
+/// the model in use waits for it to end; the window greys its Delete
+/// meanwhile.
+#[tauri::command]
+fn delete_model(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    name: String,
+    part: bool,
+) -> Result<Option<String>, Problem> {
+    let e = model::entry(&name).ok_or("no such model")?;
+    let data = data_dir(&app)?;
+    let cant = |why: String| Problem::new("manage.cant_delete").detail(why);
+    if part {
+        if let Some(j) = state.download.lock().unwrap().as_ref() {
+            if j.name() == name {
+                return cancel(&app, j).map(|_| None);
+            }
+        }
+        let file = model::part_in(&data.join("models"), e);
+        return match fs::remove_file(&file) {
+            Err(err) if err.kind() != std::io::ErrorKind::NotFound => {
+                Err(cant(format!("{err}\n{}", file.display())))
+            }
+            _ => Ok(None),
+        };
+    }
+    let file = model::file_in(&data.join("models"), e);
+    // held until the file is gone, so that no transcription loads it meanwhile
+    let mut engine = state.engine.try_lock();
+    match engine.as_mut() {
+        Ok(slot) => {
+            if slot
+                .as_ref()
+                .is_some_and(|en| model::same_file(&en.path, &file))
+            {
+                **slot = None;
+            }
+        }
+        Err(_) => {
+            let in_use = model::usable(&data, &model::load_settings(&data))
+                .is_some_and(|p| model::same_file(&p, &file));
+            if in_use {
+                return Err(Problem::new("manage.busy"));
+            }
+        }
+    }
+    let now = model::delete(&data, e).map_err(cant)?;
+    drop(engine);
+    Ok(now.map(|x| x.name.to_string()))
 }
 
 /// A .pkf already on this computer, checked by loading it.
@@ -1767,6 +1836,7 @@ fn main() {
             download_model,
             pause_download,
             cancel_download,
+            delete_model,
             use_model_file,
             open_model,
             initial_files,

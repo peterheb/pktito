@@ -477,7 +477,8 @@ function modelMenu(anchor, keys) {
     );
   }
   // where the models are: about 620 MB each, and the files the CLI takes
-  // with -m; the Store edition's are in its package, which Explorer can't show
+  // with -m. The Store edition's are in its package, which Explorer can't
+  // show: there the window lists them itself, to delete (openManage).
   const show = esc(revealLabel());
   const file = st.model_file
     ? baseName(st.model_file)
@@ -487,9 +488,9 @@ function modelMenu(anchor, keys) {
   items.push(
     `<div class="pk-menu-sep" aria-hidden="true"></div>` +
       `<button class="pk-mi" type="button" role="menuitem" data-own="1"><span>${esc(t("models.open_file"))}</span></button>` +
-      (st.store
-        ? ""
-        : `<button class="pk-mi" type="button" role="menuitem" data-reveal="1"${file ? ` title="${esc(file)}"` : ""}><span>${show}</span></button>`),
+      (st.reveal
+        ? `<button class="pk-mi" type="button" role="menuitem" data-reveal="1"${file ? ` title="${esc(file)}"` : ""}><span>${show}</span></button>`
+        : `<button class="pk-mi" type="button" role="menuitem" data-manage="1"><span>${esc(t("models.manage"))}</span></button>`),
   );
   openMenu(anchor, keys, items.join(""), "down right", (m) => {
     m.onclick = async (e) => {
@@ -498,6 +499,7 @@ function modelMenu(anchor, keys) {
       closeMenu();
       if (b.dataset.own) return useOwnFile();
       if (b.dataset.reveal) return invoke("reveal_model").catch(toastErr);
+      if (b.dataset.manage) return openManage(anchor);
       const entry = st.catalog.find((x) => x.name === b.dataset.model);
       if (!entry || (!st.model_file && st.model === entry.name)) return;
       if (!entry.have) return startDownload(entry);
@@ -511,6 +513,154 @@ function modelMenu(anchor, keys) {
     };
   });
 }
+
+/* -------------------------------------------------------------- manage -- */
+
+/* Manage models, in the model menu where the file manager can't show the
+   models' folder (st.reveal; the Store edition's is in its package): each
+   catalog model downloaded and what a stopped download of one kept, with
+   their sizes, each to delete, and their total. The model in use says so,
+   and its Delete waits while a transcription runs (manageRunning). A
+   download under way has the window to itself (setup), so none is listed
+   here. Delete asks first, saying what it frees and what follows: the
+   model in use gives way to another downloaded one, which the toast names,
+   or, the last, to choosing one again (main.rs, delete_model). */
+let manageFrom = null; // the model menu's button, which gets the keyboard back
+
+function openManage(from) {
+  if (!$("manage").hidden) return;
+  manageFrom = from;
+  $("manage").hidden = false;
+  renderManage();
+  focusManage();
+}
+
+/* false if it was not open */
+function closeManage() {
+  if ($("manage").hidden) return false;
+  $("manage").hidden = true;
+  if (manageFrom && manageFrom.isConnected)
+    manageFrom.focus({ preventScroll: true });
+  manageFrom = null;
+  return true;
+}
+
+const focusManage = () =>
+  (
+    $("manage-body").querySelector("button:not([disabled])") ||
+    $("manage-close")
+  ).focus({ preventScroll: true });
+
+function renderManage() {
+  const rows = [];
+  let used = 0;
+  const row = (m, sub, part, on) => {
+    const id = `kept-${m.key}${part ? "-part" : ""}`;
+    return (
+      `<li><div class="pk-kept-text"><span class="pk-ui" id="${id}">${esc(labelOf(m))}</span><small class="pk-small">${sub}</small></div>` +
+      `<button class="pk-btn pk-btn-del" type="button" data-delete="${m.name}"${part ? ' data-part="1"' : ""} aria-describedby="${id}"${on && running ? " disabled" : ""}>` +
+      `${esc(t("manage.delete"))}</button></li>`
+    );
+  };
+  for (const m of st.catalog) {
+    if (m.have) {
+      const on = !st.model_file && st.model === m.name;
+      used += m.bytes;
+      const size = t("manage.size", { mb: num(mb(m.bytes)) });
+      const tag = on
+        ? ` · <span class="pk-have">${esc(t("manage.in_use"))}</span>`
+        : "";
+      rows.push(row(m, `${esc(`${m.name} · ${size}`)}${tag}`, false, on));
+    }
+    if (m.partial) {
+      used += m.partial;
+      const got = { got: num(mb(m.partial)), total: num(mb(m.bytes)) };
+      rows.push(row(m, esc(t("manage.paused", got)), true, false));
+    }
+  }
+  const total =
+    used >= 1e9
+      ? t("manage.used_gb", { gb: num(used / 1e9, 2) })
+      : t("manage.used_mb", { mb: num(mb(used)) });
+  $("manage-body").innerHTML = rows.length
+    ? `<ul class="pk-kept">${rows.join("")}</ul><p class="pk-small pk-kept-total">${esc(total)}</p>`
+    : `<p class="pk-small">${esc(t("manage.none"))}</p>`;
+}
+
+/* The model in use's Delete waits while a transcription runs: on Windows a
+   file the engine has open can't be deleted, and the transcription needs it */
+function manageRunning() {
+  if ($("manage").hidden || st.model_file) return;
+  const b = $("manage-body").querySelector(
+    `[data-delete="${st.model}"]:not([data-part])`,
+  );
+  if (!b) return;
+  const had = document.activeElement === b;
+  b.disabled = running;
+  if (had && running) $("manage-close").focus({ preventScroll: true });
+}
+
+async function deleteKept(b) {
+  const m = st.catalog.find((x) => x.name === b.dataset.delete);
+  if (!m) return;
+  const part = !!b.dataset.part;
+  const on = !part && !st.model_file && st.model === m.name;
+  // the one model.rs (delete) puts in its place: the catalog's first other
+  // one downloaded
+  const other = on && st.catalog.find((x) => x.name !== m.name && x.have);
+  const frees = num(mb(part ? m.partial : m.bytes));
+  const yes = part
+    ? await ask(
+        t("manage.ask_part_title"),
+        t("manage.ask_part_text", { mb: frees, label: labelOf(m) }),
+        t("manage.delete"),
+        b,
+      )
+    : await ask(
+        t("manage.ask_title", { label: labelOf(m) }),
+        t(
+          other
+            ? "manage.ask_text_switch"
+            : on
+              ? "manage.ask_text_last"
+              : "manage.ask_text",
+          { mb: frees, other: other ? labelOf(other) : "" },
+        ),
+        t("manage.delete"),
+        b,
+      );
+  if (!yes) return;
+  try {
+    const now = await invoke("delete_model", { name: m.name, part });
+    await refresh();
+    // the last model gone: the setup screen, to choose one again
+    if (!st.ready) return closeManage();
+    renderManage();
+    focusManage();
+    const next = now && st.catalog.find((x) => x.name === now);
+    if (next) toast(t("models.using", { label: labelOf(next) }));
+  } catch (e) {
+    toastErr(e);
+  }
+}
+
+$("manage-body").onclick = (e) => {
+  const b = e.target.closest("[data-delete]");
+  if (b && !b.disabled) deleteKept(b);
+};
+$("manage-close").onclick = () => closeManage();
+$("manage").addEventListener("click", (e) => {
+  if (e.target === $("manage")) closeManage();
+});
+/* the keyboard stays in it: its close button and its Deletes */
+$("manage").addEventListener("keydown", (e) => {
+  if (e.key !== "Tab") return;
+  e.preventDefault();
+  const all = [...$("manage").querySelectorAll("button:not([disabled])")],
+    i = all.indexOf(document.activeElement),
+    n = all.length;
+  all[i < 0 ? 0 : (i + (e.shiftKey ? n - 1 : 1)) % n].focus();
+});
 
 /* --------------------------------------------------------------- setup -- */
 
@@ -917,14 +1067,20 @@ $("recent-list").onclick = (e) => {
   home = false;
   render();
 };
-/* Clearing the list asks first, in the window: the system's dialog makes
-   its first button the default, so Enter or Space there cleared the list
-   (the Windows test, 2026-10-22). Here Cancel is the default, Esc and a
-   click outside are Cancel too, and Clear wants its own click, or Tab and
-   Enter. */
-let answer = null;
+/* Clearing the list asks first, in the window, as deleting a model does: the
+   system's dialog makes its first button the default, so Enter or Space
+   there cleared the list (the Windows test, 2026-10-22). Here Cancel is the
+   default, Esc and a click outside are Cancel too, and yes, the button that
+   says what it destroys, wants its own click, or Tab and Enter. The
+   keyboard goes back to from. */
+let answer = null,
+  askFrom = null;
 
-function askClear() {
+function ask(title, text, yes, from) {
+  $("ask-title").textContent = title;
+  $("ask-text").textContent = text;
+  $("ask-yes").textContent = yes;
+  askFrom = from;
   $("ask").hidden = false;
   $("ask-no").focus({ preventScroll: true });
   return new Promise((r) => (answer = r));
@@ -934,7 +1090,7 @@ function askClear() {
 function closeAsk(yes = false) {
   if ($("ask").hidden) return false;
   $("ask").hidden = true;
-  $("clear-recent").focus({ preventScroll: true });
+  if (askFrom && askFrom.isConnected) askFrom.focus({ preventScroll: true });
   answer(yes);
   return true;
 }
@@ -950,8 +1106,14 @@ $("ask").addEventListener("keydown", (e) => {
   e.preventDefault();
   (document.activeElement === $("ask-no") ? $("ask-yes") : $("ask-no")).focus();
 });
-$("clear-recent").onclick = async () => {
-  if (!(await askClear())) return;
+$("clear-recent").onclick = async (e) => {
+  const yes = await ask(
+    t("ask.clear_title"),
+    t("ask.clear_text"),
+    t("ask.clear"),
+    e.currentTarget,
+  );
+  if (!yes) return;
   try {
     await invoke("clear_recent");
     recent = [];
@@ -1110,6 +1272,7 @@ async function pump() {
   const f = files.find((x) => x.step === "waiting");
   if (!f) return;
   running = true;
+  manageRunning();
   f.step = "reading";
   update(f);
   try {
@@ -1123,6 +1286,7 @@ async function pump() {
     update(f);
   }
   running = false;
+  manageRunning();
   pump();
 }
 
@@ -3131,11 +3295,18 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (!st) return;
-  // Esc backs out one step: a question, a menu, About, a search, then the
-  // file, then its batch
+  // Esc backs out one step: a question, a menu, Manage models, About, a
+  // search, then the file, then its batch
   if (e.key === "Escape") {
     e.preventDefault();
-    if (closeAsk() || closeMenu() || closeSheet() || closeAbout()) return;
+    if (
+      closeAsk() ||
+      closeMenu() ||
+      closeManage() ||
+      closeSheet() ||
+      closeAbout()
+    )
+      return;
     if (query && viewName() === "work") clearFind();
     else back();
     return;
@@ -3180,12 +3351,20 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* The mouse's back button goes back as the header's arrow does, closing
-   first a question, a menu or About. WebKit and WebView2 both give it as
-   button 3; the page has no history of its own for it to go back in. */
+   first a question, a menu, Manage models or About. WebKit and WebView2
+   both give it as button 3; the page has no history of its own for it to
+   go back in. */
 document.addEventListener("mouseup", (e) => {
   if (e.button !== 3 || !st) return;
   e.preventDefault();
-  if (closeAsk() || closeMenu() || closeSheet() || closeAbout()) return;
+  if (
+    closeAsk() ||
+    closeMenu() ||
+    closeManage() ||
+    closeSheet() ||
+    closeAbout()
+  )
+    return;
   back();
 });
 
@@ -3193,6 +3372,7 @@ listen("menu", (e) => {
   const id = e.payload;
   // a command from the menu bar while the window asks: Cancel, and on to it
   closeAsk();
+  closeManage();
   if (id === "add") chooseFiles();
   else if (id === "about") openAbout();
   else if (id === "find") openFind();
@@ -3229,7 +3409,7 @@ async function start() {
   $("speed").title = t("speed.tip");
   showSpeed();
   showVolume();
-  for (const id of ["notices-close", "privacy-close"]) {
+  for (const id of ["notices-close", "privacy-close", "manage-close"]) {
     $(id).innerHTML = ICON.x;
     $(id).title = keyTip(t("sheet.close"), t("key.esc"));
   }

@@ -1810,6 +1810,33 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
   color: var(--err);
 }
 
+/* Manage models: a sheet as Privacy is, as tall as its list; its rows apart
+   by space, not lines (design/README.md), each a model and its size with
+   its Delete at the right */
+.pk-manage-box {
+  height: auto;
+  max-height: min(760px, 100%);
+  width: min(480px, 100%);
+}
+.pk-kept li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 8px 0;
+}
+.pk-kept-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.pk-kept-text .pk-small {
+  overflow-wrap: anywhere;
+}
+.pk-kept-total {
+  margin-top: var(--space-2);
+}
+
 /* -------------------------------------------- sentences or captions -- */
 /* two buttons in a sunk track, the one chosen raised to the ground */
 /* 16 px above, and the transcript's 16 px margin below: the same space

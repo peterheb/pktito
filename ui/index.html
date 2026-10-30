@@ -403,8 +403,31 @@
       </div>
     </section>
 
-    <!-- Before the recent list is cleared: Cancel the default, its buttons in
-     the platform's order (app.js, askClear) -->
+    <!-- Manage models, where the file manager can't show their folder: the
+     models on this computer and what a stopped download kept, each with a
+     Delete; app.js fills it (openManage) -->
+    <div class="pk-notices" id="manage" hidden>
+      <div
+        class="pk-notices-box pk-manage-box"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="manage-title"
+      >
+        <div class="pk-notices-head">
+          <h2 class="pk-ui" id="manage-title" data-t="manage.title"></h2>
+          <button
+            class="pk-btn pk-btn-ghost pk-btn-ico"
+            id="manage-close"
+            type="button"
+            data-t-aria-label="sheet.close"
+          ></button>
+        </div>
+        <div class="pk-notices-body" id="manage-body"></div>
+      </div>
+    </div>
+
+    <!-- Before something is deleted, the recent list cleared or a model:
+     Cancel the default, its buttons in the platform's order (app.js, ask) -->
     <div class="pk-ask" id="ask" hidden>
       <div
         class="pk-ask-box"
@@ -414,15 +437,10 @@
         aria-describedby="ask-text"
         tabindex="-1"
       >
-        <h2 class="pk-ui" id="ask-title" data-t="ask.clear_title"></h2>
-        <p id="ask-text" data-t="ask.clear_text"></p>
+        <h2 class="pk-ui" id="ask-title"></h2>
+        <p id="ask-text"></p>
         <div class="pk-ask-btns" id="ask-btns">
-          <button
-            class="pk-btn pk-btn-del"
-            id="ask-yes"
-            type="button"
-            data-t="ask.clear"
-          ></button>
+          <button class="pk-btn pk-btn-del" id="ask-yes" type="button"></button>
           <button
             class="pk-btn pk-btn-primary"
             id="ask-no"
