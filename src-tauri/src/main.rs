@@ -33,6 +33,10 @@ struct AppState {
     download: Mutex<Option<Arc<download::Job>>>,
     /// The transcription asked to stop, by id; 0 for none.
     stop: AtomicU32,
+    /// The model file the transcription under way uses, from its reading of
+    /// the settings to its end (Using): Manage models can't delete it
+    /// meanwhile, whichever model is in use by then (delete_model).
+    transcribing: Mutex<Option<PathBuf>>,
     /// Files the system asked the app to open (a .pkf double-clicked) before
     /// the page was there to take them (hand_over), and whether it is now;
     /// the lock is held for both, so that none falls between.
@@ -42,6 +46,23 @@ struct AppState {
     /// file played (serve.rs).
     #[cfg(target_os = "linux")]
     serve: Mutex<Option<pktito_app::serve::Server>>,
+}
+
+/// A transcription's model file in AppState.transcribing, until it ends,
+/// however it ends.
+struct Using<'a>(&'a Mutex<Option<PathBuf>>);
+
+impl<'a> Using<'a> {
+    fn new(slot: &'a Mutex<Option<PathBuf>>, path: &Path) -> Using<'a> {
+        *slot.lock().unwrap() = Some(path.to_path_buf());
+        Using(slot)
+    }
+}
+
+impl Drop for Using<'_> {
+    fn drop(&mut self) {
+        *self.0.lock().unwrap() = None;
+    }
 }
 
 const VIDEO: &[&str] = &["mp4", "m4v", "mov", "webm", "mkv", "wmv", "avi", "3gp"];
@@ -306,9 +327,9 @@ fn cancel(app: &AppHandle, j: &download::Job) -> Result<(), Problem> {
 /// whose name comes back for the window to say so, or none, and the window
 /// goes back to choosing one (model::delete). The engine lets go of the file
 /// first: Windows deletes no file that is mapped, and macOS and Linux free
-/// its room only once nothing maps it. A transcription holds the engine, and
-/// the model in use waits for it to end; the window greys its Delete
-/// meanwhile.
+/// its room only once nothing maps it. A transcription's model waits for it
+/// to end, in use or not: a model chosen during it is in use while the one
+/// before is still transcribing. The window greys their Deletes meanwhile.
 #[tauri::command]
 fn delete_model(
     app: AppHandle,
@@ -334,23 +355,19 @@ fn delete_model(
         };
     }
     let file = model::file_in(&data.join("models"), e);
-    // held until the file is gone, so that no transcription loads it meanwhile
+    let using = state.transcribing.lock().unwrap().clone();
+    if using.is_some_and(|p| model::same_file(&p, &file)) {
+        return Err(Problem::new("manage.busy"));
+    }
+    // held until the file is gone, so that no transcription loads it
+    // meanwhile; a transcription holding it has another model's file
     let mut engine = state.engine.try_lock();
-    match engine.as_mut() {
-        Ok(slot) => {
-            if slot
-                .as_ref()
-                .is_some_and(|en| model::same_file(&en.path, &file))
-            {
-                **slot = None;
-            }
-        }
-        Err(_) => {
-            let in_use = model::usable(&data, &model::load_settings(&data))
-                .is_some_and(|p| model::same_file(&p, &file));
-            if in_use {
-                return Err(Problem::new("manage.busy"));
-            }
+    if let Ok(slot) = engine.as_mut() {
+        if slot
+            .as_ref()
+            .is_some_and(|en| model::same_file(&en.path, &file))
+        {
+            **slot = None;
         }
     }
     let now = model::delete(&data, e).map_err(cant)?;
@@ -561,6 +578,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
     let Some(model_path) = model::usable(&data, &model::load_settings(&data)) else {
         return fail(Problem::new("transcribe.no_model"));
     };
+    let _using = Using::new(&state.transcribing, &model_path);
     let mut slot = state.engine.lock().unwrap();
     let loading = slot.as_ref().map(|e| e.path != model_path).unwrap_or(true);
     send(JobEvent {

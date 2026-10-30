@@ -164,6 +164,7 @@ let batchSave = null; // what Save all chose while some of the batch was still t
 let sel = null; // the id of the file shown; none for the batch screen
 let nextId = 1;
 let running = false; // a transcription is under way
+let runningModel = null; // the catalog model in use when it began
 let home = false; // the start screen is shown, files still under way or not
 let about = false; // About is shown, over the screen that opened it
 
@@ -520,7 +521,7 @@ function modelMenu(anchor, keys) {
    models' folder (st.reveal; the Store edition's is in its package): each
    catalog model downloaded and what a stopped download of one kept, with
    their sizes, each to delete, and their total. The model in use says so,
-   and its Delete waits while a transcription runs (manageRunning). A
+   and its Delete and the transcription's own wait while one runs (held). A
    download under way has the window to itself (setup), so none is listed
    here. Delete asks first, saying what it frees and what follows: the
    model in use gives way to another downloaded one, which the toast names,
@@ -554,11 +555,11 @@ const focusManage = () =>
 function renderManage() {
   const rows = [];
   let used = 0;
-  const row = (m, sub, part, on) => {
+  const row = (m, sub, part) => {
     const id = `kept-${m.key}${part ? "-part" : ""}`;
     return (
       `<li><div class="pk-kept-text"><span class="pk-ui" id="${id}">${esc(labelOf(m))}</span><small class="pk-small">${sub}</small></div>` +
-      `<button class="pk-btn pk-btn-del" type="button" data-delete="${m.name}"${part ? ' data-part="1"' : ""} aria-describedby="${id}"${on && running ? " disabled" : ""}>` +
+      `<button class="pk-btn pk-btn-del" type="button" data-delete="${m.name}"${part ? ' data-part="1"' : ""} aria-describedby="${id}"${!part && held(m) ? " disabled" : ""}>` +
       `${esc(t("manage.delete"))}</button></li>`
     );
   };
@@ -570,12 +571,12 @@ function renderManage() {
       const tag = on
         ? ` · <span class="pk-have">${esc(t("manage.in_use"))}</span>`
         : "";
-      rows.push(row(m, `${esc(`${m.name} · ${size}`)}${tag}`, false, on));
+      rows.push(row(m, `${esc(`${m.name} · ${size}`)}${tag}`, false));
     }
     if (m.partial) {
       used += m.partial;
       const got = { got: num(mb(m.partial)), total: num(mb(m.bytes)) };
-      rows.push(row(m, esc(t("manage.paused", got)), true, false));
+      rows.push(row(m, esc(t("manage.paused", got)), true));
     }
   }
   const total =
@@ -587,17 +588,24 @@ function renderManage() {
     : `<p class="pk-small">${esc(t("manage.none"))}</p>`;
 }
 
-/* The model in use's Delete waits while a transcription runs: on Windows a
-   file the engine has open can't be deleted, and the transcription needs it */
+/* While a transcription runs, the Deletes of the model in use and of the
+   one in use when it began wait: it transcribes with one of the two (it
+   reads the settings once the file is read), and on Windows a file the
+   engine has open can't be deleted. main.rs refuses the one it transcribes
+   with in any case (delete_model). */
+const held = (m) =>
+  running &&
+  (m.name === runningModel || (!st.model_file && m.name === st.model));
+
 function manageRunning() {
-  if ($("manage").hidden || st.model_file) return;
-  const b = $("manage-body").querySelector(
-    `[data-delete="${st.model}"]:not([data-part])`,
-  );
-  if (!b) return;
-  const had = document.activeElement === b;
-  b.disabled = running;
-  if (had && running) $("manage-close").focus({ preventScroll: true });
+  if ($("manage").hidden) return;
+  for (const b of $("manage-body").querySelectorAll(
+    "[data-delete]:not([data-part])",
+  )) {
+    const had = document.activeElement === b;
+    b.disabled = held(st.catalog.find((m) => m.name === b.dataset.delete));
+    if (had && b.disabled) $("manage-close").focus({ preventScroll: true });
+  }
 }
 
 async function deleteKept(b) {
@@ -1272,6 +1280,7 @@ async function pump() {
   const f = files.find((x) => x.step === "waiting");
   if (!f) return;
   running = true;
+  runningModel = st.model_file ? null : st.model;
   manageRunning();
   f.step = "reading";
   update(f);
@@ -1286,6 +1295,7 @@ async function pump() {
     update(f);
   }
   running = false;
+  runningModel = null;
   manageRunning();
   pump();
 }
