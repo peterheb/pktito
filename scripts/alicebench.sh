@@ -31,7 +31,7 @@
 # its transcript (pktito-cli bench --json's), and for chapters 1, 2, 7, 8,
 # 9, 10 and 12 the transcript every build before 0.9.3 gives: 0.9.3
 # transcribes again the speech the English model wrote no words for
-# (pktito-app's src-tauri/src/transcribe.rs, RETRY_SPEECH_S), which gives
+# (vendor/pktito/core/transcribe.c, RETRY_SPEECH_S), which gives
 # those chapters back the LibriVox notices, credits and titles it drops at
 # their starts, as NeMo does, and chapter 1 its "End of chapter one".
 # Either passes, and one of an earlier version is named as such.
