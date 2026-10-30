@@ -527,10 +527,13 @@ private fun Bar(done: Double, stopped: Boolean, label: String) {
  * menu is the desktop's (app.js, modelMenu): each catalog model for what it
  * is for and whether it is here, Downloaded in green or its download's
  * size, the one in use checked; a model file of one's own while it is in
- * use; and Open a model file. A model that is not here is downloaded.
+ * use; Open a model file; and Manage models, where what they take is
+ * deleted (Manage), as the desktop's Store edition has it in place of
+ * Show in File Explorer: the app's storage is no folder the person can
+ * open. A model that is not here is downloaded.
  */
 @Composable
-fun ModelButton(offers: List<Offer>, model: String?, own: String?, onPick: (Offer) -> Unit, onOwnFile: () -> Unit) {
+fun ModelButton(offers: List<Offer>, model: String?, own: String?, onPick: (Offer) -> Unit, onOwnFile: () -> Unit, onManage: () -> Unit) {
     val p = pk
     val res = LocalResources.current
     var open by remember { mutableStateOf(false) }
@@ -560,6 +563,10 @@ fun ModelButton(offers: List<Offer>, model: String?, own: String?, onPick: (Offe
             Item(stringResource(R.string.models_open_file), null) {
                 open = false
                 onOwnFile()
+            }
+            Item(stringResource(R.string.models_manage), null) {
+                open = false
+                onManage()
             }
         }
     }

@@ -75,7 +75,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -474,35 +473,8 @@ private fun whenDone(secs: Long): String {
  * keys, Cancel has the focus, so that Enter does not clear the list.
  */
 @Composable
-private fun AskClear(onClear: () -> Unit, onCancel: () -> Unit) {
-    val p = pk
-    val cancel = remember { FocusRequester() }
-    val keys = hasKeys()
-    Modal(onCancel) {
-        Column(
-            Modifier
-                .widthIn(max = 400.dp)
-                .fillMaxWidth()
-                .floating()
-                .padding(24.dp),
-        ) {
-            Text(stringResource(R.string.ask_clear_title), style = Type.ui, color = p.ink)
-            Text(stringResource(R.string.ask_clear_text), style = Type.ui.copy(fontWeight = FontWeight.W400), color = p.ink, modifier = Modifier.padding(top = 8.dp))
-            Row(
-                Modifier.fillMaxWidth().padding(top = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-            ) {
-                PkButton(stringResource(R.string.ask_clear), onClear, Modifier.widthIn(min = 80.dp), kind = Kind.Del)
-                PkButton(stringResource(R.string.ask_cancel), onCancel, Modifier.widthIn(min = 80.dp).focusRequester(cancel), kind = Kind.Primary)
-            }
-        }
-    }
-    if (keys)
-        LaunchedEffect(Unit) {
-            withFrameNanos { }
-            runCatching { cancel.requestFocus() }
-        }
-}
+private fun AskClear(onClear: () -> Unit, onCancel: () -> Unit) =
+    Confirm(stringResource(R.string.ask_clear_title), stringResource(R.string.ask_clear_text), stringResource(R.string.ask_clear), onClear, onCancel)
 
 /** The wordmark as each screen's way to About, its padding outside it so that the word stays where it is (app.css, button.pk-wm). */
 @Composable

@@ -60,6 +60,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import net.pktito.app.ui.About
 import net.pktito.app.ui.Finder
+import net.pktito.app.ui.Manage
+import net.pktito.app.ui.ManageActions
 import net.pktito.app.ui.ModelButton
 import net.pktito.app.ui.Opened
 import net.pktito.app.ui.PktitoTheme
@@ -122,6 +124,8 @@ class MainActivity : ComponentActivity() {
     private var toast by mutableStateOf<String?>(null)
     /** About is up, over the start screen. */
     private var about by mutableStateOf(false)
+    /** Manage models is up, over the screen it was opened from (the model menu's). */
+    private var managing by mutableStateOf(false)
     /** About's version line: the app's, and the engine's code for this processor by its name. */
     private val version by lazy {
         val name = packageManager.getPackageInfo(packageName, 0).versionName ?: ""
@@ -155,6 +159,7 @@ class MainActivity : ComponentActivity() {
         // the files shared before this launch, which their apps have had
         if (savedInstanceState == null) File(cacheDir, SHARED).deleteRecursively()
         about = savedInstanceState?.getBoolean("about") ?: false
+        managing = savedInstanceState?.getBoolean("managing") ?: false
         savedInstanceState?.getString("find")?.let {
             finder.query = it
             finder.open = it.isNotEmpty()
@@ -215,6 +220,7 @@ class MainActivity : ComponentActivity() {
         outState.putString("saving", saving)
         outState.putString("share_token", shareToken)
         outState.putBoolean("about", about)
+        outState.putBoolean("managing", managing)
         outState.putParcelable("waiting", waiting)
         outState.putString("find", finder.query)
         val t = Transcriber
@@ -366,6 +372,7 @@ class MainActivity : ComponentActivity() {
                     }
                 },
                 onOwnFile = { pickModel.launch(arrayOf("*/*")) },
+                onManage = { managing = true },
             )
         }
         val work = @Composable {
@@ -490,9 +497,47 @@ class MainActivity : ComponentActivity() {
                     Ready(Recents.items, readyActions, model)
                 else
                     work()
-                toast?.let { Toast(it, Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp)) }
+                // over Manage models while it is up, which has it too
+                if (!managing) toast?.let { Toast(it, Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp)) }
+            }
+            if (managing) {
+                // the room left, again after each delete, not each frame of a transcript playing
+                val free = remember(Models.offers, Models.own, Downloads.state?.step) { Models.free(this@MainActivity) }
+                Manage(
+                    Models.offers, Models.model, Models.own, Downloads.state, t.running, Transcriber.loadedPath, free, toast,
+                    // a phone's sheet under Material's compact width, decided by
+                    // the window as measured here, as the side is: the window's
+                    // own size is not known before its first measure, and a
+                    // turn of the screen with Manage models up would show the
+                    // sheet for a frame on a tablet
+                    compact = maxWidth < 600.dp,
+                    ManageActions(
+                        delete = { deleted(Models.delete(this@MainActivity, it)) },
+                        deletePart = { deleted(Models.deletePart(this@MainActivity, it)) },
+                        deleteOwn = { deleted(Models.deleteOwn(this@MainActivity)) },
+                        stop = {
+                            Downloads.cancel(this@MainActivity)
+                            deleted(null)
+                        },
+                        close = { managing = false },
+                    ),
+                )
             }
         }
+    }
+
+    /**
+     * A delete of Manage models' done, and what it said, if anything: the
+     * model now in use, or that it failed. With no model left, Manage
+     * models goes, and the screen is the setup's, its choice of a model to
+     * download, a transcript open let go first: it needs no model to be
+     * read, but would to be transcribed again (manage.ask_text_last).
+     */
+    private fun deleted(said: String?) {
+        if (said != null) toast = said
+        if (Models.ready != null) return
+        managing = false
+        if (Transcriber.step.isNotEmpty() && !Transcriber.running) back()
     }
 
     /**

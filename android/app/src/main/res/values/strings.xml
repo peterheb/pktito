@@ -143,6 +143,31 @@
     <string name="models_using">Using the %1$s model</string>
     <string name="models_using_file">Using %1$s</string>
     <string name="models_ready">%1$s model ready</string>
+    <string name="models_manage">Manage models…</string>
+    <!-- Manage models (manage.*), which the desktop's Store edition has
+         where the others show the folder; the Android-only ones say so -->
+    <string name="manage_title">Manage models</string>
+    <string name="manage_size">%1$s MB</string>
+    <string name="manage_in_use">In use</string>
+    <string name="manage_delete">Delete</string>
+    <string name="manage_paused">Paused download · %1$s of %2$s MB</string>
+    <string name="manage_used_mb">%1$s MB used</string>
+    <string name="manage_used_gb">%1$s GB used</string>
+    <string name="manage_none">No models downloaded</string>
+    <string name="manage_ask_title">Delete the %1$s model?</string>
+    <string name="manage_ask_text">This frees %1$s MB. You can download it again.</string>
+    <string name="manage_ask_text_switch">This frees %1$s MB, and pktito switches to the %2$s model. You can download it again.</string>
+    <string name="manage_ask_text_last">This frees %1$s MB. It\'s the only model downloaded, so you\'ll choose a model again before transcribing.</string>
+    <string name="manage_ask_part_title">Delete the paused download?</string>
+    <string name="manage_ask_part_text">This frees %1$s MB. Downloading the %2$s model again starts over.</string>
+    <string name="manage_cant_delete">Couldn\'t delete the model</string>
+    <!-- Android's own: the room left, a download under way, the copy of a model file opened -->
+    <string name="manage_free_mb">%1$s MB free</string>
+    <string name="manage_free_gb">%1$s GB free</string>
+    <string name="manage_downloading">Downloading · %1$s of %2$s MB</string>
+    <string name="manage_ask_own_title">Delete the copy of %1$s?</string>
+    <string name="manage_ask_own_switch">This frees %1$s MB, and pktito switches to the %2$s model. The file you opened is not affected.</string>
+    <string name="manage_ask_own_last">This frees %1$s MB. It\'s the only model here, so you\'ll choose a model again before transcribing. The file you opened is not affected.</string>
     <string name="setup_title">Choose a speech model</string>
     <string name="setup_legend">Speech model</string>
     <string name="setup_on_device">on this device</string><!-- setup.on_computer -->

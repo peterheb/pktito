@@ -42,14 +42,18 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -61,6 +65,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -82,6 +87,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import kotlin.math.roundToInt
+import net.pktito.app.R
 
 val Corner = RoundedCornerShape(Radius.radiusUi)
 val CornerSm = RoundedCornerShape(Radius.radiusSm)
@@ -341,6 +347,42 @@ fun Modifier.floating(): Modifier {
         .clip(Corner)
         .background(p.ground)
         .pointerInput(Unit) { detectTapGestures { } }
+}
+
+/**
+ * A question before something is deleted, as a Modal: what, what it means,
+ * and its button in the error's red beside Cancel, which the keys start on
+ * where there are keys, so that Enter does not delete.
+ */
+@Composable
+fun Confirm(title: String, text: String, yes: String, onYes: () -> Unit, onCancel: () -> Unit) {
+    val p = pk
+    val cancel = remember { FocusRequester() }
+    val keys = hasKeys()
+    Modal(onCancel) {
+        Column(
+            Modifier
+                .widthIn(max = 400.dp)
+                .fillMaxWidth()
+                .floating()
+                .padding(24.dp),
+        ) {
+            Text(title, style = Type.ui, color = p.ink)
+            Text(text, style = Type.ui.copy(fontWeight = FontWeight.W400), color = p.ink, modifier = Modifier.padding(top = 8.dp))
+            Row(
+                Modifier.fillMaxWidth().padding(top = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            ) {
+                PkButton(yes, onYes, Modifier.widthIn(min = 80.dp), kind = Kind.Del)
+                PkButton(stringResource(R.string.ask_cancel), onCancel, Modifier.widthIn(min = 80.dp).focusRequester(cancel), kind = Kind.Primary)
+            }
+        }
+    }
+    if (keys)
+        LaunchedEffect(Unit) {
+            withFrameNanos { }
+            runCatching { cancel.requestFocus() }
+        }
 }
 
 /** A word that comes and goes at the screen's foot, on term, as the desktop's toast. */

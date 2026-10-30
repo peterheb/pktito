@@ -27,13 +27,17 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.onChildren
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import java.io.File
 import net.pktito.app.ui.About
 import net.pktito.app.ui.Finder
 import net.pktito.app.ui.findIn
+import net.pktito.app.ui.Manage
+import net.pktito.app.ui.ManageActions
 import net.pktito.app.ui.ModelButton
 import net.pktito.app.ui.Opened
 import net.pktito.app.ui.PktitoTheme
@@ -172,14 +176,14 @@ class Shots {
         "bg", "cs", "da", "de", "el", "en", "es", "et", "fi", "fr", "hr", "hu", "it", "lt",
         "lv", "mt", "nl", "pl", "pt", "ro", "ru", "sk", "sl", "sv", "uk",
     )
-    private fun offers(have: Boolean = false) = listOf(
-        Offer("parakeet-tdt-0.6b-v2", "english", listOf("en"), "", 624_480_196, "", have, 0, File("")),
+    private fun offers(have: Boolean = false, both: Boolean = false, partial: Long = 0) = listOf(
+        Offer("parakeet-tdt-0.6b-v2", "english", listOf("en"), "", 624_480_196, "", have, 0, File(""), File("")),
         Offer(
             "parakeet-tdt-0.6b-v3", "multilingual", languages, "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3#multilingual-asr",
-            647_552_644, "", false, 0, File(""),
+            647_552_644, "", both, if (both) 0 else partial, File(""), File(""),
         ),
     )
-    private val models = @Composable { ModelButton(offers(have = true), "parakeet-tdt-0.6b-v2", null, {}, {}) }
+    private val models = @Composable { ModelButton(offers(have = true), "parakeet-tdt-0.6b-v2", null, {}, {}, {}) }
     private val readyActions = ReadyActions({}, {}, {}, {}, {})
     // the recent list: today's, yesterday's, this year's and last year's,
     // an hour long and minutes, a name that fits and two that do not
@@ -217,6 +221,34 @@ class Shots {
     }
     @Test fun modelMenu() = shot("models", false, act = modelMenu) { Ready(emptyList(), readyActions, models) }
     @Test fun modelMenuDark() = shot("models", true, act = modelMenu) { Ready(emptyList(), readyActions, models) }
+
+    // Manage models: the English model in use and the Multilingual's download
+    // stopped at 312 MB, on a phone; both downloaded, on the tablet on its side;
+    // and there with a transcription running, and a delete's question
+    @Composable
+    private fun manageModels(
+        both: Boolean = false, running: Boolean = false, d: Download? = null, toast: String? = null, compact: Boolean = true,
+    ) = Manage(
+        offers(have = true, both = both, partial = if (both) 0 else 312_000_000), "parakeet-tdt-0.6b-v2", null, d, running, null,
+        18_400_000_000, toast, compact, ManageActions({}, {}, {}, {}, {}),
+    )
+    private val manageUp = { compose.onAllNodes(isDialog()).onFirst() }
+    private val askDelete = {
+        compose.onAllNodesWithText("Delete").onFirst().performClick()
+        compose.onAllNodes(isDialog()).onLast()
+    }
+    @Test fun manage() = shot("manage", false, act = manageUp) { manageModels() }
+    @Test fun manageDark() = shot("manage", true, act = manageUp) { manageModels() }
+    @Test fun manageDownloading() = shot("manage-downloading", false, act = manageUp) {
+        manageModels(d = Download("parakeet-tdt-0.6b-v3", "downloading", 262_144_000, 647_552_644, 11.8e6, "models.pktito.net", null, retry = false, trying = false))
+    }
+    @Test fun manageToast() = shot("manage-toast", false, act = manageUp) { manageModels(both = true, toast = "Using the Multilingual model") }
+    @Test fun manageTab() = shot("manage", false, tab = 1, act = manageUp) { manageModels(both = true, compact = false) }
+    @Test fun manageTabDark() = shot("manage", true, tab = 1, act = manageUp) { manageModels(both = true, compact = false) }
+    @Test fun manageTabToast() = shot("manage-toast", false, tab = 1, act = manageUp) { manageModels(both = true, toast = "Using the Multilingual model", compact = false) }
+    @Test fun manageRunning() = shot("manage-running", false, tab = 1, act = manageUp) { manageModels(both = true, running = true, compact = false) }
+    @Test fun manageAsk() = shot("manage-ask", false, tab = 1, act = askDelete) { manageModels(both = true, compact = false) }
+    @Test fun manageAskPhone() = shot("manage-ask", false, act = askDelete) { manageModels(both = true) }
 
     // the setup screen in each of its modes, a download a third of the way, as the desktop's stand-in has it
     private val setupActions = SetupActions({}, {}, {}, {}, {}, {}, {}, {})

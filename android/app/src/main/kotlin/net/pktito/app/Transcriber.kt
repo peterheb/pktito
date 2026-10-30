@@ -162,6 +162,26 @@ object Transcriber {
     @Synchronized
     fun loaded(context: Context): Boolean = handle != 0L && loadedFrom == Models.usable(context)?.path
 
+    /** The file of the model loaded, which a transcription running uses, whichever is in use now. */
+    val loadedPath: String?
+        @Synchronized get() = loadedFrom.takeIf { handle != 0L }
+
+    /**
+     * The model loaded from path let go, its file being deleted (Models.delete):
+     * the engine maps it, and a deleted file keeps its blocks until it is
+     * unmapped. On the main thread with no transcription running, where the
+     * handle is in no transcription's hands: begin sets the step there before
+     * the transcription's thread starts, and the step leaves running there
+     * only once Engine.transcribe has returned (TranscribeService).
+     */
+    @Synchronized
+    fun letGo(path: String) {
+        if (handle == 0L || loadedFrom != path) return
+        Engine.free(handle)
+        handle = 0L
+        loadedFrom = null
+    }
+
     /**
      * The model in use (Models), loaded once for the process, and again
      * once another is chosen, the one before let go: on the

@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import java.io.File
 import java.io.IOException
+import java.nio.file.Files
 import java.security.MessageDigest
 import kotlin.concurrent.thread
 import org.json.JSONArray
@@ -32,6 +33,8 @@ class Offer(
     val have: Boolean,
     val partial: Long,
     val file: File,
+    /** Where its download gathers until it checks (model.rs, part_in). */
+    val part: File,
 )
 
 /** A model file of the person's own on its way in: its name, the bytes copied of its size (0 where its app does not say), then its check. */
@@ -74,7 +77,7 @@ object Models {
             Offer(
                 o.getString("name"), o.getString("key"), (0 until langs.length()).map { langs.getString(it) },
                 o.getString("accuracy"), o.getLong("bytes"), o.getString("sha256"), o.getBoolean("have"),
-                o.getLong("partial"), File(o.getString("file")),
+                o.getLong("partial"), File(o.getString("file")), File(o.getString("part")),
             )
         }
     }
@@ -89,6 +92,9 @@ object Models {
 
     /** The screen's state anew, from the files and the preferences. */
     fun refresh(context: Context) {
+        // a copy in that its process went with: unlike a download's part, it
+        // cannot go on from where it stopped, and it may hold 600 MB
+        if (copying == null) File(ownDir(context), ".copying").delete()
         offers = catalog(context)
         val p = prefs(context)
         model = p.getString("model", null)
@@ -105,6 +111,75 @@ object Models {
         prefs(context).edit().putString("model", name).remove("model_file").apply()
         ownDir(context).listFiles()?.forEach { it.delete() }
     }
+
+    /**
+     * The catalog model to use once the file in use goes (Manage models):
+     * for the person's own file (deleting null), the catalog model it stood
+     * in for where that is here, else any downloaded; for the catalog model
+     * in use, another downloaded. Null for none, and the screen is setup's.
+     */
+    fun next(offers: List<Offer>, model: String?, deleting: String?): Offer? {
+        val here = offers.filter { it.have && it.name != deleting }
+        return here.find { it.name == model } ?: here.firstOrNull()
+    }
+
+    /**
+     * Manage models' deletes, each on the main thread with no transcription
+     * running, the one other user of a model file (Transcriber.running), and
+     * each saying what its toast says, if anything: the model now in use,
+     * where the one in use gave way to it, or that the delete failed, the
+     * system's words for why in the log. A model goes with the
+     * transcriber's copy where that is the one loaded (Transcriber.letGo):
+     * the engine maps the file (core/os.c), and a file deleted while mapped
+     * keeps its 600 MB on the disk until the process ends (the Tab S7 FE,
+     * 2026-10-30: the English model deleted after a transcription with it,
+     * 606 MB free at once and no .pkf left in the process's maps). The model in use
+     * gives way to the next (next); with none, none is in use, the setup
+     * screen's choice still the model deleted, to download again. The own
+     * file, while it is in use, stays in use, and the catalog model under
+     * it goes without a word.
+     */
+    fun delete(context: Context, o: Offer): String? {
+        val inUse = own == null && model == o.name
+        Transcriber.letGo(o.file.path)
+        if (!gone(o.file)) return context.getString(R.string.manage_cant_delete)
+        return taken(context, if (inUse) next(offers, model, o.name) else null)
+    }
+
+    /** The person's own file deleted, the copy of it the app kept: the file they opened is theirs, and stays where it is. */
+    fun deleteOwn(context: Context): String? {
+        val f = own ?: return null
+        Transcriber.letGo(f.path)
+        if (!gone(f)) return context.getString(R.string.manage_cant_delete)
+        prefs(context).edit().remove("model_file").apply()
+        return taken(context, next(offers, model, null))
+    }
+
+    /** What a download that stopped kept, deleted where no download is under way for it (Downloads.cancel is for one that is). */
+    fun deletePart(context: Context, o: Offer): String? {
+        if (!gone(o.part)) return context.getString(R.string.manage_cant_delete)
+        refresh(context)
+        return null
+    }
+
+    /** f deleted, or already not there; why not, in the log. */
+    private fun gone(f: File): Boolean = try {
+        Files.deleteIfExists(f.toPath())
+        true
+    } catch (e: IOException) {
+        Log.w(TAG, "deleting $f", e)
+        false
+    }
+
+    /** After a delete, then in use if there is one to give way to, said so (models.using), and the screen's state anew. */
+    private fun taken(context: Context, then: Offer?): String? {
+        if (then != null) use(context, then.name)
+        refresh(context)
+        return then?.let { context.getString(R.string.models_using, label(context.resources, it.key)) }
+    }
+
+    /** The room left where the models are, as the system's storage settings count it. */
+    fun free(context: Context): Long = context.noBackupFilesDir.usableSpace
 
     /** A catalog model's words, as the desktop's window has them (catalog.KEY). */
     fun label(res: Resources, key: String): String = res.getString(

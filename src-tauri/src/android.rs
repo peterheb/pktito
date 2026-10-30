@@ -462,7 +462,8 @@ pub extern "system" fn Java_net_pktito_app_Engine_backend<'a>(
 
 /// What catalog() says of each model, as main.rs's Offer: its entry,
 /// whether it is downloaded, the bytes a download that stopped has kept,
-/// and its file's path, which the app loads it from.
+/// its file's path, which the app loads it from, and the path of the part
+/// a download gathers, which Manage models deletes.
 #[derive(Serialize)]
 struct Offer {
     #[serde(flatten)]
@@ -470,6 +471,7 @@ struct Offer {
     have: bool,
     partial: u64,
     file: String,
+    part: String,
 }
 
 /// Engine.catalog(dir): the models models.pktito.net serves, as JSON, each
@@ -490,6 +492,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_catalog<'a>(
                     have: model::have(&dir, e),
                     partial: model::partial(&dir, e),
                     file: model::file_in(&dir, e).to_string_lossy().into_owned(),
+                    part: model::part_in(&dir, e).to_string_lossy().into_owned(),
                 })
                 .collect();
             Ok(env
