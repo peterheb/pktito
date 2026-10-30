@@ -1,0 +1,553 @@
+{
+  "file": "historical_apollo11-onboard-3_1.flac",
+  "duration": 178.3,
+  "model": "parakeet-tdt-0.6b-v2",
+  "segments": [
+    {"start": 0.321, "end": 2.401, "text": "When I get around here, I'll pitch down 70, huh?", "words": [
+      {"start": 0.321, "end": 0.401, "text": "When"},
+      {"start": 0.401, "end": 0.481, "text": "I"},
+      {"start": 0.481, "end": 0.641, "text": "get"},
+      {"start": 0.641, "end": 0.801, "text": "around"},
+      {"start": 0.801, "end": 1.041, "text": "here,"},
+      {"start": 1.041, "end": 1.201, "text": "I'll"},
+      {"start": 1.201, "end": 1.441, "text": "pitch"},
+      {"start": 1.441, "end": 1.521, "text": "down"},
+      {"start": 1.681, "end": 2.161, "text": "70,"},
+      {"start": 2.161, "end": 2.401, "text": "huh?"}
+    ]},
+    {"start": 2.481, "end": 3.601, "text": "What are we pitching down for?", "words": [
+      {"start": 2.481, "end": 2.561, "text": "What"},
+      {"start": 2.561, "end": 2.641, "text": "are"},
+      {"start": 2.641, "end": 2.721, "text": "we"},
+      {"start": 2.721, "end": 3.201, "text": "pitching"},
+      {"start": 3.201, "end": 3.361, "text": "down"},
+      {"start": 3.361, "end": 3.601, "text": "for?"}
+    ]},
+    {"start": 3.601, "end": 4.481, "text": "What's what's what?", "words": [
+      {"start": 3.601, "end": 3.761, "text": "What's"},
+      {"start": 3.841, "end": 4.001, "text": "what's"},
+      {"start": 4.081, "end": 4.481, "text": "what?"}
+    ]},
+    {"start": 4.481, "end": 6.721, "text": "We're gonna what we're I don't even know what we're doing.", "words": [
+      {"start": 4.481, "end": 4.641, "text": "We're"},
+      {"start": 4.641, "end": 4.721, "text": "gonna"},
+      {"start": 4.961, "end": 5.041, "text": "what"},
+      {"start": 5.201, "end": 5.361, "text": "we're"},
+      {"start": 5.761, "end": 5.841, "text": "I"},
+      {"start": 5.841, "end": 6.001, "text": "don't"},
+      {"start": 6.001, "end": 6.081, "text": "even"},
+      {"start": 6.081, "end": 6.321, "text": "know"},
+      {"start": 6.321, "end": 6.401, "text": "what"},
+      {"start": 6.401, "end": 6.561, "text": "we're"},
+      {"start": 6.641, "end": 6.721, "text": "doing."}
+    ]},
+    {"start": 7.281, "end": 16.001, "text": "We're gonna we're gonna roll over and pitch down so we're looking out the front windows down again at the pitch down and we have a switch.", "words": [
+      {"start": 7.281, "end": 7.441, "text": "We're"},
+      {"start": 7.441, "end": 7.521, "text": "gonna"},
+      {"start": 8.001, "end": 8.241, "text": "we're"},
+      {"start": 8.241, "end": 8.321, "text": "gonna"},
+      {"start": 8.481, "end": 8.721, "text": "roll"},
+      {"start": 8.721, "end": 8.961, "text": "over"},
+      {"start": 8.961, "end": 9.121, "text": "and"},
+      {"start": 9.121, "end": 9.441, "text": "pitch"},
+      {"start": 9.441, "end": 9.521, "text": "down"},
+      {"start": 9.601, "end": 9.681, "text": "so"},
+      {"start": 9.841, "end": 10.081, "text": "we're"},
+      {"start": 10.081, "end": 10.401, "text": "looking"},
+      {"start": 10.561, "end": 10.801, "text": "out"},
+      {"start": 10.801, "end": 10.961, "text": "the"},
+      {"start": 10.961, "end": 11.201, "text": "front"},
+      {"start": 11.201, "end": 11.601, "text": "windows"},
+      {"start": 11.681, "end": 11.921, "text": "down"},
+      {"start": 12.001, "end": 12.161, "text": "again"},
+      {"start": 12.161, "end": 12.321, "text": "at"},
+      {"start": 12.321, "end": 12.401, "text": "the"},
+      {"start": 15.041, "end": 15.281, "text": "pitch"},
+      {"start": 15.281, "end": 15.361, "text": "down"},
+      {"start": 15.441, "end": 15.521, "text": "and"},
+      {"start": 15.521, "end": 15.601, "text": "we"},
+      {"start": 15.681, "end": 15.681, "text": "have"},
+      {"start": 15.761, "end": 15.841, "text": "a"},
+      {"start": 15.841, "end": 16.001, "text": "switch."}
+    ]},
+    {"start": 16.401, "end": 18.641, "text": "Can we take a picture of the middle of the middle of that side, yeah, please?", "words": [
+      {"start": 16.401, "end": 16.481, "text": "Can"},
+      {"start": 16.481, "end": 16.561, "text": "we"},
+      {"start": 16.561, "end": 16.641, "text": "take"},
+      {"start": 16.641, "end": 16.721, "text": "a"},
+      {"start": 16.721, "end": 16.881, "text": "picture"},
+      {"start": 16.881, "end": 16.961, "text": "of"},
+      {"start": 16.961, "end": 16.961, "text": "the"},
+      {"start": 16.961, "end": 16.961, "text": "middle"},
+      {"start": 16.961, "end": 16.961, "text": "of"},
+      {"start": 16.961, "end": 16.961, "text": "the"},
+      {"start": 16.961, "end": 17.041, "text": "middle"},
+      {"start": 17.601, "end": 17.681, "text": "of"},
+      {"start": 17.681, "end": 17.761, "text": "that"},
+      {"start": 18.081, "end": 18.321, "text": "side,"},
+      {"start": 18.321, "end": 18.481, "text": "yeah,"},
+      {"start": 18.481, "end": 18.641, "text": "please?"}
+    ]},
+    {"start": 18.721, "end": 24.161, "text": "And then we're gonna have hiking and then we're gonna how would you like it when we look at the moon ahead of us coming out the window?", "words": [
+      {"start": 18.721, "end": 18.801, "text": "And"},
+      {"start": 18.801, "end": 18.881, "text": "then"},
+      {"start": 18.881, "end": 19.041, "text": "we're"},
+      {"start": 19.041, "end": 19.121, "text": "gonna"},
+      {"start": 19.121, "end": 19.281, "text": "have"},
+      {"start": 19.281, "end": 19.761, "text": "hiking"},
+      {"start": 20.001, "end": 20.081, "text": "and"},
+      {"start": 20.081, "end": 20.161, "text": "then"},
+      {"start": 20.161, "end": 20.321, "text": "we're"},
+      {"start": 20.321, "end": 20.401, "text": "gonna"},
+      {"start": 21.281, "end": 21.361, "text": "how"},
+      {"start": 21.361, "end": 21.441, "text": "would"},
+      {"start": 21.441, "end": 21.521, "text": "you"},
+      {"start": 21.521, "end": 21.601, "text": "like"},
+      {"start": 21.601, "end": 21.681, "text": "it"},
+      {"start": 21.761, "end": 21.841, "text": "when"},
+      {"start": 22.001, "end": 22.081, "text": "we"},
+      {"start": 22.081, "end": 22.161, "text": "look"},
+      {"start": 22.161, "end": 22.241, "text": "at"},
+      {"start": 22.321, "end": 22.401, "text": "the"},
+      {"start": 22.401, "end": 22.641, "text": "moon"},
+      {"start": 22.641, "end": 22.881, "text": "ahead"},
+      {"start": 22.881, "end": 23.041, "text": "of"},
+      {"start": 23.041, "end": 23.121, "text": "us"},
+      {"start": 23.361, "end": 23.521, "text": "coming"},
+      {"start": 23.521, "end": 23.681, "text": "out"},
+      {"start": 23.681, "end": 23.761, "text": "the"},
+      {"start": 23.761, "end": 24.161, "text": "window?"}
+    ]},
+    {"start": 24.321, "end": 25.921, "text": "Can we see the earth rising from there?", "words": [
+      {"start": 24.321, "end": 24.401, "text": "Can"},
+      {"start": 24.401, "end": 24.481, "text": "we"},
+      {"start": 24.481, "end": 24.641, "text": "see"},
+      {"start": 24.641, "end": 24.721, "text": "the"},
+      {"start": 24.721, "end": 25.041, "text": "earth"},
+      {"start": 25.041, "end": 25.361, "text": "rising"},
+      {"start": 25.361, "end": 25.521, "text": "from"},
+      {"start": 25.681, "end": 25.921, "text": "there?"}
+    ]},
+    {"start": 26.256, "end": 27.376, "text": "Oh, that'd be a birthday.", "words": [
+      {"start": 26.256, "end": 26.496, "text": "Oh,"},
+      {"start": 26.496, "end": 26.736, "text": "that'd"},
+      {"start": 26.736, "end": 26.736, "text": "be"},
+      {"start": 26.816, "end": 26.896, "text": "a"},
+      {"start": 26.896, "end": 27.376, "text": "birthday."}
+    ]},
+    {"start": 27.536, "end": 28.416, "text": "We gotta be quick.", "words": [
+      {"start": 27.536, "end": 27.616, "text": "We"},
+      {"start": 27.696, "end": 27.856, "text": "gotta"},
+      {"start": 27.856, "end": 27.936, "text": "be"},
+      {"start": 28.096, "end": 28.416, "text": "quick."}
+    ]},
+    {"start": 28.416, "end": 30.416, "text": "What was the time we got on the nail?", "words": [
+      {"start": 28.416, "end": 28.496, "text": "What"},
+      {"start": 28.496, "end": 28.576, "text": "was"},
+      {"start": 28.576, "end": 28.736, "text": "the"},
+      {"start": 28.736, "end": 28.976, "text": "time"},
+      {"start": 28.976, "end": 29.056, "text": "we"},
+      {"start": 29.056, "end": 29.216, "text": "got"},
+      {"start": 29.216, "end": 29.376, "text": "on"},
+      {"start": 29.376, "end": 29.456, "text": "the"},
+      {"start": 29.536, "end": 30.416, "text": "nail?"}
+    ]},
+    {"start": 31.376, "end": 33.296, "text": "Yeah, we could decide.", "words": [
+      {"start": 31.376, "end": 31.696, "text": "Yeah,"},
+      {"start": 31.696, "end": 31.776, "text": "we"},
+      {"start": 31.856, "end": 31.936, "text": "could"},
+      {"start": 32.096, "end": 33.296, "text": "decide."}
+    ]},
+    {"start": 33.616, "end": 34.736, "text": "Now?", "words": [
+      {"start": 33.616, "end": 34.736, "text": "Now?"}
+    ]},
+    {"start": 34.736, "end": 35.456, "text": "What's that?", "words": [
+      {"start": 34.736, "end": 34.976, "text": "What's"},
+      {"start": 34.976, "end": 35.456, "text": "that?"}
+    ]},
+    {"start": 35.456, "end": 37.456, "text": "What was the time we got on it?", "words": [
+      {"start": 35.456, "end": 35.616, "text": "What"},
+      {"start": 35.616, "end": 35.776, "text": "was"},
+      {"start": 35.776, "end": 35.936, "text": "the"},
+      {"start": 35.936, "end": 36.096, "text": "time"},
+      {"start": 36.096, "end": 36.256, "text": "we"},
+      {"start": 36.256, "end": 36.496, "text": "got"},
+      {"start": 36.496, "end": 36.816, "text": "on"},
+      {"start": 36.816, "end": 37.456, "text": "it?"}
+    ]},
+    {"start": 37.776, "end": 39.216, "text": "Turn time?", "words": [
+      {"start": 37.776, "end": 38.096, "text": "Turn"},
+      {"start": 38.256, "end": 39.216, "text": "time?"}
+    ]},
+    {"start": 41.536, "end": 42.656, "text": "First time or what?", "words": [
+      {"start": 41.536, "end": 41.776, "text": "First"},
+      {"start": 41.936, "end": 42.096, "text": "time"},
+      {"start": 42.256, "end": 42.336, "text": "or"},
+      {"start": 42.336, "end": 42.656, "text": "what?"}
+    ]},
+    {"start": 42.656, "end": 43.376, "text": "Ah.", "words": [
+      {"start": 42.656, "end": 43.376, "text": "Ah."}
+    ]},
+    {"start": 43.696, "end": 46.576, "text": "We want the uh big camera, huh?", "words": [
+      {"start": 43.696, "end": 43.936, "text": "We"},
+      {"start": 43.936, "end": 44.096, "text": "want"},
+      {"start": 44.096, "end": 44.256, "text": "the"},
+      {"start": 44.336, "end": 44.656, "text": "uh"},
+      {"start": 45.136, "end": 45.216, "text": "big"},
+      {"start": 45.376, "end": 45.856, "text": "camera,"},
+      {"start": 45.856, "end": 46.576, "text": "huh?"}
+    ]},
+    {"start": 46.576, "end": 48.336, "text": "Big lens or small one?", "words": [
+      {"start": 46.576, "end": 46.896, "text": "Big"},
+      {"start": 46.896, "end": 47.136, "text": "lens"},
+      {"start": 47.136, "end": 47.216, "text": "or"},
+      {"start": 47.296, "end": 47.616, "text": "small"},
+      {"start": 47.616, "end": 48.336, "text": "one?"}
+    ]},
+    {"start": 48.336, "end": 49.856, "text": "Oh, it doesn't really matter.", "words": [
+      {"start": 48.336, "end": 49.056, "text": "Oh,"},
+      {"start": 49.056, "end": 49.216, "text": "it"},
+      {"start": 49.216, "end": 49.456, "text": "doesn't"},
+      {"start": 49.456, "end": 49.616, "text": "really"},
+      {"start": 49.616, "end": 49.856, "text": "matter."}
+    ]},
+    {"start": 50.016, "end": 51.616, "text": "80 millimeter probably is good for.", "words": [
+      {"start": 50.016, "end": 50.256, "text": "80"},
+      {"start": 50.256, "end": 50.736, "text": "millimeter"},
+      {"start": 50.816, "end": 50.896, "text": "probably"},
+      {"start": 51.136, "end": 51.216, "text": "is"},
+      {"start": 51.216, "end": 51.376, "text": "good"},
+      {"start": 51.376, "end": 51.616, "text": "for."}
+    ]},
+    {"start": 51.776, "end": 52.976, "text": "30 air coming up?", "words": [
+      {"start": 51.776, "end": 51.936, "text": "30"},
+      {"start": 52.016, "end": 52.176, "text": "air"},
+      {"start": 52.336, "end": 52.496, "text": "coming"},
+      {"start": 52.496, "end": 52.976, "text": "up?"}
+    ]},
+    {"start": 52.976, "end": 55.456, "text": "Oh, 30 airs coming up in what, 250.", "words": [
+      {"start": 52.976, "end": 53.136, "text": "Oh,"},
+      {"start": 53.296, "end": 53.456, "text": "30"},
+      {"start": 53.536, "end": 53.696, "text": "airs"},
+      {"start": 53.856, "end": 54.016, "text": "coming"},
+      {"start": 54.016, "end": 54.096, "text": "up"},
+      {"start": 54.096, "end": 54.176, "text": "in"},
+      {"start": 54.256, "end": 54.496, "text": "what,"},
+      {"start": 54.496, "end": 55.456, "text": "250."}
+    ]},
+    {"start": 56.288, "end": 59.168, "text": "That takes from luck to get that.", "words": [
+      {"start": 56.288, "end": 56.368, "text": "That"},
+      {"start": 56.608, "end": 56.768, "text": "takes"},
+      {"start": 56.848, "end": 56.928, "text": "from"},
+      {"start": 58.608, "end": 58.688, "text": "luck"},
+      {"start": 58.768, "end": 58.848, "text": "to"},
+      {"start": 58.848, "end": 59.008, "text": "get"},
+      {"start": 59.008, "end": 59.168, "text": "that."}
+    ]},
+    {"start": 67.008, "end": 67.568, "text": "Yeah.", "words": [
+      {"start": 67.008, "end": 67.568, "text": "Yeah."}
+    ]},
+    {"start": 69.488, "end": 71.968, "text": "It doesn't matter, I'll get two hours on that stage.", "words": [
+      {"start": 69.488, "end": 69.568, "text": "It"},
+      {"start": 69.728, "end": 69.968, "text": "doesn't"},
+      {"start": 69.968, "end": 70.208, "text": "matter,"},
+      {"start": 70.208, "end": 70.368, "text": "I'll"},
+      {"start": 70.368, "end": 70.448, "text": "get"},
+      {"start": 70.528, "end": 70.688, "text": "two"},
+      {"start": 70.688, "end": 70.848, "text": "hours"},
+      {"start": 70.848, "end": 71.008, "text": "on"},
+      {"start": 71.008, "end": 71.168, "text": "that"},
+      {"start": 71.328, "end": 71.968, "text": "stage."}
+    ]},
+    {"start": 72.128, "end": 74.128, "text": "They don't care if you run out.", "words": [
+      {"start": 72.128, "end": 72.288, "text": "They"},
+      {"start": 72.288, "end": 72.448, "text": "don't"},
+      {"start": 72.448, "end": 72.688, "text": "care"},
+      {"start": 72.688, "end": 72.768, "text": "if"},
+      {"start": 72.768, "end": 73.008, "text": "you"},
+      {"start": 73.008, "end": 73.248, "text": "run"},
+      {"start": 73.248, "end": 74.128, "text": "out."}
+    ]},
+    {"start": 74.128, "end": 76.608, "text": "As long as you're on bitrate low.", "words": [
+      {"start": 74.128, "end": 74.288, "text": "As"},
+      {"start": 74.288, "end": 74.448, "text": "long"},
+      {"start": 74.528, "end": 74.608, "text": "as"},
+      {"start": 74.608, "end": 74.768, "text": "you're"},
+      {"start": 74.768, "end": 74.928, "text": "on"},
+      {"start": 74.928, "end": 75.488, "text": "bitrate"},
+      {"start": 75.488, "end": 76.608, "text": "low."}
+    ]},
+    {"start": 82.048, "end": 84.048, "text": "Okay, infinity.", "words": [
+      {"start": 82.048, "end": 82.528, "text": "Okay,"},
+      {"start": 82.528, "end": 84.048, "text": "infinity."}
+    ]},
+    {"start": 84.688, "end": 90.128, "text": "Lap 115.", "words": [
+      {"start": 84.688, "end": 84.928, "text": "Lap"},
+      {"start": 85.088, "end": 90.128, "text": "115."}
+    ]},
+    {"start": 90.208, "end": 92.368, "text": "Yeah, let me get my gouge out here.", "words": [
+      {"start": 90.208, "end": 90.368, "text": "Yeah,"},
+      {"start": 91.088, "end": 91.248, "text": "let"},
+      {"start": 91.248, "end": 91.328, "text": "me"},
+      {"start": 91.328, "end": 91.408, "text": "get"},
+      {"start": 91.408, "end": 91.568, "text": "my"},
+      {"start": 91.568, "end": 92.048, "text": "gouge"},
+      {"start": 92.048, "end": 92.208, "text": "out"},
+      {"start": 92.208, "end": 92.368, "text": "here."}
+    ]},
+    {"start": 92.368, "end": 93.168, "text": "I got my gouge.", "words": [
+      {"start": 92.368, "end": 92.448, "text": "I"},
+      {"start": 92.448, "end": 92.528, "text": "got"},
+      {"start": 92.608, "end": 92.768, "text": "my"},
+      {"start": 92.768, "end": 93.168, "text": "gouge."}
+    ]},
+    {"start": 93.408, "end": 95.888, "text": "I may want to back off a half-stop to get the earth.", "words": [
+      {"start": 93.408, "end": 93.488, "text": "I"},
+      {"start": 93.488, "end": 93.568, "text": "may"},
+      {"start": 93.648, "end": 93.728, "text": "want"},
+      {"start": 93.888, "end": 93.968, "text": "to"},
+      {"start": 93.968, "end": 94.208, "text": "back"},
+      {"start": 94.208, "end": 94.368, "text": "off"},
+      {"start": 94.368, "end": 94.528, "text": "a"},
+      {"start": 94.528, "end": 95.088, "text": "half-stop"},
+      {"start": 95.168, "end": 95.248, "text": "to"},
+      {"start": 95.248, "end": 95.408, "text": "get"},
+      {"start": 95.408, "end": 95.568, "text": "the"},
+      {"start": 95.568, "end": 95.888, "text": "earth."}
+    ]},
+    {"start": 96.208, "end": 98.688, "text": "Are you black and white or color?", "words": [
+      {"start": 96.208, "end": 96.368, "text": "Are"},
+      {"start": 96.368, "end": 96.448, "text": "you"},
+      {"start": 97.328, "end": 97.568, "text": "black"},
+      {"start": 97.568, "end": 97.728, "text": "and"},
+      {"start": 97.728, "end": 97.968, "text": "white"},
+      {"start": 97.968, "end": 98.128, "text": "or"},
+      {"start": 98.128, "end": 98.688, "text": "color?"}
+    ]},
+    {"start": 98.688, "end": 99.328, "text": "Color.", "words": [
+      {"start": 98.688, "end": 99.328, "text": "Color."}
+    ]},
+    {"start": 99.328, "end": 100.768, "text": "Alrighty.", "words": [
+      {"start": 99.328, "end": 100.768, "text": "Alrighty."}
+    ]},
+    {"start": 100.768, "end": 102.688, "text": "Moon distant 5'6.", "words": [
+      {"start": 100.768, "end": 101.168, "text": "Moon"},
+      {"start": 101.168, "end": 101.568, "text": "distant"},
+      {"start": 101.648, "end": 102.688, "text": "5'6."}
+    ]},
+    {"start": 103.328, "end": 105.408, "text": "Earth distance 11.", "words": [
+      {"start": 103.328, "end": 103.728, "text": "Earth"},
+      {"start": 103.728, "end": 104.128, "text": "distance"},
+      {"start": 104.208, "end": 105.408, "text": "11."}
+    ]},
+    {"start": 106.448, "end": 107.888, "text": "Here's the next point.", "words": [
+      {"start": 106.448, "end": 106.688, "text": "Here's"},
+      {"start": 106.768, "end": 106.848, "text": "the"},
+      {"start": 107.008, "end": 107.088, "text": "next"},
+      {"start": 107.648, "end": 107.888, "text": "point."}
+    ]},
+    {"start": 112.81, "end": 120.73, "text": "There's plenty of readings of your which way are you uh maneuvering there, friend?", "words": [
+      {"start": 112.81, "end": 112.97, "text": "There's"},
+      {"start": 113.13, "end": 113.37, "text": "plenty"},
+      {"start": 113.53, "end": 113.61, "text": "of"},
+      {"start": 113.69, "end": 114.01, "text": "readings"},
+      {"start": 114.09, "end": 114.25, "text": "of"},
+      {"start": 114.25, "end": 114.33, "text": "your"},
+      {"start": 117.29, "end": 117.37, "text": "which"},
+      {"start": 117.61, "end": 117.77, "text": "way"},
+      {"start": 117.77, "end": 117.85, "text": "are"},
+      {"start": 117.85, "end": 118.01, "text": "you"},
+      {"start": 118.09, "end": 118.41, "text": "uh"},
+      {"start": 119.53, "end": 120.17, "text": "maneuvering"},
+      {"start": 120.25, "end": 120.49, "text": "there,"},
+      {"start": 120.49, "end": 120.73, "text": "friend?"}
+    ]},
+    {"start": 120.97, "end": 124.49, "text": "Five thicks at a five thicks at one two fifty of this.", "words": [
+      {"start": 120.97, "end": 121.13, "text": "Five"},
+      {"start": 121.21, "end": 121.53, "text": "thicks"},
+      {"start": 121.61, "end": 121.77, "text": "at"},
+      {"start": 121.77, "end": 121.85, "text": "a"},
+      {"start": 122.41, "end": 122.65, "text": "five"},
+      {"start": 122.81, "end": 123.05, "text": "thicks"},
+      {"start": 123.13, "end": 123.29, "text": "at"},
+      {"start": 123.29, "end": 123.37, "text": "one"},
+      {"start": 123.53, "end": 123.61, "text": "two"},
+      {"start": 123.69, "end": 123.93, "text": "fifty"},
+      {"start": 124.01, "end": 124.09, "text": "of"},
+      {"start": 124.17, "end": 124.49, "text": "this."}
+    ]},
+    {"start": 124.57, "end": 125.13, "text": "Are you rolling?", "words": [
+      {"start": 124.57, "end": 124.73, "text": "Are"},
+      {"start": 124.73, "end": 124.81, "text": "you"},
+      {"start": 124.81, "end": 125.13, "text": "rolling?"}
+    ]},
+    {"start": 125.85, "end": 126.01, "text": "Okay.", "words": [
+      {"start": 125.85, "end": 126.01, "text": "Okay."}
+    ]},
+    {"start": 126.17, "end": 130.01, "text": "I'm rolling right.", "words": [
+      {"start": 126.17, "end": 126.33, "text": "I'm"},
+      {"start": 126.33, "end": 126.81, "text": "rolling"},
+      {"start": 126.81, "end": 130.01, "text": "right."}
+    ]},
+    {"start": 130.01, "end": 132.25, "text": "Well, there is some rough country over there.", "words": [
+      {"start": 130.01, "end": 130.41, "text": "Well,"},
+      {"start": 130.41, "end": 130.65, "text": "there"},
+      {"start": 130.65, "end": 130.81, "text": "is"},
+      {"start": 130.81, "end": 130.97, "text": "some"},
+      {"start": 130.97, "end": 131.21, "text": "rough"},
+      {"start": 131.21, "end": 131.53, "text": "country"},
+      {"start": 131.53, "end": 131.77, "text": "over"},
+      {"start": 131.77, "end": 132.25, "text": "there."}
+    ]},
+    {"start": 132.25, "end": 133.85, "text": "You might get it coming sideways.", "words": [
+      {"start": 132.25, "end": 132.41, "text": "You"},
+      {"start": 132.41, "end": 132.65, "text": "might"},
+      {"start": 132.65, "end": 132.89, "text": "get"},
+      {"start": 132.89, "end": 133.05, "text": "it"},
+      {"start": 133.05, "end": 133.37, "text": "coming"},
+      {"start": 133.37, "end": 133.85, "text": "sideways."}
+    ]},
+    {"start": 133.85, "end": 135.53, "text": "Here, stand by in case it does.", "words": [
+      {"start": 133.85, "end": 134.17, "text": "Here,"},
+      {"start": 134.17, "end": 134.41, "text": "stand"},
+      {"start": 134.41, "end": 134.65, "text": "by"},
+      {"start": 134.65, "end": 134.81, "text": "in"},
+      {"start": 134.81, "end": 134.97, "text": "case"},
+      {"start": 134.97, "end": 135.05, "text": "it"},
+      {"start": 135.21, "end": 135.53, "text": "does."}
+    ]},
+    {"start": 135.61, "end": 137.21, "text": "What's the AOS time?", "words": [
+      {"start": 135.61, "end": 135.77, "text": "What's"},
+      {"start": 135.77, "end": 135.85, "text": "the"},
+      {"start": 135.85, "end": 136.33, "text": "AOS"},
+      {"start": 136.41, "end": 137.21, "text": "time?"}
+    ]},
+    {"start": 139.968, "end": 159.968, "text": "15 with a burn 1523 something like that be with you in 10 seconds now just want to get my uh yeah put back together here something like a chart there gonna be over here ALS 7615", "words": [
+      {"start": 139.968, "end": 140.368, "text": "15"},
+      {"start": 140.528, "end": 140.608, "text": "with"},
+      {"start": 140.768, "end": 140.848, "text": "a"},
+      {"start": 140.928, "end": 141.248, "text": "burn"},
+      {"start": 143.248, "end": 144.368, "text": "1523"},
+      {"start": 144.448, "end": 144.528, "text": "something"},
+      {"start": 144.848, "end": 145.168, "text": "like"},
+      {"start": 145.168, "end": 145.488, "text": "that"},
+      {"start": 146.448, "end": 146.528, "text": "be"},
+      {"start": 146.608, "end": 146.768, "text": "with"},
+      {"start": 146.768, "end": 146.928, "text": "you"},
+      {"start": 146.928, "end": 147.168, "text": "in"},
+      {"start": 147.168, "end": 147.488, "text": "10"},
+      {"start": 147.488, "end": 147.808, "text": "seconds"},
+      {"start": 147.888, "end": 147.968, "text": "now"},
+      {"start": 148.288, "end": 148.368, "text": "just"},
+      {"start": 148.368, "end": 148.528, "text": "want"},
+      {"start": 148.528, "end": 148.608, "text": "to"},
+      {"start": 148.608, "end": 148.768, "text": "get"},
+      {"start": 148.768, "end": 148.928, "text": "my"},
+      {"start": 149.088, "end": 149.168, "text": "uh"},
+      {"start": 149.568, "end": 149.648, "text": "yeah"},
+      {"start": 151.008, "end": 151.088, "text": "put"},
+      {"start": 151.248, "end": 151.488, "text": "back"},
+      {"start": 151.488, "end": 151.808, "text": "together"},
+      {"start": 151.808, "end": 151.968, "text": "here"},
+      {"start": 152.288, "end": 152.368, "text": "something"},
+      {"start": 152.528, "end": 152.688, "text": "like"},
+      {"start": 152.688, "end": 152.768, "text": "a"},
+      {"start": 152.928, "end": 153.328, "text": "chart"},
+      {"start": 156.448, "end": 156.528, "text": "there"},
+      {"start": 157.008, "end": 157.088, "text": "gonna"},
+      {"start": 157.248, "end": 157.328, "text": "be"},
+      {"start": 157.328, "end": 157.488, "text": "over"},
+      {"start": 157.488, "end": 157.648, "text": "here"},
+      {"start": 157.968, "end": 158.768, "text": "ALS"},
+      {"start": 158.768, "end": 159.968, "text": "7615"}
+    ]},
+    {"start": 160.048, "end": 164.528, "text": "after getting off the statement I'll do that", "words": [
+      {"start": 160.048, "end": 160.128, "text": "after"},
+      {"start": 160.368, "end": 160.448, "text": "getting"},
+      {"start": 160.768, "end": 160.848, "text": "off"},
+      {"start": 161.648, "end": 161.728, "text": "the"},
+      {"start": 161.728, "end": 162.048, "text": "statement"},
+      {"start": 163.888, "end": 164.048, "text": "I'll"},
+      {"start": 164.048, "end": 164.288, "text": "do"},
+      {"start": 164.288, "end": 164.528, "text": "that"}
+    ]},
+    {"start": 170.234, "end": 172.794, "text": "Now what else we got coming up here?", "words": [
+      {"start": 170.234, "end": 170.394, "text": "Now"},
+      {"start": 170.554, "end": 170.634, "text": "what"},
+      {"start": 170.634, "end": 170.874, "text": "else"},
+      {"start": 170.874, "end": 171.034, "text": "we"},
+      {"start": 171.034, "end": 171.194, "text": "got"},
+      {"start": 171.754, "end": 172.074, "text": "coming"},
+      {"start": 172.074, "end": 172.234, "text": "up"},
+      {"start": 172.234, "end": 172.794, "text": "here?"}
+    ]},
+    {"start": 173.194, "end": 175.354, "text": "Vacuum.", "words": [
+      {"start": 173.194, "end": 175.354, "text": "Vacuum."}
+    ]},
+    {"start": 175.434, "end": 177.354, "text": "Eyeballing and chattering.", "words": [
+      {"start": 175.434, "end": 176.234, "text": "Eyeballing"},
+      {"start": 176.234, "end": 176.394, "text": "and"},
+      {"start": 176.394, "end": 177.354, "text": "chattering."}
+    ]}
+  ],
+  "captions": [
+    {"start": 0.321, "end": 2.481, "lines": ["When I get around here,","I'll pitch down 70, huh?"]},
+    {"start": 2.481, "end": 5.761, "lines": ["What are we pitching down for?","What's what's what? We're gonna what we're"]},
+    {"start": 5.761, "end": 8.001, "lines": ["I don't even know what we're doing.","We're gonna"]},
+    {"start": 8.001, "end": 12.001, "lines": ["we're gonna roll over and pitch down so","we're looking out the front windows down"]},
+    {"start": 12.001, "end": 13.001, "lines": ["again at the…"]},
+    {"start": 15.041, "end": 16.881, "lines": ["pitch down and we have a switch.","Can we take a picture"]},
+    {"start": 16.881, "end": 18.321, "lines": ["of the middle of the middle of that side,"]},
+    {"start": 18.321, "end": 21.441, "lines": ["yeah, please? And then we're gonna","have hiking and then we're gonna how would"]},
+    {"start": 21.441, "end": 23.361, "lines": ["you like it when we look","at the moon ahead of us"]},
+    {"start": 23.361, "end": 26.496, "lines": ["coming out the window? Can we see","the earth rising from there? Oh,"]},
+    {"start": 26.496, "end": 30.916, "lines": ["that'd be a birthday. We gotta be quick.","What was the time we got on the nail?"]},
+    {"start": 31.376, "end": 33.616, "lines": ["Yeah, we could decide."]},
+    {"start": 33.616, "end": 35.456, "lines": ["Now? What's that?"]},
+    {"start": 35.456, "end": 37.776, "lines": ["What was the time we got on it?"]},
+    {"start": 37.776, "end": 39.416, "lines": ["Turn time?"]},
+    {"start": 41.536, "end": 42.656, "lines": ["First time or what?"]},
+    {"start": 42.656, "end": 43.696, "lines": ["Ah."]},
+    {"start": 43.696, "end": 46.576, "lines": ["We want the uh big camera, huh?"]},
+    {"start": 46.576, "end": 48.336, "lines": ["Big lens or small one?"]},
+    {"start": 48.336, "end": 50.016, "lines": ["Oh, it doesn't really matter."]},
+    {"start": 50.016, "end": 51.776, "lines": ["80 millimeter probably is good for."]},
+    {"start": 51.776, "end": 52.976, "lines": ["30 air coming up?"]},
+    {"start": 52.976, "end": 55.656, "lines": ["Oh, 30 airs coming up in what, 250."]},
+    {"start": 56.288, "end": 57.288, "lines": ["That takes from…"]},
+    {"start": 58.608, "end": 59.608, "lines": ["luck to get that."]},
+    {"start": 67.008, "end": 68.008, "lines": ["Yeah."]},
+    {"start": 69.488, "end": 72.128, "lines": ["It doesn't matter,","I'll get two hours on that stage."]},
+    {"start": 72.128, "end": 74.128, "lines": ["They don't care if you run out."]},
+    {"start": 74.128, "end": 76.808, "lines": ["As long as you're on bitrate low."]},
+    {"start": 82.048, "end": 84.248, "lines": ["Okay, infinity."]},
+    {"start": 84.688, "end": 90.208, "lines": ["Lap 115."]},
+    {"start": 90.208, "end": 92.368, "lines": ["Yeah, let me get my gouge out here."]},
+    {"start": 92.368, "end": 93.408, "lines": ["I got my gouge."]},
+    {"start": 93.408, "end": 96.208, "lines": ["I may want to back off a half-stop","to get the earth."]},
+    {"start": 96.208, "end": 98.688, "lines": ["Are you black and white or color?"]},
+    {"start": 98.688, "end": 100.768, "lines": ["Color. Alrighty."]},
+    {"start": 100.768, "end": 102.888, "lines": ["Moon distant 5'6."]},
+    {"start": 103.328, "end": 105.608, "lines": ["Earth distance 11."]},
+    {"start": 106.448, "end": 107.448, "lines": ["Here's the next"]},
+    {"start": 107.648, "end": 108.648, "lines": ["point."]},
+    {"start": 112.81, "end": 114.83, "lines": ["There's plenty of readings of your…"]},
+    {"start": 117.29, "end": 118.61, "lines": ["which way are you uh…"]},
+    {"start": 119.53, "end": 120.97, "lines": ["maneuvering there, friend?"]},
+    {"start": 120.97, "end": 124.57, "lines": ["Five thicks at a five thicks","at one two fifty of this."]},
+    {"start": 124.57, "end": 125.57, "lines": ["Are you rolling?"]},
+    {"start": 125.85, "end": 132.25, "lines": ["Okay. I'm rolling right. Well,","there is some rough country over there."]},
+    {"start": 132.25, "end": 135.61, "lines": ["You might get it coming sideways.","Here, stand by in case it does."]},
+    {"start": 135.61, "end": 137.41, "lines": ["What's the AOS time?"]},
+    {"start": 139.968, "end": 141.448, "lines": ["15 with a burn…"]},
+    {"start": 143.248, "end": 144.848, "lines": ["1523 something"]},
+    {"start": 144.848, "end": 149.848, "lines": ["like that be with you in 10 seconds now","just want to get my uh yeah…"]},
+    {"start": 151.008, "end": 153.714, "lines": ["put back together here","something like a chart…"]},
+    {"start": 156.448, "end": 162.248, "lines": ["there gonna be over here ALS 7615","after getting off the statement…"]},
+    {"start": 163.888, "end": 164.888, "lines": ["I'll do that…"]},
+    {"start": 170.234, "end": 171.411, "lines": ["Now what else we got"]},
+    {"start": 171.754, "end": 173.194, "lines": ["coming up here?"]},
+    {"start": 173.194, "end": 175.434, "lines": ["Vacuum."]},
+    {"start": 175.434, "end": 177.554, "lines": ["Eyeballing and chattering."]}
+  ]
+}

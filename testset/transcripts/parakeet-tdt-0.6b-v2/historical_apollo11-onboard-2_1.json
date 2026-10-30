@@ -1,0 +1,448 @@
+{
+  "file": "historical_apollo11-onboard-2_1.flac",
+  "duration": 170.748,
+  "model": "parakeet-tdt-0.6b-v2",
+  "segments": [
+    {"start": 1.105, "end": 2.945, "text": "B, I mean press A, Mark.", "words": [
+      {"start": 1.105, "end": 1.505, "text": "B,"},
+      {"start": 1.505, "end": 1.585, "text": "I"},
+      {"start": 1.585, "end": 1.665, "text": "mean"},
+      {"start": 1.825, "end": 2.065, "text": "press"},
+      {"start": 2.225, "end": 2.545, "text": "A,"},
+      {"start": 2.545, "end": 2.945, "text": "Mark."}
+    ]},
+    {"start": 3.985, "end": 6.225, "text": "Okay, now what's your raider chamber pressure?", "words": [
+      {"start": 3.985, "end": 4.145, "text": "Okay,"},
+      {"start": 4.145, "end": 4.305, "text": "now"},
+      {"start": 4.385, "end": 4.545, "text": "what's"},
+      {"start": 4.545, "end": 4.625, "text": "your"},
+      {"start": 4.785, "end": 5.265, "text": "raider"},
+      {"start": 5.265, "end": 5.585, "text": "chamber"},
+      {"start": 5.585, "end": 6.225, "text": "pressure?"}
+    ]},
+    {"start": 6.225, "end": 7.345, "text": "It's good.", "words": [
+      {"start": 6.225, "end": 6.705, "text": "It's"},
+      {"start": 6.705, "end": 7.345, "text": "good."}
+    ]},
+    {"start": 7.585, "end": 8.385, "text": "95.", "words": [
+      {"start": 7.585, "end": 8.385, "text": "95."}
+    ]},
+    {"start": 8.385, "end": 8.785, "text": "95.", "words": [
+      {"start": 8.385, "end": 8.785, "text": "95."}
+    ]},
+    {"start": 9.025, "end": 11.105, "text": "Fox is oscillating around.", "words": [
+      {"start": 9.025, "end": 9.265, "text": "Fox"},
+      {"start": 9.345, "end": 9.425, "text": "is"},
+      {"start": 9.505, "end": 9.905, "text": "oscillating"},
+      {"start": 9.985, "end": 11.105, "text": "around."}
+    ]},
+    {"start": 12.385, "end": 14.385, "text": "Okay, we're steering.", "words": [
+      {"start": 12.385, "end": 12.785, "text": "Okay,"},
+      {"start": 12.785, "end": 12.945, "text": "we're"},
+      {"start": 13.025, "end": 14.385, "text": "steering."}
+    ]},
+    {"start": 22.065, "end": 24.625, "text": "25 seconds in, it says go decrease.", "words": [
+      {"start": 22.065, "end": 22.545, "text": "25"},
+      {"start": 22.705, "end": 23.025, "text": "seconds"},
+      {"start": 23.025, "end": 23.265, "text": "in,"},
+      {"start": 23.265, "end": 23.345, "text": "it"},
+      {"start": 23.345, "end": 23.505, "text": "says"},
+      {"start": 23.585, "end": 23.745, "text": "go"},
+      {"start": 23.825, "end": 24.625, "text": "decrease."}
+    ]},
+    {"start": 24.625, "end": 25.985, "text": "I'm going to hold off.", "words": [
+      {"start": 24.625, "end": 24.785, "text": "I'm"},
+      {"start": 24.865, "end": 24.945, "text": "going"},
+      {"start": 25.025, "end": 25.105, "text": "to"},
+      {"start": 25.105, "end": 25.345, "text": "hold"},
+      {"start": 25.345, "end": 25.985, "text": "off."}
+    ]},
+    {"start": 28.465, "end": 29.345, "text": "Steering pretty good.", "words": [
+      {"start": 28.465, "end": 28.945, "text": "Steering"},
+      {"start": 29.025, "end": 29.185, "text": "pretty"},
+      {"start": 29.185, "end": 29.345, "text": "good."}
+    ]},
+    {"start": 29.425, "end": 30.385, "text": "The gimbals are uh", "words": [
+      {"start": 29.425, "end": 29.505, "text": "The"},
+      {"start": 29.505, "end": 29.905, "text": "gimbals"},
+      {"start": 30.065, "end": 30.225, "text": "are"},
+      {"start": 30.305, "end": 30.385, "text": "uh"}
+    ]},
+    {"start": 30.864, "end": 37.424, "text": "Working a little bit more busily than I would have guessed, but uh everything's looking good.", "words": [
+      {"start": 30.864, "end": 31.184, "text": "Working"},
+      {"start": 31.184, "end": 31.424, "text": "a"},
+      {"start": 31.424, "end": 31.664, "text": "little"},
+      {"start": 31.664, "end": 31.904, "text": "bit"},
+      {"start": 32.864, "end": 33.184, "text": "more"},
+      {"start": 33.184, "end": 33.664, "text": "busily"},
+      {"start": 33.824, "end": 33.984, "text": "than"},
+      {"start": 33.984, "end": 34.064, "text": "I"},
+      {"start": 34.064, "end": 34.224, "text": "would"},
+      {"start": 34.224, "end": 34.304, "text": "have"},
+      {"start": 34.464, "end": 34.944, "text": "guessed,"},
+      {"start": 34.944, "end": 35.104, "text": "but"},
+      {"start": 35.104, "end": 35.184, "text": "uh"},
+      {"start": 35.344, "end": 35.904, "text": "everything's"},
+      {"start": 35.904, "end": 36.544, "text": "looking"},
+      {"start": 36.544, "end": 37.424, "text": "good."}
+    ]},
+    {"start": 40.064, "end": 42.944, "text": "GMS and GNN count together.", "words": [
+      {"start": 40.064, "end": 40.784, "text": "GMS"},
+      {"start": 40.784, "end": 40.944, "text": "and"},
+      {"start": 41.344, "end": 41.904, "text": "GNN"},
+      {"start": 41.904, "end": 42.064, "text": "count"},
+      {"start": 42.304, "end": 42.944, "text": "together."}
+    ]},
+    {"start": 43.024, "end": 43.984, "text": "Okay.", "words": [
+      {"start": 43.024, "end": 43.984, "text": "Okay."}
+    ]},
+    {"start": 44.144, "end": 50.384, "text": "Pitch trim is up at one and a half degrees, cycling about that, which is a little bit off the trim value.", "words": [
+      {"start": 44.144, "end": 44.464, "text": "Pitch"},
+      {"start": 44.544, "end": 44.944, "text": "trim"},
+      {"start": 44.944, "end": 45.024, "text": "is"},
+      {"start": 45.024, "end": 45.184, "text": "up"},
+      {"start": 45.184, "end": 45.344, "text": "at"},
+      {"start": 45.344, "end": 45.424, "text": "one"},
+      {"start": 45.504, "end": 45.664, "text": "and"},
+      {"start": 45.664, "end": 45.744, "text": "a"},
+      {"start": 45.744, "end": 46.064, "text": "half"},
+      {"start": 46.064, "end": 46.544, "text": "degrees,"},
+      {"start": 46.784, "end": 47.344, "text": "cycling"},
+      {"start": 47.344, "end": 47.584, "text": "about"},
+      {"start": 47.584, "end": 47.904, "text": "that,"},
+      {"start": 47.904, "end": 48.064, "text": "which"},
+      {"start": 48.064, "end": 48.224, "text": "is"},
+      {"start": 48.224, "end": 48.304, "text": "a"},
+      {"start": 48.304, "end": 48.384, "text": "little"},
+      {"start": 48.384, "end": 48.544, "text": "bit"},
+      {"start": 48.544, "end": 48.784, "text": "off"},
+      {"start": 48.784, "end": 48.864, "text": "the"},
+      {"start": 48.864, "end": 49.184, "text": "trim"},
+      {"start": 49.344, "end": 50.384, "text": "value."}
+    ]},
+    {"start": 50.464, "end": 53.664, "text": "Ya trim is cycling about zero.", "words": [
+      {"start": 50.464, "end": 50.624, "text": "Ya"},
+      {"start": 50.864, "end": 51.184, "text": "trim"},
+      {"start": 51.184, "end": 51.344, "text": "is"},
+      {"start": 51.344, "end": 51.744, "text": "cycling"},
+      {"start": 51.744, "end": 51.984, "text": "about"},
+      {"start": 51.984, "end": 53.664, "text": "zero."}
+    ]},
+    {"start": 54.144, "end": 56.224, "text": "Chamber pressure is ninety-five.", "words": [
+      {"start": 54.144, "end": 54.624, "text": "Chamber"},
+      {"start": 54.624, "end": 55.104, "text": "pressure"},
+      {"start": 55.104, "end": 55.344, "text": "is"},
+      {"start": 55.344, "end": 56.224, "text": "ninety-five."}
+    ]},
+    {"start": 59.424, "end": 60.064, "text": "Yeah, you're", "words": [
+      {"start": 59.424, "end": 59.744, "text": "Yeah,"},
+      {"start": 59.744, "end": 60.064, "text": "you're"}
+    ]},
+    {"start": 60.464, "end": 62.144, "text": "into a minute into it, yeah.", "words": [
+      {"start": 60.464, "end": 60.544, "text": "into"},
+      {"start": 60.864, "end": 60.944, "text": "a"},
+      {"start": 60.944, "end": 61.264, "text": "minute"},
+      {"start": 61.264, "end": 61.504, "text": "into"},
+      {"start": 61.504, "end": 61.744, "text": "it,"},
+      {"start": 61.744, "end": 62.144, "text": "yeah."}
+    ]},
+    {"start": 62.464, "end": 63.984, "text": "Well, it's still below zero.", "words": [
+      {"start": 62.464, "end": 62.784, "text": "Well,"},
+      {"start": 62.784, "end": 63.024, "text": "it's"},
+      {"start": 63.024, "end": 63.184, "text": "still"},
+      {"start": 63.184, "end": 63.504, "text": "below"},
+      {"start": 63.504, "end": 63.984, "text": "zero."}
+    ]},
+    {"start": 63.984, "end": 67.744, "text": "I just I I bet you we're never gonna catch up.", "words": [
+      {"start": 63.984, "end": 64.224, "text": "I"},
+      {"start": 64.224, "end": 64.464, "text": "just"},
+      {"start": 65.104, "end": 65.344, "text": "I"},
+      {"start": 65.344, "end": 65.424, "text": "I"},
+      {"start": 65.584, "end": 65.824, "text": "bet"},
+      {"start": 65.824, "end": 65.904, "text": "you"},
+      {"start": 65.984, "end": 66.144, "text": "we're"},
+      {"start": 66.144, "end": 66.304, "text": "never"},
+      {"start": 66.304, "end": 66.464, "text": "gonna"},
+      {"start": 66.544, "end": 67.104, "text": "catch"},
+      {"start": 67.104, "end": 67.744, "text": "up."}
+    ]},
+    {"start": 70.624, "end": 73.344, "text": "Let's go ahead and see what I'm gonna do.", "words": [
+      {"start": 70.624, "end": 70.864, "text": "Let's"},
+      {"start": 70.864, "end": 71.024, "text": "go"},
+      {"start": 71.024, "end": 71.184, "text": "ahead"},
+      {"start": 71.184, "end": 71.264, "text": "and"},
+      {"start": 71.344, "end": 71.424, "text": "see"},
+      {"start": 71.504, "end": 71.584, "text": "what"},
+      {"start": 71.664, "end": 71.904, "text": "I'm"},
+      {"start": 71.904, "end": 71.984, "text": "gonna"},
+      {"start": 72.144, "end": 73.344, "text": "do."}
+    ]},
+    {"start": 79.184, "end": 80.944, "text": "G feels very pleasant, doesn't it?", "words": [
+      {"start": 79.184, "end": 79.264, "text": "G"},
+      {"start": 79.584, "end": 79.904, "text": "feels"},
+      {"start": 79.904, "end": 80.064, "text": "very"},
+      {"start": 80.064, "end": 80.544, "text": "pleasant,"},
+      {"start": 80.544, "end": 80.784, "text": "doesn't"},
+      {"start": 80.784, "end": 80.944, "text": "it?"}
+    ]},
+    {"start": 80.944, "end": 85.024, "text": "We're measuring uh just as dead over zero G on the G meter.", "words": [
+      {"start": 80.944, "end": 81.104, "text": "We're"},
+      {"start": 81.104, "end": 81.584, "text": "measuring"},
+      {"start": 81.664, "end": 81.984, "text": "uh"},
+      {"start": 82.464, "end": 82.544, "text": "just"},
+      {"start": 82.704, "end": 82.864, "text": "as"},
+      {"start": 82.944, "end": 83.184, "text": "dead"},
+      {"start": 83.264, "end": 83.504, "text": "over"},
+      {"start": 83.504, "end": 83.744, "text": "zero"},
+      {"start": 83.904, "end": 84.144, "text": "G"},
+      {"start": 84.144, "end": 84.224, "text": "on"},
+      {"start": 84.224, "end": 84.384, "text": "the"},
+      {"start": 84.384, "end": 84.464, "text": "G"},
+      {"start": 84.624, "end": 85.024, "text": "meter."}
+    ]},
+    {"start": 85.104, "end": 86.624, "text": "Tank pressures are good.", "words": [
+      {"start": 85.104, "end": 85.424, "text": "Tank"},
+      {"start": 85.424, "end": 85.824, "text": "pressures"},
+      {"start": 85.824, "end": 86.064, "text": "are"},
+      {"start": 86.064, "end": 86.624, "text": "good."}
+    ]},
+    {"start": 86.624, "end": 87.424, "text": "Okay.", "words": [
+      {"start": 86.624, "end": 87.424, "text": "Okay."}
+    ]},
+    {"start": 88.064, "end": 88.704, "text": "The uh", "words": [
+      {"start": 88.064, "end": 88.304, "text": "The"},
+      {"start": 88.464, "end": 88.704, "text": "uh"}
+    ]},
+    {"start": 91.306, "end": 94.106, "text": "Chamber pressure is holding steady as a rock.", "words": [
+      {"start": 91.306, "end": 91.786, "text": "Chamber"},
+      {"start": 91.786, "end": 92.106, "text": "pressure"},
+      {"start": 92.106, "end": 92.266, "text": "is"},
+      {"start": 92.266, "end": 92.506, "text": "holding"},
+      {"start": 92.666, "end": 92.986, "text": "steady"},
+      {"start": 92.986, "end": 93.146, "text": "as"},
+      {"start": 93.146, "end": 93.306, "text": "a"},
+      {"start": 93.306, "end": 94.106, "text": "rock."}
+    ]},
+    {"start": 94.346, "end": 96.346, "text": "Holding it's building up a little bit actually.", "words": [
+      {"start": 94.346, "end": 94.666, "text": "Holding"},
+      {"start": 94.746, "end": 94.986, "text": "it's"},
+      {"start": 95.066, "end": 95.386, "text": "building"},
+      {"start": 95.386, "end": 95.546, "text": "up"},
+      {"start": 95.546, "end": 95.626, "text": "a"},
+      {"start": 95.626, "end": 95.786, "text": "little"},
+      {"start": 95.786, "end": 95.946, "text": "bit"},
+      {"start": 96.026, "end": 96.346, "text": "actually."}
+    ]},
+    {"start": 96.346, "end": 98.986, "text": "It's up around ninety-six now.", "words": [
+      {"start": 96.346, "end": 96.586, "text": "It's"},
+      {"start": 96.586, "end": 96.746, "text": "up"},
+      {"start": 96.746, "end": 96.826, "text": "around"},
+      {"start": 97.066, "end": 97.626, "text": "ninety-six"},
+      {"start": 98.026, "end": 98.986, "text": "now."}
+    ]},
+    {"start": 99.466, "end": 102.426, "text": "Guffels are still a little bit busier than I would have guessed.", "words": [
+      {"start": 99.466, "end": 100.186, "text": "Guffels"},
+      {"start": 100.186, "end": 100.266, "text": "are"},
+      {"start": 100.506, "end": 100.746, "text": "still"},
+      {"start": 100.746, "end": 100.826, "text": "a"},
+      {"start": 100.826, "end": 100.906, "text": "little"},
+      {"start": 100.986, "end": 101.146, "text": "bit"},
+      {"start": 101.146, "end": 101.626, "text": "busier"},
+      {"start": 101.626, "end": 101.786, "text": "than"},
+      {"start": 101.786, "end": 101.866, "text": "I"},
+      {"start": 101.866, "end": 102.026, "text": "would"},
+      {"start": 102.026, "end": 102.106, "text": "have"},
+      {"start": 102.106, "end": 102.426, "text": "guessed."}
+    ]},
+    {"start": 102.506, "end": 106.826, "text": "That's a little more um chamber pressure than they were predicted.", "words": [
+      {"start": 102.506, "end": 102.746, "text": "That's"},
+      {"start": 102.746, "end": 102.906, "text": "a"},
+      {"start": 102.906, "end": 103.146, "text": "little"},
+      {"start": 103.146, "end": 103.306, "text": "more"},
+      {"start": 103.386, "end": 103.706, "text": "um"},
+      {"start": 104.986, "end": 105.466, "text": "chamber"},
+      {"start": 105.466, "end": 105.866, "text": "pressure"},
+      {"start": 105.866, "end": 106.026, "text": "than"},
+      {"start": 106.026, "end": 106.106, "text": "they"},
+      {"start": 106.106, "end": 106.266, "text": "were"},
+      {"start": 106.266, "end": 106.826, "text": "predicted."}
+    ]},
+    {"start": 107.066, "end": 107.786, "text": "Yeah.", "words": [
+      {"start": 107.066, "end": 107.786, "text": "Yeah."}
+    ]},
+    {"start": 107.786, "end": 109.386, "text": "They're predicting ninety five.", "words": [
+      {"start": 107.786, "end": 107.946, "text": "They're"},
+      {"start": 108.106, "end": 108.426, "text": "predicting"},
+      {"start": 108.666, "end": 108.906, "text": "ninety"},
+      {"start": 108.986, "end": 109.386, "text": "five."}
+    ]},
+    {"start": 109.706, "end": 110.906, "text": "We may uh shut down a little bit.", "words": [
+      {"start": 109.706, "end": 109.866, "text": "We"},
+      {"start": 109.866, "end": 110.026, "text": "may"},
+      {"start": 110.106, "end": 110.346, "text": "uh"},
+      {"start": 110.346, "end": 110.506, "text": "shut"},
+      {"start": 110.506, "end": 110.666, "text": "down"},
+      {"start": 110.666, "end": 110.746, "text": "a"},
+      {"start": 110.746, "end": 110.826, "text": "little"},
+      {"start": 110.906, "end": 110.906, "text": "bit."}
+    ]},
+    {"start": 111.066, "end": 113.946, "text": "Shut down a little pretty turn.", "words": [
+      {"start": 111.066, "end": 111.146, "text": "Shut"},
+      {"start": 111.226, "end": 111.306, "text": "down"},
+      {"start": 111.306, "end": 111.386, "text": "a"},
+      {"start": 111.386, "end": 111.466, "text": "little"},
+      {"start": 112.746, "end": 112.986, "text": "pretty"},
+      {"start": 113.146, "end": 113.946, "text": "turn."}
+    ]},
+    {"start": 114.266, "end": 116.426, "text": "What do you think about this crazy cheese wheel?", "words": [
+      {"start": 114.266, "end": 114.426, "text": "What"},
+      {"start": 114.426, "end": 114.586, "text": "do"},
+      {"start": 114.586, "end": 114.666, "text": "you"},
+      {"start": 114.666, "end": 114.826, "text": "think"},
+      {"start": 114.826, "end": 114.986, "text": "about"},
+      {"start": 114.986, "end": 115.146, "text": "this"},
+      {"start": 115.146, "end": 115.546, "text": "crazy"},
+      {"start": 115.546, "end": 115.866, "text": "cheese"},
+      {"start": 116.026, "end": 116.426, "text": "wheel?"}
+    ]},
+    {"start": 122.266, "end": 124.666, "text": "All your electricals look okay over there, bud?", "words": [
+      {"start": 122.266, "end": 122.426, "text": "All"},
+      {"start": 122.586, "end": 122.746, "text": "your"},
+      {"start": 122.746, "end": 123.306, "text": "electricals"},
+      {"start": 123.306, "end": 123.466, "text": "look"},
+      {"start": 123.546, "end": 123.706, "text": "okay"},
+      {"start": 123.866, "end": 124.026, "text": "over"},
+      {"start": 124.026, "end": 124.266, "text": "there,"},
+      {"start": 124.266, "end": 124.666, "text": "bud?"}
+    ]},
+    {"start": 124.826, "end": 126.266, "text": "Man, I'm not gonna look at them.", "words": [
+      {"start": 124.826, "end": 125.146, "text": "Man,"},
+      {"start": 125.146, "end": 125.306, "text": "I'm"},
+      {"start": 125.306, "end": 125.466, "text": "not"},
+      {"start": 125.466, "end": 125.546, "text": "gonna"},
+      {"start": 125.626, "end": 125.706, "text": "look"},
+      {"start": 125.706, "end": 125.866, "text": "at"},
+      {"start": 125.866, "end": 126.266, "text": "them."}
+    ]},
+    {"start": 126.266, "end": 127.226, "text": "Alright.", "words": [
+      {"start": 126.266, "end": 127.226, "text": "Alright."}
+    ]},
+    {"start": 127.706, "end": 129.066, "text": "Probably a good rule.", "words": [
+      {"start": 127.706, "end": 127.866, "text": "Probably"},
+      {"start": 127.946, "end": 128.026, "text": "a"},
+      {"start": 128.026, "end": 128.186, "text": "good"},
+      {"start": 128.266, "end": 129.066, "text": "rule."}
+    ]},
+    {"start": 141.318, "end": 141.878, "text": "How about that?", "words": [
+      {"start": 141.318, "end": 141.478, "text": "How"},
+      {"start": 141.478, "end": 141.558, "text": "about"},
+      {"start": 141.638, "end": 141.878, "text": "that?"}
+    ]},
+    {"start": 141.878, "end": 145.958, "text": "It's winning a couple of thirty-five more seconds, and we'll be out of mode, too.", "words": [
+      {"start": 141.878, "end": 142.038, "text": "It's"},
+      {"start": 142.038, "end": 142.278, "text": "winning"},
+      {"start": 142.358, "end": 142.438, "text": "a"},
+      {"start": 142.438, "end": 142.598, "text": "couple"},
+      {"start": 142.598, "end": 142.678, "text": "of"},
+      {"start": 143.078, "end": 143.558, "text": "thirty-five"},
+      {"start": 143.558, "end": 143.798, "text": "more"},
+      {"start": 143.798, "end": 144.118, "text": "seconds,"},
+      {"start": 144.118, "end": 144.278, "text": "and"},
+      {"start": 144.278, "end": 144.438, "text": "we'll"},
+      {"start": 144.438, "end": 144.518, "text": "be"},
+      {"start": 144.518, "end": 144.678, "text": "out"},
+      {"start": 144.678, "end": 144.758, "text": "of"},
+      {"start": 144.758, "end": 145.078, "text": "mode,"},
+      {"start": 145.078, "end": 145.958, "text": "too."}
+    ]},
+    {"start": 155.264, "end": 161.904, "text": "Well, it's more than just chamber pressure continuing, it's up about 98, 98 percent.", "words": [
+      {"start": 155.264, "end": 155.584, "text": "Well,"},
+      {"start": 155.584, "end": 155.824, "text": "it's"},
+      {"start": 155.824, "end": 156.064, "text": "more"},
+      {"start": 156.064, "end": 156.304, "text": "than"},
+      {"start": 156.304, "end": 156.544, "text": "just"},
+      {"start": 157.344, "end": 157.824, "text": "chamber"},
+      {"start": 157.824, "end": 158.384, "text": "pressure"},
+      {"start": 158.384, "end": 158.944, "text": "continuing,"},
+      {"start": 158.944, "end": 159.184, "text": "it's"},
+      {"start": 159.184, "end": 159.264, "text": "up"},
+      {"start": 159.424, "end": 159.584, "text": "about"},
+      {"start": 159.584, "end": 160.544, "text": "98,"},
+      {"start": 160.544, "end": 160.864, "text": "98"},
+      {"start": 160.944, "end": 161.904, "text": "percent."}
+    ]},
+    {"start": 162.224, "end": 164.784, "text": "Yeah, there's a little thing in there.", "words": [
+      {"start": 162.224, "end": 162.384, "text": "Yeah,"},
+      {"start": 162.464, "end": 162.544, "text": "there's"},
+      {"start": 162.624, "end": 162.704, "text": "a"},
+      {"start": 162.704, "end": 162.864, "text": "little"},
+      {"start": 162.864, "end": 162.944, "text": "thing"},
+      {"start": 163.024, "end": 163.184, "text": "in"},
+      {"start": 163.344, "end": 164.784, "text": "there."}
+    ]},
+    {"start": 165.45, "end": 168.89, "text": "And Dan keep driving off in the cockpit and waiting all day to look at that thing.", "words": [
+      {"start": 165.45, "end": 165.53, "text": "And"},
+      {"start": 165.61, "end": 165.77, "text": "Dan"},
+      {"start": 165.93, "end": 166.01, "text": "keep"},
+      {"start": 166.09, "end": 166.25, "text": "driving"},
+      {"start": 166.41, "end": 166.49, "text": "off"},
+      {"start": 166.65, "end": 166.73, "text": "in"},
+      {"start": 166.73, "end": 166.81, "text": "the"},
+      {"start": 166.81, "end": 167.21, "text": "cockpit"},
+      {"start": 167.29, "end": 167.37, "text": "and"},
+      {"start": 167.45, "end": 167.69, "text": "waiting"},
+      {"start": 167.85, "end": 167.93, "text": "all"},
+      {"start": 167.93, "end": 168.01, "text": "day"},
+      {"start": 168.09, "end": 168.17, "text": "to"},
+      {"start": 168.33, "end": 168.41, "text": "look"},
+      {"start": 168.41, "end": 168.49, "text": "at"},
+      {"start": 168.49, "end": 168.65, "text": "that"},
+      {"start": 168.65, "end": 168.89, "text": "thing."}
+    ]}
+  ],
+  "captions": [
+    {"start": 1.105, "end": 3.145, "lines": ["B, I mean press A, Mark."]},
+    {"start": 3.985, "end": 7.585, "lines": ["Okay, now what's your raider","chamber pressure? It's good."]},
+    {"start": 7.585, "end": 9.025, "lines": ["95. 95."]},
+    {"start": 9.025, "end": 11.305, "lines": ["Fox is oscillating around."]},
+    {"start": 12.385, "end": 14.585, "lines": ["Okay, we're steering."]},
+    {"start": 22.065, "end": 24.625, "lines": ["25 seconds in, it says go decrease."]},
+    {"start": 24.625, "end": 26.185, "lines": ["I'm going to hold off."]},
+    {"start": 28.465, "end": 32.104, "lines": ["Steering pretty good.","The gimbals are uh Working a little bit"]},
+    {"start": 32.864, "end": 37.624, "lines": ["more busily than I would have guessed,","but uh everything's looking good."]},
+    {"start": 40.064, "end": 43.024, "lines": ["GMS and GNN count together."]},
+    {"start": 43.024, "end": 44.144, "lines": ["Okay."]},
+    {"start": 44.144, "end": 45.504, "lines": ["Pitch trim is up at one"]},
+    {"start": 45.504, "end": 50.464, "lines": ["and a half degrees, cycling about that,","which is a little bit off the trim value."]},
+    {"start": 50.464, "end": 53.864, "lines": ["Ya trim is cycling about zero."]},
+    {"start": 54.144, "end": 56.424, "lines": ["Chamber pressure is ninety-five."]},
+    {"start": 59.424, "end": 62.464, "lines": ["Yeah, you're into a minute into it, yeah."]},
+    {"start": 62.464, "end": 63.984, "lines": ["Well, it's still below zero."]},
+    {"start": 63.984, "end": 64.984, "lines": ["I just"]},
+    {"start": 65.104, "end": 67.944, "lines": ["I I bet you we're never gonna catch up."]},
+    {"start": 70.624, "end": 73.544, "lines": ["Let's go ahead and see what I'm gonna do."]},
+    {"start": 79.184, "end": 80.944, "lines": ["G feels very pleasant, doesn't it?"]},
+    {"start": 80.944, "end": 85.104, "lines": ["We're measuring uh just as dead","over zero G on the G meter."]},
+    {"start": 85.104, "end": 86.624, "lines": ["Tank pressures are good."]},
+    {"start": 86.624, "end": 87.624, "lines": ["Okay."]},
+    {"start": 88.064, "end": 89.064, "lines": ["The uh…"]},
+    {"start": 91.306, "end": 94.346, "lines": ["Chamber pressure is holding steady","as a rock."]},
+    {"start": 94.346, "end": 99.186, "lines": ["Holding it's building up a little bit","actually. It's up around ninety-six now."]},
+    {"start": 99.466, "end": 101.146, "lines": ["Guffels are still a little bit"]},
+    {"start": 101.146, "end": 104.206, "lines": ["busier than I would have guessed.","That's a little more um…"]},
+    {"start": 104.986, "end": 107.786, "lines": ["chamber pressure than they were predicted.","Yeah."]},
+    {"start": 107.786, "end": 111.066, "lines": ["They're predicting ninety five.","We may uh shut down a little bit."]},
+    {"start": 111.066, "end": 112.066, "lines": ["Shut down a little…"]},
+    {"start": 112.746, "end": 114.266, "lines": ["pretty turn."]},
+    {"start": 114.266, "end": 116.926, "lines": ["What do you think","about this crazy cheese wheel?"]},
+    {"start": 122.266, "end": 124.826, "lines": ["All your electricals look okay","over there, bud?"]},
+    {"start": 124.826, "end": 127.426, "lines": ["Man, I'm not gonna look at them. Alright."]},
+    {"start": 127.706, "end": 129.266, "lines": ["Probably a good rule."]},
+    {"start": 141.318, "end": 143.078, "lines": ["How about that? It's winning a couple of"]},
+    {"start": 143.078, "end": 146.373, "lines": ["thirty-five more seconds,","and we'll be out of mode, too."]},
+    {"start": 155.264, "end": 156.744, "lines": ["Well, it's more than just"]},
+    {"start": 157.344, "end": 162.224, "lines": ["chamber pressure continuing,","it's up about 98, 98 percent."]},
+    {"start": 162.224, "end": 167.29, "lines": ["Yeah, there's a little thing in there.","And Dan keep driving off in the cockpit"]},
+    {"start": 167.29, "end": 169.39, "lines": ["and waiting all day to look at that thing."]}
+  ]
+}

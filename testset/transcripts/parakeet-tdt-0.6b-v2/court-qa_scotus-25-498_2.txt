@@ -1,0 +1,41 @@
+So I think at various points, I would have to go back and look at the very, very precise language that they used.
+Sometimes the courts in these cases have said that it has to have the same objectives, the same risk-reward profile, and the same strategies.
+You use an and instead of an or.
+And sometimes asset allocation is thrown into some of those decisions.
+I agree that the Ninth Circuit certainly didn't do that here.
+We think that's correct.
+It does not have to be the same asset allocation.
+I think where some confusion could happen is how you define what the strategy is.
+So I've been using kind of objectives and aims as this broader goal of we want to reduce downside, we want to have kind of a risk mitigating approach.
+The strategy in some cases is going to be the way that you implement that objective.
+And so here that would have been allocating assets to the hedge funds and the private equity funds.
+Obviously, we don't think you have to hold that constant because
+That would then have some of the problems that petitioners have suggested.
+But I think that the Ninth Circuit generally did the right thing, and we read the opinion the same way that Mr.
+On this asset allocation point, I mean, your brief says, this is I'm reading from Page 25, where two funds seek to achieve similar levels of risk using different asset allocation strategies, the challenged fund may be compared to a fund with more conventional assets.
+That bear the same level of risk.
+Exactly.
+If you didn't allow that, you would be essentially foreclosing these claims from the outset.
+Exactly.
+And we think that petitioners were perfectly capable of doing that here.
+There are many different assets that have the kind of downside protection that Intel said it was using the private equity funds and the hedge funds here to accomplish.
+And so they could have compared this to a fund that had more allocations to bonds or to high-yield savings accounts or something like that.
+Intel or the plaintiffs here just chose not to do so.
+Instead, they were comparing these.
+To these kind of equity-heavy funds that wanted to have more exposure to the potential for the upside.
+And I don't think that the correct kind of implication to draw from that is that there weren't those kinds of funds available.
+I think more likely the case is that if they had tried to draw those kinds of comparisons, Intel's funds just wouldn't really have underperformed to any significant degree.
+That's consistent with the way the Ninth Circuit kind of understood the complaint here.
+Some of the charts in the complaint tend to just suggest that Intel's funds performed pretty much exactly as they anticipated they would.
+On this question of the Ninth Circuit's opinion, how do you respond to petitioners?
+reading of the opinion as isolating the underperformance allegations and treating them in a certain way before dealing with the others or however he characterized it.
+Do you does the do you agree with that view?
+I think it's correct that the Ninth Circuit first looked underperformance allegations and determined whether those allegations were going to be probative at all in the analysis, and it held that they were not.
+I don't think that that's incorrect to do that that way.
+I think that's very consistent with Twombly, for example.
+In order for those allegations to do any work, they have to be tied to a meaningful comparator, because otherwise they are equally consistent with the lawful alternative explanation here that these just had different objectives and so the different results.
+Don't tell you anything.
+That's not enough to take the complaint outside of neutral territory, is the term that Twombly uses at one point.
+But then I think that the Ninth Circuit did continue on to look at all of the rest of the allegations in the complaint and assess them on their own merit to see if those allegations moved the complaint outside of neutral territory.
+They were insufficient on their own for reasons that had nothing to do with underperformance, as Mr.
+McLeod was saying.

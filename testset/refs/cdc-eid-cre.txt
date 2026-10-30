@@ -1,0 +1,451 @@
+# Reference transcript: EID podcast: Genetically Similar High-Risk Strains of Carbapenemase-Producing Enterobacterales
+# Source: https://tools.cdc.gov/podcasts/media/pdf/364037_EID_CRE.pdf
+# Covers the whole recording (41 min), not just the clip(s); see manifest.json for clip offsets. Text as published, not aligned to audio.
+
+Genetically Similar High-Risk Strains of
+Carbapenemase-Producing Enterobacterales in
+Humans and Companion Animals, United States
+[Announcer] This program is presented by the Centers for Disease Control and Prevention.
+
+[Matt Kuehnert] Hello, I’m Dr. Matt Kuehnert, Editor in Chief of the journal Emerging
+Infectious Diseases. EID is an open access, high impact, peer reviewed scientific journal
+published by CDC. EID publishes articles on new and re-emerging infectious diseases that occur
+around the world, with the mission of improving the understanding of pathogen emergence,
+control, and prevention. We are pleased to present selected EID articles to you, brought to life in
+new and interesting ways through this podcast series.
+[Candice Hoffmann] Welcome to the Emerging Infectious Diseases podcast. I’m Candice
+Hoffmann. In this episode, we’ll discuss the article, “Genetically Similar High-Risk Strains of
+Carbapenemase-Producing Enterobacterales in Humans and Companion Animals, United
+States.” It was published in the March 2026 issue.
+This article describes interesting findings about high-risk antibiotic-resistant bacteria in people,
+cats, and dogs. This type of bacteria has sometimes been referred to as “nightmare bacteria” due
+to its resistance to powerful, last-resort antibiotics. We’ll hear from two of the study’s authors.
+[Rich Stanton] Hi, my name is Dr. Richard Stanton. I go by Rich. I am a molecular
+epidemiologist at CDC. I’m in the Division of Healthcare Quality Promotion. And our division
+focuses on healthcare-associated infections or illnesses you pick up when you're receiving
+healthcare. And my group specifically focuses on antibiotic-resistant infections. And I've been at
+CDC for 10 years. I have a PhD in pharmacology.
+And I started out in the same division I'm in now, DHQP, but I was on the lab side doing more
+lab-based work. My group now is the epi group, but I enjoy basic research. I'm interested in
+resistance and how it emerges. And this is the ideal environment for that because we're sort of at
+the cutting edge of knowledge of antimicrobial resistance, antibiotic resistance, and also, we
+have the best awareness nationally of what's going on. So, I think it's an important job that I
+enjoy. It's challenging but also rewarding.
+[Allison James] I am Dr. Allison James. I am a veterinarian and microbiologist and I work at
+CDC in the Division of Foodborne, Waterborne, and Environmental Diseases. So, we cover a lot
+of territory in terms of different pathogens that come from food, water, the environment. But my
+program is the One Health Antimicrobial Resistance Program, and I lead that program in the
+Outbreak Response and Prevention Branch. And the work we do is really focused on looking at
+antimicrobial-resistant bacteria that are transmitted or shared between humans and animals. So
+that covers a lot of different areas. But one of the main focuses of my program has been
+carbapenem-resistant organisms in companion animals or, when I say companion animals, I
+mean dogs and cats.
+So, my journey to public health was a little convoluted. I grew up in a household. My father was
+a veterinarian. And so, I pursued vet school like since I can remember and got to my
+undergraduate studies and just was really kind of became interested in a lot of different things,
+particularly like policy and social factors related to health and, just kind of, my world got a lot
+bigger at the time. And so, when I, I kind of pursued the path of veterinary school, found the
+
+Master of Public Health program when I got into vet school. And so, I pursued my MPH at the
+same time as my veterinary degree. And then kind of went down the path of thinking I would
+work in academia, and after vet school, I worked for a year in private practice and then went
+back and got my PhD in molecular microbiology and did stay in academia after that for a while
+teaching public health and doing public health type research, but just decided that I was kind of
+dancing on the periphery of public health and wanted to do it, wanted to be in it more than I was
+in academia. And so, I joined CDC through the EIS program in 2019 and have been hooked ever
+since.
+[Candice Hoffmann] Let’s set the stage by introducing the bacteria examined in this study. Let’s
+start with the name: carbapenemase-producing carbapenem-resistant Enterobacterales—CP-CRE
+for short. It’s a long name, so let’s break it down, starting with the last part. Enterobacterales are
+bacteria that commonly cause healthcare-associated infections, also known as HAIs.
+[Rich Stanton] The most frequently encountered species of Enterobacterales that we see in
+healthcare associated infections are E. coli, Klebsiella pneumoniae, and Enterobacter cloacae.
+[Candice Hoffmann] Next, let’s define CRE.
+[Rich Stanton] CRE stands for carbapenem-resistant Enterobacterales. So CRE are a class of
+drug-resistant bacteria. They're a threat to human health because they cause infections that are
+difficult to treat. So, they've been referred to as “nightmare bacteria” by CDC in the past. And
+that's really just because, again, if someone ends up with a CRE infection, there's very limited
+treatment options for patients. They typically are associated with health care-associated
+infections or HAIs, but as we show in this paper, they can also be found in the community. And
+lately in the past few years, other work by CDC in our division has shown that some types of
+CRE that were previously pretty rare in the United States are becoming more and more common.
+So, we’re seeing CRE emerging as an increasing threat in multiple states across the US. So that
+was just important to note with CREs, they’re emerging as a more important public health threat
+within the last few years.
+So carbapenems are an important class of broadly acting antibiotics. For many bugs or many
+pathogens, they're considered last line drugs, especially to treat gram-negative bacteria, which
+include Enterobacterales. And carbapenemases are enzymes, so they are proteins that can be
+found in bacteria that inactivate most or all classes of carbapenems as well as other beta-lactam
+antibiotics. So, they're basically genes that can encode enzymes that can quickly degrade these
+drugs and render them ineffective. So, drugs you would take intravenously, like for a serious
+infection.
+[Candice Hoffmann] So, the CP in CP-CRE stands for “carbapenemase-producing”. It refers to
+the enzymes these bacteria produce that make carbapenem antibiotics ineffective.
+[Rich Stanton] And they're important because they have a really broad activity, and that's what
+you would get prescribed if nothing else would work. You wouldn't get an IV for a simple
+infection usually. That's sort of a last resort. So, if you have something that's resistant to those,
+it's usually resistant to the other drugs that you would give before then too. That’s why they are
+very worrisome and concerning, especially those with carbapenemases. That confers resistance
+to the other more common antibiotics that you would use as a first line defense.
+[Candice Hoffmann] While carbapenem antibiotics are important for human health, they are not
+commonly used in animals.
+
+[Allison James] So the only thing I think that's important for the context of this study is that
+carbapenems are not approved for use in animals in the United States. So, the FDA approves
+animal drugs and there's no labeled use for these, but extra label use of certain drugs in certain
+animal species is allowed in the United States. And so there have been a couple of studies to
+show that carbapenems are used very infrequently in dogs and cats in the US. So, I think the
+studies have shown that they're less than, like, half a percent of all prescriptions or something in
+a few tertiary care veterinary hospitals. So, these are going to be like high level inpatient care
+veterinary hospitals. So, I just wanted to make that point that these carbapenems are not being
+used a ton in veterinary medicine. They're in fact barely being used at all.
+[Candice Hoffmann] This study came about after several reports of outbreaks involving CP-CRE
+in companion animals, that is, dogs and cats.
+[Rich Stanton] So CDC was aware of several reports over the past few years of carbapenemaseproducing CRE or CP-CRE in companion animals. And DHQP was even involved in a few CPCRE outbreak investigations that involved dogs and cats in the United States. So, some of our
+public health partners had reached out to us just because we had expertise for those specific
+pathogens for those investigations. We don't normally conduct investigations or outbreaks
+involving animals, but that just sort of piqued our curiosity to find out if, you know, are these the
+same strains that are commonly found in humans? Because again, these are usually only
+associated with humans and healthcare-associated infections. We see them much rarer in the
+community. So that's, from our perspective, what we were, you know, sort of piqued our interest
+in this area. I think Allison would probably know a lot more about…more the history of CP-CRE
+in companion animals.
+[Allison James] How this study originated, Rich is exactly right. And that what really started our
+engagement in this space is the outbreaks that were occurring at veterinary hospitals. And before
+there had been a major outbreak at a veterinary hospital in 2018 to 2019, there had only been
+three reports in the peer-reviewed literature from the US about CP-CRE in pets (in dogs and cats)
+in the US. And so, it was really kind of rare, sporadic. And then we had this big outbreak at this
+veterinary hospital in 2018-2019. And then in 2022, there was another outbreak that occurred at
+an animal rescue facility. And meanwhile, there were all these kind of unpublished outbreaks that
+we were hearing about, that state and local public health partners, as well as CDC were engaging
+about, and I think it really raised the question for us about what's the human health risk here? So,
+we had known that there were two reports from Europe that suggested a household transmission
+event. Again, we don't know which direction, whether from humans or from the animals, but
+there was a household transmission event of CP-CRE between dogs in a house and a human. And
+then there was another study from Switzerland that showed veterinary staff had been colonized
+with the same CP-CRE strain as one that had caused a hospital outbreak where that staff person
+worked. And so really the data was really sparse about human-animal transmission. And so, as
+these outbreaks in the US started coming to us and we were asked to provide technical
+assistance, I think the question really came up, does public health belong in this space? Is this a
+human health issue? And at the time, we didn't know the answer. And so that was really
+the…kind of the driving force or the impetus behind this particular study.
+[Candice Hoffmann] So, to learn more about how CP-CRE affects pets and people, the
+researchers first used a national database: NCBI Pathogen Detection. Dr. Stanton explained what
+that is.
+
+[Rich Stanton] So NCBI is the National Center for Biotechnology Information. It's actually part
+of HHS, like CDC is. And they host an online database of whole genome sequencing data. So
+basically, the DNA sequences of pathogens, but also from humans and animals. And for those
+pathogens, especially the resistant ones, they built what they call pathogen detection, which is a
+live online public database of pathogen DNA sequence data from all over the world. And when
+someone submits a sequence from a pathogen, so a CP-CRE sequence, for example, so they'll
+take that sequence and compare it to everything else that's already in the database.
+If it's similar to something else in the database, they will cluster them together so that tells you
+that this set of sequences are genetically similar to each other. The sequences also have what we
+call metadata or additional information associated with it, like where they're from, like if this
+pathogen was from a human source or maybe it was from an animal source. So, we were able to
+look at that data and compare that to the clustering data to find clusters of genetically similar
+sequences from pathogens that were included samples that were collected from humans and also
+from, like dogs or cats. So that's really how we use that online database. Again, NCBI's pathogen
+detection, it's an online public database of all the available DNA sequences of pathogens that's
+been uploaded to public repositories.
+[Candice Hoffmann] Any lab can submit sequences to NCBI Pathogen Detection. Most U.S.
+entries come from public health labs, including CDC and state partners. These labs routinely
+share data to help track pathogens nationwide.
+[Rich Stanton] So CDC, the public health partners, we upload our data for public consumption
+because it's been generated using your tax dollars. And this is a free online resource that anyone
+could, if they have interest, other researchers or other public health labs across the world can
+view the data and help to have a better understanding of what types of pathogens we're seeing.
+We can see what they're seeing over there.
+So, it's really at the discretion of whoever generates the data. And again, our public health
+partners largely upload their data, sort of like automatically once it's generated. Allison can
+probably talk more about, like the pet side of it. I can say, sequencing is probably much rarer
+occurring for companion animals than it is for humans certainly.
+[Allison James] Yeah, for sure. It's the same sort of system where it's at the discretion of the
+person or the lab that generated the data. And yes, we just don't have the whole genome
+sequencing type systems in place like the human health side does for veterinary medicine. And
+so, Rich is right, we have far fewer isolates in the NCBI database than the human isolates.
+[Rich Stanton] It's several orders of magnitude more data available from human samples than
+there are pathogens from companion animals in the U.S. I think we identified, I think, a couple
+of hundred companion animal CP-CRE sequences. And comparatively, from the US, we have
+roughly 50,000 from humans. So, it's definitely a lot more from humans.
+[Candice Hoffmann] The team used a One Health lens to interpret their findings. Let’s define
+One Health.
+[Allison James] It’s basically this idea that when considering health issues, you should take into
+account the environmental factors as well as factors related to humans and animals. And so, you
+look at things from a very holistic approach. And so often what you'll see is a Venn diagram with
+like humans, animals and the environment forming bubbles that overlap in the middle and that
+overlapping part is the One Health piece.
+
+[Candice Hoffmann] Using that approach, the researchers labeled mixed human–animal groups
+in the database as “One Health clusters”. Here’s what that means in this study.
+[Allison James] So for the One Health clusters, those are just going to be the ones that are
+clusters that the NCBI pathogen detection system group together that include both human and
+animal derived isolates of CP-CRE.
+[Candice Hoffmann] Now, how did they identify those clusters?
+[Rich Stanton] NCBI's pathogen detection just groups pathogen sequences, so the DNA from the
+pathogens, it groups them based on similarity. So, it creates groups of pathogen sequences that
+are more similar to each other than they are to anything else in their database. And this is… for
+some of these species, it's hundreds of thousands of sequences and they'll group them. The
+groups can range from just a couple of sequences to up to dozens or hundreds or even thousands.
+So, once they're grouped based on genetic similarity, then we look within those groups to
+determine whether the samples in the groups were from humans, or they were from dogs or cats.
+So, we identified a lot of samples that were from dogs and cats, but they only cluster with other
+samples from dogs and cats. But we also identified samples from dogs and cats that were on the
+same clusters with other samples or sequences that were from humans. And so that's how we
+defined like a One Health cluster—again, a cluster that contained samples from both the
+companion animals and the humans.
+[Candice Hoffmann] In total, they identified 11 One Health clusters that included both human
+and companion animal isolates. Once the researchers identified these clusters, they gathered
+details on where the samples were found and what types of tests were run.
+[Rich Stanton] So once we identified the sequences that were in those One Health clusters, we
+would reach out to the submitter, whoever submitted the sequence, and where we could figure
+out the information, like where it was from, when it was collected, what the body site was. A lot
+of that information for the human sequences has already been collected by CDC because the
+sequences and the associated data were generated by state and local public health partners and
+then uploaded to NCBI. So, we would have access to that data.
+[Candice Hoffmann] The samples came from a mix of different types of lab tests: colonization
+screens and clinical tests. Dr. Stanton explained the difference.
+[Rich Stanton] So with CP-CRE, you can be colonized, meaning you could have the pathogen
+inside of your body, but not necessarily show any symptoms. So, you wouldn't be sick. So, it
+could be found in what we call, like your flora or your microbiome. So, part of like the bacteria
+that's, that's found in your digestive tract. Some of it could be CP-CRE and sometimes unless
+you had, like other underlying health conditions, you may not actually get sick from it. So, you
+would just be a carrier. So, a colonization screen is something that a test that's performed to
+determine whether someone actually has that CP-CRE inside of them, but they may not be aware
+of it. So, a lot of times colonization screening will occur before a patient goes into a hospital. If
+that particular hospital or that facility is experiencing an outbreak, so they want to know the
+status of the patient when they're coming in because maybe they're going to bring in a CP-CRE
+already or if they're not, if they don't have one, they want to see if they pick it up while they're in
+the facility. So that's just basically a screening that can determine if someone has a CP-CRE even
+if they're asymptomatic. A clinical test, on the other hand, means that you're actually sick and
+you're experiencing the symptoms of maybe CP-CRE, so they want to do a test to see if your
+
+sickness is caused by CP-CRE. And if it is, that's what we label as like a clinical test. So,
+colonization is generally no symptoms, but if you're carrying it, so we're colonized by the
+bacteria, whereas a clinical test or clinical screen would mean you're actually sick and the
+bacteria is the cause of it. So, that’s a difficulty with monitoring these pathogens like CP-CRE
+that cause healthcare-associated infections because sometimes they can be carried for a long
+time, weeks or months or even years possibly without someone having symptoms. So, they could
+be like, you know, spreading it continually. And I think, correct me if I’m wrong Allison, but
+most of the companion animal samples were from colonization screening.
+[Allison James] Yeah, that's right. So that was the opposite of what we saw in humans where
+most of the isolates were collected from clinical specimens, whereas in the animals, most of
+them were colonization screens.
+I think because this is so new in the companion animal space, I think that a lot of the
+colonization screens were due to increased vigilance and increased surveillance because of the
+outbreaks at a few veterinary facilities. So, a very small handful of facilities that had already
+experienced an outbreak at that time were doing admission testing more so than usual. And so,
+when they did admission testing, they found it. And so, I think that that's why the numbers are so
+skewed.
+[Candice Hoffmann] People and animals that are colonized with bacteria are at higher risk of
+later developing an infection.
+After identifying the “One Health clusters”, the researchers then compared the DNA samples to
+each other to see how closely they matched, using a method called core multilocus sequence
+typing.
+[Rich Stanton] If you think of DNA and bacteria as being equivalent to a fingerprint, coregenome multilocus sequence typing, or CGMLST, would be like instead of comparing a large set
+of fingerprints to each other one by one, you would label individual features of the fingerprint
+and sort of as a way to kind of simplify those comparisons, like you could think of as like they
+have a fingerprint say like, oh, I've got a loop that points up to the left and five concentric circles
+in the middle. And you would just label your fingerprint like that. And then if you got a new
+fingerprint that came in, you'd say, well, this loop points to the right, it only has three concentric
+circles, so it's not closely related. Then maybe another one comes in with a loop that points to the
+left, say, well this one's probably more closely related.
+So, core-genome multilocus sequence typing, or CGMLST, instead of looking at every single
+base pair, there are millions of base pairs of DNA from each of the pathogen genomes, it
+condenses those down to individual genes. So, there's millions of base pairs of pathogens, but
+those encode thousands of genes. So instead of comparing all of the DNA to each other, you're
+just comparing the genes to each other. So it's just a much faster and more efficient way of
+making genetic comparisons and especially in this study since we were dealing with hundreds of
+samples, it just made more sense for efficiency's sake and consistency of comparison to use
+CGMLST instead of like doing a base pair by base pair comparison of the millions of bases of
+DNA from each of the pathogens.
+[Candice Hoffmann] Let’s zoom out and talk about the main findings of the study.
+[Allison James] Basically, we found that there's evidence for exchange of these strains between
+humans and animals. So that's kind of the bottom line. We have several lines of evidence to
+
+support that, including that we found when we looked at sequence types, the sequence types that
+we found in the 11 clusters were all high-risk, internationally disseminated clones. And high risk
+in this context means that they've all been previously identified as those that cause infections in
+humans, but also, they are known to amplify and disseminate antimicrobial resistance genes. So,
+I think the bottom line here is that common things happen commonly. These are common highrisk strains, and we found them in both humans and animals.
+All of the clusters possessed the NDM gene family. The NDM, the New Delhi metallo-betalactamase gene family is really emerging in U.S. human cases as the predominant
+carbapenemase. And so, I don't think it's really any surprise that we're seeing this parallel
+increase in companion animals if it's true that they're exchanging these CP-CRE strains. And
+again, we've shown that there is evidence for that. And then when we looked at the phylogenetic
+trees, we found that these isolates were not on an individual tree. They were not kind of all at one
+end. Not all of the animal isolates were clustered together at one end of the tree. They were
+interspersed with the human isolates, which suggested to us that they are intermingling, that
+they're not circulating exclusively among their own host species. And so, we have all these kinds
+of lines of evidence that really support this idea that exchange is already happening between
+humans and animals in the U.S. And I just want to point out that I'm using the word exchange
+very deliberately because we don't know directionality. We don't know whether these organisms
+originated in humans and spread to animals either directly or indirectly through some
+environmental source or the opposite way, whether they came from animals and spread to
+humans. And so, I think that, for me, is really the key take-home message of this study.
+[Rich Stanton] The only thing else I would say in addition to that is, you know, we initially
+looked for just CP-CRE sequences that had been found in dogs and cats. And so we found in the
+United States at the time of our search there were 246 available. Almost 70% of those ended up
+being in these One Health clusters. So that tells us that, you know, not only, as you mentioned,
+are these high-risk clones, but also the majority of the CP-CRE that was found in animals is also
+from the same strains that are known to infect humans. I think that's sort of on top of what you
+mentioned, Allison, is just that shows that these are very similar strains that are circulating and
+they're not distinct strains that only infect animals and strains that only infect humans. It's sort of
+a problem for all of us.
+[Allison James] To Rich's point about those original sequences, I was a little surprised by that. I
+was surprised that most of them were included in One Health clusters. So about two thirds of the
+isolates that were identified from dogs and cats, two thirds of those isolates all clustered. And I
+think that was a surprising finding for me. I don't know if you were surprised by that too, Rich.
+[Rich Stanton] I was, yeah. Again, when they're doing a colonization screen, they're not looking
+for a specific strain. You're just looking for, “is this patient carrying CP-CRE?”. So, there was no
+bias just looking for strains that were associated with human cases. So, I was definitely surprised
+by that as well.
+[Candice Hoffmann] So what do these findings mean for pet owners?
+[Allison James] For pet owners, I think the main message is do those things that we've sort of
+always recommended that you do. Follow good pet hygiene as we call it. So, pick up pet feces,
+wash your hands after handling pet feces, keep pets off of eating surfaces and out of the kitchen
+if you can. Wash dishes, the pet's dishes regularly and outside of the kitchen if you can, you
+know, wipe counters, just kind of the things that we've always recommended.
+
+But it might also mean that pet owners who have certain health conditions, that maybe their
+immune system is a little weakened for whatever reason, and who have a pet that's diagnosed
+with CP-CRE, that might mean that they need to be a little bit more diligent around their pet to
+protect themselves from acquiring these bacteria and possibly establishing a risk for infection. Or
+if there's other household members that have an immune suppressive condition that live in the
+house. Or even talk to a healthcare provider about their risk if they have a pet that's diagnosed
+with this bug. I don't think that there's a lot of different things that we need to do at this time as
+pet owners. I think just being aware and being a little bit more careful is warranted, especially if
+you are a person that might be at higher risk for a CP-CRE infection.
+[Candice Hoffmann] This study looked at cats and dogs and used the term “companion animals”
+to describe them.
+[Allison James] It's interesting. Mostly because that's kind of the common language around dogs
+and cats in particular. And we wanted to make sure that we defined it very clearly because this
+question comes up pretty regularly. Are we talking about all pets? Which could be very broad.
+And the answer was no; we're simply talking about dogs and cats here. And so, I think we just
+kind of went with the term that's commonly used.
+[Candice Hoffmann] While cats and dogs may be the most popular pets, owners of other pets—
+like rodents, reptiles, and birds—might wonder if any of the findings apply to them.
+[Allison James] In terms of other pets, not really. There's really not a lot of reports of other types
+of pets, including horses even. There have been some reports of CP-CRE and livestock, but to
+my knowledge, those studies were in food producing animals and not what we think of as pets.
+That goes the same with other household pets like household birds, reptiles, rodents, those kinds
+of pets.
+I am not aware of any studies in those pets exactly, but there have been a couple of reports of
+CP-CRE in birds in general, like migratory birds or scavenger species of birds. And there have
+been a couple of reports in rodents that live among humans, but they're considered pest species
+like rats. But really that's it. There's really not a lot of data out there about CP-CRE in other
+animal species.
+[Rich Stanton] I think there's been some incidental findings in some wild animals. But I think in
+general, like this has kind of shown us that CP-CRE has a broad host range as well, and it can
+persist in the environment too. So, it would not surprise me if there is a potential, you know, risk
+for other types of pets to be carrying CP-CRE.
+[Candice Hoffmann] CP-CRE outbreaks have been found in both animal and human healthcare
+settings. The reasons for this may have to do with the nature of these environments.
+[Rich Stanton] It can persist on built surfaces and sinks and plumbing. And it can survive. It can
+be a pretty hardy organism that's difficult to get rid of. So if there's an exposure that occurs, it
+can lead to a sort of persistent presence in the environment and unless you're like actively taking
+measures related to infection and prevention and control of CP-CRE, you may not be aware that,
+you know, cleaning practices are not completely sufficient because there's been an exposure that
+has contaminated your environment. So, I think because these bacteria are hardy and again, can
+survive for a long time in the built environment, especially in healthcare, it can be harder to
+recognize that there is a potential source of ongoing transmission unless you're actively looking
+for it, especially I would say in the veterinarian healthcare environment, which is probably not as
+
+sophisticated in understanding these sorts of pathogens and these infections as we are on the
+human side, and we still have outbreaks in the human healthcare environment.
+[Allison James] When I think about these organisms, what I like to tell people is when you think
+about where E. coli lives, where organisms like E. coli live without the carbapenem resistance,
+they're kind of everywhere. They're ubiquitous in the environment. And so, it's really no different
+fundamentally if they acquire a carbapenem resistance gene. And so, they survive in these
+environments because they just do naturally unless we have strong infection prevention and
+control protocols like cleaning, disinfecting, that kind of thing. But in addition, in, like tertiary
+care centers for on the veterinary side, but I think also on the human side, we're using a lot of
+antibiotics and we're selecting for these organisms to remain in these environments because CPCRE are often transmitted on these little pieces of DNA and they often are co-located with
+resistance genes to other classes of antibiotics. So even if you're not using carbapenems, you
+could be selecting for CP-CRE just through antimicrobial use, through your daily activities or
+whatever. So that's why I think sometimes we see them more in these really, what we call high
+risk settings where there are very sick people or very sick animals and they're on a lot of
+antibiotics just in general.
+[Candice Hoffmann] The authors had this take-home message for healthcare providers, the ones
+who treat humans.
+[Rich Stanton] I would hope that it would just increase awareness because we've seen CP-CRE
+increasing in the United States and this points to a potential increase that could be occurring from
+community sources as well. Also point out that a lot of testing that's associated with public health
+is available for the healthcare community. So, the AR Lab Network is a national resource of labs
+that can help identify CP-CRE and other antibiotic-resistant organisms. And that, again, like CPCRE can result in limited treatment options. So, it's good to, again, have an awareness of CPCRE, know that it has been increasing in the United States and also that now being found, again,
+in community sources, possibly from, you know, pets and other animals.
+[Candice Hoffmann] For clinicians, the AR Lab Network provides specialized testing and
+support to identify CP-CRE and other resistant organisms.
+[Candice Hoffmann] The researchers had this advice for veterinarians.
+[Allison James] I think for veterinarians, this study combined with the other studies or reports of
+outbreaks in veterinary facilities just really support that veterinarians need to be aware of this
+issue. I think a lot of patients, or rather in the veterinary context, clients of our animal patients
+are looking to veterinarians to make sure that they are warning them or making them aware of
+any health risks that they might have from their pet. And so, I think the first thing is to really
+raise awareness that this is a potential zoonotic risk. But then I think there's some other
+implications for how we practice veterinary medicine in terms of really increasing our infection
+prevention and control so that we limit that spread within hospitals, we limit acquisition by
+animals, and we limit the number of animals that go out into the community and possibly, you
+know, shed this into the environment or spread it onwards. So that's what we're really trying to
+prevent here. And so, I think the first step is really education and making veterinarians aware of
+this issue.
+[Candice Hoffmann] To the authors, this study raises a lot of questions for future research.
+
+[Allison James] I view this as kind of a wide-open area for research. We have a lot of knowledge
+gaps related to CP-CRE in animals and we have some related to CP-CRE exchange between
+humans and animals. And I think that there's just so much work to be done that I don't know
+where to start except for I think frequency and directionality of transmission between humans
+and animals is gonna be a major question. So, for example, what is the risk to a household
+member when a pet in a house is found to be colonized or infected with CP-CRE? What do we
+tell that person? That's an open-ended question right now. We don't know. What do we tell a pet
+owner when their pet acquires CP-CRE? What can we tell them about preventing transmission
+onward into the community? Do they need to avoid public areas like dog parks or groomers or
+anything like that? How long will they be colonized? We don't know that answer either. And so,
+coming up with these recommendations is very difficult when we don't have sort of the basic
+knowledge of transmission between humans and animals.
+Another question that I think is relevant to the human health side as well as the overall burden of
+CP-CRE and companion animals. How many animals out there are colonized that we're not
+going to detect because they have no indication to test? But I think that that question is also not
+well characterized in humans. So those are the kinds of things that I'm thinking of related to how
+do we stop this. How do we intervene in the transmission chain to prevent further transmission?
+We just have so many knowledge gaps that I don't think we have very strong recommendations at
+this time.
+[Rich Stanton] I think there's a big black box as far as our understanding of colonization, how
+long it persists in the animals, how long it would persist in the humans. What's the ongoing risk?
+You know, what's necessarily the risk of colonization? Are you constantly spreading or is this
+only a temporary phenomenon? Does it clear? I think there's a lot of open areas for research for
+CP-CRE causing healthcare-associated infections in humans or causing community-associated
+infections in humans. And there's even a bigger knowledge gap of that when it comes to CP-CRE
+in pets.
+[Candice Hoffmann] In fact, since the authors began working on this study, another report came
+out showing more insight into the epidemiological links between human and animal CP-CRE
+outbreaks.
+[Allison James] Since we've been working on this analysis, there has been a report about human
+and animal transmission in the United States that had epidemiological linkages. So that was a
+limitation of our study is that we didn't have any clear epi linkages between humans and animals.
+But we since now have a report that suggests that animals that were hospitalized at a veterinary
+facility that was experiencing outbreak later went on to have their owners or caretakers
+diagnosed with CP-CRE. And so just to point out that that link is now pretty established between
+our findings and the other bodies of work that have come out since then.
+[Candice Hoffmann] We hope that you’ve enjoyed listening to this podcast and that this
+discussion will inspire you to become a regular reader of EID—or at least, a semi-regular reader.
+[Rich Stanton] So I would say I am a semi-regular reader of EID. I definitely pay attention
+whenever there's anyone in our branch or maybe a state public health partner that we work with
+that publishes work, especially if it's pertinent to healthcare-associated infections and antibiotic
+resistance, I'll read it.
+
+We actually chose the journal because we thought it would have a good public reach for multiple
+communities, so human healthcare as well as animal healthcare component, obviously. And just
+in general, thought it might be of general interest as well.
+[Allison James] We were very focused on making sure that this article was going to be accessible
+to the many different stakeholders that might be interested in this, including pet owners and
+veterinarians. And so that was one of the driving factors for EID for this particular article.
+[Candice Hoffmann] Thanks for listening to our podcast. You can read the Emerging Infectious
+Diseases journal and subscribe to our email list at cdc.gov/eid.
+[Outro] The conclusions, findings, and opinions expressed by authors contributing to this journal
+do not necessarily reflect the official position of the U.S. Department of Health and Human
+Services, the Public Health Service, the Centers for Disease Control and Prevention, or the
+authors' affiliated institutions.
+[Announcer] For the most accurate health information, visit cdc.gov or call 1-800-CDC-INFO
+
+

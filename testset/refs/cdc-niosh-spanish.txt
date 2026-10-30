@@ -1,0 +1,66 @@
+# Reference transcript: Actualización de la política científica de NIOSH (Spanish)
+# Source: https://tools.cdc.gov/podcasts/media/pdf/357679_B_Hearing_Loss_Update_Spanish.pdf
+# Covers the whole recording (5 min), not just the clip(s); see manifest.json for clip offsets. Text as published, not aligned to audio.
+
+Actualización de la política científica de NIOSH:
+Recomendación sobre pruebas de ajuste individuales
+para los dispositivos de protección auditiva
+Este es un mensaje de los Centros para el Control y la Prevención de Enfermedades.
+A continuación se describe la política de NIOSH para determinar la atenuación proporcionada
+por los dispositivos de protección auditiva para los trabajadores individuales. Esta declaración
+sirve como una actualización del documento de NIOSH Criterios para un estándar
+recomendado: exposición al ruido ocupacional de 1998.
+NIOSH recomienda que los empleadores usen pruebas de ajuste cuantitativas para evaluar la
+atenuación que proporcionan los dispositivos de protección auditiva a los trabajadores. Las
+pruebas de ajuste cuantitativas son la medida física o sicofisíca de la atenuación del ruido o el
+sonido que proporciona un protector auditivo. Las pruebas de ajuste dan lugar a una
+puntuación personal de atenuación (PAR, por sus siglas en inglés) que es objetiva y que refleja
+con precisión el nivel de reducción del sonido que obtiene un trabajador mientras usa un
+protector auditivo específico, o indica que una persona ha alcanzado un nivel de protección
+específico. Los empleadores deben integrar las pruebas de ajuste individuales a los programas
+de prevención de la pérdida auditiva.
+En el documento de NIOSH Criterios para un estándar recomendado: exposición al ruido
+ocupacional de 1998, NIOSH estableció que “…idealmente, se deben hacer pruebas de ajuste
+individuales a los trabajadores para los protectores auditivos”. Sin embargo, en 1998 los
+sistemas de pruebas de ajuste no estaban disponibles comercialmente. Por lo tanto, NIOSH
+recomendó en su lugar reducir la clasificación de reducción del ruido en la etiqueta del
+fabricante para estimar la atenuación del protector auditivo de un trabajador “según su uso”.
+Desde 1998, los avances en investigación y tecnología han hecho posible comprobar
+rápidamente la atenuación que obtiene cada trabajador de sus dispositivos de protección
+auditiva preferidos en el lugar de trabajo. Ahora hay disponibles varios sistemas de pruebas de
+ajuste de protectores auditivos. Hay una norma disponible de la Sociedad de Acústica de
+América y el Instituto Estadounidense de Estándares Nacionales (ASA/ANSI) que especifica los
+criterios de rendimiento para el equipo y un método para calcular una PAR.
+Durante décadas, NIOSH ha desarrollado, investigado y propiciado avances en la tecnología de
+pruebas de ajuste de los protectores auditivos. Las investigaciones de NIOSH demostraron que
+las clasificaciones de los protectores auditivos basadas en pruebas de laboratorio sobrestiman
+la protección de los trabajadores en el campo, que las estrategias de reducción de la
+clasificación de los protectores auditivos no pueden evaluar el “ajuste adecuado”, y que la
+capacitación individualizada es necesaria para que las pruebas de ajuste mejoren la atenuación
+que obtienen los trabajadores. Por lo tanto, NIOSH recomienda las pruebas de ajuste
+cuantitativas individuales de los protectores auditivos en lugar de la estrategia de reducción de
+la clasificación.
+Las pruebas de ajuste de los protectores auditivos proporcionan un valor personal de reducción
+de ruido para cada trabajador que use un determinado protector auditivo. Esta declaración de
+política aclara que NIOSH recomienda las pruebas de ajuste de los protectores auditivos como
+práctica esencial para garantizar que los dispositivos de protección auditiva se ajusten
+adecuadamente a cada trabajador.
+Page 1 of 2
+
+Recomendación sobre pruebas de ajuste individuales para los dispositivos de protección auditiva
+
+Si bien NIOSH recomienda el uso de pruebas de ajuste individuales de los protectores auditivos
+en el campo como una buena práctica para los empleadores, NIOSH no favorece ningún
+método especifico de prueba de ajuste. Los sistemas que calculan una PAR según las normas
+de ASA/ANSI más actualizadas cumplen con esta recomendación de NIOSH. Además,
+cualquier tecnología que mida directamente el nivel de exposición protegido de un trabajador y
+lo documente -por ejemplo el monitoreo del nivel de exposición protegido en tiempo realconcuerda con esta recomendación.
+Para más información sobre la nueva recomendación sobre pruebas de ajuste individuales para
+los dispositivos de protección auditiva visite cdc.gov/niosh.
+Para obtener la información de salud más precisa, visite cdc.gov o llame al 1-800-CDC-INFO.
+
+Page 1 of 2
+
+Recomendación sobre pruebas de ajuste individuales para los dispositivos de protección auditiva
+
+

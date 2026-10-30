@@ -1,0 +1,39 @@
+two years prior to those nine days, we got to figure it out with the most dedicated and talented and excellent team on planet Earth.
+You had a wonderful team on the ground.
+Nine days, yes.
+Teeth clenching nine days for a lot of us on the ground sitting on console being like, are they okay?
+Is everything going to go good this day?
+I think I was personally most nervous on Splashdown Day.
+So that was just really, really proud of you guys and all of the teamwork you exhibited over the course of the mission.
+But then you're so humble in how you recognize the broader team that took you to where you went.
+You have many titles.
+Astronaut, engineer.
+A human that's traveled farthest away from Earth.
+I don't know, they're record breaker, historic mission, astronaut.
+There's so many different titles that you have wife, you have aunt, you have friend, colleague.
+So with all of these titles that you have, I want to talk a little bit about your engineering title.
+So when you're learning a new spacecraft like Orion, what's the first thing that you get curious about from an engineering perspective?
+Not as an astronaut, but particularly as an engineer.
+I actually was curious as an engineer from the time of Artemis I.
+I loved learning about Orion.
+I had a little familiarization session about the displays and how we interacted with the telemetry and the controls way in the Artemis I days.
+So I was interested then.
+The coolest thing about spaceflight is how many different problems you have to solve that feel so new to.
+a earth bound species that's used to problem problem solving on planet earth in 1G with the radiation environment that we have here with the not having to have everything be very weight limited and to take all of those normal
+Problems about how to stay alive and translate them into the microgravity and vacuum of space environment is just so fascinating.
+How do we solve hitting the atmosphere at Mach 39 and making it down to the ground?
+How do we solve not only providing us breathing air, but getting rid of our CO2?
+And how much of that, you know, as an electrical engineer, we have control systems.
+We talk about closed-loop control and just whether systems are passively controlled or actively controlled.
+How do we implement redundancy in flight software?
+Those kinds of things were so fascinating to me.
+One of them, another one that came out during our training was controlling our entry interface point.
+Even though we have things like the spacecraft is venting our CO2, it's venting our other waste, it's changing its trajectory for all these different reasons because of the gravity of the moon isn't perfect.
+And how do we correct for that and still enter the atmosphere at exactly the right point, exactly the right angle, so that our heat shield can work perfectly?
+There's really just not something, there's nothing I wasn't fascinated with.
+I had to actually hold back my questions in all of our classes because I wanted to deep dive everything.
+And luckily, my
+My crewmates were very patient with me, and when I wanted to deep dive, sometimes we had to just zoom out a little bit to the operationally relevant.
+But yeah, it was just the time of my life for an electrical engineer.
+Teamwork, the engineering pieces.
+There's another title that you've given yourself infamously as well, which is.

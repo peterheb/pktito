@@ -1,0 +1,32 @@
+We will hear argument this morning in case 25-498, Anderson versus Intel Corporation Investment Policy Committee.
+Mr.
+Wessler.
+Mr.
+Chief Justice, and may it please the Court.
+ERISA's duty of prudence is inherently flexible.
+As a result, this Court has consistently declined to inject judicially crafted bright line rules into a determination of whether a complaint's allegations plausibly allege imprudence.
+Categorical rules, as this court put it colorfully in Dudenhofer, do not readily divide the plausible sheep from the meritless goats because they are inconsistent with the careful, context-sensitive inquiry that both ERISA and Rule 8 require.
+The Ninth Circuit's meaningful benchmark requirement is just such a rule.
+Under it, a court first asks whether a complaint's performance allegations on their own.
+Can plausibly demonstrate imprudence by identifying a virtually indistinguishable fund that performed better.
+If the complaint fails to identify that specific fund, the performance allegations are discarded.
+And that is true even if the complaint relies on benchmarks selected by the fiduciaries themselves or comparators identified by benchmarking experts.
+In the respondent's view, this rule is consistent with the ordinary pleading framework set forth in Twambly and Iqbal, but under that framework,
+Courts must assess all non-conclusory allegations together in determining if a complaint plausibly states a claim.
+The meaningful benchmark requirement precludes that assessment.
+And the Ninth Circuit's rule isn't even necessary.
+Everyone agrees that without more, a complaint merely alleging that one fund performed better than another won't survive a motion to dismiss.
+The ordinary pleading standards, however, are perfectly capable of weeding out a truly meritless claim like that.
+Ultimately, because the meaningful benchmark rule is both out of step with Twombly and Iqbal and an unnecessary solution in search of a problem, it should be rejected.
+I welcome the Court's questions.
+So are you saying that you can prove imprudence or demonstrate it by comparing dissimilar funds?
+I mean, that is one way.
+That's a complaint.
+So, how would you do that?
+Sure.
+So, it's context-dependent, and there is no one specific fund that a complaint needs to identify to make performance allegations relevant to support a claim of imprudence.
+It can run a very wide spectrum of different ways that the complaint could use performance allegations to contribute to the overall plausibility of a complaint.
+And the way it would do that is, it would identify a relevant way of comparing the performance of one fund with other potential comparators, and it would explain why that performance was relevant to the theory of breach alleged in a complaint.
+But what the Ninth Circuit has done here is it has attempted to predefine the kind of comparison that will count when a court.
+Is asking how the performance allegations contribute to the market.
+I think what the Ninth Circuit is saying is you can't compare apples and orange if you have a fund, an equity fund, that is designed to produce high returns but riskier returns, and you can't compare that to a fund that.

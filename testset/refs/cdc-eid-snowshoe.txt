@@ -1,0 +1,411 @@
+# Reference transcript: EID podcast: Pediatric Meningoencephalitis Cluster Caused by Snowshoe Hare Virus
+# Source: https://tools.cdc.gov/podcasts/media/pdf/364906_EID_SnowshoeHare.pdf
+# Covers the whole recording (32 min), not just the clip(s); see manifest.json for clip offsets. Text as published, not aligned to audio.
+
+Pediatric Meningoencephalitis Cluster Caused by
+Snowshoe Hare Virus, Whistler, British Columbia,
+Canada, 2024
+[Announcer] This program is presented by the Centers for Disease Control and Prevention.
+
+[Matt Kuehnert] Hello, I’m Dr. Matt Kuehnert, Editor in Chief of the journal Emerging
+Infectious Diseases. EID is an open access, high impact, peer reviewed scientific journal
+published by CDC. EID publishes articles on new and re-emerging infectious diseases that occur
+around the world, with the mission of improving the understanding of pathogen emergence,
+control, and prevention. We are pleased to present selected EID articles to you, brought to life in
+new and interesting ways through this podcast series.
+[Candice Hoffmann] Welcome to the Emerging Infectious Diseases podcast. I’m Candice
+Hoffmann. In the summer of 2024, three children in Canada were admitted to the same hospital,
+all with meningoencephalitis. Meningoencephalitis is a dangerous inflammation of the brain and
+its protective membranes. At first, these cases looked like unrelated, unexplained illnesses. But a
+team of experts pieced together the clues and ultimately traced these cases to snowshoe hare
+virus, an uncommon mosquito-borne infection. They published their findings
+in EID. First, we’ll hear from two of the authors, Dr. Jennifer Tam and Dr. Faisal Ali.
+[Jennifer Tam] Hi, I'm Dr. Jennifer Tam. I work at BC Children's Hospital in Vancouver, Canada
+as a pediatric infectious diseases physician and I was involved in the cases of the snowshoe
+hare cluster that we found here.
+[Faisal Ali] My name is Dr. Faisal Ali. I'm a pediatric infectious diseases fellow at the University
+of British Columbia. I primarily work at BC Children's Hospital, and I was involved in this
+cluster of cases at the start of my infectious diseases fellowship training where I was on a
+microbiology rotation. So, I was quite heavily involved in the laboratory medicine or diagnostic
+aspects of the patient's care.
+[Candice Hoffmann] Dr. Tam, Dr. Ali, and their colleagues published this article in EID to
+increase awareness among healthcare and public health professionals of snowshoe hare virus.
+[Faisal Ali] It highlights a cluster of children who had meningoencephalitis that went
+undiagnosed. And eventually we found the cause, which was this emerging virus, the snowshoe
+hare virus that can be transmitted via mosquito vectors. And it is an important consideration for
+undiagnosed cases of meningoencephalitis during the summer months and mosquito season in
+Canada.
+[Candice Hoffmann] Alright, so we'll start with the virus. So, what is snowshoe hare virus and
+why is it called that?
+[Jennifer Tam] So, snowshoe hare virus is an arbovirus. So, it’s a virus that circulates normally
+between mosquitoes and small mammals. But humans can accidentally be infected after a
+mosquito bite. Snowshoe hare virus is part of a larger group of closely related viruses called
+California serogroup viruses, which includes things like Jamestown Canyon virus, La Crosse
+virus, and California encephalitis virus as kind of prime examples that are significant in North
+America. Snowshoe hare virus specifically is found coast to coast in Canada and the Northern
+U.S. states, so it’s quite a wide geographic distribution. And how it got its deceptively cute name
+Pediatric Meningoencephalitis Cluster Caused by Snowshoe Hare Virus, Whistler, British Columbia,
+Canada, 2024
+Page 1 of 9
+April 2026
+
+was that it was first isolated from a snowshoe hare in Montana in the late 1950s. But it does
+circulate in other small mammals as well, such as rabbits, squirrels, chipmunks, and other
+rodents. So, when people get snowshoe hare virus, they will have no idea that they got it
+because it's asymptomatic most of the time. For those who do develop symptoms, it generally
+happens three to seven days after they get bitten, so that’s the incubation period, and it generally
+presents non-specifically like a typical febrile viral illness. So, one might get fever, chills,
+nausea, vomiting, headache, abdominal pain, things like that. But a small subset might develop a
+neuroinvasive disease such as meningitis, encephalitis, or meningoencephalitis. But this is still
+strikingly rare, which is what makes our cluster of patients quite alarming. But overall, it does
+seem that snowshoe hare virus is more likely to cause symptoms in kids rather than adults from
+what we can see in the published literature and what would be in keeping with what we found in
+our area as well.
+[Candice Hoffmann] Arboviruses like snowshoe hare virus are spread by mosquitoes.
+[Faisal Ali] The mosquitoes that transmit this virus or the vectors, they're primarily the Aedes
+and the Culiseta species of mosquitoes. And those species are pretty widespread and abundant
+through basically all of Canada, from the Atlantic to the Pacific, as well as the northern states of
+the United States, so kind of bordering Canada. There’s been a lot of studies looking at
+which particular mosquitoes harbor snowshoe hare virus, and it has actually been isolated in a lot
+of the field-captured mosquitoes of both the Aedes and the Culiseta species.
+[Candice Hoffmann] How does the virus get from mosquitoes to mammals and humans?
+[Faisal Ali] The transmission of snowshoe hare virus through these mosquitoes primarily occurs
+by two different ways. So, the first is where the mosquito that bites an infected animal, be it a
+snowshoe hare or a small rodent, picks up the virus and transmits it to the next animal, and that
+could also be a human through a blood meal.
+[Candice Hoffmann] The virus also persists in mosquitoes through something called
+“transovarial transmission”.
+[Faisal Ali] So what happens is that the mother mosquito passes the snowshoe hare virus to her
+offspring through the eggs. As a result of this transovarial transmission, the virus itself can
+persist in the mosquito populations over the winter months as well, because they don't really
+need that vertebral host, the snowshoe hare or the squirrel, to persist during those kind of colder
+months.
+[Candice Hoffmann] Because the virus can persist in mosquito eggs over winter, risk can return
+quickly each spring.
+Going back to the three cases described in this article, there were three patients with similar
+symptoms, hospitalized around the same time. Ultimately these cases were connected, but
+it wasn’t obvious right away.
+[Jennifer Tam] So case number one is the older of the three pre-adolescents, and she actually
+presented more like a meningitis with headache, photophobia, neck stiffness, vomiting. And so,
+she was treated with a 10-day course of ceftriaxone. Then the second patient, who was maybe
+the flag that signaled that there was a link here, was a toddler who actually had much more
+pronounced neurological symptoms, more compatible with encephalitis. So, she presented with
+seizures and through her hospital stay, she even had some word finding difficulties, some blurry
+vision, and even some visual hallucinations. And then the last patient presented more nonPediatric Meningoencephalitis Cluster Caused by Snowshoe Hare Virus, Whistler, British Columbia,
+Canada, 2024
+Page 2 of 9
+April 2026
+
+specifically with fevers, vomiting, fatigue, and a slow heart rate. But the key in this case that
+clued us in to a neurological process was that his cerebrospinal fluid white blood count was
+elevated. He was also ultimately treated with 10 days of ceftriaxone for culture negative
+meningitis. So, all these patients were admitted for one and a half weeks on average, so quite a
+profound amount of time to complete their treatment. They did all fully recover from their
+symptoms, thankfully though, months later. All three families continue to be really engaged with
+us for further research to better understand this virus.
+[Candice Hoffmann] How did the three cases in this paper come onto your radar, and how did
+you first realize they might be connected?
+[Jennifer Tam] It was a bit serendipitous that we came across this cluster, but we hope that
+raising awareness about this virus will obviously leave things less to chance in the future. But
+how it happened in our case was I was just chatting with the mom of case number two—so
+this was the second patient that chronologically presented to our hospital with these symptoms—
+and the mom just brought up that, interestingly, one of her neighbor’s kids was also in the
+hospital with a similar issue. And our team had actually just finished making a plan for that
+neighbor whom we were treating as a culture-negative meningitis because we didn't find
+anything else on the initial investigations. And for that first patient, when she was just the only
+one, I remember talking to our infectious diseases division group and asking, you know, at what
+point should we start thinking about less common causes like the California serogroup viruses?
+And we didn't totally come to a consensus because we just had that one patient. But then when
+we had these two patients linked together, we immediately alerted our microbiologists who
+helped to arrange further testing. And coincidentally, on this same day, we also received a new
+consult request for the young boy who is our third patient in the case, who we realized was also
+from the same area presenting with abnormal neurological testing. And so that's what really
+caught our attention as an epidemiological signal, if there ever was one.
+[Candice Hoffmann] With three children from the same area with overlapping hospital stays,
+with similar neurological symptoms, this was beginning to look like more than a coincidence.
+[Jennifer Tam] In our case, without the epidemiological link, to be honest, I'm not sure we would
+have gone marching that much farther because unfortunately, many of these rare things
+like snowshoe hare virus don't have actual treatments. And there was nothing obvious that made
+us suspect mosquito bites up front because they were not covered in mosquito bites, these kids or
+anything, but it was summer and all the children spent a lot of time outdoors. And so, we knew
+it was a possibility. And so, when we think about encephalitis cases, California serogroup
+viruses is on our list of what we would think of next if we wanted to go further.
+[Candice Hoffmann] So how did all the specialists in the hospital collaborate to determine the
+cause of the children’s symptoms?
+[Faisal Ali] Their care was actually kind of overlapping between different teams within the
+hospital, so obviously the general pediatrics team, pediatric neurology team, the infectious
+diseases team. And I think it was an interesting interplay between all of those different kind of
+subspecialists and trying to piece together the diagnosis because initially when we didn't really
+have that diagnosis that it's snowshoe hare virus meningoencephalitis, there was a lot of different
+differentials, be it bacterial meningitis, other viral meningoencephalitis or even autoimmune
+encephalitis. So, there was a lot of brainstorming and probably problem solving happening
+Pediatric Meningoencephalitis Cluster Caused by Snowshoe Hare Virus, Whistler, British Columbia,
+Canada, 2024
+Page 3 of 9
+April 2026
+
+behind the scenes with all of those different subspecialists. And it just goes to show how, you
+know, these things can develop before you ultimately find your diagnosis.
+[Candice Hoffmann] Multiple lab levels were involved in the diagnostic testing
+that ultimately identified snowshoe hare virus.
+[Jennifer Tam] We have our local microbiologists at BC Children's Hospital, but then lot of the
+testing is actually done through the British Columbia Centre for Disease Control or BC CDC,
+which is our provincial public health lab. From there, there are some tests that are done actually
+at a national level.
+[Candice Hoffmann] Do tests for snowshoe hare virus go to the national lab in Canada?
+[Jennifer Tam] That has to go to the national lab, exactly. And so, that does add to the turnaround
+time. So as of now, we still send everything to the NML or the National Microbiology Lab.
+[Candice Hoffmann] A public health investigation was launched after the first three cases
+were identified. This investigation uncovered a fourth case of snowshoe hare virus. Another
+author of this article, Dr. Rohit Vijh, explained how this investigation unfolded.
+[Rohit Vijh] My name is Dr. Rohit Vijh. I am a medical health officer at Vancouver Coastal
+Health Public Health, and I serve as the medical director for communicable disease control for
+our Vancouver Coastal Health region, which includes the Sea-to-Sky region of Squamish,
+Whistler and Pemberton. So, when Vancouver Coastal Health was notified of these three
+pediatric cases in late September 2024 that had occurred amongst residents living within the
+Whistler region, we immediately recognized that this was unusual. And in particular, when
+all three children had been hospitalized in August and laboratory testing had identified them with
+this snowshoe hare virus, we sort of really kind of jumped into action to really understand what
+was going on here as this was a virus that we had not seen before within this region present this
+amount of severity and this clustering in time. And so, for the first part of our response, which
+was supporting the affected families and clinical teams, we worked really closely with our
+colleagues at BC Children's Hospital, with our public health colleagues at the public health
+laboratory at the BC Centre for Disease Control and the different infectious disease specialists to
+better understand the person demographics and the risk factors of our different cases. What was
+really challenging for us was that Jamestown Canyon, snowshoe hare, and these California
+serogroup viruses were not reportable in British Columbia to public health at that time, and in
+fact, what was reportable to us was encephalitis and meningitis, but because of that, we did not
+have like a standardized case definition, we didn't have a standardized case report form of like
+questions like we would for other types of communicable diseases such as measles or pertussis.
+[Candice Hoffmann] Reportable diseases are illnesses that, by law, must be reported to public
+health authorities when diagnosed. The list of reportable diseases varies from place to
+place. Because snowshoe hare virus and related viruses weren’t reportable in British Columbia,
+investigators had to create their own plan. They drew on practices from places where these
+infections are reportable, creating a working case definition and a short questionnaire to guide
+what information to collect.
+[Rohit Vijh] And so, where we had to start in our investigation was really looking to other
+jurisdictions within the U.S. and other parts of Canada where it was reportable to really
+understand how do we classify these cases and also what pieces of information we need to
+collect to kind of collate together to kind of inform our public health response in caring for these
+Pediatric Meningoencephalitis Cluster Caused by Snowshoe Hare Virus, Whistler, British Columbia,
+Canada, 2024
+Page 4 of 9
+April 2026
+
+cases and also to identify any additional sources to mitigate them. And so, what that required us
+to do was to kind of put this hodgepodge of different questions into a case report form and give
+that to our environmental health officers who worked with the different families to collect the
+different pieces of information and a lot of that information is what you guys see in figure one in
+the paper of really understanding when their symptoms started, when their exposure period
+would have occurred, when were they hospitalized, to really see like were these cases actually
+happening very close in time? And then also connecting with the families to understand where
+they may have gone, whether they may have traveled outside a province, whether they stayed in
+different parts of BC to really identify, are there commonalities in these cases of where they
+could have been exposed? And what we determined through our investigation was that all these
+individuals had sort of stayed local to the Sea-to-Sky region. They had all been in outdoor
+settings and had numerous mosquito bites and there were some settings that they had had in
+common. And that was very useful because I think it really helped us understand that this was an
+emerging pathogen that was occurring within our region with this level of severity for the first
+time in the documented history in British Columbia. And that those mapping and these exercises
+were really kind of integral to some of the mosquito surveillance that has been set up in the past
+two years within the region.
+The other part or the last part of our response after kind of identifying these exposures was really
+around identifying any other potential infections that may not have been reported to us or may
+not have been tested for this virus because it's not very common in the differential for
+encephalitis and meningitis at the outset. And so, what we did is we kind of issued this targeted
+physicians and nurse practitioner update within the region to report any cases of unexplained
+neurological illness, any cases of encephalitis and meningitis that did not have an identified
+pathogen that had occurred within the season in 2024, so that we could potentially connect with
+them and arrange for additional testing to see if potentially these clinical presentations were
+associated with California serogroup virus. The alert to community physicians is actually
+a regular tool that we use in public health for either novel infectious diseases or re-emerging
+infectious diseases. And they're really meant to sort of help raise awareness to physicians as to
+what's kind of going on locally in their area to help them either, you know, look at patients that
+are coming in and ask the right questions or kind of keep a certain infectious disease a bit higher
+on their differential than they might normally because it is circulating. And so, we do this quite
+regularly for other types of diseases like measles and pertussis, for example. But in this case, we
+really wanted to put out this alert because this was something very novel. It's not something that
+is often tested for. And in these alerts, we sort of talk about like signs and symptoms they should
+look for, the type of testing they should order. And as a result of that, we did have a physician
+reach out to us who had a patient, an adult patient this time, who had had encephalitis with no
+infectious cause and had subsequently been treated for autoimmune encephalitis with
+immunocompromising medication. And we were able to kind of get some bank specimens,
+collect additional specimens, and were able to actually confirm that this individual actually had
+likely California serogroup virus that had explained their encephalitis picture, and as a result had
+sort of been taken off these medications that were suppressing their immune system that were no
+longer needed, and the person subsequently recovered.
+[Candice Hoffmann] In addition to the public health investigation that Dr. Vijh described, there
+was a mosquito surveillance pilot to find out which species are in the region and what viruses
+they might be carrying. Leading that work was Dr. Anya Smith from the BC Centre for Disease
+Control.
+Pediatric Meningoencephalitis Cluster Caused by Snowshoe Hare Virus, Whistler, British Columbia,
+Canada, 2024
+Page 5 of 9
+April 2026
+
+[Anya Smith] Hello, my name is Dr. Anya Smith. I'm a senior scientist with the British Columbia
+Centre for Disease Control in Vancouver, Canada. I'm also a clinical associate professor within
+the School of Population and Public Health at the University of British Columbia, also in
+Vancouver. So, I lead applied research and targeted surveillance involving zoonotic and
+vectorborne diseases, and have a background in epidemiology and public health, and I’ve been at
+the BC Centre for Disease Control for over two and a half years.
+[Candice Hoffmann] Dr. Smith led the Sea-to-Sky surveillance project. She starts with where and
+when it launched.
+[Anya Smith] So, to set the study area for those individuals listening who don't know the Sea-toSky, it's about a 130-kilometer stretch of highway along the southwest coast of British
+Columbia. It's a very beautiful stretch of highway, very scenic, and has multiple municipalities
+along it including Pemberton and Whistler, which many people probably have heard of, and
+Squamish. And so, together with multiple partners last year in the summer of 2025, we launched
+a mosquito surveillance study. And I should just mention that our partners included Vancouver
+Coastal Health, which is the health authority overseeing that region, also the Department of
+Zoology at University of BC, also Líl̓wat First Nation, Squamish First Nation, and also, I should
+mention thanks to funding from University of British Columbia Centre for Disease
+Control. So, all of us together launched this study in response to a cluster of four encephalitis
+cases that occurred in the region in the summer of 2024.
+So last year, we wanted to go in and get a sense of what endemic and invasive mosquito species
+were circulating in the area and also what viruses they may be carrying, if any, and namely
+California serogroup viruses and West Nile virus. So, we also wanted to inform the current risk
+to public health by doing this study as well. So, we set up multiple mosquito traps, I believe 11
+mosquito traps, along the corridor from Pemberton through Whistler and Squamish to trap
+mosquitoes. And then these mosquitoes were taken back to the Department of Zoology at UBC
+and identified to the species level and then sent to the public health lab at the BC CDC for
+pathogen testing.
+[Candice Hoffmann] Next, Dr. Smith described how the researchers chose mosquito collection
+sites and how they collected mosquitoes.
+[Anya Smith] So the way we choose sites, once we have that geographic area, we use satellite
+view on Google Maps to really get a sense of certain features, so things like where the forested
+areas are, you know, where mosquitoes like to hang out. We also look for where stagnant water
+is, so you know, they love to breed in stagnant water. We look for industrial areas because some
+species of mosquitoes really are urban dwelling and prefer those areas. We also look for features
+like parks, schools, trails, recreational areas where people could potentially be exposed. We also
+look for First Nations communities if we are partnering with First Nations and if, of course, we
+have permission to access those communities. So, we look for all of these features first. We also
+contact our municipal and city partners and ask, you know, has the public sort of raised concern
+about an uptick in mosquito activity in certain areas? And so, we use all of this information
+to kind of get a preliminary list of potential sites. Then what we do is we do a recon day, as we
+call it. So, we go and we actually hit the ground, and we take a look at all these sites in person.
+And we look more closely at things like how sheltered from the extreme elements is it? So, you
+know, if it's too windy, they're going to blow around, we're not going to catch them.
+If they're exposed to extreme heat, they'll desiccate. You know, they like the warm temperatures,
+Pediatric Meningoencephalitis Cluster Caused by Snowshoe Hare Virus, Whistler, British Columbia,
+Canada, 2024
+Page 6 of 9
+April 2026
+
+but if it's extreme and very exposed, then that's not good either. We also look for where we could
+hang or set traps where trap disturbance is minimal. So, believe it or not, people do come in and
+vandalize or steal traps. I don't know why, but it happens. And so, you know, we kind of…we
+consider all of these things, and we also of course consider accessibility. We don't want one of
+our students to be going and having to hike half an hour into a site either. You know, we have so
+many hours in the day. So, all of those things play in. And so that's how we kind of choose the
+sites, and then we narrow those down and then we have our final set of sites.
+In terms of how we collect them, we have multiple different types of traps, and those are largely
+due to either this, you know, they lure certain species of mosquitoes or genera of mosquitoes,
+also mosquitoes that are in certain physical states. So, for example, one of the ones that we use is
+called the CDC light trap. And it's a very general trap. It catches multiple different species of
+mosquitoes, and it uses light and carbon dioxide as a lure for those mosquitoes, they're usually
+hung, so hung from a branch about a meter to a meter and a half off the ground, and like I said, a
+wide range of mosquito genera like Aedes, Anopholes, and Culex species, which are which are
+around the area. We also have what we what's called a BG-Pro Sentinel trap. This trap is
+typically set on the ground and it's really targeting species within the Aedes genera. And so
+Aedes, a lot of them are urban adapted and so they do like industrial sites and laying eggs in old
+empty tires with water that's accumulated. They're container breeders essentially. And so, we set
+those closer to the ground where they're flying and hoping to catch more of them. And again,
+they use carbon dioxide as a lure for those mosquitoes. And then thirdly, we also have what are
+called gravid traps. And so those are interesting. They're trying to lure female mosquitoes that
+have had a blood meal and are ready to lay their eggs. And so, what we use as a lure is what we
+call a hay-brewed tea. It's supposed to smell like and mimic stagnant water for them to come and
+lay. And so, those are used to specifically lure these blood-fed females. And so, with those three
+in mind, we set those across the different sites, and we have students that come on a set morning
+of every week to set up the traps. And then 24 hours later, the student comes back around the
+same time to collect the mosquitoes and bring them back to UBC. And so, what we want is to
+allow for that 24-hour period to include the dusk-to-dawn period where a lot of mosquitoes are
+active. And so that's the summary of what we do.
+[Candice Hoffmann] So what’s next? With early findings in hand, the team has expanded the
+work to a nearby, more populated region.
+[Anya Smith] Yeah, so the study…so we have expanded to the North Shore, which is a
+region that's adjacent to the Sea-to-Sky corridor. And so, we are expanding the work that we did
+in the Sea-to-Sky to the North Shore for a couple of reasons, one of which is although we just
+found two positive pools in the Sea-to-Sky, we did find the virus in mosquitoes in that area. And
+we also know that the North Shore is a more populated area, a much more populated
+area. So, you've got larger populations that are living within or near prime mosquito habitat.
+And so, we really want to expand the work out. And so, what that means is we want to have a
+primary data set where we can look back in the future when doing similar work to understand
+what the trends might be in the distribution of invasive and endemic mosquito species and the
+viruses that they're carrying, if any.
+[Candice Hoffmann] So, the aim now is to build a baseline data set, tracking mosquito species
+and any viruses they may carry, so public health officials can spot trends and respond
+sooner. This work relies on strong partnerships across public health, academia, First Nations, and
+municipalities. Dr. Smith names several.
+Pediatric Meningoencephalitis Cluster Caused by Snowshoe Hare Virus, Whistler, British Columbia,
+Canada, 2024
+Page 7 of 9
+April 2026
+
+[Anya Smith] Again, in partnership with Vancouver Coastal Health, Department of Zoology at
+UBC, we're partnering with Squamish Nation, once again, also Tsleil-Waututh Nation, First
+Nation, and also municipal and city partners in North and West Vancouver. Also, it's funded by
+the Lionsgate Hospital Foundation, UBC CDC, and the UBC Faculty of Medicine.
+[Candice Hoffmann] While researchers work to learn more about how snowshoe hare virus
+spreads among animals and mosquitoes, there’s information that healthcare and public
+health professionals can act on now.
+[Rohit Vijh] So for clinicians, I think what's really important is within our region, we've had
+multiple rounds with infectious disease and medical microbiologists to really kind of consider
+California serogroup viruses in patients that are presenting with unexplained meningitis and
+encephalitis during the mosquito season, particularly if they've had exposures within these parts
+of our province. And that really early consultation with public health and our public health lab
+colleagues is really important so that the appropriate testing can be organized and expedited to
+help establish that diagnosis, and that even though these infections are uncommon, they still may
+be an unrecognized cause of neurological illness in some communities. And so, it's always
+important to kind of consider it as part of your differential for these meningitis and encephalitis
+when other more common viral causes have been ruled out.
+[Candice Hoffmann] What advice do you have for families and children to protect themselves
+from snowshoe hare virus and other arboviruses?
+[Rohit Vijh] Families can reduce their risk by using insect repellent approved for children and
+following those label directions, wearing long sleeves and pants when mosquitoes are most
+active, potentially avoiding or being more cognizant during dusk and dawn periods when
+mosquito activity is greater, using things like window screens at night to kind of reduce the
+amount of mosquitoes that might be coming in and avoiding sort of areas with heavy mosquito
+activity. And other things that people can also do is really be cognizant of reducing standing
+water near your home, clear or drain anything that can hold stagnant water, like plant pots, so
+that the mosquito larvae don't have time to breed in those areas. And so, I would say really what
+they can do to protect themselves are all the things that we recommend around kind of
+preventing getting mosquito bites to begin with. I also think it's important to put risk into
+perspective. Most of these infections are thought to be asymptomatic or cause very mild illness
+and that severe, neurological disease is quite uncommon. But you know, families that might be in
+these areas and their child sort of develop more severe neurological symptoms should promptly
+seek medical attention.
+[Faisal Ali] At the end of the day, in terms of advice, for practical advice for families with
+children, is that mosquito bites are mostly an annoyance, but in some cases they can transmit
+these viruses that can sometimes cause severe and serious illness. And so, I think it's important to
+make sure that we try our best to prevent mosquito bites and reduce their areas of breeding. But
+at the end of the day, kids should still be able to enjoy the outdoors in the summer for sure and go
+out and play in their backyards and parks.
+[Candice Hoffmann] Thanks for listening to our podcast. We hope you’ll become a regular
+reader of EID, where you can find articles like this one.
+[Rohit Vijh] I definitely do regularly read EID. I think it's a journal that as a public health
+physician who works in communicable disease control is really a source where I have often
+Pediatric Meningoencephalitis Cluster Caused by Snowshoe Hare Virus, Whistler, British Columbia,
+Canada, 2024
+Page 8 of 9
+April 2026
+
+found different outbreak investigations being reported or different disease topics that are being
+discussed, and it often is a really rich resource for me as part of my own professional learning
+and continuing medical education to really stay up to date with what's current or novel within my
+field to help inform my own practice and clinical decision making.
+[Jennifer Tam] We chose to publish in EID because we know it’s a far reaching, highimpact journal. And we did feel that this cluster was quite intriguing and would be of interest to
+broader audiences than just pediatric infectious diseases, for example.
+[Candice Hoffmann] You can read the full article, “Pediatric Meningoencephalitis Cluster
+Caused by Snowshoe Hare Virus, Whistler, British Columbia, Canada, 2024”.
+[Outro] The conclusions, findings, and opinions expressed by authors contributing to this journal
+do not necessarily reflect the official position of the U.S. Department of Health and Human
+Services, the Public Health Service, the Centers for Disease Control and Prevention, or the
+authors' affiliated institutions.
+[Announcer] For the most accurate health information, visit cdc.gov or call 1-800-CDC-INFO
+
+Pediatric Meningoencephalitis Cluster Caused by Snowshoe Hare Virus, Whistler, British Columbia,
+Canada, 2024
+Page 9 of 9
+April 2026
+
+
