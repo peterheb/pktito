@@ -1,0 +1,362 @@
+# Reference transcript: Lead poisoning prevention podcast: Teaching Data to Talk (EH Nexus, Marion County)
+# Source: https://tools.cdc.gov/podcasts/media/pdf/368406_EHNexus_MarionCounty.pdf
+# Covers the whole recording (32 min), not just the clip(s); see manifest.json for clip offsets. Text as published, not aligned to audio.
+
+[00:00:07.25] - Scott Pauley
+Welcome to the Childhood Lead Poisoning Prevention Podcast, where we plan to explore the public health
+innovations that are happening across the country, in our many different childhood lead poisoning prevention
+programs across the United States. I'm Scott Pauley, and I'll be your host today, talking with our representative
+from Marion County, Kristen Milbrath.
+[00:00:31.18] - Scott Pauley
+Marion County has been working on an initiative known as Lead Advisor, an AI-powered tool that translates
+complex lead inspection reports into plain English. Instead of wading through pages of technical jargon,
+parents and homebuyers in Marion County can now go to the Lead Advisor website, type in an address, and
+get a clear answer: Does this home have lead hazards?
+[00:00:55.05] - Scott Pauley
+Joining us is Kristin from the Marion County Public Health Department located in Indianapolis, Indiana. Kristin,
+welcome to the show.
+[00:01:04.13] - Kristen Milbrath
+
+1
+
+Hi, Scott. Thank you so much for having me and giving me and us the opportunity in Indianapolis, Indiana to
+talk about the work we've been doing here. I love that we finally got the opportunity to discuss some of the
+things that we've been working on. I've personally been in the lead department for about 5 years now, and
+my— in my current role for about 4, and it's great to see how we've grown over the years and what we were
+able to produce within the last couple of years.
+[00:01:43.26] - Scott Pauley
+Yeah, it's incredible. You guys are doing amazing things there. Obviously we're highlighting one of your recent,
+successes. But can you just tell me a little bit more about the background for your county, for your program, for
+your team, and just kind of what do you guys look like there? What are you guys operating out of?
+[00:02:02.20] - Kristen Milbrath
+Yeah, so we are actually the biggest county in Indiana, and then behind us is Lake County, Indiana, up in the
+northwest area near Chicago. So, for us, our department is, there's 20 of us and all of us have different
+program areas. I personally oversee our clinical staff, so I work a lot with our case managers, our lead case
+managers, outreach coordinators to do testing in schools. And we also work with providers where we create,
+we call them report cards. And I won't get into the nitty-gritty on that one, but with it, we have another outreach
+coordinator that works with them to, to follow, you know, how many children are going in to see this provider
+and how many of them are being screened for lead poisoning.
+[00:03:05.22] - Kristen Milbrath
+So, we like to look at those numbers and see where we have room for improvement, where we can increase
+the numbers. And my team is about 10 people, including myself. So, we do a lot in, in the clinical side, but we
+also have our environmental side that goes out and does the lead inspections and completes those. And as we
+were talking amongst the different sides of everything, you know, we realized there's just something missing,
+so that's kind of where we came up with the Lead Advisor.
+[00:03:46.20] - Scott Pauley
+Well, let's talk more about that. So, um, what was the problem that you guys were trying to solve and what
+really led you to decide that this was the best way to go about that?
+[00:03:56.05] - Kristen Milbrath
+Yeah, the thing that came up first was our in-house database that we use to hold inspection reports. It's called
+ACCELA. And for us, it provides us the opportunity to be able to keep better documentation on those things,
+on, you know, inspections, and track them along with other areas within the health department, such as
+housing, indoor air quality, hazmat, things of those nature. And we realized while we have the ability to get in
+there and put those reports in, there's also a public-facing side of that that is not accessible. That even as
+2
+
+somebody that works at the health department, I have no idea how to get on that website on the public-facing
+side to find already publicly available information about lead inspections.
+[00:04:59.09] - Kristen Milbrath
+So that's where we saw the opportunity and where we saw the most need to do something so individuals can
+have the education and the basis to make an informed decision on where to live within the county. And, you
+know, as you continue working in the same area, you see there might be several homes that have lead
+exposures in them that just aren't fully being abated or things that just aren't really being taken seriously. So,
+we were able to take that idea and run with it.
+[00:05:47.04] - Scott Pauley
+I love that. So, you know, obviously I think the biggest takeaway here is that you're looking at trying to make
+this easier for just your average parent to be able to go in and find that information. But can you tell me, what
+does that look like functionally? Like, what does that when they come to look at the website, what does that
+show them?
+[00:06:06.17] - Kristen Milbrath
+When somebody gets on our website to look at the Lead Advisor, it's actually housed on our Mission Unleaded
+website that has other very good information on it as well, where we have schools that can sign up for school
+lead testing. And there's different areas that you can look at depending on why you're visiting the site. Are you
+visiting it from a school perspective, a parent perspective? And I mean, I could go on with that, but we decided
+to put it on that website where when you get on, there's a pop-up that comes up and you can start looking at
+the Lead Advisor.
+[00:06:45.24] - Kristen Milbrath
+And with that, you can type in an address, you can type in your address, an address, a random address, and it
+should pull up a report for that home if there has been one done, I believe, within the last 10 years. If there was
+an inspection that wasn't completed on the home within that 10-year timeframe, or hasn't been completed at
+all, it'll, it'll tell you. There will be a little pop-up that comes up that says, oh, there's no report found. And, you
+know, if you have questions, feel free to reach out to us at the health department.
+[00:07:23.23] - Kristen Milbrath
+And, you know, with that, they're able to look at the reports and I'm a visual person, so I love the fact that there
+are some visuals on there. There's some graphs that can show you, okay, this is where your dust sample is.
+And this is the threshold and give you that idea of where you're sitting in regards to the, the current levels. And
+it also provides you the opportunity when you're looking through those reports to ask questions about them.
+
+3
+
+[00:07:57.10] - Kristen Milbrath
+There is a chat function on there where you can ask if, if you don't know what a certain term is, you, you know,
+you see EBLL* on there or, you know, any type of acronym that we may use that you may not know. You can
+ask it and it'll tell you what it is.
+* Editor’s note: “EBLL” stands for “Elevated Blood Lead Level,” a term formerly used by CDC. CDC no longer uses this terminology.
+Instead, CDC now uses the “Blood Lead Reference Value” (BLRV) to identify children with blood lead levels higher than most
+children’s. There is no safe level of lead in blood. For current guidance, visit cdc.gov and search “blood lead reference value”
+
+[00:08:19.26] - Scott Pauley
+Right, and that's got to be really helpful, especially for you, for maybe for preventing your team from having to
+field some of those questions that would normally come in and eat up some more of your time as well.
+[00:08:30.03] - Kristen Milbrath
+Yeah.
+[00:08:31.14] - Scott Pauley
+Yeah. All right, well, can you tell me, so obviously I think, you know, most of us are not very tech savvy, so I'm
+pretty sure you did not build this yourself. So can you tell us a little bit more about—
+[00:08:44.08] - Kristen Milbrath
+You would be correct.
+[00:08:45.18] - Scott Pauley
+Exactly. I wouldn't either. So, can you tell us a little bit more about how that partnership with the contractor that
+you worked with to build the LeadBot as well, actually tell us how that kind of developed, where you kind of had
+that relationship built from and how that worked?
+[00:09:05.08] - Kristen Milbrath
+Yeah. So, when I started at the health department about 5 years ago, that was a relationship that had already
+been established. And, you know, through the process of working with them and talking with other staff
+members here, I was able to learn a little bit more about how that relationship began. And it was— I actually, I
+don't know how long ago the relationship started, but it was— we had their help with something on a very small
+scale. And as the years have gone on, we've actually asked more of them. And while we continue to grow,
+they continue to grow and give us ideas for different projects.
+[00:09:51.11] - Kristen Milbrath
+4
+
+And it's, it's been nice to be able to have that rapport with them and to be able to grow that relationship
+because they're able to take something they've already created for us and expand it. So, they already have an
+idea of what it is we're wanting, and sometimes they know what we want before we know what we want. And
+they're actually in the process of helping redo all of the health department's websites. So, it's been nice to see
+them grow as a company as well.
+[00:10:24.27] - Scott Pauley
+Yeah, and that's always great when we're working with our local, you know, smaller business partners as well
+in our community. I know that's always a helpful thing for us when we're trying to pair that partnership. So,
+yeah, I think, you know, on top of that, the next question usually is going to be anytime we're in public health is,
+how did you pay for this?
+[00:10:45.05] - Kristen Milbrath
+So we were actually very fortunate that we had recently gotten some funds, I believe, through a grant, Health
+First Indiana, possibly, and we were able to use those funds to pay for the updates to the site and creating the
+Lead Advisor and all of that, which I will say in regards to the payment, it was something that we knew we were
+wanting to do this for a little while. So, we were able to look at budgets and look at things and come up with a
+plan to be able to make it happen. It wasn't something that overnight we were like, let's do this. And then we
+looked at the budget, and we just had, you know, $50,000 to $80,000 just sitting there ready to go to create it.
+It was something that we, we put the thought into it and made sure we were able to have that available for us.
+[00:11:46.20] - Scott Pauley
+Yeah, I feel like that's a pretty common experience in public health is, is to have an idea and then figure out
+how to pay for it after, right? Have to have that resilience.
+[00:11:57.19] - Kristen Milbrath
+Yeah.
+[00:11:57.29] - Scott Pauley
+Yeah, so I think we kind of talked about this previously in the conversation, but there was a big idea moment
+usually when you have something like this. And what sparked that? Like, where was the original conversations
+about this and where did that happen and where did that come out of?
+[00:12:17.17] - Kristen Milbrath
+Yeah, so with that, there was actually a leadership group that we were a part of, and I always call it NLAPH
+because I can never remember the full title of it.
+
+5
+
+[00:12:32.26] - Scott Pauley
+The National Leadership Academy for Public Health, for the public's health.
+[00:12:36.27] - Kristen Milbrath
+Yes, yes. Thank you. So that is, that was through the CDC. And as a part of their Lead-Free City initiative, we
+got together a group of individuals from the city. Some of them were from Indiana University Indianapolis. And
+some of them from the health department. And through that leadership program and talking with other cities
+that were also looking at lead-free in the future, we were able to come up with this is what we wanted to do.
+And that was through a lot of conversations.
+[00:13:17.28] - Kristen Milbrath
+There were a lot of things that you know we had tried that didn't quite work out. And, you know, I think through
+those no’s and, you know, the lack of feasibility or something not really being realistic, we were able to get to
+the Lead Advisor. So that was like thinking back on it now is a tiresome process, but worth it in the end.
+[00:13:45.05] - Scott Pauley
+Yeah, I'm sure that's— I feel like maybe that's also another common experience in public health, a tiresome
+process that is usually worth it in the end.
+[00:13:54.10] - Kristen Milbrath
+Yeah.
+[00:13:55.14] - Scott Pauley
+Yeah.
+[00:13:57.12] - Scott Pauley
+So why don't you talk to us a little bit more about the technical side of this? What did you guys have to do in
+order for this to be real and to be plausible? And what did you have to deliver to your partner for them to be
+able to make this product?
+[00:14:16.20] - Kristen Milbrath
+Yeah. I think the biggest thing I can think of is advocating, advocating for ourselves to be able to make this
+happen. I mean, you know, this day and age, you hear AI, a lot of people get scared, which I mean, that's fair.
+There are some things out there that you're like, I don't know how this works. So, you get a little frightened by
+it. But with that, we were able to talk with the individuals and figure out what their fear or hesitancy was with it.
+So, a lot of it had to do with public health information, personal health information becoming public. We're
+6
+
+fortunate in Marion County that we, we don't only go to homes where a child may have a lead level above the
+action level. We go to all sorts of locations to do lead inspections. So that piece of it was something that we
+didn't have to worry about, where I know some health departments, they only go to homes where there has
+been a confirmed child in the house with a lead level above their action level. So that was something we didn't
+really have to worry about. And then once we were able to explain to some of the tech people at the health
+department that this stuff's already publicly available, it's just not accessible, they— once they finally got that,
+they were like, okay, okay, I see what you're saying.
+[00:15:57.04] - Kristen Milbrath
+Let’s figure out how we can do this. And there were a lot of conversations between us at the health department
+and our partners at Plow Digital to figure out how we could make this happen and do it in a secure way so
+there was no personal health information getting out there that shouldn't be out there.
+[00:16:21.29] - Scott Pauley
+Yeah, no, it sounds amazing. So, you, you do have some safety, um, I, I don't know what you call them, like
+stops, um, in order to prevent anybody from getting into that. Why don't you talk about some of that side of it?
+[00:16:37.02] - Kristen Milbrath
+Um, from my very basic terminology, uh, and understanding of it is we have our servers at the health
+department that pull very specific data points and put those into another server, and from that server our Lead
+Advisor pulls those data. So, there's, there's kind of like a, a middleman, if you will, to make it a little easier to
+make sure things aren't being transmitted to the Lead Advisor that shouldn't be transmitted. So, there's, there's
+several safety checks in there and I'm sure somebody across the street could explain that way better than I
+could, but that's my understanding of it.
+[00:17:31.22] - Scott Pauley
+I mean, as long as you got IT and legal sign off on it, I think we're probably good, right?
+[00:17:36.08] - Kristen Milbrath
+Yeah. Yeah. Yeah.
+[00:17:38.11] - Scott Pauley
+Yup, that's usually what we're looking for.
+[00:17:40.26] - Scott Pauley
+Okay.
+7
+
+[00:17:41.15] - Scott Pauley
+And so can you just tell me kind of what's the impact that you've seen so far? I mean, have you really gotten
+anecdotally any feedback that has really made you feel like, hey, this is something that's going to keep building
+and we're really excited about where this is going?
+[00:18:04.28] - Kristen Milbrath
+I mean, the feedback that really comes to mind is— and I guess it's not even feedback, it's more, we were able
+to go live with this tool in 2024, and last year in 2025, we already made updates to it to include more
+information because it was something that continued to grow for us.
+[00:18:32.10] - Kristen Milbrath
+While there is definitely more we're, we're going to be doing coming up regarding the marketing side of things,
+we actually recently created a video for doctors' offices or dentists' offices or any type of office you could
+probably think of that would get the word out about this specific website, especially because it's one of those
+places that you can ask it questions and it can go in depth as you want it, or as surface level as you want it.
+[00:19:11.07] - Kristen Milbrath
+And I think for individuals that are a little bit more versed in the lead world, digging deeper into some of the
+reports that they can pull is helpful. But if you're a parent that just found out your child might have, you know,
+lead exposure or lead poisoning, you can get on there and ask just basic questions to possibly make yourself
+feel a little bit better about the situation and know that there are resources out there for you.
+[00:19:48.03] - Scott Pauley
+Yeah, okay. And so then, when we look at this, usually in a project like this, we kind of have some speed
+bumps or some things that maybe, that didn't go perfectly. What were some of those things that maybe
+happened during the process that you feel like you know, it would be great to share because if somebody else
+is trying to do this as well in their program, it's always great to learn from somebody else's hard bumps and
+their hardships.
+[00:20:13.28] - Kristen Milbrath
+Yeah. The iterate— we went through many iterations of this. We had a lot of testing completed where we had
+individuals that knew about lead look at the website before it went live. We had individuals that were
+community members look at it before it went live to see if it was something that made sense from a community
+standpoint, because at the end of the day, that was, that was the point. It's for the community to be able to look
+at that information and use it for their benefit.
+[00:20:55.09] - Kristen Milbrath
+8
+
+So, if we're creating something that's not doable or reasonable for them, then what was— why are we doing it?
+So, we, we went through a lot of testing and learning what we, we could and could not do on the site and
+making sure that when people were asking the chat questions it was coming back with correct answers, not
+just crazy out-of-the-box responses that didn't make sense at all. So, there was a lot of that type of testing as
+well. And I, would say going into it, as you're working through dealing with clients and just a lot of the questions
+that they would ask keeping like a mental note, or, you know, having some type of document going where you
+can keep track of commonly asked questions or things that you would want to make sure you can put in that
+tool, because our AI tool is a little different than some of the other ones in that It's not pulling from the entire
+internet, it's pulling from what we've given it.
+[00:22:23.00] - Kristen Milbrath
+So, we've gone through and given it different resources, such as information from the CDC or the EPA or HUD,
+places that are well established and we know have reliable, accurate information. So, I don't know what a lead
+equivalent would be to for Wikipedia, but it's not just coming from, from anywhere. We've taught it the
+information and it’s limited.
+[00:22:56.29] - Scott Pauley
+Yeah, and so another issue that happens a lot with AI that I think we talk about a lot, especially in scientific
+community or public health community, is hallucinations. The AI is so eager to please you that a lot of times it
+just wants to give you an answer. Whether it's right or not, it wants to give you an answer. So, I think you guys
+have figured out a, a pretty elegant, extremely simple solution for that. Can you explain that a little bit more?
+[00:23:22.10] - Kristen Milbrath
+Yeah, if you ask a question and it doesn't know the answer to it, it tells you to reach out to us. It gives you our
+contact information and it tells you it doesn't know instead of trying to come up with an answer that is not
+factual. So that, that's how we went about that one.
+[00:23:45.24] - Scott Pauley
+Yeah, I love that. Okay, so timeline for this one. You just tell me, approximately how long did this entire
+process take, and, and if you can break down any of the steps or like phases of it, that would be awesome too.
+[00:24:03.12] - Kristen Milbrath
+Yeah, I would say it took approximately a year. And a lot of it included— not a lot of it, but yeah, a lot of it was
+just back and forth trying to figure out how we could get the information from A to B, or what information could
+go from A to B. And because you have a lot of, you know, people in the kitchen trying to make this happen,
+schedules kind of got in the way sometimes. But once we were able to get the right person with the right
+person to get the answers that everybody needed, it went much more smoothly. And So, yeah, about a year,
+and I'd say about half of that was more focused just on the data.
+9
+
+[00:25:06.23] - Scott Pauley
+And so now, I mean, a year into using this, have you noticed a shift in the workload for your staff from
+answering questions at all?
+[00:25:15.20] - Kristen Milbrath
+Yes and no. There have been changes in that. It is something that if we have a client calling for a lead
+inspection, they can more readily and make it a lot quicker to give them the information that they want and get
+it into their hands because the website has the ability when you pull up that report to print it. So, you can have
+it within minutes as opposed to days through snail mail or if you come into the office to get it, which can be
+helpful. And again, with some of those acronyms that we use, It's nice to be able to use the chat function for
+them to be able to just ask it.
+[00:26:03.19] - Kristen Milbrath
+Of course, at the end of the day, we're still available for any questions if somebody has questions about
+something, but some of those little questions that can easily be answered through the website have cut back
+on some of the calls and things.
+[00:26:20.22] - Scott Pauley
+Yeah, I'm sure. Okay, and so I think one of the last things I want to talk about is you kind of talked about, you
+know, sometimes you got to get people to buy in, right? And, you know, you're working with a couple different
+sides of your department, and so how did you address, like, the people that were skeptical about whether or
+not the tool could be done, and how useful it would be? Like, what were some of the ways that you kind of
+addressed those concerns?
+[00:26:50.18] - Kristen Milbrath
+Yeah, the first thing we did was try to talk to them and better understand what the concern was and get as
+much information as we could about that to know what our next step would be in regards to talking to them and
+understanding what we needed to do to be able to have them have a better understanding of the tool.
+[00:27:17.08] - Kristen Milbrath
+So I can think of one meeting that we had with some managers from our tech team at the health department,
+and, you know, they didn't realize that these reports were already publicly available, and we were talking to
+them about how they are, they're just not accessible. And one of the managers just stops and he goes, "Hold
+on, so you're telling me I could get online right now, and I can pull up a report about Scott's house right now,
+and it's already there?" And we're like, "Yeah, you just— it's hard to get to." So, it's not that we're trying to pull
+reports that aren't out there already. They're there, they're just really, really hard to find.
+10
+
+[00:28:08.07] - Kristen Milbrath
+And once I think they understood that they were already publicly available, they were— it was much easier to
+move to continue the process from there. And that was, that was helpful.
+[00:28:26.29] - Scott Pauley
+Yeah. Yeah, that's awesome though. I mean, I think perseverance is always the key for things, especially in
+public health, is continuing to reassure and sticking forward. And, you know, I think you've kind of talked about
+this throughout the interview is, you know, even when you heard no, you kind of figured out like, hey, let's keep
+pushing through and finding a way to yes. And, you know, that's how you got great things done out there in
+Marion County.
+[00:28:51.23] - Scott Pauley
+We really appreciate you coming on. Is there anything else that you want to share with any of the other CLIPs
+that might be watching this and trying to get some inspiration or innovation from you?
+[00:29:03.27] - Kristen Milbrath
+Hmm. I think my takeaway from the program and just this process was learning what other people are doing
+around you too. So yes, we're doing this in Marion County, but I've talked to health departments all over the
+country, and I can actually remember in our one group, there was a group from Puerto Rico, and they were
+talking about just their project was creating a surveillance system for, you know, lead testing. And sometimes
+you can just get so caught up in all the things you're doing that you forget all the great things you are doing,
+and it's kind of refreshing to see that they're able to now have that surveillance system in place and that they
+can continue to grow. And it doesn't just stop because you feel like you're plateauing. And just kind of looking
+at reframing things. Just because it doesn't work one way doesn't mean it won't work another.
+[00:30:27.16] - Scott Pauley
+Absolutely, absolutely. That's refreshing. All right, and so one last time for, for everyone who's listening, the
+website is missionunleaded.org, right?
+[00:30:39.27] - Kristen Milbrath
+Correct.
+[00:30:40.13] - Scott Pauley
+Missionunleaded.org. Okay, thank you so much for sharing your journey, and thank you so much for coming on
+and sharing this with everyone I know. Hopefully everybody will find it as helpful as I found it and as inspiring in
+11
+
+the work that you guys are doing. It's great work out there in Indianapolis. And, thank you for tuning into the
+very first episode of the Childhood Lead Poisoning Prevention Program podcast.
+[00:31:05.03] - Kristen Milbrath
+Thank you for having me.
+[00:31:09.22] - AI Announcer
+During this episode, you may have heard the term EBLL. Or elevated blood lead level. We want to note that
+this is an older term that CDC no longer uses. Today, CDC relies on what's called the blood lead reference
+value to identify children with more lead in their blood than most. It's also important to remember that there is
+no known safe level of lead in a child's blood. For the most current information and guidance, please visit
+CDC's website at CDC.gov.
+
+12
+
+

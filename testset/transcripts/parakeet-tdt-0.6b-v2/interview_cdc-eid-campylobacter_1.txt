@@ -1,0 +1,31 @@
+So one of our first steps in the epidemiologic portion of the investigation was to create a broad hypothesis generating questionnaire.
+So for that, we wanted to know what foods people were eating, what water sources people drank from, whether people treated their water at home, if people had attended any large community gatherings, or if they had had recent animal contact.
+And so, to distribute those questionnaires, we used a lot of different methods.
+We used social media, we used the local health department's website, email, and door-to-door canvassing.
+Then, we needed to analyze the results of our questionnaire, and we calculated odds ratios for the different possible exposures.
+So, we had 138 questionnaires come back to us, and from those, we identified 64 cases of campobacteriosis.
+And even that is probably a bit of the tip of the iceberg because obviously we weren't able to reach everybody in the town, and some people might have had more mild illnesses that they didn't recognize or report.
+Even as it was, 64 people, that's a huge percentage of a town of only about 330.
+And we found from that that municipal water exposure was strongly associated with illness.
+No other exposures had statistically significant associations.
+Drinking water is not a common source of outbreaks like this, as Dr.
+Jansen notes.
+Most campobacteriosis outbreaks are eventually linked to food, usually dairy and poultry.
+So, water was the surprising cause.
+Then, our investigation used both epidemiologic and environmental methods.
+So, as part of the environmental investigation, the town's water system was evaluated and water testing was done.
+And that testing was positive for coliforms, which suggested possible water contamination.
+The town issued a boil water advisory, and then there was a request for specialized campy bacteria testing.
+Now, that's not normally available in Nebraska, so we had to reach out to CDC for that testing.
+So, CDC was able to guide our colleagues at the Nebraska Department of Environment and Energy through the collection of these samples.
+So, six large-volume dead-end ultra-filtration water samples, and those were collected from the two active town wells and some other important sites in the town's water distribution system.
+And then CDC was able to perform the Campbell bacter specific DNA testing and culture on those samples, as well as the microbial source tracking.
+This microbial source tracking was a unique and important part of this investigation.
+So, microbial source tracking is a PCR technique that can identify bacteria molecular markers that are unique to humans, ruminants like cows and deer, and bird feces.
+And we were interested in those because humans, ruminants, and birds, those are known environmental fecal shutters of Campylbacter.
+So, there were six samples, and one was positive by PCR for presence of Campylbacter DNA.
+And then the microbial source tracking detected avian-specific fecal rRNA genomic material.
+So, those findings together suggested that the water contamination likely came from bird feces.
+And microbial source tracking proved to be tremendously helpful because it allowed us to link the contamination specifically to bird feces.
+And that led us right to the source and enabled us to take that action to stop the contamination.
+Knowing that bird feces was the likely source of contamination, the investigators then looked into how bird feces could have entered the water system.

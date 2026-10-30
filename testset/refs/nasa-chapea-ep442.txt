@@ -1,0 +1,389 @@
+# Reference transcript: Houston We Have a Podcast, Ep 442: CHAPEA 2 Audio Log 4
+# Source: https://www.nasa.gov/podcasts/houston-we-have-a-podcast/chapea-2-audio-log-4/
+# Covers the whole recording (37 min), not just the clip(s); see manifest.json for clip offsets. Text as published, not aligned to audio.
+
+Kenna Pell
+
+Houston We Have a Podcast. Welcome to the official podcast of the NASA Johnson Space Center, episode 442: CHAPEA 2: Audio Log 4. I’m Kenna Pell, and I’ll be your host today. On this podcast, we bring in the experts, scientists, engineers, and astronauts, all to let you know what’s going on in the world of human spaceflight and more.
+
+We’re back with our final audio log from the CHAPEA crew. CHAPEA, or Crew Health and Performance Exploration Analog, is a year-long analog mission in a habitat right here on Earth that’s simulating very closely what it would be like to live on Mars. We’re lucky enough to have check-ins with the crew: Commander Ross Elder, Flight Engineer James Spicer, Medical Officer Ellen Ellis, and Science Officer Matthew Montgomery.
+
+Just to recap, this is the second analog mission for CHAPEA. This isn’t so much a technology demonstration or a dress rehearsal for a human Mars mission. The primary purpose of the study is human research, a deep study into the understanding of what life would be like if you had to be there for a full year. The crew entered the 3D printed habitat for their 378 day red planet mission last year at NASA’s Johnson Space Center in Houston on October 19, 2025. They will exit at the end of the month on October 31, 2026.
+
+Now, as much as we’d love to have live interviews with them, they are simulating what it would be like to be on Mars. So, video interviews, phone conversations, or really any form of communicating with Earth while on the red planet will be significantly delayed. Any information sent at the speed of light could take somewhere on the order of three to twenty-three minutes one way, depending on relative distance between Earth and Mars as they orbit the Sun. This makes a two-way conversation very, very difficult. So, to meet the needs of this analog, the crew is recording an audio log based on the questions that we have drafted for them.
+
+This audio log was recorded on day 321 for the crew, with only about two months remaining for their time in the habitat. We asked them to reflect on their time so far, and also what they’re looking forward to once they egress.
+
+On this episode, we’ll also be bringing on CHAPEA 2’s principal investigator, Grace Douglas, to learn more about her perspective as this second mission comes to a close.
+
+Let’s visit Mars Dune Alpha one last time.
+
+Ross Elder
+
+Hello again, Houston We Have a Podcast. The CHAPEA 2 Crew of Four, tasked with living and working for over a year in a 3d printed habitat, simulating a stay on the red planet, has rallied together to provide another update on the mission.
+
+At the time of this recording, we have survived 321 out of 378 days in mission, leaving just under two months to go. Listeners haven’t heard from us in quite some time, but nonetheless, the crew has been rather busy.
+
+Matthew Montgomery
+
+Yeah, just as a reminder, last time we checked in, it was right after we came out of the solar conjunction, so that was a big event for us. But since then, we’ve kind of been in the bulk of our mission, doing a lot of different tasks and just building up the data set. So we’ve participated in a lot of Mars walks, or officially called EVAs. That’s Extravehicular Activities. During those, we’ve been doing equipment builds, doing a lot of maintenance activities. We’ve also been doing science and experiment work, things like rock and core analysis, weather experiments, material analysis, some seed germination. We’ve been doing those both during the EVAs and inside the hab. And then as always, exercise. We have a mix: resistance workouts, cardio workouts, things that would all be countermeasures for bone or muscle loss. So just really staying busy through this kind of later portion of the mission.
+
+We’ve kind of been talking about throughout this journey and experience what things would surprise people if they they really had a good understanding of our lived experience and one that keeps coming up is just the amount of food that we have to consume like our caloric goals, yeah, are really high! It doesn’t seem like it but yeah we have to eat quite a bit, and that’s really due to the physical demands of the mission. That’s kind of both the exercise side and the EVA side. So we’re expending a lot of energy on all of these outputs, but the inputs of that are very important. So I feel like we’re consuming basically any time we’re not doing an activity, so even though we have three meal blocks, we’re all trying to get calories in in between. So we make jokes about hey, there’s a second breakfast or elevenses. We have to have pre dinner or post dinner in addition to those other meals. But yeah, it’s really you have to have a concerted effort to get the amount of calories in, and you know that’s part of the job to be able to perform. You gotta you gotta have the fuel inputs.
+
+James Spicer
+
+And of course, just like everything else, we track our entire input. So every sip of water, every shake of the salt shaker goes to NASA, so they can see how what goes in affects our performance.
+
+Matthew Montgomery
+
+The good old spreadsheets.
+
+Ross Elder
+
+It’s not surprising that astronauts typically lose weight. Yeah, I mean when our day is so scheduled out, it’s very difficult to to find time to eat. So there’s a lot of things that are pretty physically demanding, and to be able to set that aside, eat some calories that you may or may not be wanting to eat. It’s difficult to try to stay on top of, and it’s pretty easy to see that over time you’d probably lose some weight.
+
+Matthew Montgomery
+
+What else? What are some of the other ones that might surprise some people?
+
+Ross Elder
+
+I’ve likely mentioned this before, but it’s eerily quiet here in the habitat. There’s like a fairly high baseline noise floor, but it’s mostly white noise from fans and equipment running. And apart from the occasional message alert or our crew conversations, there’s just not much background noise. And for me, I actually miss the sound of weather, busy streets, and just like commotion in general. So much that I tend to listen to music and movies and recordings, and the crew sees me all the time with my earbud in, just so I have some kind of noise to to fill the silence.
+
+Matthew Montgomery
+
+Yeah, I think going back to the city after the mission is going to be maybe like a little jarring, just all that ambient noise that we’re not used to. That’s the one I’ve been thinking about. But I agree. There’s there’s that hum. But aside from the hum, yeah, it’s it’s quite quiet.
+
+James Spicer
+
+I think some people on Earth might be surprised by the sheer range of tools and equipment that we have to use on on basically a daily basis. And there’s some stuff you’d expect, like the exercise equipment and the EVA equipment. But almost on a daily basis, we have to use various different types of wrenches, drills. We had to get our drain snake the other day to clear some plumbing issues. Let’s see. We had to use a metal detector the other day. I had to break out a needle and thread to sew up a large hole in my flight suit. So as NASA is learning what future, what future Mars crews are going to have to deal with, being able to be autonomous and being able to fix problems with a wide range of kits will be very important.
+
+Ellen Ellis
+
+I think that extends into the medical domain as well. Like you were talking about, James, all the tools that we use in the hab. Prior to ingress, we were given a short course in phlebotomy, and routinely we perform a self blood draw. So we do the blood draw on ourselves, and we, there’s a supporting crew member assigned to assist if necessary. We’ve also gotten practice with an ultrasound probe. We’re testing out other medical devices to assist future crews to perform more invasive procedures.
+
+As we’ve discussed previously, we don’t have real-time communication, so we have to be able to do our own self-assessments and be able to articulate that back to ground support. It’s so important that we’re using precise language, and it’s important on both sides as well, making sure that we’re asking the right questions and providing the right information moving forward.
+
+Matthew Montgomery
+
+The self blood draws I think are always an interesting one. When I’ve told anyone about that, the reaction I get is always surprise. We’re kind of saying, like, even some of the medical people we know…
+
+Ross Elder
+
+Yeah. Nurses and doctors and everybody that we know are surprised that we’re sticking ourselves. They’re like, we don’t even do that.
+
+Matthew Montgomery
+
+That one’s pretty unique.
+
+Kind of sticking on the lines of things that might surprise people, thinking about ourselves and like our expectations coming into the mission versus you know kind of where we’re at now. One that’s come up for me is just the amount of builds that we’ve done and the amount of EVAs that we’ve been on. I knew coming into the mission that builds were going to be important. That was actually a piece of what interests me in this. Like thinking about showing up to a location that nobody’s been to before and nothing being there. I find that really exciting. But the lived reality of that is like pretty much every EVA we go on. There’s at least some build aspect to it. We might do other stuff like maintenance and science, but there’s that kind of common thread. You know, you’ve got to build infrastructure, you got to prepare. So I think that’s been a little bit of just coming coming to terms with what that lived reality is like, along with the frequency of EVAs.
+
+So we’ve kind of talked about this one on some of the other podcasts and stuff. But our EVA frequency is really high. So yeah, just preparing for that in the future makes a big big piece and living through that.
+
+Ross Elder
+
+Yeah, I like to call it extreme camping. And so like for me, it’s like imagine plopping yourself down in a very remote location with nothing but the items on your back, and as Matt alluded to, Mars is exceptionally remote, and none of the foundation and infrastructure that people are used to exists. So it requires the crew and hopefully other means of staging things prior to our arrival to build it. As with camping, you must set up shelter and either inventory or find sources of resources like food or water, and that those things are critical to keep you alive. Once you establish those things, you can branch out from there to explore, knowing that you have a safe location to withdraw to if conditions get bad.
+
+And prior to the first actual crew on Mars, this concept will be practiced on the Moon. So the Moon, while it’s much closer, is also in extreme living condition. If anybody thought otherwise, and NASA and future crewed missions to the Moon in the near future will experience all those same needs and requirements while building out the new Moon base.
+
+Ellen Ellis
+
+Yeah, I think it’ll be an excellent opportunity to get some lessons learned before a future mission to Mars. One thing I think I hadn’t given too much thought to is how we’d be spending our holidays prior to ingress. We’re recording this podcast over Labor Day weekend. Back home in Rhode Island, my extended family, the Hellenes, will be getting together for a clam bake, my parents will be there. A lot of great people, all in one place. It’s one of my favorite things to do in the summer. But that’s probably fairly realistic for a surface mission. If there’s work that requires attention, it’s got to be done regardless of the calendar date. It’s just part of the job.
+
+James Spicer
+
+One thing I wasn’t expecting to have to do so much is write up all the reports and logs, and so there’s a lot of typing associated with being a Martian astronaut, where every build we do, every EVA, there’s logs and questions we have for mission control, or they have questions for us that we have to answer. So it turns out that much typing is going to be a key skill for Martian astronauts in the future.
+
+Ellen Ellis
+
+Yeah, just going back to the using precise language as well, right? That cuts down on so much time if you can clearly articulate what your needs are.
+
+Ross Elder
+
+Yeah, I agree, James. And I feel like it’s not even just typing. There’s a lot of different technology that we use, so it spans kind of all the medias because you know yeah we’re typing on a keyboard but we’ve got our iPads we’ve got cameras we’ve got Hololenses we’ve got you name it we’ve got some kind of technology that we’re using in every space and I expect that only to get even more complicated as it moves on. We’re gonna have some new augmented reality and virtual reality things that probably will go along with the crew.
+
+Matthew Montgomery
+
+Yeah, you allude to it, but the photos is another one. Like just the amount of photo processing that we do on the back end, because we’re gathering a lot of those either through the science experiments, through the microscopes, or on the EVAs. So those all have to get categorized and, you know, titled and typed up, so yeah, another aspect of typing there as well.
+
+James Spicer
+
+Totally, and it’s not just us that want to see the photos, but of course the researchers back on Earth want to see the photos, and we have to be very careful about getting all that stuff back because we don’t have a fast link.
+
+Matthew Montgomery
+
+What about off-duty time? Has any of that been different from the beginning of the mission? Now that we’re in kind of the later portion of the mission?
+
+Ellen Ellis
+
+I think earlier in the mission, a lot of our off-duty time was spent preparing for upcoming tasks. The more experience we’ve gained, the less spin-up time is required to prepare. I mean, it’s still the top priority, especially for new activities that we haven’t accomplished before. But I think we’re in a position now to reap the benefits from the investment of hard work that we put in upfront to iron out our crew processes and familiarize ourselves with the procedures.
+
+Matthew Montgomery
+
+I think for me, personal goals have been more maybe apparent now that we’ve gotten later into the mission. You can kind of see the finish line coming, so you have a little bit of that time pressure that makes accomplishing more real-feeling. So you you know it’s coming, and you’ve got to allocate your limited white space accordingly to to really meet your personal goals as well as the you know highly scheduled, like we talked about, mission goals.
+
+Ross Elder
+
+And I think it’s tough. I think we all came in here thinking that we were going to, you know, accomplish a large amount of personal goals, thinking there was going to be a decent amount of off-duty time. So, I know we were, we were talking about leaving here knowing, you know, multiple languages and new instruments, and you know, read the entire library. I think a lot of that, you know, we’ve done some. We haven’t done all the things that we wanted, but I think to Ellen’s point, a lot of it we’ve been on duty, so even when we’re off, we’re still on. We’re prepping for something else. That also means, you know, every once in a while it is nice to take a break. We need the rest and recovery. It’s got to happen.
+
+Matthew Montgomery
+
+Yeah, especially in the fourth quarter where we’re we’re close, but we still have mission to go. That’s what I think that’s the most important.
+
+Ross Elder
+
+Yeah, you really just don’t want to be idle-minded, and there’s got to be something that you you set your sights on.
+
+Ellen Ellis
+
+Is there something you guys are looking forward to when we finish the mission? Okay, I’ll go seeing my husband smile at me when the egress door opens, giving my mom and dad a hug, and FaceTiming with my nephews Luke and Tim in the UK. And my mother-in-law in South Africa.
+
+James Spicer
+
+I’m also looking forward to Ellen’s husband smiling-
+
+Matthew Montgomery
+
+Can’t wait to see Steve.
+
+Ross Elder
+
+He can’t wait to see you either. I’m sure.
+
+James Spicer
+
+I think for me, back on Earth, I’m a big fan of swimming and being in the ocean, being on the water, and of course on Mars, water is a is a very scarce resource. So all of our showers are timed, and of course there’s no way to go swimming here. So I’m very excited for that when we get out to be able to take a long hot shower.
+
+Matthew Montgomery
+
+Yeah, I think the family one and the friends and partner and everything. Yeah, that’s definitely the the primary one. For me, I’m kind of interested in just what living back out in the world is going to be like, since we’ve been in this kind of muted environment, like we were just talking about. I think everything’s going to be a lot more vivid and just coming back in the world after this kind of crazy experience, and you know, seeing what that’s like-that’s that’s what I think I’m interested.
+
+Ross Elder
+
+Boy, do I have a solution for you! I’m actually most excited about the air show in Houston. It’s happening the same weekend as we egress, and some of my close friends and colleagues are actually participating in it, and while the Houston public thinks that the shows and the flyovers are for their entertainment, that is incorrect! Rather, I’ve assured the crew that the whole air show was actually planned to celebrate our return to Earth, and that they should just ignore the fact that it looks like all the planes are a little bit off their mark. It’s really for this where we’re egressing from.
+
+Matthew Montgomery
+
+We’re just gonna kick it up full full speed.
+
+Ross Elder
+
+Full speed. Get engines flying overhead.
+
+James Spicer
+
+One thing I’m thinking about more as the mission draws to an end is what we’re going to be doing next. We’re here for the year, here for the mission, and then a few weeks after we get out, we have to go back to our normal day-to-day lives. And so, things that we’ve been able to put off for the last year, like paying rent or having to buy groceries and other tasks that concern Earthlings, but might not concern Martians. We’re going to have to start figuring out here. For example, none of us have driven a car in over a year, so that’s something we’re going to have to figure out quite quickly when we get out of here.
+
+Ross Elder
+
+Yeah, I’ve been sitting in my chair trying to figure out how to fly a plane again. Mentally picturing it. Chair-flying’s the way.
+
+We’re also, you know, very much looking forward to recording another Houston We Have a Podcast session. Although hopefully the next one will be located at the studio at Johnson Space Center instead of us recording out here on Mars,
+
+Matthew Montgomery
+
+It’ll be a fun full circle moment.
+
+What about the fun stuff? What what are we looking forward to eating when we get out of the hab? Talking food before.
+
+Ellen Ellis
+
+I think I’m looking forward to just standing in the grocery store, like especially in the produce section. We’ve eaten a lot of fruits and vegetables this year, and we had some really successful harvests with our crops, thanks to Matt’s leadership and our our crop team. At various points in the mission, we’ve had lettuce and kale and radishes. But there’s just going to be something really special about going to a grocery store surrounded by all the smells and colors of fresh, juicy options. I think that’s going to be a moment that I’ll savor.
+
+Matthew Montgomery
+
+I’m looking forward to the range of Asian cuisine back in LA. I’m going to do the the tour once I’m back. Get a little little Thai, a little Indian, some Vietnamese.
+
+Ross Elder
+
+Little spice.
+
+Matthew Montgomery
+
+Yeah, kick it up, dress on the spice. Yeah, I love love the spicy food.
+
+James Spicer
+
+Cheese and avocado, my top two picks.
+
+Ross Elder
+
+I have forgotten what cheese is like.
+
+James Spicer
+
+It’s kind of like milk if you leave it, and then you mix it with the stomach of a cow.
+
+Ross Elder
+
+What is milk like?
+
+Matthew Montgomery
+
+It’s not powdered always?
+
+Ross Elder
+
+Well, special thanks to all the listeners that have been following along with the mission thus far, and we’re looking forward to talking to you guys soon.
+
+Kenna Pell
+
+I know I say this on every single CHAPEA audio log episode that we’ve done, but it is so good to hear the voices from the crew. At the time of that recording, they were 321 days in out of 378 days of their mission, with about two months to go. The crew absolutely maintains their enthusiasm for all of the hard work that they continue to do, and while they have two months to go, they are keeping the same workload, keeping busy, and keeping the science going as busy as ever as they reach toward the end of their mission.
+
+The crew shared about things that they weren’t expecting, even though they were extremely prepared for this mission, extremely astronaut-like, of course, in the crew selection process. But some of the things that maybe they kind of retrospectively weren’t thinking about was how, in this Mars analog habitat, they’re using everyday equipment: wrenches, needle and thread, metal detector, a drain snake.
+
+One thing that the crew shared that I thought was really interesting was how quiet the habitat is. There are things that they didn’t really think about when it came to everyday life. So there’s no weather. They don’t have to plan for what to wear each day. There’s no traffic, so they don’t have to plan for commute to work times, and there’s no people sounds. And so it’s going to be interesting, and I look forward to hearing from them and talking about what were those initial feelings or thoughts when they exited the quiet hab? Because I know a lot of people are going to be cheering for them. It’s going to be quite loud. I will be there as well once they exit, and what that transition is really like.
+
+And of course, they are looking forward to egress, seeing their family, and re-entering the world. And we are extremely excited for them, and can’t wait to have them here in the studio.
+
+Now, let’s hear from Grace Douglas, Principal Investigator of CHAPEA Mission 2.
+
+Grace, welcome back to Houston We Have a Podcast. Thanks for joining us today.
+
+Grace Douglas
+
+Thank you for inviting me.
+
+Kenna Pell
+
+Last time you were on the show as a guest, you were speaking with our host Gary Jordan about egress for CHAPEA Mission 1, so really full circle here as we’re nearing egress for CHAPEA Mission 2, and I know our listeners would love to get a sense of your final thoughts as egress nears and what’s kind of going through your mind.
+
+Grace Douglas
+
+At this point, we are still very mission focused. So we have to get through the last few weeks of the mission, and we want to make sure we’re supporting our crew really well through that. And then we have our post-mission data collections and debriefs. So at this point, everyone is very mission focused.
+
+Kenna Pell
+
+I guess coming from the communications perspective, where I sit here working at NASA, were you surprised by the coverage and interest garnered by CHAPEA 1’s egress?
+
+Grace Douglas
+
+I was really happy to see it. NASA, I think, is a very inspiring agency, and we are moving into a very fast pace to go back to the Moon and then go on to Mars. And when we developed this analog, we were trying to make sure we were going to be ready and that we were going to be able to keep up with that fast pace. And we were looking ahead when we developed this because this has been in development, you know, for many years, to even start these missions. And now coming to the end of the second one, it’s really great to see the public engagement with this kind of thing.
+
+Kenna Pell
+
+I remember seeing it everywhere. I was so excited, and above all else, with the extreme amount of coverage and interest that really came out of CHAPEA Mission 1’s egress. What is one thing that you wish or hope that the general public knows or just takes away from these missions?
+
+Grace Douglas
+
+So I do a lot of outreach with the public, and one thing that I really note is that the media puts out a lot of space movies that make the public have a very… an expectation of what spaceflight’s going to be like, and I think they’re often surprised that we have such limitations on the resources that we can take and the infrastructure that’s there supporting the crew. And so that was the importance of this mission, was that we know that we’re going to have such limited resources compared to the International Space Station when we go onto the Moon and Mars that we really need to understand how we’re trading in that space and making sure that we’re bringing the right things in that limited resource space.
+
+And so just the understanding that you know even on some of these upcoming missions, we don’t even have hot water, and we might not be able to heat food. Things like that are often surprising, and that’s where we’re working with. And we’re trying to say we have this much mass, this much power, this much volume, and we have to make reductions from where we are on the International Space Station, and how do we do that and support crew in the best way possible? And that’s what these missions are about. It’s to make sure that the way we’re planning is going to enable them to be successful, to meet their objectives, to come home safely, and do it in a much more restricted environment.
+
+Kenna Pell
+
+Yeah, absolutely. I know at least with telling the Artemis II story and with limitation mass, you know, constraints with what you can bring on Orion versus just having at your fingertips on the International Space Station is is quite different. So trying to explain that too, and you know, it’s funny that you mentioned space movies because last night at the Artemis II crew their final post flight event here in Houston one of the questions from the audience was what is something in space movies that you wish they shared more about when it comes to difficulties of space flight they definitely mentioned constraints with size weight just items at your luxury, but also showing-not showing, but talking about going to the bathroom. Things that are harder that they don’t show in the space movies.
+
+We talked about this just as you were walking over here to the studio, but reflecting on the past year, and you had mentioned, you know, it’s way more than a year, right? And I’m not just saying that in the sense that this mission is 378 days, but the planning that goes into it beforehand. You had put it in your last episode at the end of CHAPEA 1’s egress. It’s it’s really like a marathon. I thought that was so perfectly put. What are you most proud of when it comes to maybe finishing the marathon?
+
+Grace Douglas
+
+Well, now finishing the second marathon, I would say I’m still incredibly proud of this team, and you know we had a team that built this mission, a team of experts that came together across NASA to build what would be the most likely scenario to study, to really understand these trades as we go onto the Moon and Mars. And we built this analog that’s now been used for these two very long missions very successfully. And so I’m very proud of the crew that has completed a very long, successful mission, and then also our team who’s built it and the teams that are supporting it. Everyone coming together to really make something of this level of effort happen, so that we can get this data and really support our crews going forward. This is, I’m very proud of that.
+
+But also, this analog that that was built, the CHAPEA analog, is was built by this team to be versatile and to be able to be modified, and NASA is able to continue using this as we move forward, and even as operational plans change, this habitat is able to be used in other ways, in other scenarios, and it is going to be used in the upcoming Moon and Mars Exploration Analog, and in those scenarios where they are looking at some additional science and some other operational scenarios. I’m proud of this team that had the foresight to build something that would have the versatility and be modifiable to be used to study different operational plans.
+
+Kenna Pell
+
+And that’s perfect based on changing needs, guidelines, programs, and different goals from the agency too.
+
+When it comes to mission and science, let’s dive into that a little bit more. You as the PI or principal investigator of CHAPEA Mission 2 and CHAPEA Mission 1, right?
+
+Grace Douglas
+
+Yes.
+
+Kenna Pell
+
+Okay. You helped select the crews, right? Or did you select the crews?
+
+Grace Douglas
+
+It was a team of us who selected the crews, so we did do this in a very astronaut-like way. We we had a selection process that included also meeting the educational requirements, the medical requirements. We had some testing along the way here at Johnson Space Center, so we did work with a team, and it was a lot of the same team that they use when they’re selecting astronauts.
+
+Kenna Pell
+
+Oh, okay, cool. I did not realize that. And how does it feel watching the crews you selected go through these missions?
+
+Grace Douglas
+
+So when we’re selecting them because we are selecting crews that we are expecting to succeed in these missions. It’s definitely very rewarding when you get to the end of the mission and you have a successful mission. And ultimately, the expectation is that you’re getting astronaut-like data. So I think it’s not surprising that you know things are as successful as they are and it’s very rewarding to work with the these very astronaut-like individuals. They’re very engaged in the science, and to work with them through the entire missions and to watch as they complete these missions. You know, it’s really rewarding to work with such dedicated and accomplished individuals who are doing so much to help forward the science and help NASA meet its goals of getting back to the Moon and Mars.
+
+Kenna Pell
+
+And you were the principal investigator for the first mission, and of course here for CHAPEA Mission 2. Do you have any differences that you could share between the two missions?
+
+Grace Douglas
+
+The missions are intended to be repeatable, so we try not to have a lot of differences between them. You know, there can be some differences, like some tech demonstrations and things like that. But in general, our goal is to keep the missions similar because when we’re looking at the trades between resources, we really need to look across several different crews to really make sure that it is something that is going to be more generalizable across crews and not specific to a crew.
+
+Kenna Pell
+
+Okay, no, that makes total sense. And you had mentioned previously about the value in repeatability, and just kind of mentioned that too. Are you looking forward to comparing insights from CHAPEA 1 to this mission, CHAPEA 2?
+
+Grace Douglas
+
+Yes, and that that is the goal to look across the different crews and the different missions. So we’re very excited that now we’re going to have data from two missions. And even going forward as we move forward into the Moon and Mars exploration analog, we’ll be able to keep looking across data from the different analogs and the different operational concepts.
+
+Kenna Pell
+
+That’s really exciting. We talked earlier about this mission being a marathon, and just a few days before our listeners are hearing this, or it’s released for the first time, will be one year that the crew has been in the CHAPEA habitat. So close to the finish line! And the team working around the clock, just as Mission Control does, just a few buildings away, monitoring the International Space Station.
+
+Can you explain to our listeners, are there any specific insights that you’re looking forward to understanding after egress specifically?
+
+Grace Douglas
+
+So, if you’re talking about specifically in that egress time frame, during that we will be collecting data to close out the mission, so basically their end baseline, and we’ll also be doing a lot of debriefs where we get to ask them a lot of questions. So we will be getting a lot of information in real time for the first time about what you know the crew’s perspective on certain things in the mission, things like that, and during the entire mission, we did have that communication delay. So everything has been written communication to this point. And then, in addition to that, once this mission completes, we’ll now have two complete sets of data. So we’ll start being able to look across mission one and mission two data.
+
+Kenna Pell
+
+And the crew goes into a quarantine period after, right? Is that about two weeks or so?
+
+Grace Douglas
+
+So they will quarantine while we are collecting that final baseline data because our goal is to collect that final baseline while they’re healthy.
+
+Kenna Pell
+
+Is it more of a quarantine because you’re going back out to the real world, or…?
+
+Grace Douglas
+
+No, our goal is that we close out the mission, we complete the debriefs, and we complete all of our data collections, and we get that baseline without you know any other confounding factors in the data. And so it’s not an expectation that there’s a higher risk to them or anything like that, it’s more like we just want to make sure that we’re collecting an accurate baseline.
+
+Kenna Pell
+
+Got it. What’s next for you after the post-egress period?
+
+Grace Douglas
+
+So we are going to be part of the Moon and Mars Exploration Analog, and so we’re continuing studies looking at those different mission scenarios there, and again, that data is going to be very important to start understanding these risk resource trades that we are also looking at in CHAPEA across multiple mission scenarios, and we also have other studies going on. In you know, we work with other analog teams to understand food systems specifically in other analogs. And we have other ground tests going on as well to make sure that our systems are ready for those long duration missions.
+
+So specifically, I work in space food systems, and we do have quite a few studies that are looking at how do we reduce the mass in a way that’s still acceptable to crew? How do we support crew in the best way when they have these tight timelines, when they’re doing a lot of EVAs, and when they might not have you know hot water or food heating capabilities?
+
+Kenna Pell
+
+Well, Grace, we are so close here at the time of this recording to egress, and I know everyone is so excited to see the crew once they leave the habitat on October 31.
+
+Grace, thank you so much for joining us today.
+
+Grace Douglas
+
+Thank you very much for having me on.
+
+Kenna Pell
+
+Thanks for sticking around. I hope you learned something new today.
+
+You can check out the latest from around the agency at NASA.gov. You could also find out more about CHAPEA at NASA.gov/chapea. And you can find our full collection of episodes and all the other wonderful NASA podcasts at NASA.gov/podcasts.
+
+On social media we’re on the NASA Johnson Space Center pages of Facebook, X, and Instagram. If you have any questions for us or suggestions for future episodes, email us at nasa-houstonpodcast@mail.nasa.gov.
+
+This episode was recorded on October 1, 2026.
+
+Our producer is Dane Turner. Audio engineers are Will Flato and Daniel Tohill, and our social media is managed by Kelcie Howren. Houston, we have a podcast was created and is supervised by Gary Jordan. Special thanks to Kelsey Spivey for helping us plan and set up these interviews. And of course, thanks again to Grace Douglas for taking the time to come on the show and our CHAPEA 2 crew: Ross Elder, Ellen Ellis, Matthew Montgomery, and James Spicer for sending us the audio log.
+
+Give us a rating and feedback on whatever platform you’re listening to us on, and tell us what you think of our podcast.
+
+We’ll be back next week.
+
+3… 2… 1… This is an official NASA podcast.

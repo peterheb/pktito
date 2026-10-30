@@ -1,0 +1,461 @@
+# Reference transcript: Houston We Have a Podcast, Ep 431: CHAPEA 2 Audio Log 3
+# Source: https://www.nasa.gov/podcasts/houston-we-have-a-podcast/chapea-2-audio-log-3/
+# Covers the whole recording (52 min), not just the clip(s); see manifest.json for clip offsets. Text as published, not aligned to audio.
+
+Kenna Pell
+
+Houston We Have a Podcast. Welcome to the official podcast of the NASA Johnson Space Center, Episode 431: CHAPEA 2: Audio Log 3. I’m Kenna Pell and I’ll be your host today. On this podcast we bring in the experts, scientists, engineers, and astronauts, all to let you know what’s going on in the world of human spaceflight and more.
+
+We’re back with another audio log from the CHAPEA crew. CHAPEA, or Crew Health and Performance Exploration Analog, is a year-long analog mission in a habitat right here on Earth that’s simulating very closely what it would be like to live on Mars. We’re lucky enough to have check-ins with the crew: Commander Ross Elder, Flight Engineer James Spicer, Medical Officer Ellen Ellis, and Science Officer Matthew Montgomery.
+
+Just to recap, this is the second analog mission for CHAPEA. This isn’t so much a technology demonstration or a dress rehearsal for a human Mars mission. The primary purpose of this study is human research, a deep study into understanding what life would be like if you had to be there for a full year. The crew entered the 3D printed habitat for their 378-day Red Planet mission last year here at NASA’s Johnson Space Center in Houston on October 19, 2025. They’ll exit on October 31st of this year in 2026.
+
+Now, as much as we’d like to have live interviews with them, they are simulating what it would be like on Mars. So, video interviews, phone conversations, or really any form of communicating with Earth while on the red planet would be significantly delayed. Any information sent at the speed of light could take anywhere on the order of three to twenty-three minutes one way, depending on relative distance between Earth and Mars as they orbit the Sun. This makes a two-way conversation very, very difficult. So to meet the needs of this analog, the crew is recording audio logs based on the questions that we have drafted for them.
+
+This episode centers on a unique moment in the CHAPEA mission- the simulated two-week loss of signal period that mimics a Mars-Earth communications blackout. This happens when Mars moves behind the Sun. We’ll hear from the crew via audio recordings twice: first during the two-week loss of signal or LOS with Earth, and then we’ll hear from them again after communication returns. For the CHAPEA crew at Mars Dune Alpha, it’s like the universe hits an ultimate airplane mode for two weeks. While they are typically in a time delay of three to twenty-three minutes, during this loss of signal, they will have no email, no mission control guidance, and ultimately zero problem-solving help from Earth.
+
+We’ll also be bringing on special guest Sarah Whiting, she’s the Deputy Element Scientist for Analogs with NASA’s Human Research Program, to learn more about the LOS and what CHAPEA is learning from simulating this loss of communication.
+
+This first audio log you’re about to hear was recorded right at the mission’s midpoint, day 200, and in the thick of the two-week simulated loss of signal that mimics a Mars-Earth communications blackout. So, with that context in mind, let’s step into Mars Dune Alpha and hear how the crew is navigating autonomy, teamwork, and the operational demands of a simulated Mars mission during this two-week loss of signal period.
+
+Let’s check in with the Martians.
+
+Ross Elder
+
+Howdy, Houston We Have a Podcast. This is the CHAPEA 2 crew coming to you on site at Mars Dune Alpha. I’m Ross Elder, the Commander, and with me is the full crew, including…
+
+James Spicer
+
+James Spicer.
+
+Ellen Ellis
+
+Ellen Ellis.
+
+Matthew Montgomery
+
+Matthew Montgomery.
+
+Ross Elder
+
+It’s been about three months since you last likely heard from us in February, and a lot’s transpired since then. We’ve currently found ourselves in the middle of a solar conjunction, resulting in a loss of signal with communications to and from Earth, including mission control and our friends and families back home. But we’ll explain this a bit more later.
+
+Ellen Ellis
+
+Yeah, we’re at the midpoint of our mission. Today marks day 200. We’ve had our fair share of tired muscles and blisters, but no medical emergencies to date, thankfully. So call that a win. I think it’s also a good sign that we’re still making each other laugh. I think that’s a pretty healthy activity. For team dynamics, I think we’re in a sweet spot. We’re mission focused, working through tasks proficiently, but we still enjoy each other’s company during the downtime. I think that’s really important for future Mars missions. It makes us a more cohesive, stronger crew.
+
+Earlier this week, we had a Space Force high holiday, May the Fourth, while the Hab inhabitants were made honorary Guardians.
+
+Today is also my husband’s birthday; he’ll be celebrating with family. So, happy birthday, Steve!
+
+Speaking of birthdays, we got to celebrate one recently. Have first our science officer, Matt had a birthday.
+
+Matthew Montgomery
+
+It was quite a nice day. You guys made it special. It’s always nice. It’s a weird one when you’re away, and we were also in the loss of coms while that happened. So couldn’t talk to friends and family directly, but got to have family, so that’s nice. My friends and family had sent a bunch of cards in beforehand in my care package. So opening up some of those was a nice little treat on that day. Then we kind of got back into normal, what I’ll call loss of signal hab life, which is a little bit different from our normal. We’re not doing EVAs right now. We’ve got a lot of just focus on science activities, so we’ve been doing a little bit of geology, specifically some X-ray spectroscopy analysis. It’s a different one for us. We’re doing a lot of seed germination experiments, and we also started our second round of crops recently. So we’ve all been caring for those. They’re a good little companion through this loss of signal.
+
+James Spicer
+
+So, Matt, you mentioned that we’ve been doing a ton of EVAs before the loss of signal. I think we calculated we’re now at the halfway point of the mission. I think we’ve each been outside the habitat for over 150 hours, So that’s been a lot of our effort over the last six months. Our EVAs are split between the virtual reality and the non-virtual reality, but we spend a lot of time outside maintaining bits of equipment, fixing bits of equipment, retrieving supplies, that sort of thing, and then once we get out of the loss of signal next week, we’ll get right back into it.
+
+Matthew Montgomery
+
+Yeah, talking about those. Those are pretty significant numbers. Like if you think about ISS crews, like over a career, somebody racking up like 60 hours of EVA time. That’s huge. Yeah, it’s huge. So I think that kind of speaks to like the tempo that we’re expecting on future Mars missions. That we’re at the halfway point. We’re doubling EVA time. So yeah, lots to prepare for for the future.
+
+James Spicer
+
+Yeah, and the rationale I believe is that EVA’s on the ISS are planned months, often years in advance, trained for very specifically. But, but EVAs on the Moon and on Mars will have to be closer to a daily occurrence that you do without specific training for each task.
+
+Matthew Montgomery
+
+I think that’s a good kind of segue. We’ve been talking about autonomy with the loss of signal specifically, but, and the time delay and everything. So, as future Mars crews prepare, I think NASA has to have a little bit of a focus shift on how they prepare them for that level of autonomy. Where right now we have a lot of communications with ISS and moon crews, but that’s going to need to kind of change as as they prepare for that time delay.
+
+We recently also had Artemis II. That’s that’s a big event. That’s a big one. I think for me personally, to see that advance while we’re in here, kind of a surreal timing for myself. Kind of thinking about them and their mission, and thinking about our mission. You know, they’re very different, but there are similar goals.
+
+Do we think there’s any key parallels between our missions? Any key differences between them? What might that crew have been going through that we might also be experiencing?
+
+Ellen Ellis
+
+I can jump in. There’s, there’s some parallels with health and human performance research that’s going on during the Artemis II mission. They conducted a study called the Artemis Research for Crew Health and Readiness, or ARCHR for short. ARCHR evaluated like crew activity levels, movements, interactions, and sleep patterns. The Artemis crew wore special wristband devices similar to a smartwatch that recorded sleep and movement. And crew members also completed surveys and tested motor skills to assess how well they performed individually and as a team before and after flight. The results will provide input into habitability for the Orion spacecraft, so that NASA can make decisions about space utilization. But here in Mars, Dane Alpha, we’re wearing the same watches, completing all those surveys, performing motor skills tests as well to gather similar data. Obviously, there’s some differences in the environmental conditions. We aren’t exposed to the physiological effects of radiation or microgravity, which can result in bone loss and muscle atrophy. I’d probably still sign up for the microgravity portion. I don’t know about you.
+
+Those impacts are non-trivial, though. Astronauts can lose bone mass density they can lose muscle mass. That’s why nutrition and exercise are so important to get right ahead of a long duration mission. Countermeasures need to be dialed in so that astronauts can arrive on Mars ready for the physically demanding tasks that lie ahead.
+
+Ross Elder
+
+I don’t know what I’d do if I lost 25 percent of these biceps.
+
+James Spicer
+
+There are obviously a lot of differences between the Artemis II mission and what we’re up to here on Mars Dune Alpha. Some of the similarities, though, include the food. So I believe their menu was published, and they have some foods that we don’t. We’re particularly jealous of the chocolate spread that they appeared to have in their capsule. We don’t have any of that, but but a lot of the other food is pretty similar.
+
+As Ellen mentioned, we spend a lot of our time in here doing exercise in order to mitigate the effects of Martian gravity. And although we’re not in zero gravity, future Martian astronauts will have to spend a lot of their time maintaining their muscle mass. Of course, the Artemis II is in a much smaller vehicle than our habitat here on Mars. They had, I think, roughly about the size of a minivan. It’s probably not dissimilar to the room in which we’re recording, and they were in there for 10 days. Spending a year in a room this size I think would be a little challenging, so we’re very happy to have our own rooms.
+
+Ross Elder
+
+Artemis II also probably didn’t have a birthday on board, so we got to eat some cake. So this is for a nice little treat variations of cake and some frosting, different types.
+
+Matthew Montgomery
+
+What about that wake-up music, though? We’re talking about bone loss. Gonna have keep the morale up too.
+
+Ross Elder
+
+Yeah, that’s true. We just kept reading about how we had the Artemis II crew had different wake-up songs every day, so we got a little envious and decided to program some of our own. So now we’ve got a new wake-up song every day for the the remainder of the mission. All 178 days we’ve got left.
+
+Matthew Montgomery
+
+Let’s see how we feel about it in a couple weeks.
+
+Ross Elder
+
+Yeah, it’s currently randomized, so we’ve got some pretty interesting options.
+
+Ellen Ellis
+
+I did want to bring, bring that up, though. I think you programmed an amazing system that reads out our incoming messages from Mission Control and status on our up and down link, and it’s just it’s super impressive. I think without that input, without the input from Mission Control, that the hab has been like eerily quiet. But I love what you created, and I think it’s really contributed to the vibe here.
+
+Ross Elder
+
+Now we have a computer that talks to us instead.
+
+Matthew Montgomery
+
+Wouldn’t be a Mars mission without a talking computer. Gotta check that box.
+
+Ross Elder
+
+We’ve also had some creativity in the form of memes lately as well. I think there’s been some some comedy and humor that we’ve devised, looking back on things that we’ve gone through. Trying to correct some jokes at the things that we’ve gone through.
+
+Matthew Montgomery
+
+This is true.
+
+James Spicer
+
+Hard to relay of the meme of audio, unfortunately.
+
+Ross Elder
+
+Yeah, could you explain…
+
+James Spicer
+
+Well, there’s this one with the train.
+
+I was just going to say one of the other similarities to Artemis II is that our bathroom also had some issues the other day. So while the Artemis II astronauts were busy plunging their toilet, we were also fixing our shower drains and sink drains.
+
+Ross Elder
+
+Also, our Outlook currently does not work. But for others reasons we’ll talk to in a moment.
+
+James Spicer
+
+This is true.
+
+Ross Elder
+
+Also, I think a big difference between the Armus two mission and ours is the distance. While a trip around the moon can take just a few short days. A trip to Mars may take you around nine months. At this point, the mission was some 400 million kilometers away from Earth, which has resulted in some very long time delays of over 22 minutes for just one-way communications. That’s quite a major difference when NASA is used to near real-time communications with the ISS and with Artemis II.
+
+James Spicer
+
+Which brings us neatly into the solar conjunction, which is where we find ourselves right now. So, during the entire mission, as Ross mentioned, we have a time delay, which is the time it takes for a radio signal traveling at the speed of light to leave Earth and reach Mars, and that time varies over the course of mission anywhere between 13 and 22 minutes, and this is due to the movement of Earth and Mars along their orbits. Signals need line of sight between the receiver and the transmitter to be able to be received correctly. As an example, if you can’t see Mars, then Mars can’t see you. And so the way NASA currently manages comms with their Mars rovers, for example, is they have three stations all around the Earth. They have one in Australia, one in California, and one in Spain. And this means that as the Earth rotates, at least one of those can see Mars at any given time. However, there’s a time in the orbit where, as Earth and Mars move around the Sun, there’s about a two-week period where the Sun actually comes right in between the two, and that means that any signal sent by Mars or by Earth can’t make it past the Sun, and the signal gets blocked. So that’s where we currently are right now. We have about two weeks where we can’t talk to Earth. We can’t talk to Mission Control. We can’t talk to friends and family, and so it results in a whole different operational mentality for the crew and for the ground teams.
+
+Ross Elder
+
+James, would you say that’s a good thing or a bad thing?
+
+James Spicer
+
+It’s interesting you say that. So NASA has set up a system of relay satellites to enable 24/7 communications with the International Space Station. During the Artemis II mission, there was a period where the capsule was behind the Moon, and so NASA, from their ground stations on Earth, was not was not able to communicate, and that period lasted about 40 minutes, which is the same for Artemis as it was for Apollo back in the 1960s and 70s. Michael Collins, one of the Apollo 11 astronauts, reported that he actually quite enjoyed the conjunction because it was the one time in the mission he didn’t have to talk to mission control, and actually, it hasn’t been terrible the past couple of weeks. We can do our own thing, our own schedule. So, certainly, pros and cons.
+
+Ellen Ellis
+
+So, like James mentioned, like ISS has real time or near real time communication, and Artemis II had that 40-minute loss of signal. That’s got to be a nail-biting time for the families and for mission control, right? Just waiting to know that everything’s going to be all right. I think we’ve all been in situations where we’ve lost cell phone signal, like either being out in the woods or traveling in a foreign country. Sometimes it’s at an inopportune moment, and you get that feeling in your gut, like, okay, we’re on our own here. In a nutshell, that’s been us for two weeks. But we’ve had delayed comms throughout our mission, right, for our day-to-day routine, and we’re used to getting, exercising a certain amount of autonomy. Occasionally, we’ll find ourselves in situations where we have a time-sensitive question, and we know mission control won’t be able to respond in time. We have to decide on a course of action and just communicate that forward to mission control. But those situations are infrequent. Most of the time, we have contact with mission control in advance, and we can get any clarification that’s needed. But the blackout has been operationally meaningful because we alter our behavior. We’re operating completely autonomously now, with no expectation of direction from Mission Control.
+
+Ross Elder
+
+Absolutely, I agree. We’re in the middle of the solar conjunction, and that means we have to continue doing some of our routine operations and be concerned about some of the contingencies and emergencies that pop up. So the routine things that means we’re still doing maintenance. The maintenance never stops, and if anything, it actually becomes more important than ever. Should we have any contingencies or emergencies, we’re the only four crew members that are able to affect the results, and we’ll conclude potentially weeks before NASA even knows that it ever happened. Because of that, we have to continue to train to ensure that we’re able to respond appropriately should something arise, and we have to kind of lower our risk acceptance whenever possible. So that means reducing our exposure time by limiting our extravehicular activities and other high-risk operational events.
+
+However, if something should occur to our critical life support systems, we may find ourselves getting forced to make some quick decisive actions to include extravehicular activities and making sure that we’re still on the other end of the phone line after the solar conjunction ends, and that NASA can still maintain contact with us. Sometimes that means that you know safety measures and training becomes a bit more paramount.
+
+Matthew Montgomery
+
+I want to just like really hang on the difference in the timescales that we’re talking about between like the loss of signal that you brought up, James, with 40 minutes versus two weeks. I mean, that’s like an order of magnitude difference on how long you’re going to be out of contact. Like NASA doesn’t have experience with that and that crew autonomy piece. I think as a lived experience, it would be you know quite a critical time as the four on Mars out of contact. You know every decision would just have so much more weight and stakes behind it. So yeah, all the things that you’re talking about, Ross, about just trying to be a little more risk averse and operationally mindful and training and being ready, totally, totally important during that time.
+
+Yeah, there’s some other just like day-to-day operational differences that come up. So we’re generating quite a lot of data, especially on the science side. Think about things like pictures. We capture a lot of microscope images. We talk a lot about the time delay, but one that doesn’t come up quite as much is the data transfer limitations. So we have data caps. It kind of feels more like dial-up internet when the signal is there than kind of what we’re used to with just being able to beam large data files, kind of on a whim. So things we’ve been thinking about are once the signal comes back, how do we actually manage that data bandwidth? Because if we develop a large queue and just start beaming that right away, we’re going to put ourselves back into a loss of comms situation, or vice versa if the ground team starts dumping a ton of data back up to us right away when we establish that connection, we’re going to be back into a loss of comms. So we want to avoid that. So I know the crew here has been being mindful, and we’ve created some procedures of our own to manage that reconnection, making sure we’re capturing our critical mission data, we want to get that backed up as soon as possible. But we don’t want to impact those day-to-day operations, and we want to make sure we get the comms back up and running as soon as possible.
+
+Ross Elder
+
+I think it’s important to note because it’s the only players aren’t just us as crew members and MCC on the ground to include the support teams, but friends and families as well have to understand the system that we have. So all of the data that they send us during the solar conjunction gets included with the data that NASA will send up, and we can find ourselves, like you mentioned, with a longer loss of signal because of all the information that gets sent.
+
+James Spicer
+
+So if one of Matt’s family has sent him a birthday video that can clog up communications for several hours.
+
+Ellen Ellis
+
+Do it anyway!
+
+Ross Elder
+
+Yeah, data is not the only thing we’ve been accumulating. We’ve accumulated a lot of trash now too. Since we haven’t been able to go out on EVAs. We’ve had to hold on to our trash, as we have a receptacle on Mars that we take it out to. But it’s something we have to deal with on a day-to-day basis, and part of the airlock now has become trash storage.
+
+Matthew Montgomery
+
+Quite a lot of it. The not so glorious side of space travel, as they say, those human elements.
+
+James Spicer
+
+This is true. It’s going to be up to you and me on Monday.
+
+Ross Elder
+
+Today we were actually talking about our trip to the National Outdoor Leadership School, where we spent about a week together out in the middle of nowhere, doing some backcountry skiing, and I think this is kind of actually a good like lessons learned throughout all of that training because that there were plenty of times where we found ourselves completely disassociated with society. We didn’t have any communication links, and we talked about how we deal with that, how we communicate. What happens if everybody gets sick, we have to make the decisions. So I feel like there’s some parallels with all the training that we went through on that side with what we’re doing now because if something happens, we kind of have to focus on the same autonomy that we were dealing with out there in the middle of the wilderness.
+
+Matthew Montgomery
+
+That’s good one. We even we got hit with a blizzard right towards the end of that trip, and there’s a lot of decision making around how do we get to our pickup point on time, and what’s the best route for that? And yeah, yeah.
+
+Ross Elder
+
+Exactly. I think that’s what we’re we’re striving for right now, right? We’re trying to get to our pickup time, which is the end of the solar conjunction, where we communicate again with with the MCC here in a couple days, and hope everything goes well. We don’t deal with any injuries or illnesses, or have to make too many crazy decisions on our own. But I think we’re prepared and continuing to prepare to make those decisions if we need to.
+
+James Spicer
+
+And if you’re listening to this MCC, it means we survived the solar conjunction!
+
+Thanks so much for having us, Houston We Have a Podcast. We’ll look forward to chatting with you in a few months’ time.
+
+Kenna Pell
+
+As you just heard, the crew is navigating the midpoint of their mission with resilience, humor, and a whole lot of autonomy, which is a huge theme of today’s conversations, especially during this two-week loss of signal. It was really interesting to hear how the crew transitioned from the fast-paced EVA-heavy first half of this mission to this more isolated, self-sustaining phase. And this was our first time hearing from the CHAPEA crew post the Artemis II mission. It was really cool not only hearing them discuss parallels in the mission, such as both taking part in Human Research Program’s ARCHR or Artemis Research for Crew Health and Readiness study, but on the lighter side too, as they were following along the Artemis II mission – in their delayed fashion, of course. It was really fun hearing about them compare the food menu aboard Orion, and even hearing about the CHAPEA crew how they were inspired by the wake up songs each day during the Artemis II mission, and they eventually made their own wake up music playlist too.
+
+I don’t know about you, but I also found it really interesting hearing about the parallels between their mission and their wilderness training, reminding us that in both environments, small decisions can carry big consequences when help is days or even weeks away.
+
+Now let’s hear from Sara Whiting to learn more about the LOS and what CHAPEA is learning from simulating this loss of communication.
+
+Sara, welcome to Houston We Have a Podcast. Thanks for joining us today.
+
+Sara Whiting
+
+Yeah, thanks for having me.
+
+Kenna Pell
+
+So this is your first time on the show. Can you tell our listeners a little bit about your background? And I do know that folks like to hear about everyone’s journey to NASA, if you could mention that too.
+
+Sara Whiting
+
+Yeah. So I have a little bit of a non-traditional background for NASA. I’m actually a clinical neuropsychologist. I mostly worked in hospitals with clinical patients before I came to NASA, but I was always extremely interested in research and technology and spaceflight in general. I was kind of a sci-fi nerd as a kid, and the idea of applying psychology to spaceflight was incredibly fascinating to me, and I, you know, was thrilled to find an opportunity here in Houston to apply that.
+
+Kenna Pell
+
+You know, we were talking before we started recording, and you had mentioned having some experience, whether you called it residencies or internships at hospitals too. So I didn’t realize that it was a, what did you call that?
+
+Sara Whiting
+
+Neuropsychology, and it’s similar to the medical field where you have to do clinical internships and residencies. I did the same thing in various different states across the country, and my final fellowship was here in Houston. I wasn’t intending to work for NASA at all, but living here in Houston, you’re surrounded by space flight and the aerospace industry, and I learned about it and said, “Wow, that’s the career for me!”
+
+Kenna Pell
+
+Wow! And so, from you mentioned New York, right? And so, you’d always been kind of a sci-fi nerd as a kid growing up. Did you ever think that you would, you know, work for NASA?
+
+Sara Whiting
+
+Never. I always followed NASA very closely as a kid, and I you know I wanted to make it down to Florida to watch a, watch a shuttle launch, but I never did. But I was always super interested in it and very engineering minded, even though I ended up in a different field. But you know, it it was something that was super super cool, and I just never knew until I actually got here to Houston that psychologists even worked at NASA. And it was just literally by being here in the same city and and the proximity of it and learning more about it that I’ve discovered that that was a career option for me.
+
+Kenna Pell
+
+I love that. So currently, you are the Deputy Element Scientist for Analogs. Can you explain what does that mean, and then what is your role in CHAPEA?
+
+Sara Whiting
+
+Yeah, so my job is essentially I’m the scientist that oversees the science implementation, like how we run our science in various different ground analogs that NASA either owns or partners with. And ground analogs are any type of facility that simulates in some way the effects on the human that we would see in flight normally. Except it’s here on the ground, so we don’t have to fly.
+
+Kenna Pell
+
+We just listened to the audio log from the crew that was recorded during the loss of signal with Mission Control, and so this is a big event during their time in the habitat. What was a little over two weeks or so, and I know our listeners want to learn more about it. The crew mentioned that the loss of signal took place because of a conjunction. Can you explain what that means?
+
+Sara Whiting
+
+Yeah, so a solar conjunction is when Earth and Mars are on the opposite side of the Sun from each other in their orbits. And because of that, signals that we send back and forth kind of get interfered with because they’re trying to go through the sun. You know, space radiation and other types of you know things interfere with the signal reaching the other side, or we just see a lot of signal degradation, so we just don’t get a good signal. So this this loss of signal event in CHAPEA Mission 2 simulates that kind of environment that we might see in a real mission, depending on where Earth and Mars are in their orbit.
+
+Kenna Pell
+
+You explain that so well. I can see the infographic in my head. What did it look like for the crew in the habitat?
+
+Sara Whiting
+
+So from the the crew’s perspective, we we coordinated with them ahead of time to know when we’re officially signing off and when we officially lose that signal. And from their perspective, we we told them that they need to be self sufficient during that time. That they might not hear from us. They might not be able to send data back and forth to us, so they need to make sure they have all the right resources with them until we regain that signal. So from MCC, we have to send them extra materials or extra instructions ahead of time to make sure they have everything they need data-wise to last them through that whole period before we regain the signal and can talk to them again.
+
+Kenna Pell
+
+Why? Why simulate something like this?
+
+Sara Whiting
+
+Why? Because it’s hard. Because we’ve never done it before. As as an agency, NASA’s never had a loss of signal of this length before. Most of our LOSs in low Earth orbit, or even during Artemis II, were shorter in duration, on the order of minutes to hours, full days, full weeks, is something that we have never done as an agency, and it’s really, really hard because our crews need a lot of ground support typically. So it’s really important step forward for us to simulate this kind of thing on the ground first, so that we know what we’re getting into in these future missions.
+
+Kenna Pell
+
+Sure, and Ellen did mention that the Artemis II loss of signal. It went around the far side of the moon, but was that about 40 minutes and two weeks… Is this something that real Mars crews will experience in the future?
+
+Sara Whiting
+
+Likely so. There’s you know there’s certain things we can do in a mission to plan- to try to plan around a solar conjunction, for example, like designing when we launch or when we return or how long we stay on the surface to maybe try to avoid it as best we can, because it’s that hard. But sometimes on these longer missions, it might be unavoidable. It, it’s an event that happens about every two years, so it’s not a frequent event. But depending on what our orbits look like, what our launch opportunities look like, we may encounter it, and so it’s important for us to be ready.
+
+Kenna Pell
+
+And so, what do you learn from simulating loss of signal? I know it probably a lot of logistics pre-planning. You know, what do we prioritize telling the crew, and vice versa?
+
+Sara Whiting
+
+So, a lot of things we’re learning is operationally what we need to do to make crews best prepared to handle this challenge, to be as autonomous as they possibly can without the assistance of Earth. But also, from the crew’s perspective, we need to understand how being that cut off from their support system impacts them. That what kinds of supports they might need in addition to things we’ve already thought of, what have we not thought of? And this opportunity tells us the kinds of things that you know, based on crew feedback or based on lessons learned of you know things that didn’t go as planned or you know needed better planning. It’s an opportunity for us to learn those lessons now, so that we can iterate and do it again in future missions, and make sure we get right and ready before we try to actually launch to Mars.
+
+Kenna Pell
+
+And the crew, we had talked about it on the previous episode Audio Log 2, how they always, you know, daily are experiencing communication delays and talking about okay, what do we want to prioritize and talking to MCC. Sometimes they have to figure things out on their own, and so this was just that times, you know, by two weeks, right?
+
+So did the CHAPEA 1 crew, did they have a similar loss of signal in their mission?
+
+Sara Whiting
+
+They did. Yep. So we’re replicating the same conditions that that first mission had, so that we can pull the data together and look at across different missions how did different people or different crews experience this event to make sure we’re capturing a range of experiences or range of needs.
+
+Kenna Pell
+
+What happens once the crew regains communication?
+
+Sara Whiting
+
+So once we regain communication, the the very first step is just to send confirmations back and forth to make sure we’ve reestablished that link. The next step after that is we start sending data back and forth. There’s over the course of two weeks. There’s a lot of data that’s built up that would normally just be transiting back and forth, you know, on a daily basis. But now it’s kind of backlogged. We got that bottleneck, and we have to really think about carefully what order we’re sending all that data in. What’s the highest priority so that we’re not overloading our bandwidth to where the crew can’t get necessary information from us, but they’re still sending all that backlog back to us. So it’s kind of a dance that we’re playing both on the MCC side, where we’re trying to prioritize “Hey, what do crew really need right now, and what can kind of wait a little bit longer to clear the backlog?” And crew have to decide the same thing.
+
+Kenna Pell
+
+So we mentioned earlier you are the Deputy Element Scientist for Analogs, which is under the human research program here at NASA. What types of disciplines or scientific fields does HRP support?
+
+Sara Whiting
+
+Yeah, HRP or the Human Research Program supports a really broad array of science fields, ranging from things like behavioral health and performance, like psychology of spaceflight, to exercise science, to cardiovascular science, sensory motor like balance and vestibular functioning, also things like nutrition and immune functioning. various different fields that all can interact with each other to optimize or take away from our ability to perform well in spaceflight. And that’s why CHAPEA is so important, is it’s looking across all of those different disciplines to see how they interact with each other in this environment, so we can understand the trades of if we boost one, how does that affect the other, or if we take away from one, how does that affect the others?
+
+Kenna Pell
+
+And so, the Human Research Program here at NASA really does support so many missions: CHAPEA, the International Space Station, and Artemis. Can you tell us a little bit more just about maybe the breadth of how much HRP or the Human Research Program is really involved across NASA?
+
+Sara Whiting
+
+Yeah, broadly, if there’s a mission going on at NASA that involves humans, HRP is generally involved, and that’s because we’re trying to understand how all of the different ways that we fly affect the human. Short flights, you know, we were doing shuttle data for a while. Very short flights. Even Artemis II, it was a short flight, but it’s a very new flight environment. It’s a new mission cadence that we need to understand and be prepared for. And then, of course, ISS, which is kind of established at this point, but we’re still learning new things about how the human body reacts to spaceflight or microgravity on a long duration mission like a Mars mission. So that, combined with what we learned in ground analogs about how it feels to live in an isolated and confined environment for a very long period of time, help us better prepare for these upcoming missions that are are challenges that we’ve never done before.
+
+So there’s a lot that we can learn from CHAPEA, and I I think that’s the value of it is that it’s it can be very broad in what we can learn. There’s lots of things we can learn specific to behavioral health and performance, but there’s also lots of things we’re learning about what we need in a food system for exploration, what we need in from exercise, how EVAs might work, like surface EVAs going out to do a Mars walk, is probably a very different experience and a very different coordination with the ground here on Earth than it would be in our traditional EVAs that you see on ISS. Those are very well coordinated and you know orchestrated by MCC on the ground. Whereas on Mars, because of our delay, we’re not going to see that.
+
+Kenna Pell
+
+In our last episode, we took a deep dive into spacewalks or Mars walks, and we got an update on this audio log about how many they have been supporting, which I was surprised to hear. In talking about the future, what are you looking most forward to when it comes to the future of analog studies here at NASA?
+
+Sara Whiting
+
+I’m super excited about analogs because I I think it’s our our our creative outlet. It’s it’s our opportunity to explore what future sustaining lunar or Mars missions might look like. Learn some of these really critical areas that we’re not necessarily thinking about right now. These changes in operational designs, or how we run our MCC, for example. These are all opportunities where we can get creative as an agency and say, “How do we think we need to do this differently? What do we need to look for? What have we not even thought of? And analogs is our best way of doing that. It’s it’s both cheaper to do it on the ground first, but also it’s faster, that we can change over our science. We can iterate our science faster on the ground than we can by flying our science. So that’s why ground analogs is actually a really critical component of human health research beyond just what we learn from our flight crews.
+
+Kenna Pell
+
+Sarah, thank you for coming on Houston We have a podcast today.
+
+Sara Whiting
+
+Thank you so much for having me.
+
+Kenna Pell
+
+Now let’s hear from Ross, Ellen, Matthew, and James as they unpack what life is like just after Mars Dune Alpha regained signal after the two-week communications blackout.
+
+Ross Elder
+
+It has been 11 mission days since our last recording, and it’s been a little bit over a week from the end of the solar conjunction. So at this point, we’ve successfully regained signal with Earth, but we wanted to talk a little bit more about what life has been like during the loss of signal and transitioning afterwards.
+
+James Spicer
+
+So during the solar conjunction, it was deemed too dangerous for us to participate in spacewalks and some of the other activities that we normally do. And so our schedule during the solar conjunction was actually pretty quiet. We had some science tasks to get done, and of course we had our usual maintenance tasks, our cleaning to keep the habitat in shape. But for most of the time, we were stuck inside the habitat, just working through our own projects, reading, and training.
+
+Matthew Montgomery
+
+We also have all the habitat systems to keep operational, and one that we were working on quite a bit was the crops. So we had crop care to manage, and what that kind of looks like for us on a day to day is we have a semi-automated system. We still have to make sure that we have enough water in there. So typically, that requires daily refills on that front. And then there’s system checks, just making sure the pumps are running, and we have to do things like manual pollination when some of the peppers or tomatoes are flowering. So that keeps us busy. We do a rotation, so each crew member takes a day, and we work through that. But as with all hardware systems, there always tends to be issues that pop up over time. And we actually had a pump failure on one of our pepper plants, so that was something we had to live troubleshoot and address. And thankfully we have spare parts in the habitat, we had another pump. So myself and James, when we noticed that, we worked through getting that tray pulled out of the system, and then we had to work through the pump swap out. So it’s kind of a, of course, a submerge pump, so there’s some work to be done there, and you’re trying to keep the roots nice and clean. So I think James, you got your shoulder workout or an extra shoulder workout that day, having to hold up the tray while I was swapping that pump out. So a little bit of action there and some unplanned excitement, let’s say. But…
+
+Ellen Ellis
+
+I think one thing I’ve enjoyed about this experience is getting to see the interesting varieties of crops that we get to grow here at Mars Dune Alpha. Some of the things that they grow on ISS as well. So we get the standard peppers and tomatoes, but also some Swiss chard and varieties of bok choy and dill and basil. It’s just been it’s been fun to learn and have that experience.
+
+Matthew Montgomery
+
+Yeah, I think it’s great. We’ve leveraged a lot of experience from the Kennedy Space Center team, who supports us on the crop endeavors, and yeah, all that knowledge coming from the ISS and the years of their crop experience- it’s, that’s a great support system to have.
+
+Ross Elder
+
+there are certain qualities that I think, as a crew member, that may also apply to a future Mars crew member, and may or may not apply to us as individuals at any part during the mission. One of the key things is patience, so that applies to both patience with the mission itself, the scenarios that were underway, and working with each other. So one of the big things when we’re having a loss of signal is that we do not have that communication that we normally would have with MCC, our family and our friends, and understanding that there is going to be time before we are able to communicate with them. Same thing happens on the backside of that loss of signal, where there is a significant amount of data that is both uplinking and downlinking, in that time span we are still in a loss of communication, not necessarily loss of signal, but we still have to continue to be patient as we await all of the data to transfer.
+
+Another important characteristic is being flexible, so understanding that things change constantly, and that includes even during the solar conjunction. There are times that we have to be very attentive to the details of things that are happening around us and noticing when things go wrong, and we have to always be able to respond appropriately. There are times where you have to make decisions with partial information, and I think during the solar conjunction, that was even more so the case. So we didn’t have those information sources that we would normally have to include MCC, our family and friends at home, as well as just having communication through email to other sources that provide us additional information. So a lot of the times we have to use the information that’s provided, make quick, decisive actions, and during the solar conjunction, that was more so than ever.
+
+Now that we’ve regained communications with Earth, one of the things that we’ve had to think about is planning and scheduling transfers. One of the big important things to note is the amount of offline data that we’ve been storing throughout the solar conjunction. All of that data has to get downlinked back to NASA, and in the same span of time, we’re also waiting for communications that come back from friends and family as well as mission data. So it’s been interesting trying to you know learn ourselves as to what’s going to happen, as well as instructing those around us how the transition was going to work.
+
+Matthew Montgomery
+
+I think in general, looking at it, though, we were quite successful, and it went pretty smoothly.
+
+I did have some messages come in. I had a birthday over the loss of signal, so yeah, some small messages came, and those were nice to get on the front end of the signal coming back. And then, kind of after that, it really did take some time, like Ross is saying, to get all of the mission-related data pushed back down. So we had a good schedule planned out that Commander put together, and we adhered to that, making sure that we pushed the highest priority data first, and then kind of tiered it down as time went on, then kind of transitioning back into the regular working schedule was a piece of it, and it was kind of an abrupt transition. We went from this very you know disconnected time, like we were just talking about, right back in to our normal working schedule. So in a way the it almost felt like the loss of signal didn’t happen.
+
+Ellen Ellis
+
+Yeah, we didn’t really get a lot of time to reconnect with family or friends. We jumped right back into virtual reality extravehicular activities. Those are the Mars walks that we do outside the airlock. And it feels like that aligns with a realistic surface mission. Once the loss of communication period is over. There’d likely be equipment that needs like routine maintenance. We did some exploration of a lava tube in the nearby crater and some field geology and maintenance on an in-situ resource utilization equipment.
+
+So yeah, we went right back into it. And then this week we have our peak fitness testing, and we’ll be doing bio collections this week. So blood draws on Wednesday, guys.
+
+Matthew Montgomery
+
+The demands simply don’t stop. Mission’s got to keep going.
+
+James Spicer
+
+Sure does, and it’s important to note that even once we got back into signal and and we were back in contact with Earth, we still have that 22 to 30 minute time delay each way. So, one thing that I have to work out with my family, who are scattered across the entire globe, is when’s the best time to email. And even if they email me. I could either be asleep or out on a spacewalk or something. I’m not going to be able to get back to them very quickly. It’s going to be at least several hours probably before before I can get back to them. And the same on the other way. So when I send an email out, my family could be asleep or traveling or working, etc. So, we’re very much still in the mode of not being able to talk to friends and family in anything close to real time.
+
+Matthew Montgomery
+
+One thing that not having signal really gets you thinking about is what are some of the things that you miss about Earth, or what are the things that are important or possible to develop during Mars mission. And I think a reoccurring conversation for us, and one that a lot of people don’t realize, is that we don’t have access to the internet, and I think that would be a big one that could be developed. Like, what ways within that time delayed environment that you’re talking about could we still have a semblance of the internet or a way to look up information, or maybe similarly access to like AI or chatbots? So you know that’s a pretty critical piece that a lot of us don’t realize are so integrated in our lives. Just that ability to look up information quickly. We have some ways around it here, but yeah, I think that’s one we could we could develop more.
+
+James Spicer
+
+Yeah, and going off that, I don’t think you’re talking about how do we get past the light time between, more how can I type in a query into something that looks like an internet browser, and then 45 minutes later I see what that web page looks like.
+
+Matthew Montgomery
+
+Yeah, exactly.
+
+Matthew Montgomery
+
+Yeah, I guess one to think about is this isn’t like Project Hail Mary where he has access to all software and all information. We have a much more limited set of resources that we can pull from, and finding ways in the future for Mars crews to have wider access is just going to make them more effective in the long run.
+
+Ellen Ellis
+
+Alright, and that’s all we have to report here from Mars Dune Alpha. See you next time!
+
+Kenna Pell
+
+The challenge of managing information flow was something I hadn’t thought about, and how once the signal returned, it wasn’t like everything was going to instantly snap back to normal. There was a giant backlog of mission data, messages, and system updates, all waiting to be slowly transferred through that nominal communication delay each way. Something I found interesting too was that, of course, they needed to be strategic in what they prioritize being transferred based on bandwidth constraints, we often or always I feel like take for granted instant access to information here on Earth, which the crew talks about how even simple research becomes a time delayed activity, leaning on downloaded encyclopedias even to find information. It’s a small look into what future Mars explorers might need to innovate to feel connected and informed.
+
+And of course, with this hardworking CHAPEA 2 crew, once the signal was back, the work accelerated quickly. The crew transitions straight into virtual reality Mars walks, science, and more. In their words, the mission simply doesn’t stop.
+
+<Outro Music>
+
+Thanks for sticking around. I hope you learned something new today.
+
+You can check out the latest from around the agency at NASA.gov. You can also find out more about CHAPEA at nasa.gov/chapea, and you can find our full collection of episodes and all the other wonderful NASA podcasts at nasa.gov/podcasts.
+
+On social media, we’re on the NASA Johnson Space Center pages of Facebook, X, and Instagram. If you have any questions for us or suggestions for future episodes email us at nasa-houstonpodcast@mail.nasa.gov.
+
+This episode was recorded on July 8, 2026.
+
+Our producer is Dane Turner. Audio engineers are Will Flato and Daniel Tohill. And our social media is managed by Kelsey Howren. Houston We Have a Podcast was created and is supervised by Gary Jordan. Special thanks to Kelsey Spivey for helping us plan and set up the interview. And of course, thanks again to Sara Whiting for taking the time to come on the show, and our CHAPEA 2 crew, Ross Elder, Ellen Ellis, Matthew Montgomery, and James Spicer for the incredible audio logs.
+
+Give us a rating and feedback on whatever platform you’re listening to us on, and tell us what you think of our podcast.
+
+We’ll be back next week.
+
+3…2…1… This is an official NASA podcast.

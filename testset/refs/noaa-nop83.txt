@@ -1,0 +1,179 @@
+# Reference transcript: NOAA Ocean Podcast, Ep 83: Mapping the Way After a Disaster: NOAA Navigation Response Teams
+# Source: https://oceanservice.noaa.gov/podcast/may26/nop83-navigation-response-team.html
+# Covers the whole recording (29 min), not just the clip(s); see manifest.json for clip offsets. Text as published, not aligned to audio.
+
+HOST: This is the NOAA Ocean Podcast. I'm your host, Allison Burrell. I've got Commander John Kidd in the studio with us today. Welcome, John.
+
+Commander John Kidd: Hi, Allison. Glad to be here.
+
+HOST: You are the chief of the Navigation Response Branch within the National Ocean Service. When I first learned about the navigation response teams, I wasn't aware that they were such an important part of the work at the National Ocean Service. Can you tell us more about these teams and what do they actually do?
+
+Commander John Kidd: Navigation response teams are strategically located around the country. We have four active teams right now, but essentially they're small teams of NOAA Corps officers, physical science technicians or physical scientists, and they operate these small trailerable survey launches around the nation. Our bread and butter is definitely doing emergency response survey, so following up after major storms or marine incidents, but we also do routine survey to support the Office of Coast Survey's general priorities, too.
+
+HOST: You said something that I didn't understand, trailerable?
+
+Commander John Kidd: Trailerable. So small vessels that fit on a trailer, we can literally tow it across the country if we have to, which we do frequently. For instance, our NRT Gulfport team will be doing survey ops in Green Bay this year, which is clearly not near Gulfport, Mississippi, so they'll have to drive all the way north to Green Bay this year to do the survey up there.
+
+HOST: The Navigation Response Team, do you refer to them as NRTs?
+
+Commander John Kidd: Absolutely. NOAA loves acronyms.
+
+HOST: So I'll refer to it as NRT from here on out. When are these Navigation Response Teams deployed? In what situations?
+
+Commander John Kidd: Well, for an emergency response posture, it can be sometimes tricky to make that determination if we get deployed or not. There are obvious circumstances when you have a major hurricane make landfall. Okay, yeah, we're definitely going to have to deploy to make sure the Army Corps engineers feel supported and we're able to clear those waterways. Sometimes it's a little less obvious for minor tropical storms and such, but when we make that determination, we need to mobilize. We just gather all our assets and make the call, and teams can be on the road within 24 hours, sometimes even shorter notice.
+
+HOST: Does NOAA partner with other government and local agencies in response to an emergency such as a hurricane?
+
+Commander John Kidd: Absolutely. The U.S. Coast Guard, captain of the port, is the major authority to make decisions to close a port or open a port whenever that time comes. But we also work very closely with the U.S. Army Corps of Engineers. There are other federal agencies that do emergency hydrographic survey responses. So we're on the water alongside them surveying the waterways, and we both feed our information, all the products, to the Coast Guard for their decision making.
+
+HOST: As the chief, do you ever get to go out on these responses?
+
+Commander John Kidd: I could most certainly choose to travel and join the teams. They usually like their space and run their teams the way they do. I do like to visit the teams in a non-emergency posture throughout the year just to say hi. And it's difficult being a remote supervisor. But my previous position was on an NRT team down in Gulfport. So I've had plenty of time in the field in hurricane response.
+
+HOST: How many people typically serve on a team? And does that vary depending on either the emergency or event that they're being deployed for?
+
+Commander John Kidd: Absolutely. So on our routine survey missions, the teams are individually staffed with about two to four people depending on the team. A minimum of two people on the team. Obviously, you're going to need two people on the boat to do a survey to drive the boat and to operate the sonar equipment. But for large complex operations, large complex emergency ops, we can send as many as five people on a boat. And we can also send multiple boats per event. I've been on a deployment for a major hurricane where we've sent three boats in a single area. So we can scale up or down depending on what is needed.
+
+HOST: There's always someone on call?
+
+Commander John Kidd: Yes, definitely. Always somebody on call. We try and cover each other and allow folks to go on leave. But yeah, we can scramble teams whenever we need it.
+
+HOST: Are there teams all over the United States? Where are they located?
+
+Commander John Kidd: We have four active teams. One is in Seattle, Washington. One team is in Gulfport, Mississippi. One team is Patuxent, Maryland. And the last one is in New London, Connecticut. We'll be shortly standing up a team in Charleston, South Carolina, hopefully within the year. We try to strategically place them around the country to kind of ensure that we have coverage through the United States. We do not have any teams in Alaska or Hawaii, but we have the ability to fly out a mobile mapping kit out to those states and obviously fly people to respond to any emergencies out there. So we try to separate our folks so we can cover as much ground as possible with the limited staff that we have.
+
+HOST: Your teams were heavily involved in the response to this collapse, this bridge collapse in Baltimore in 2024. Could you, as an anecdote, walk us through those first 24 to 48 hours?
+
+Commander John Kidd: Yeah, sure. We got the call and I hopped on the phone to see what assets we had available. At that time, our team in Patuxet, Maryland, their vessel was not available for survey. So we actually had to call in our team from New London, Connecticut, which is certainly within driving distance to the area. In the beginning, it wasn't very clear at what point we would be called into survey. The beginning parts of the response were very much focused on recovery of the lost people who were unfortunately on the bridge.
+
+Once it became clear that auxiliary channels were needed, auxiliary channels meaning channels that didn't necessarily go through the bridge where the bridge had to collapse, but on the eastern and western sides of the river to allow traffic to pass through the bridge area for recovery efforts.
+
+Once that mission was clear to us, we knew exactly we should mobilize right away. So our team traveled down again from New London, Connecticut, and were on the water within 24 hours of that notification. The first week or so was very hectic. There were a lot of logistics that needed to happen, finding hotels and finding where we could gain access to the secured area. We initially sent five people along for that initial deployment. I'm glad we did because it was so complicated. We had people on the boat running the vessel, collecting hydrographic data.
+
+We had people ashore doing remote processing and additional people ashore just running general logistics, where to get food, how to handle launch and recovery of the vessel from which marina. We also flew in some additional expertise in how to operate our terrestrial laser scanners, which is a sensor we use to map the air gaps of the bridge to the water. So how high the bridge is off the water in those auxiliary channel areas to make sure the various tugs and barges that we're trying to pass underneath could do so safely.
+
+HOST: Were there safety concerns sending a boat out into the bay to do that initial survey?
+
+Commander John Kidd: Absolutely. There was a ton of metal debris in the water. So that's the mission for us. We have to go find that. That's the navigational hazard. So those risks always exist for us in emergency response. You know, sometimes you find a hazard that is just below the water surface, which would be a hazard for us. Sometimes the hazard is much deeper and would only be hazardous for a deep cargo ship.
+
+So in the environment of the FSK, the bridge collapsed. There was a lot of metal that was coming up out of the water. It was quite hairy. For the first week or two, we were only conducting survey ops during the day. So we could mostly see where the major hazards were. There are some surveying techniques that you can use to mitigate those hazards that are just below the water line.
+
+We call it half-stepping, basically only navigating the boat where we have existing hydrographic data. So we know that there's not a hazard there. Later on in the response effort, we actually had the vessel operating in the middle of the night. So much less visibility, obviously. We had some auxiliary lights in the area on the bridge, but the low light conditions were a bit tricky to deal with. But we had gained experience in the area. We knew where all the major hazards were. It was mitigated well. So beyond the 48 hours, this was a multi-month-long effort.
+
+HOST: What was that like for the teams on the ground? Was it the same team the whole time, or were you switching out teams if it was lasting that long?
+
+Commander John Kidd: Yeah, it was definitely a long stretch. The core of the team was constant.
+
+We did sub out people here and there just to give relief. In all, Office of Coast Survey was involved in the response for more than 52 consecutive days, and that included 22 days of active surveying on the water. Earlier on, we had the most people deployed just because of the new operating area. But as the response progressed, we were able to get away with sending fewer and fewer people out there, particularly because we were utilizing some remote processing techniques, which were pretty new to us at the time. But we were shipping our data to other places in the country to process and to deliver the products to the stakeholders that night. So it required less personnel on site towards the latter end of the response.
+
+HOST: When you mean stakeholders, you mean like the local and other government agencies that you work with?
+
+Commander John Kidd: Yes, ma'am. The Army Corps engineers probably be the primary stakeholder in that operation. The folks that were managing the common operating picture, so all of the federal agencies involved. There were many involved.
+
+HOST: Your response teams were also involved in the response to the midair collision over the Potomac in Washington, D.C. in January of 2025, sadly between a commercial jet and an Army helicopter near Ronald Reagan Washington National Airport. In contrast to the bridge collapse, this was a widely different emergency. How did NOAA respond in this instance?
+
+Commander John Kidd: Yeah, this was definitely a challenging response. NRTs have actually responded to other downed airplanes in the past, but this one was unique in that the aircraft landed in a very shallow field in the Potomac River. Most of our operating area was just in a few feet of water. So shallow enough that even our small boats were unable to get in the area. So we had to call in our autonomous surface vessels from their home ported in Gulfport, Mississippi. We chose to mobilize them because they have drafts of about 10 inches. We have two of them. They're about five foot long and eight foot long. Once they got on site, we were able to use them to map the debris field to find all of the hazards in the water.
+
+HOST: So these are remote operated vehicles?
+
+Commander John Kidd: Correct. Autonomous surface vehicles. Autonomous meaning you can program a preset mission, even give it a box and say, go fill this area. It'll go out and use its hydrographic sensors, multi-beam sonars, side-scan sonars, collect a full data set, come back to you, and you intercept it, process it, and that we can use that data set to find all of the bits and pieces of the aircraft, which was really critical for the FBI divers that wanted to recover as much of the debris from as possible from the waterway.
+
+HOST: Oh, that's so interesting. So these autonomous vehicles, they're not remote controlled. You program them and they go out and do their job and come back and deliver the data.
+
+Commander John Kidd: Yeah, they can be remote controlled with like a, almost looks like a drone controller. You can operate them that way, particularly like the beginning and ending of the mission to get it from the start point back to the boat, for instance, but it's much more effective to use them in an autonomous posture so that you can be doing other things. For instance, we sometimes use them as a force multiplier. So we'll have the ASVs mapping in an area adjacent to the actual survey vessel while we're actually serving with our own boats or we, like, sometimes use them as a force multiplier.
+
+HOST: From the time that you realized that the water was so shallow to deploying the autonomous vehicles, how long did that take to get those up and running?
+
+Commander John Kidd: This was beyond that first 48 hours of the incident response. So we actually had a survey vessel on site within 24 hours to survey the main channel part. We actually found quite a bit of debris in the main channel, including one of the helicopter's rotors.
+
+HOST: Is there still any surveying being done after either of these emergencies?
+
+Commander John Kidd: So for the Francis Scott Key Bridge, no, we completed that operation. We are expected to be called back in once the bridge is rebuilt to just give a fresh sweep on the seafloor to make sure the charts are up to date. That work has yet to be completed. So we're expecting that callback in the near future, hopefully.
+
+For the DCA aircraft collision event, we also do not have any more responsibilities after that. We successfully covered the area and reported all the features and the FBI divers were able to cover all of the debris that they were wanting to from that area. So we don't have any more responsibilities in that area either. We are sending the team back in the Potomac River to recover some of that area and some additional spots for just general chart updates, but nothing associated with the aircraft collision.
+
+HOST: Because that area of the Potomac is already very shallow and it usually stays that way?
+
+Commander John Kidd: Yes, correct.
+
+HOST: So there aren't boats that are being navigated through that section regularly?
+
+Commander John Kidd: Actually, there are. I personally navigate my small trailerable boat in those waterways all the time. There's a really good boat ramp in the area, but no significant marine commerce going through that area of the waterway.
+
+HOST: So as you mentioned, the different locations of the teams, since we don't have boats in every U.S. port, what are some of the challenges you face in getting to the launch site after a storm or incident?
+
+Commander John Kidd: Yeah, that's where it really gets interesting. Particularly in a post-hurricane environment. It's quite difficult to gain access to the survey area. We have to get our survey assets through downed trees and low power lines, and it can be quite difficult. We usually send a reconnaissance vehicle ahead to make sure that the path is clear because it's nearly impossible to turn a big rig with a truck and the boat on the trailer, turn that around in such a tight area. Lodging is sometimes difficult for us since we sometimes use RVs to make sure we can be as close as possible to the operating area.
+
+And once we're on site, we largely rely on ourselves for sustenance. We bring in our own food, our own water, and fuel. After a few days have passed, other stakeholders move into the area, like the National Guard, and they're a great resource for us. They'll often drop water tanks and fuel depots to us to keep us going if the response goes on for multiple days.
+
+HOST: So we've talked about a bridge collapse and an airplane crash into a body of water. But there's also hurricanes and other types of incidents. I'm wondering if you had some examples of those NRTs have participated in. An example of a storm response and what other types of responses do the NRTs respond to?
+
+Commander John Kidd: When I was on the NRT Gulfport team years ago, Hurricane Laura made landfall on Lake Charles. We deployed to this one, but unfortunately, we weren't able to find lodging that was very close. So we actually had to drive back and forth three hours each way to get to the operating area. Trees down, power lines down. It took us quite some time to find a suitable boat launch to get on the waterways to satisfy the survey requests that the Coast Guard had given us.
+
+And just a month later, Hurricane Delta made landfall about 12 miles away from where Hurricane Laura made landfall just a month prior. So guess where we ended up? Back at Lake Charles. And that was the response that we chose to utilize RVs. And man, it was a world of difference. We were right there next to the boat ramp. We were in and out, satisfied the requirements of the Coast Guard. And it was way more efficient to do it that way. So ever since that response, we've been doing business that way.
+
+And we find it to be very, very efficient.
+
+HOST: What other types of activities do the NRTs participate in?
+
+Commander John Kidd: This past year, we mobilized our flyway mapping kit. We call it the MIST kit, mobile integrated survey team on a U.S. Coast Guard cutter up in Alaska to assist their annual buoy placement project. We've also sent the MIST kit down to Antarctica on a Coast Guard cutter down there to survey a bay that they were interested in, I believe, building some type of infrastructure down there.
+
+This past year, we responded to a sunken fishing vessel off the coast of Oregon that unfortunately went down heading in because of a storm. And we were able to find that vessel. So we can respond to any sorts of requests.
+
+HOST: Let's dive into what kind of technology is used to survey under the water. You mentioned at DCA the autonomous vehicles that were used after the mid-air collision.
+
+Commander John Kidd: All of our survey vessels have multi-beam echo sounders, which basically broadcast a wide swath of acoustic energy into the water and wait for its reflection back to the ship or boat. And with that information, we can derive exactly how deep it is in the water. But we have multi-beam sonars. We have side-scan sonars, which basically creates an intensity image where you can see shadows of sound. So it gives you a good picture. You can't derive depths off of those information, but it gives you a bit of a higher resolution, just a different looking image that you can use to assess what the feature is that you're trying to map. We have position and orientation systems that tell us exactly how the boat is moving. So pitching up and down, yawing left and right, rotations. It tells you exactly what the ship is doing so that you know in which direction you're shooting your acoustic energy into the water.
+
+We have terrestrial laser scanners that we use to map the scene above the water. Acoustics don't really work well in air, so to map the above water environment, we use our laser scanners. So we've got a bunch of sensors that we're able to create a complete 3D georeference point cloud of the entire environment to exactly geolocate where things are and give you an exact lat-long and position in the vertical reference of how deep it is or how far off the water it is.
+
+HOST: And lat-long as in latitude and longitude?
+
+Commander John Kidd: Yes, ma'am.
+
+HOST: Does NOAA have scuba divers assisting with surveying on the response teams as well?
+
+Commander John Kidd: No, we don't have any divers in the water. Back in the day, they had an instrument called the Diver's Least Depth Gauge. It's basically a fancy pressure sensor that you could put on top of an obstruction in the water just to give an accurate depth of where it was. But with all of this remote processing, technological advancements, those sensors are no longer used.
+
+HOST: How small of an object can you actually spot on the seafloor? Are we talking about a shipping container or a coffee mug?
+
+Commander John Kidd: It kind of depends on the conditions that you're facing. For our systems, they are very high quality, very accurate. So a shipping container, very, very easy. You'll have a very clear picture of exactly how the shipping container looks. Even if it's deformed because of some type of pressure or it was struck, you'll be able to easily see the wrinkles in the shipping container. As far as a coffee mug, it might be a little shallow of water that we would need to operate in to accurately get a good picture on that. But yeah, we could detect something as small as a few inches in certain ideal circumstances.
+
+HOST: What is the point of this survey? You're looking down to see if there is debris, but what if the debris is right in the middle of a shipping lane?
+
+Commander John Kidd: That's why we're there. If there is a significant navigational hazard, if there is an I-beam in the middle of the two bridge abutments of the Francis Scott Key Bridge that would poke a hole in a ship that's trying to transit the area, that's very hazardous. That could lead to discharge of oil into the waterways. It could even result in loss of life. So it's absolutely critical that we clear these waterways for any of the hazards, for safety of life, for the resumption of commerce.
+
+That's the name of the game, to find all of the bits and pieces that may be dangerous. And sometimes we find things that aren't dangerous, right? A tree that's been down on the side of the channel that's just outside the channel, it's probably not navigationally significant. We'll report it anyway. If the Army Corps engineers find that it's in an area that they don't want it to be, they can certainly go in and extract it. And we're constantly working with them to communicate, hey, this is what's in the waterways. Should we chart this? It might need to be charted on our chart so that the mariners know that it exists. Or do you want to remove it, in which case we would not chart it.
+
+HOST: After a hurricane, in addition to there being debris on the ground, what is the depth that's required for a ship to be able to pass through a port? Are there standard depths?
+
+Commander John Kidd: Every ship is different. But you're not going to be changing the layout of the bottom of a port just for every ship. It largely depends on what port you're talking about, right? Some ports require much deeper drafts, much, much deeper authorized minimum depths. Those are preset values and published on our charts of how deep a channel is expected to be. It can be deeper than that. It cannot be shallower than that. So we're there to verify if it is, if it is shallower than that, possibly due to shifting shoals of increased wave action. If a hurricane comes through increased currents, we'll need to identify where those shoals are so that the Army Corps of Engineers dredging vessels can come in to clear that extra sediment to regain that channel depth.
+
+HOST: It makes sense that after a hurricane or a large storm that you would want to resurvey and redredge to make sure that the depth is optimal. But how often, if there aren't any storms, do you still have to go in and resurvey and redredge from just normal wave action?
+
+Commander John Kidd: That is mostly dependent on the environmentals that you're looking at. So if you have a rocky bottom in the Gulf of Maine, that bottom is most likely not going to change very quickly, very often. So the frequency at which you would survey that area is much, much less than something like the Chesapeake Bay over the Chesapeake Bay Bridge tunnel where there's always shifting sand waves.
+
+It's very environmental-based with currents and how many storms have impacted the area. So it kind of depends.
+
+HOST: And you touched upon this a little bit when speaking about scuba divers and how they're not really used anymore. But how have the navigation response teams evolved over the years?
+
+What have you learned and adapted to in terms of staffing and process and transportation?
+
+Commander John Kidd: I really love this question because it just seems that we've been on the leading edge of technological advance since the beginning of my career. We're always pushing forward, optimizing our workflows. I gave the example of the utilization of the RVs, something as simple as that. That's a huge, huge benefit to us. It makes us way more efficient. In this past year, we've been largely focused on enabling remote processing workflows. So we have Starlink on our vessels. We've been developing these automated data management systems where it'll automatically pipe our data ashore to folks that are in their nice, comfy office to be able to process that data. Instead of spending time out in the field, you know, our teams spend eight to ten hours on the water on our routine survey ops.
+
+Traditionally, they had to have processed that data that night. But with remote processing, we can farm that work out to others so that those survey teams can maximize the time on the water, get the sleep that they need, and to be able to get out there and do it all again the next day. So that's kind of the hot topic right now for us is fully realizing a remote processing posture and getting as many people involved in the process to really push our throughput.
+
+HOST: Being a part of these NRTs sounds like a lot of fun. What kind of education does it require to join one of these and get trained to participate in these navigation response teams?
+
+Commander John Kidd: It kind of depends on the position you're trying to occupy. For our NOAA Corps folks, there's a standard pathway. Our NOAA Corps officers spend their first assignment on an Office of Coast Survey ship for two years. They'll spend it on a large platform and then have an opportunity to be the officer in charge of one of the NRTs for their first land billet. Our physical scientists require a certain amount of education and colleges with certain mathematics and training like that. But we can also take our physical science technicians don't require nearly as much education.
+
+There's a lot of on-the-job training that we can do and send them to NOAA-focused trainings.
+
+HOST: Well, thank you so much, John, for coming and speaking with us here at the NOAA Ocean Podcast.
+
+This is such a fascinating topic. And now we'll be thinking about the navigation response teams every time there's a hurricane or an incident along the coasts of the United States.
+
+Commander John Kidd: Yeah, it was a pleasure talking with you, Alison. Thank you for having me.
+
+HOST: This has been Alison Burrell with the NOAA Ocean Podcast. Be sure to subscribe to the podcast and check out all our episodes through the National Ocean Service website or wherever you get your podcasts.
+
+Thanks for listening. Let's keep making waves.

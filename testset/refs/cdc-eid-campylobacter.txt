@@ -1,0 +1,215 @@
+# Reference transcript: EID podcast: Campylobacteriosis Outbreak Linked to Municipal Water, Nebraska
+# Source: https://tools.cdc.gov/podcasts/media/pdf/362393_EID_Campylobacteriosis.pdf
+# Covers the whole recording (18 min), not just the clip(s); see manifest.json for clip offsets. Text as published, not aligned to audio.
+
+Campylobacteriosis Outbreak Linked to Municipal
+Water, Nebraska, USA, 2021
+[Announcer] This program is presented by the Centers for Disease Control and Prevention.
+
+[D. Peter Drotman] This podcast series is brought to you by Emerging Infectious Diseases, often
+referred to simply as EID. I’m Dr. D. Peter Drotman, Editor-in-Chief. EID is an open access,
+high impact, peer reviewed scientific journal published monthly by CDC. EID publishes articles
+on new and re-emerging infectious diseases that occur anywhere around the world so as to
+improve the understanding of factors involved in disease emergence, control, and prevention.
+[Candice Hoffmann] Welcome to the Emerging Infectious Diseases podcast. I’m Candice
+Hoffmann. In this episode we’ll be discussing the article “Campylobacteriosis Outbreak Linked
+to Municipal Water, Nebraska, USA, 2021” which was published in the October 2024 issue.
+The article we are discussing in this episode follows the investigation of a campylobacteriosis
+outbreak that occurred in a small town in Nebraska in 2021. We talked to two authors who
+worked on this outbreak investigation. Dr. Lauren Janssen was an Epidemic Intelligence Service
+officer at the time of the outbreak.
+[Lauren Jansen] Hi, I'm Dr. Lauren Jansen, and I served as a CDC Epidemic Intelligence Service
+officer at the Nebraska Department of Health and Human Services. I currently serve as an
+Assistant Professor of Preventive Medicine at the University of Massachusetts Chan Medical
+School.
+I trained as a family physician first but found that I wanted to have a greater impact than I could
+have working with patients one-on-one. So, I decided to move my career into more of a public
+health space. I did training in preventive medicine and public health at the University of
+Massachusetts, and then really dreamed of being a CDC Epidemic Intelligence Service officer.
+So, fortunately I applied to and was accepted to that program and had just an incredible
+experience serving two years in the state of Nebraska.
+[Candice Hoffmann] Brianna Loeck, an epidemiologist with the state of Nebraska, also worked
+on this investigation.
+[Brianna Loeck] Hi there, my name is Brianna Loeck. I'm an infectious disease epidemiologist at
+Nebraska Department of Health and Human Services.
+Since I've been at the Nebraska Department of Health and Human Services, I've been in a variety
+of roles. I actually started as an administrative assistant in the epidemiology unit and then
+progressed to a health surveillance specialist and then the enteric disease epidemiologist. And
+now I serve as an infectious disease epidemiologist overseeing healthcare-associated infections
+and respiratory diseases now.
+[Candice Hoffmann] In 2021, people in a small town in Nebraska started getting sick with
+campylobacteriosis.
+[Brianna Loeck] Campylobacteriosis is actually the most common cause of food poisoning
+worldwide. It's caused by a bacteria called Campylobacter and you can get it in a couple
+different ways: from undercooked chicken, unpasteurized milk, and even contaminated water.
+The symptoms you would typically see associated with this would be diarrhea (and it can
+
+sometimes be bloody), stomach cramps, and fever and nausea. And typically, those would show
+up a few days after you have been exposed to that bacteria.
+[Candice Hoffmann] In many cases, people recover from campylobacteriosis without knowing
+Campylobacter bacteria caused their illness. In cases where patients’ symptoms are severe
+enough to seek medical attention, healthcare providers may run tests to confirm
+campylobacteriosis.
+[Brianna Loeck] How it's diagnosed is with a stool test. If you're sick enough to go to the doctor,
+you would provide that stool sample and they would test it at their lab and look for the bacteria's
+DNA to see if it was positive. Now there's PCR tests out there that are super quick, and you
+know, it can take up to less than an hour to run and you can have results super quickly. And
+they'll look for parasites, viruses, and bacteria. So, there's kind of a broad spectrum of what you
+can look for in a stool sample.
+[Candice Hoffmann] Most people recover from campylobacteriosis without antibiotics.
+[Brianna Loeck] Fortunately, most people don't need any antibiotics; you really just need rest and
+fluids to stay hydrated, especially from diarrhea. You can get dehydrated a lot. But in more
+serious cases, you may need antibiotics, but again, fortunately, most people recover without any
+antibiotics.
+[Candice Hoffmann] In response to the unusual number of cases of campylobacteriosis occurring
+in the same town in the same time frame, a local health department alerted the Nebraska state
+health department.
+[Brianna Loeck] In this specific situation, the local health department…it oversees a small town
+where this outbreak occurred and there’s only about 300 people that live in this town. And within
+a week's timeframe, there were eight people who tested positive for Campylobacter and that was
+reported because Campylobacter is a reportable disease, so that is required to get reported to us.
+The local health department notified us as soon as possible, which makes great communication.
+That's what makes a successful outbreak investigation when all partners are communicating. So,
+they notified Nebraska Department of Health and Human Services, and we immediately began
+an outbreak investigation. She said, “This is unheard of. We do not see eight cases within a
+week.” We even looked back at the data and she was absolutely right. We see maybe one case a
+year from this small town of Campylobacter. So very unusual, very alarming. So, to see this type
+of situation, we knew something was wrong.
+[Candice Hoffmann] The state and local health officials knew right away this was an unusual
+situation. These eight cases turned out to be the tip of the iceberg. Dr. Jansen and her colleagues
+got to work to investigate the outbreak and find out how many more people were affected and
+how they became ill. They began with a questionnaire that asked about multiple possible ways
+people could have gotten infected.
+[Lauren Jansen] So, one of our first steps in the epidemiologic portion of the investigation was to
+create a broad hypothesis-generating questionnaire. So, for that, we wanted to know what foods
+people were eating, what water sources people drank from, whether people treated their water at
+home, if people had attended any large community gatherings or if they had had recent animal
+contact. And so, to distribute those questionnaires, we used a lot of different methods. We used
+social media, we used the local health department's website, email, and door-to-door canvassing.
+Then we needed to analyze the results of our questionnaire, and we calculated odds ratios for the
+
+different possible exposures. So, we had 138 questionnaires come back to us. And from those,
+we identified 64 cases of campylobacteriosis. And even that is probably a bit of the tip of the
+iceberg because obviously we weren't able to reach everybody in the town, and some people
+might have had more mild illnesses that they didn't recognize or report. Even as it was, 64
+people…that's a huge percentage of a town of only about 330. And we found from that, that
+municipal water exposure was strongly associated with illness. No other exposures had
+statistically significant associations.
+[Candice Hoffmann] Drinking water is not a common source of outbreaks like this, as Dr. Jansen
+notes.
+[Lauren Jansen] So, most campylobacteriosis outbreaks are eventually linked to food, usually
+dairy and poultry. So, water was a surprising cause. Then, our investigation used both
+epidemiologic and environmental methods. So, as part of the environmental investigation, the
+town's water system was evaluated, and water testing was done. And that testing was positive for
+coliforms, which suggested possible water contamination. The town issued a boil water advisory
+and then there was a request for specialized Campylobacter testing.
+Now, that's not normally available in Nebraska. So, we had to reach out to CDC for that testing.
+So, CDC was able to guide our colleagues at the Nebraska Department of Environment and
+Energy through the collection of these samples. So, six large volume dead-end ultrafiltration
+water samples. And those were collected from the two active town wells and some other
+important sites in the town's water distribution system. And then CDC was able to perform the
+Campylobacter-specific DNA testing and culture on those samples, as well as the microbial
+source tracking.
+[Candice Hoffmann] This microbial source tracking was a unique and important part of this
+investigation.
+[Lauren Jansen] So, microbial source tracking is a PCR technique that can identify bacteria
+molecular markers that are unique to humans, ruminants like cows and deer, and bird feces. And
+we were interested in those because humans, ruminants and birds, those are known
+environmental fecal shedders of Campylobacter. So, there were six samples, and one was
+positive by PCR for presence of Campylobacter DNA. And then the microbial source tracking
+detected avian-specific fecal RNA genomic material. So those findings together suggested that
+the water contamination likely came from bird feces. And microbial source tracking proved to be
+tremendously helpful because it allowed us to link the contamination specifically to bird feces.
+And that led us right to the source and enabled us to take that action to stop the contamination.
+[Candice Hoffmann] Knowing that bird feces was the likely source of contamination, the
+investigators then looked into how bird feces could have entered the water system.
+[Lauren Jansen] So, we wanted to know where the bird feces could be entering the water system.
+So, we started to think about where birds could intrude in that way. So, birds like to roost on
+water towers. And so that led our investigation towards the water tower. So, our water colleagues
+in the Nebraska Department of Environment and Energy, they did the initial inspections of the
+water system, looking for backflow and doing the coliform testing and things like that. They also
+used a drone to fly over the water tower and inspect the water tower, but that inspection…the
+drone inspection was not revealing. But when we learned that bird feces was responsible for the
+contamination, then the town was able to bring in an external water tower expert who could do
+
+an internal inspection, which is costly and difficult. But that inspector was able to take actually
+pictures of the inside of the tower where you can see the gap and the light coming through.
+[Candice Hoffmann] Armed with the knowledge of how the water became contaminated, the
+town took action to prevent future cases of campylobacteriosis.
+[Lauren Jansen] Once we knew there was a water contamination problem, the town was able to
+initiate water chlorination, which was maintained until the tower repair was able to be
+completed. And then after that, fortunately, no campylobacteriosis cases attributable to water
+were reported once the tower was repaired and after initiation of the chlorination.
+[Candice Hoffmann] This outbreak investigation highlights the importance of drinking water
+safety, particularly in communities with aging infrastructure.
+[Lauren Jansen] Untreated groundwater systems are common in the United States. In fact, more
+than 20 million U.S. residents were served by non-disinfected water in 2006. We know that
+untreated groundwater systems with aging infrastructure are vulnerable to fecal intrusion, and
+this increases the risk for large outbreaks of enteric disease. So, with that in mind, public health
+professionals can encourage communities and managers of aged water systems to increase
+scrutiny of system components to help ensure drinking water safety. I'll also share that water
+towers are a common method of storing but also pressurizing water and they can often be more
+than 100 years old.
+[Candice Hoffmann] Looking back at this investigation, Brianna Loeck and her coauthors
+stressed the importance of collaboration between community, state, local and federal partners in
+solving this and other outbreaks.
+[Brianna Loeck] Outbreak investigations, they really work best when everyone is involved. Like,
+no single group can solve it alone. It takes a lot of manpower and a lot of expertise in other areas
+to make it work. Local health departments…they're usually the first ones to notice unusual
+illness in their communities. And those are reported by multiple sources. So, disease
+surveillance, providers, and even complaints in the community. The state health department (so
+us), we can then step in and support them and help connect dots across multiple jurisdictions if
+that's needed.
+[Candice Hoffmann] Federal partners, including CDC, FDA, and EPA also play a role.
+[Brianna Loeck] They can track things across states and do specialized testing like the CDC did
+for us. So, when all these groups share information and move quickly together, the source gets
+identified quicker and fewer people get sick, which is the goal. So, teamwork is what turns an
+outbreak response into a public health success.
+[Lauren Jansen] Yeah, and I would add too that we'd be remiss not to mention the partners that
+we had in the community. We had some really enthusiastic and tireless community members who
+really helped get the word out about our questionnaire, who distributed stool test kits to people
+who couldn't leave home. We really benefited from the help of the community in solving this
+outbreak.
+[Candice Hoffmann] This investigation, highlighted in EID, shows how community engagement,
+interagency collaboration, and proactive public health measures are important in safeguarding
+community health.
+
+[Lauren Jansen] I think the high points of the investigation were that we were able to identify
+that the water was the problem. And specifically, probably the most exciting thing was that we
+were able to use the technique microbial source tracking to link the contamination to birds
+specifically. And that led us to be able to know that the water tower was the problem because
+birds like to roost on water towers. And so, with that knowledge, we were able to help the town
+really target their investigation in the right direction and be able to take the action to stop the
+contamination.
+[Brianna Loeck] We investigated this pretty big outbreak for such a small town in Nebraska, and
+it was super striking that we received eight positive Campylobacter tests within a week. And in
+this town that is pretty much unheard of, I believe they typically have about one case of
+Campylobacter annually. So, to have eight in a week was alarming. And the local health
+department in that area who oversees that small town alerted us right away. And thankfully for
+their due diligence and monitoring their cues, their investigation disease cues, we were able to
+act on it very quickly and put up a response and work with all of our partners. And I just think
+that, you know, working together quickly and having strong communication, we were really able
+to succeed in this outbreak investigation because I think water outbreaks can be really difficult.
+But I think with just like having our communication, working with multiple teams…even CDC
+we worked with, we worked with the local health department, our water division, even the media
+and the small town we were working with, I believe the mayor and everybody. You know, it
+was…these don't come up too often and when they do, we do the best that we can to stop the
+outbreak and stop getting people from getting sick.
+[Candice Hoffmann] We hope that you enjoyed listening to this podcast and that you’ll become a
+regular reader of EID, where you will find more articles like this one.
+[Lauren Jansen] We thought that Emerging Infectious Diseases was the perfect journal to help us
+share this knowledge of this really powerful technology that folks could be using in outbreak
+response. Campylobacteriosis is not exactly an emerging infectious disease, you know, I mean,
+it's not Ebola, you know, but the use of that technique, the microbial source tracking technique,
+that was fairly novel. And we thought that was something that belonged in Emerging Infectious
+Diseases because the technique has gone on to be used in other outbreaks since and it's a really
+powerful technique.
+[Candice Hoffmann] Thanks for listening to our podcast. You can read the Emerging Infectious
+Diseases journal and subscribe to our email list at cdc.gov/eid.
+[Outro] The conclusions, findings, and opinions expressed by authors contributing to this journal
+do not necessarily reflect the official position of the U.S. Department of Health and Human
+Services, the Public Health Service, the Centers for Disease Control and Prevention, or the
+authors' affiliated institutions.
+[Announcer] For the most accurate health information, visit cdc.gov or call 1-800-CDC-INFO
+
+

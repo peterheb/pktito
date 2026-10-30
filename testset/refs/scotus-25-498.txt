@@ -1,0 +1,10415 @@
+# Reference transcript: Anderson v. Intel Corp. Investment Policy Committee, No. 25-498 (oral argument)
+# Source: https://www.supremecourt.gov/oral_arguments/argument_transcripts/2026/25-498_febh.pdf
+# Covers the whole recording (61 min), not just the clip(s); see manifest.json for clip offsets. Text as published, not aligned to audio.
+
+SUPREME COURT
+OF THE UNITED STATES
+IN THE SUPREME COURT OF THE UNITED STATES
+- - - - - - - - - - - - - - - - WINSTON R. ANDERSON, ET AL.,
+
+)
+
+Petitioners,
+
+)
+
+v.
+
+) No. 25-498
+
+INTEL CORPORATION INVESTMENT POLICY)
+COMMITTEE, ET AL.,
+Respondents.
+
+)
+)
+
+- - - - - - - - - - - - - - - - - -
+
+Pages:
+
+1 through 70
+
+Place:
+
+Washington, D.C.
+
+Date:
+
+October 6, 2026
+
+HERITAGE REPORTING CORPORATION
+Official Reporters
+1150 Connecticut Avenue, N.W., Suite 305
+Washington, D.C. 20036
+(202) 628-4888
+www.hrcreporters.com
+
+Official - Subject to Final Review
+
+1
+1
+
+IN THE SUPREME COURT OF THE UNITED STATES
+
+2
+
+- - - - - - - - - - - - - - - - -
+
+3
+
+WINSTON R. ANDERSON, ET AL.,
+
+)
+
+4
+
+Petitioners,
+
+)
+
+5
+
+v.
+
+) No. 25-498
+
+6
+
+INTEL CORPORATION INVESTMENT POLICY)
+
+7
+
+COMMITTEE, ET AL.,
+
+8
+9
+
+Respondents.
+
+)
+)
+
+- - - - - - - - - - - - - - - - - -
+
+10
+11
+
+Washington, D.C.
+
+12
+
+Tuesday, October 6, 2026
+
+13
+14
+
+The above-entitled matter came on for oral
+
+15
+
+argument before the Supreme Court of the United States
+
+16
+
+at 10:03 a.m.
+
+17
+18
+19
+20
+21
+22
+23
+24
+25
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+2
+1
+
+APPEARANCES:
+
+2
+
+MATTHEW W.H. WESSLER, ESQUIRE, Washington, D.C.; on
+
+3
+4
+5
+6
+
+behalf of the Petitioners.
+CHARLES L. McCLOUD, ESQUIRE, Washington, D.C.; on
+behalf of the Respondents.
+AIMEE BROWN, Assistant to the Solicitor General,
+
+7
+
+Department of Justice, Washington, D.C.; for the
+
+8
+
+United States, as amicus curiae, supporting the
+
+9
+
+Respondents.
+
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+3
+1
+
+C O N T E N T S
+
+2
+
+ORAL ARGUMENT OF:
+
+3
+
+MATTHEW W.H. WESSLER, ESQ.
+
+4
+
+On behalf of the Petitioners
+
+5
+
+ORAL ARGUMENT OF:
+
+6
+
+CHARLES L. McCLOUD, ESQ.
+
+7
+
+On behalf of the Respondents
+
+8
+
+ORAL ARGUMENT OF:
+
+9
+
+AIMEE BROWN, ESQ.
+
+10
+
+For the United States, as amicus
+
+11
+
+curiae, supporting the Respondents
+
+12
+
+REBUTTAL ARGUMENT OF:
+
+13
+
+MATTHEW W.H. WESSLER, ESQ.
+
+14
+
+On behalf of the Petitioners
+
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+
+Heritage Reporting Corporation
+
+PAGE:
+
+4
+
+39
+
+58
+
+68
+
+Official - Subject to Final Review
+4
+1
+
+P R O C E E D I N G S
+
+2
+3
+
+(10:03 a.m.)
+CHIEF JUSTICE ROBERTS:
+
+We will hear
+
+4
+
+argument this morning in Case 25-498, Anderson
+
+5
+
+versus Intel Corporation Investment Policy
+
+6
+
+Committee.
+
+7
+
+Mr. Wessler.
+
+8
+
+ORAL ARGUMENT OF MATTHEW W.H. WESSLER
+
+9
+
+ON BEHALF OF THE PETITIONERS
+
+10
+11
+12
+
+MR. WESSLER:
+
+Mr. Chief Justice, and
+
+may it please the Court:
+ERISA's duty of prudence is inherently
+
+13
+
+flexible.
+
+14
+
+consistently declined to inject judicially
+
+15
+
+crafted bright-line rules into a determination
+
+16
+
+of whether a complaint's allegations plausibly
+
+17
+
+allege imprudence.
+
+18
+
+Court put it colorfully in Dudenhoeffer, do not
+
+19
+
+readily "divide the plausible sheep from the
+
+20
+
+meritless goats" because they are inconsistent
+
+21
+
+with the careful, context-sensitive inquiry
+
+22
+
+that both ERISA and Rule 8 require.
+
+23
+
+As a result, this Court has
+
+Categorical rules, as this
+
+The Ninth Circuit's "meaningful
+
+24
+
+benchmark requirement" is just such a rule.
+
+25
+
+Under it, a court first asks whether a
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+5
+1
+
+complaint's performance allegations on their
+
+2
+
+own can plausibly demonstrate imprudence by
+
+3
+
+identifying a virtually indistinguishable fund
+
+4
+
+that performed better.
+
+5
+
+to identify that specific fund, the performance
+
+6
+
+allegations are discarded, and that is true
+
+7
+
+even if the complaint relies on benchmarks
+
+8
+
+selected by the fiduciaries themselves or
+
+9
+
+comparators identified by benchmarking experts.
+
+10
+
+In the Respondents' view, this rule is
+
+11
+
+consistent with the ordinary pleading framework
+
+12
+
+set forth in Twombly and Iqbal.
+
+13
+
+that framework, courts must assess all
+
+14
+
+non-conclusory allegations together in
+
+15
+
+determining if a complaint plausibly states a
+
+16
+
+claim.
+
+17
+
+precludes that assessment.
+
+18
+
+If the complaint fails
+
+But, under
+
+The "meaningful benchmark requirement"
+
+And the Ninth Circuit's rule isn't
+
+19
+
+even necessary.
+
+Everyone agrees that, without
+
+20
+
+more, a complaint merely alleging that one fund
+
+21
+
+performed better than another won't survive a
+
+22
+
+motion to dismiss.
+
+23
+
+standards, however, are perfectly capable of
+
+24
+
+weeding out a truly meritorious -- meritless
+
+25
+
+claim like that.
+
+The ordinary pleading
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+6
+1
+
+Ultimately, because the meaningful
+
+2
+
+benchmark rule is both out of step with Twombly
+
+3
+
+and Iqbal and an unnecessary solution in search
+
+4
+
+of a problem, it should be rejected.
+
+5
+
+I welcome the Court's questions.
+
+6
+
+JUSTICE THOMAS:
+
+So are you saying
+
+7
+
+that you can prove imprudence or demonstrate it
+
+8
+
+by comparing dissimilar funds?
+
+9
+
+MR. WESSLER:
+
+10
+
+that a complaint --
+
+11
+12
+13
+
+I mean, that is one way
+
+JUSTICE THOMAS:
+
+So how would you do
+
+that?
+MR. WESSLER:
+
+Sure.
+
+So it's
+
+14
+
+context-dependent, and there is no one specific
+
+15
+
+fund that a complaint needs to identify to make
+
+16
+
+performance allegations relevant to support a
+
+17
+
+claim of imprudence.
+
+18
+
+spectrum of different ways that the complaint
+
+19
+
+could use performance allegations to contribute
+
+20
+
+to the overall plausibility of a complaint.
+
+21
+
+And the way it would do that is it
+
+It can run a very wide
+
+22
+
+would identify a relevant way of comparing the
+
+23
+
+performance of one fund with other potential
+
+24
+
+comparators, and it would explain why that
+
+25
+
+performance was relevant to the theory of
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+7
+1
+2
+
+breach alleged in a complaint.
+But what the Ninth Circuit has done
+
+3
+
+here is it has attempted to predefine the kind
+
+4
+
+of comparison that will count when a court is
+
+5
+
+asking how the performance allegations
+
+6
+
+contribute to plausibility.
+
+7
+
+JUSTICE THOMAS:
+
+I think what the
+
+8
+
+Ninth Circuit is saying is you can't compare
+
+9
+
+apples and oranges if you have a fund, an
+
+10
+
+equity fund, that is designed to produce high
+
+11
+
+returns but riskier returns, and you can't
+
+12
+
+compare that to a fund that is to protect
+
+13
+
+against losses.
+
+14
+
+MR. WESSLER:
+
+We -- I agree that if
+
+15
+
+that was all the complaint was trying to do, to
+
+16
+
+premise a claim of imprudence on, that kind of
+
+17
+
+complaint would be -- would not survive a
+
+18
+
+motion to dismiss.
+
+19
+
+think, went beyond just a recognition that the
+
+20
+
+performance allegations need to contribute to
+
+21
+
+the theory of imprudence.
+
+22
+
+But the Ninth Circuit, I
+
+What it did was to say the only kind
+
+23
+
+of comparison that will count is one that
+
+24
+
+identifies a specific materially
+
+25
+
+indistinguishable fund that only differed in
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+8
+1
+
+performance.
+
+2
+
+the kind of comparator that counts, it set the
+
+3
+
+bar in a way that would foreclose a complaint
+
+4
+
+from relying on a whole range of different
+
+5
+
+kinds of potential comparisons.
+
+6
+
+JUSTICE THOMAS:
+
+7
+
+And by attempting to predefine
+
+So do you agree that
+
+you can't compare apples and oranges?
+
+8
+
+MR. WESSLER:
+
+Yes, but I think the
+
+9
+
+question is, what is an apple and what is an
+
+10
+
+orange?
+
+11
+
+defining at the outset what can count as a
+
+12
+
+relevant comparator.
+
+And that question can't be answered by
+
+13
+
+And I can, if I can, just give you an
+
+14
+
+example.
+
+15
+
+meaningful benchmark definition that it
+
+16
+
+adopted, requires that a specific comparator be
+
+17
+
+an actually existing fund that shares similar
+
+18
+
+aims, similar risks, similar potential rewards,
+
+19
+
+and similar asset allocations.
+
+20
+
+So the Ninth Circuit's rule, the
+
+But imagine a complaint that
+
+21
+
+identifies a potentially imprudent fund and
+
+22
+
+says this fund is labeled as a growth fund, but
+
+23
+
+it is underperforming another fund that is
+
+24
+
+labeled as a stable value fund.
+
+25
+
+Ninth Circuit's definition, that attempted
+
+Under the
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+9
+1
+
+comparison would fail because the two funds do
+
+2
+
+not share similar aims.
+
+3
+
+allegation is to demonstrate that the growth
+
+4
+
+fund is underperforming even a fund that isn't
+
+5
+
+attempting to maximize returns.
+
+6
+
+But the point of the
+
+And I think what you can see is that
+
+7
+
+the Ninth Circuit's definition of this
+
+8
+
+"meaningful benchmark requirement," if you
+
+9
+
+trace it back, what you see is that it came
+
+10
+
+from a series of Eighth Circuit decisions, a
+
+11
+
+trio of Eighth Circuit decisions, in which the
+
+12
+
+Eighth Circuit had crafted this rule in which
+
+13
+
+it said, to state a claim, plaintiffs have to
+
+14
+
+identify a meaningful benchmark.
+
+15
+
+But, if you look at those cases,
+
+16
+
+what's going on there is very different from
+
+17
+
+the kind of case you have here.
+
+18
+
+cases, what -- what you had was plaintiffs
+
+19
+
+attempting to exclusively rely on performance
+
+20
+
+allegations to state a claim.
+
+21
+
+non-performance allegations in the case.
+
+22
+
+the Eighth Circuit said, if all you're going to
+
+23
+
+do is look just at performance allegations and
+
+24
+
+try to get through a motion to dismiss, you
+
+25
+
+better have a pretty tight connection between
+
+In those
+
+There were no
+
+Heritage Reporting Corporation
+
+And
+
+Official - Subject to Final Review
+10
+1
+
+the challenged fund and whatever fund you're
+
+2
+
+saying did better than that fund.
+
+3
+
+But, here, the complaint in this case
+
+4
+
+doesn't rely exclusively on performance
+
+5
+
+allegations.
+
+6
+
+methodological problem of the Ninth Circuit's
+
+7
+
+approach that adopted this Eighth Circuit rule
+
+8
+
+and ported it over into a case in which
+
+9
+
+performance allegations are just a part of the
+
+10
+
+overall picture.
+
+11
+
+And I think that's really the
+
+It -- it block-ported that rule,
+
+12
+
+though.
+
+And so what it said was not only do
+
+13
+
+you have to identify this actually existing
+
+14
+
+specific fund that must share the same
+
+15
+
+objectives, risks, and rewards, but also, if
+
+16
+
+the complaint doesn't identify that fund, the
+
+17
+
+performance allegations are out of the holistic
+
+18
+
+analysis because they, on their own, don't
+
+19
+
+demonstrate imprudence.
+
+20
+
+JUSTICE JACKSON:
+
+21
+
+what does your complaint rely on?
+
+22
+
+just trying to understand how the argument that
+
+23
+
+you just laid forward applies to your
+
+24
+
+complaint.
+
+25
+
+MR. WESSLER:
+
+So can I ask you,
+I -- I'm
+
+Sure.
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+11
+1
+
+JUSTICE JACKSON:
+
+So you say we don't
+
+2
+
+rely solely on performance allegations, so what
+
+3
+
+do you rely on?
+
+4
+
+MR. WESSLER:
+
+The complaint has
+
+5
+
+paragraphs of non-performance allegations that
+
+6
+
+detail why the fiduciaries' over-allocation of
+
+7
+
+these funds into hedge funds was both risky and
+
+8
+
+also unprecedented, inconsistent with the way
+
+9
+
+other fiduciaries managing similarly sized
+
+10
+
+plans were constructing their investment
+
+11
+
+options.
+
+12
+
+JUSTICE JACKSON:
+
+13
+
+comparator to sustain those kinds of
+
+14
+
+allegations or don't you?
+
+15
+
+No.
+
+They're -- no, you
+
+17
+
+JUSTICE JACKSON:
+
+You don't need one?
+
+18
+
+MR. WESSLER:
+
+16
+
+19
+20
+
+MR. WESSLER:
+
+So do you need a
+
+don't --
+
+-- you don't -- you
+
+don't -- you -JUSTICE KAGAN:
+
+Well, Mr. Wessler, I
+
+21
+
+guess I don't understand the relevance of those
+
+22
+
+allegations.
+
+23
+
+you over the Iqbal line themselves, all well
+
+24
+
+and good.
+
+25
+
+something in addition to them.
+
+I mean, if those allegations get
+
+If they don't, then you need
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+12
+1
+
+And I think, going back to Justice
+
+2
+
+Thomas's question, the thing that you need
+
+3
+
+in addition is like another apple.
+
+4
+
+Now I -- I understand it when you say
+
+5
+
+it can't -- it doesn't have to be, like,
+
+6
+
+precisely the same apple with precisely, you
+
+7
+
+know, the same color and texture and taste and
+
+8
+
+all of that.
+
+9
+
+apple.
+
+10
+
+But it's got to be kind of an
+
+And it seems to me that the Ninth
+
+11
+
+Circuit pretty much said exactly that.
+
+12
+
+you're -- you're -- you're suggesting a kind of
+
+13
+
+caricature of the Ninth Circuit opinion.
+
+14
+
+the Ninth Circuit opinion doesn't say
+
+15
+
+absolutely everything, including the -- the
+
+16
+
+assets invested in, has to be the same.
+
+17
+
+I mean,
+
+But
+
+It says, you know, in the end, it
+
+18
+
+can't be a good comparison unless you have a --
+
+19
+
+a -- a fund with the same general approach and
+
+20
+
+risk/reward profile.
+
+21
+
+MR. WESSLER:
+
+22
+23
+
+Sure.
+
+So a couple of
+
+responses to that.
+I -- I -- I -- I don't think that, in
+
+24
+
+my view, is an accurate reading of what the
+
+25
+
+Ninth Circuit did, and here's why.
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+13
+1
+
+The Ninth Circuit ruled out all of the
+
+2
+
+proposed comparators in this complaint, okay?
+
+3
+
+It said none of them are "truly comparable"
+
+4
+
+under its definition of what can count.
+
+5
+
+And what we know is that the complaint
+
+6
+
+identified a range of different kinds of
+
+7
+
+comparators, including, Justice Kagan, the
+
+8
+
+fiduciary's own selected benchmarks, okay?
+
+9
+
+It went into detail about why the
+
+10
+
+fiduciaries identified other funds and said --
+
+11
+
+and told participants:
+
+12
+
+funds and evaluate the performance of our fund
+
+13
+
+against those funds.
+
+You can look at these
+
+14
+
+Those were ruled out of the -- of --
+
+15
+
+on front -- in the Ninth Circuit based on this
+
+16
+
+meaningful benchmark standard.
+
+17
+
+We also know that the standard the
+
+18
+
+Ninth Circuit adopted, the definition, allowed
+
+19
+
+it to rule out comparators identified by
+
+20
+
+experts in the benchmarking process.
+
+21
+
+The plaintiffs in this case went out
+
+22
+
+at the pleading stage, retained experts who
+
+23
+
+were investment professionals involved in
+
+24
+
+benchmarking to look at the fiduciaries' funds,
+
+25
+
+and asked them:
+
+Can you identify relevant
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+14
+1
+
+comparators for these funds given the features,
+
+2
+
+what they are, what their objectives are, the
+
+3
+
+asset allocation, everything?
+
+4
+
+And the experts did that.
+
+Those are
+
+5
+
+in the complaint.
+
+6
+
+under the Ninth Circuit's definition.
+
+7
+
+And they were ruled out
+
+CHIEF JUSTICE ROBERTS:
+
+Well, that's
+
+8
+
+just -- it seems to me that's just an objection
+
+9
+
+to the application of the rule in your
+
+10
+
+particular case.
+
+11
+
+a -- a basis for throwing out the basic -- the
+
+12
+
+fundamental approach.
+
+13
+
+MR. WESSLER:
+
+It -- it doesn't represent
+
+I -- I -- I think it's
+
+14
+
+more than that because, under this definition,
+
+15
+
+this meaningful benchmark definition, not only
+
+16
+
+is the court -- the Ninth Circuit attempting to
+
+17
+
+predefine what can count for relevance in the
+
+18
+
+plausibility analysis, but it's isolating a
+
+19
+
+category of allegation, just the performance
+
+20
+
+allegations.
+
+21
+
+performance allegations identify a specific
+
+22
+
+fund that is materially indistinguishable?
+
+23
+
+It's asking:
+
+Do those
+
+If not, those performance allegations
+
+24
+
+are out of the case before you reach the
+
+25
+
+holistic analysis.
+
+And I think that that's a
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+15
+1
+
+function of this meaningful benchmark rule that
+
+2
+
+was initially created in the Eighth Circuit,
+
+3
+
+where all you had were performance allegations.
+
+4
+
+And I think, in some ways, it might be
+
+5
+
+understandable that if that's -- that's all the
+
+6
+
+complaint has, just an attempt to state a claim
+
+7
+
+based exclusively on performance allegations,
+
+8
+
+then, if the performance allegations are
+
+9
+
+incapable of permitting a plausible inference
+
+10
+
+of imprudence, you're out.
+
+11
+
+JUSTICE ALITO:
+
+Well --
+
+12
+
+JUSTICE KAVANAUGH:
+
+13
+
+JUSTICE ALITO:
+
+Why --
+
+-- are you saying that
+
+14
+
+you can -- you can state a claim by comparing
+
+15
+
+apples and oranges but supplement that with the
+
+16
+
+suggestion that the strategy was flawed?
+
+17
+
+The question presented concerns
+
+18
+
+underperformance.
+
+19
+
+brief about denigrating the strategy, featuring
+
+20
+
+such a heavy reliance on private equity and
+
+21
+
+hedge funds.
+
+22
+
+But there's a lot in your
+
+MR. WESSLER:
+
+Right.
+
+So let me be
+
+23
+
+clear about this.
+
+The complaint does not
+
+24
+
+challenge, as -- as a category, the ability
+
+25
+
+that fiduciaries have to invest in hedge funds
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+16
+1
+
+or private equity.
+
+What the complaint
+
+2
+
+challenges as the basis for its imprudence
+
+3
+
+claim is the -- is the strategy that -- that
+
+4
+
+the Intel fiduciaries adopted in which they
+
+5
+
+overallocated these target-date funds and a
+
+6
+
+global diversified fund to this kind of asset
+
+7
+
+class.
+
+8
+
+JUSTICE ALITO:
+
+9
+
+like strategy and not about -- not
+
+10
+
+underperformance.
+
+11
+
+MR. WESSLER:
+
+Well, that does sound
+
+I agree with you that
+
+12
+
+the theory is strategy.
+
+13
+
+allegations --
+
+The performance
+
+14
+
+JUSTICE KAVANAUGH:
+
+15
+
+JUSTICE GORSUCH:
+
+16
+
+the case?
+
+Why is --
+
+How is that in
+
+The QP that you presented us with --
+
+17
+
+MR. WESSLER:
+
+Yeah.
+
+18
+
+JUSTICE GORSUCH:
+
+-- is whether, for
+
+19
+
+claims predicated on fund underperformance, a
+
+20
+
+meaningful benchmark is required.
+
+21
+
+MR. WESSLER:
+
+Right.
+
+22
+
+JUSTICE GORSUCH:
+
+And --
+
+And the Ninth
+
+23
+
+Circuit also said that Anderson insists that he
+
+24
+
+is not challenging -- that he's challenging the
+
+25
+
+implementation of the strategy as opposed to --
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+17
+1
+
+as opposed to the strategy itself.
+
+2
+
+MR. WESSLER:
+
+3
+
+JUSTICE GORSUCH:
+
+4
+
+MR. WESSLER:
+
+5
+
+JUSTICE GORSUCH:
+
+6
+
+Yes.
+
+So a couple --
+
+So is that --
+
+-- a couple --- that's the case
+
+as it comes to us.
+
+7
+
+MR. WESSLER:
+
+-- a couple responses to
+
+8
+
+that.
+
+9
+
+think there is any disagreement about this --
+
+10
+
+is a rule that applies not just to claims that
+
+11
+
+rely exclusively on underperformance but rely
+
+12
+
+on allega- -- on allegations --
+
+13
+14
+
+The Ninth Circuit's rule -- and I don't
+
+JUSTICE GORSUCH:
+
+Okay.
+
+MR. WESSLER:
+
+16
+
+JUSTICE GORSUCH:
+
+Yeah.
+Let's suppose we're
+
+going to answer the question presented, and --
+
+18
+
+MR. WESSLER:
+
+19
+
+JUSTICE GORSUCH:
+
+20
+
+just -- let me just finish, counsel.
+
+I -- but I -- yeah.
+
+21
+
+MR. WESSLER:
+
+22
+
+JUSTICE GORSUCH:
+
+23
+
+time you want, I promise.
+
+24
+25
+
+If
+
+that -- what that may -- whatever that may be.
+
+15
+
+17
+
+Okay.
+
+-- and -- let me
+
+Sorry.
+You'll get all the
+
+But let's say we answer the question
+presented and whether -- whether claims for
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+18
+1
+
+underperformance need -- require a meaningful
+
+2
+
+benchmark.
+
+3
+4
+5
+
+Do you have any objection to saying
+that's true?
+MR. WESSLER:
+
+Yes, we have an
+
+6
+
+objection to that, and here's why, because,
+
+7
+
+as the Ninth Circuit defined what counts as a
+
+8
+
+meaningful benchmark, it screens out all manner
+
+9
+
+of potentially relevant ways that a complaint
+
+10
+
+could perform the comparison.
+
+11
+
+JUSTICE GORSUCH:
+
+Okay.
+
+But -- but do
+
+12
+
+you agree with the general principle that when
+
+13
+
+we're limited to underperformance claims, a
+
+14
+
+benchmark of some kind, a meaningful benchmark
+
+15
+
+of some kind, is required, apples, not oranges?
+
+16
+
+MR. WESSLER:
+
+I think that for -- for
+
+17
+
+performance allegations to be relevant, they --
+
+18
+
+they -- there is inherent comparison that needs
+
+19
+
+to occur.
+
+20
+
+here is the way in which the Ninth Circuit
+
+21
+
+attempted to define, before a court ever
+
+22
+
+considers the allegations, what can count for
+
+23
+
+purposes of that comparison.
+
+24
+25
+
+I think the -- the -- the problem
+
+JUSTICE BARRETT:
+
+But don't you have
+
+to do that to decide if an apple is an apple?
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+19
+1
+
+Don't you have to say, well, it has to be
+
+2
+
+round, you know, it has to come from a certain
+
+3
+
+kind of tree?
+
+4
+
+I mean, it seems to me that, really,
+
+5
+
+you are agreeing that a meaningful benchmark
+
+6
+
+standard is appropriate.
+
+7
+
+little bit about what is meaningful, right?
+
+8
+
+But there has to be some criteria.
+
+9
+
+MR. WESSLER:
+
+You're fighting a
+
+So, yes, but I think
+
+10
+
+what matters is -- is the way in which the
+
+11
+
+complaint connects the dots between the
+
+12
+
+challenged fund and the proposed comparator.
+
+13
+
+So just, for instance, the Ninth
+
+14
+
+Circuit would -- would screen -- the Ninth
+
+15
+
+Circuit's rule would screen out attempts to
+
+16
+
+provide a comparison point of fiduciary's own
+
+17
+
+selected benchmarks if those benchmarks don't
+
+18
+
+meet the specific criteria that the Ninth
+
+19
+
+Circuit said qualify.
+
+20
+
+And I think that's, again, a function
+
+21
+
+of a view that the way that the court could
+
+22
+
+assess the allegations is to -- in the
+
+23
+
+complaint is to isolate the performance
+
+24
+
+allegations separate and apart from the rest of
+
+25
+
+the allegations in the complaint and ask, based
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+20
+1
+
+just on those performance allegations, does the
+
+2
+
+complaint demonstrate -- have a --
+
+3
+
+JUSTICE BARRETT:
+
+4
+
+You're putting more weight on your
+
+5
+
+non-performance allegations?
+
+6
+
+MR. WESSLER:
+
+So you're shifting.
+
+Our view is that they
+
+7
+
+have to be taken together under a holistic
+
+8
+
+analysis.
+
+9
+
+give me maybe 30 seconds to walk through why I
+
+10
+
+think that matters in a case like this.
+
+11
+
+And I think, if I can, if you can
+
+The theory of imprudence here is one
+
+12
+
+in which the fiduciaries told participants that
+
+13
+
+the reason they were adding more of these funds
+
+14
+
+into hedge funds was an attempt to mitigate
+
+15
+
+risk.
+
+16
+
+strategy, okay?
+
+That was the stated objective of this
+
+17
+
+And the complaint lays out, outside of
+
+18
+
+the performance allegations, why that strategy
+
+19
+
+couldn't be accomplished through this over-
+
+20
+
+allocation into hedge funds.
+
+21
+
+It explains, hedge funds, contrary to
+
+22
+
+what the fiduciaries said, hedge funds are, in
+
+23
+
+fact, correlated to the market.
+
+24
+
+volatile.
+
+25
+
+mitigation that the fiduciaries are saying is
+
+They are often
+
+They don't provide the kind of risk
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+21
+1
+
+their objective.
+
+2
+
+And the performance allegations in
+
+3
+
+this case corroborate those non-performance
+
+4
+
+allegations.
+
+5
+
+performance of these funds underperformed other
+
+6
+
+points of comparison in exactly the ways --
+
+7
+
+They show specifically that the
+
+JUSTICE KAVANAUGH:
+
+Why -- why does
+
+8
+
+performance matter in the sense that half of
+
+9
+
+all the funds are going to underperform or be
+
+10
+
+lower than the median?
+
+11
+
+what your complaint's really about is either
+
+12
+
+the strategy of going low risk or the means to
+
+13
+
+fulfill that strategy, namely, hedge funds.
+
+It seems to me that
+
+14
+
+What you just said suggests it's the
+
+15
+
+latter, the means to fulfill that strategy or
+
+16
+
+achieve that strategy.
+
+17
+
+underperformance has anything to do with that.
+
+18
+19
+20
+
+MR. WESSLER:
+
+I don't know why
+
+Well, I -- I mean,
+
+there -- there are two -JUSTICE KAVANAUGH:
+
+Was that a
+
+21
+
+reasonable, prudent strategy to use hedge funds
+
+22
+
+to achieve a goal of low risk or not?
+
+23
+
+MR. WESSLER:
+
+24
+
+JUSTICE KAVANAUGH:
+
+25
+
+Right.
+
+So --
+
+I'll just ask that
+
+question.
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+22
+1
+
+MR. WESSLER:
+
+2
+
+that the fiduciaries did it.
+
+3
+
+that's really the -- the thrust of this
+
+4
+
+complaint, is that no one -- if -- if risk
+
+5
+
+mitigation was your goal, the complaint
+
+6
+
+alleges, there were other, better-performing
+
+7
+
+ways to accomplish that goal.
+
+8
+
+complaint identified -- you asked, I think,
+
+9
+
+this --
+
+10
+
+-- not -- not in the way
+
+JUSTICE KAVANAUGH:
+
+And I think
+
+And the
+
+Well, the
+
+11
+
+question, I think, that ERISA asks is whether
+
+12
+
+it was an unreasonable means to achieve that
+
+13
+
+goal, namely, use of hedge funds.
+
+14
+
+that's -- you can just have argument on that
+
+15
+
+question.
+
+16
+17
+18
+
+MR. WESSLER:
+
+Sure.
+
+Sure.
+
+And you --
+
+And that
+
+question gets at, I think, a slightly -JUSTICE KAVANAUGH:
+
+And the answer, I
+
+19
+
+guess, is -- is no, is what the Ninth Circuit
+
+20
+
+concludes.
+
+21
+
+MR. WESSLER:
+
+Well, the Ninth Circuit
+
+22
+
+ultimately carved up this complaint in a way
+
+23
+
+that allowed it to isolate just the performance
+
+24
+
+allegations and ask, based only on those
+
+25
+
+allegations, do those allegations demonstrate
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+23
+1
+2
+
+imprudence?
+And I think part of the problem here
+
+3
+
+is that the performance allegations help
+
+4
+
+reinforce or corroborate the
+
+5
+
+non-performance-related allegations about the
+
+6
+
+nature of this strategy.
+
+7
+
+JUSTICE JACKSON:
+
+But I guess I don't
+
+8
+
+see that.
+
+9
+
+Justice Kavanaugh's question.
+
+10
+
+in the Ninth Circuit's opinion.
+
+11
+
+do have a -- a -- they mention
+
+12
+
+underperformance, but they focus on your
+
+13
+
+argument and they say, for example, "The
+
+14
+
+argument appears to rest on the proposition
+
+15
+
+that the fiduciaries' allocation strategy was
+
+16
+
+imprudent because hedge funds and private
+
+17
+
+equity funds are inherently so risky that no
+
+18
+
+prudent investor with the same aims would have
+
+19
+
+invested in them."
+
+20
+
+And I am sort of piggy-backing on
+I don't see that
+I mean, they
+
+That doesn't bring to mind anything
+
+21
+
+about underperformance.
+
+22
+
+focusing on the very part of the complaint that
+
+23
+
+you say they should be focusing on.
+
+24
+25
+
+MR. WESSLER:
+
+They seem to be
+
+So let me -- can I point
+
+you to where I think --
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+24
+1
+
+JUSTICE JACKSON:
+
+2
+
+MR. WESSLER:
+
+3
+
+look in the complaint.
+
+4
+
+the Petition Appendix, what you'll see there is
+
+5
+
+that the court says, "To the extent a plaintiff
+
+6
+
+asks a court to infer imprudence based on
+
+7
+
+performance, even in part, must" -- "the
+
+8
+
+plaintiff must compare the performance to funds
+
+9
+
+or investments that are meaningfully similar."
+
+10
+
+That's at 14a.
+
+11
+
+Yes.
+
+-- you can -- you can
+So, if you go to 14a of
+
+And then, at 15a, the next page, the
+
+12
+
+court is saying, to accomplish that, to
+
+13
+
+actually permit a plaintiff to rely on
+
+14
+
+performance allegations, those allegations must
+
+15
+
+by themselves demonstrate imprudence.
+
+16
+
+So what's going on in the Ninth
+
+17
+
+Circuit's decision -- and, again, this --
+
+18
+
+this -- this goes back to the way that the
+
+19
+
+Eighth Circuit's rule evolved -- is that a
+
+20
+
+court first isolates the performance
+
+21
+
+allegations and asks:
+
+22
+
+complaint identify a specific materially
+
+23
+
+indistinguishable fund that differs only in
+
+24
+
+performance?
+
+25
+
+then the performance allegations on their own
+
+Is there -- does the
+
+That's the standard.
+
+And if not,
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+25
+1
+
+will fail to demonstrate imprudence and so
+
+2
+
+they're out of the case.
+
+3
+
+And then we might ask:
+
+4
+
+putting the performance allegations to one
+
+5
+
+side, do the rest of the allegations state a
+
+6
+
+claim?
+
+7
+
+attempt to isolate a category of allegation and
+
+8
+
+ask do those allegations just on their own
+
+9
+
+permit an inference of imprudence is -- is --
+
+10
+
+Well, okay,
+
+And what we submit is that that kind of
+
+JUSTICE JACKSON:
+
+What do you make of
+
+11
+
+the part of the Ninth Circuit's opinion where
+
+12
+
+it says it is possible that a plaintiff could
+
+13
+
+make out an imprudence claim by alleging that a
+
+14
+
+plan invested much more in a particularly risky
+
+15
+
+class of assets than did other comparable
+
+16
+
+plans, even if investing in that asset class is
+
+17
+
+not per se imprudent in smaller amounts?
+
+18
+
+They do seem to entertain this idea of
+
+19
+
+asset allocation and -- and say, contrary to
+
+20
+
+what you just said, that you could make out an
+
+21
+
+imprudence claim on that basis.
+
+22
+
+MR. WESSLER:
+
+I -- I think that's
+
+23
+
+correct, but they have done that by discarding
+
+24
+
+at the outset the performance -- one category
+
+25
+
+of allegation in this complaint.
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+26
+1
+
+At its core, I think the problem with
+
+2
+
+the Ninth Circuit's approach is -- is -- is
+
+3
+
+just a pleading one.
+
+4
+
+sidestep the requirement that this Court has
+
+5
+
+consistently emphasized applies to ERISA claims
+
+6
+
+no less than any other in which a court must
+
+7
+
+take all of the allegations together and ask
+
+8
+
+holistically whether they together are able to
+
+9
+
+state a claim.
+
+It's an attempt to
+
+10
+
+JUSTICE JACKSON:
+
+11
+
+JUSTICE ALITO:
+
+Can I just ask --
+
+Well, "holistic" is
+
+12
+
+kind of a magic word, but I -- I don't
+
+13
+
+understand how your arguments about your --
+
+14
+
+your argument about strategy and your argument
+
+15
+
+about underperformance fit together.
+
+16
+
+particular strategy is reasonable or not cannot
+
+17
+
+be judged based on how that strategy performed
+
+18
+
+in one particular instance.
+
+19
+
+it might -- they -- they're just two different
+
+20
+
+things.
+
+Whether a
+
+It may be -- it --
+
+21
+
+If you want to analyze whether it's a
+
+22
+
+good strategy to try to -- to convert a fourth
+
+23
+
+down from the one-yard line, you would have to
+
+24
+
+look at a large number of instances where
+
+25
+
+that's done.
+
+The fact that it didn't work in a
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+27
+1
+
+particular case doesn't really show you
+
+2
+
+anything, nor does the fact that it worked in a
+
+3
+
+particular case show you anything.
+
+4
+
+But you seem to be trying to -- you
+
+5
+
+know, you say "holistic" and you want to throw
+
+6
+
+these two seemingly unrelated things together.
+
+7
+
+MR. WESSLER:
+
+8
+
+JUSTICE ALITO:
+
+9
+
+MR. WESSLER:
+
+10
+
+JUSTICE ALITO:
+
+11
+
+what you're arguing.
+
+12
+
+MR. WESSLER:
+
+Let -Maybe I'm not --
+
+Yeah.
+
+Let me --
+
+-- I don't understand
+
+-- let me try to -- let
+
+13
+
+me -- let me just try to be specific about how
+
+14
+
+it worked in this complaint.
+
+15
+
+So what this complaint did, outside of
+
+16
+
+the performance allegations, is that it
+
+17
+
+explained why the particular strategy that
+
+18
+
+these fiduciaries adopted to achieve the risk
+
+19
+
+mitigation goal was inappropriate for that risk
+
+20
+
+mitigation goal.
+
+21
+
+It included paragraph after paragraph
+
+22
+
+of allegation explaining why hedge funds are
+
+23
+
+incapable, at least in the allocations that
+
+24
+
+these fiduciaries used, of decoupling
+
+25
+
+themselves sufficiently from equity markets in
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+28
+1
+
+a way that would have provided downside market
+
+2
+
+protection and how these hedge funds, again, at
+
+3
+
+this allocation level would not have been able
+
+4
+
+to prevent the kind of volatility that the
+
+5
+
+fiduciaries were concerned with.
+
+6
+
+And then, in the performance
+
+7
+
+allegations, it included specific examples of
+
+8
+
+the kinds of hedge fund investments that the
+
+9
+
+fiduciaries employed that matched up with those
+
+10
+
+volatile approaches --
+
+11
+
+JUSTICE GORSUCH:
+
+12
+
+MR. WESSLER:
+
+13
+
+JUSTICE GORSUCH:
+
+14
+
+Let me --
+
+-- that were --- let me come at
+
+it --
+
+15
+
+MR. WESSLER:
+
+16
+
+JUSTICE GORSUCH:
+
+17
+
+the same question a different way.
+
+18
+
+doubt one could have a -- an argument about the
+
+19
+
+strategy being a good or -- or bad one to try
+
+20
+
+to mitigate risk rather than seek more growth
+
+21
+
+or to rely on hedge funds as opposed to other
+
+22
+
+investments tools.
+
+23
+
+-- alleged outside.
+-- let me come at
+I don't
+
+But that's not the question you asked
+
+24
+
+us to address in your cert petition.
+
+25
+
+petition asks us to address, when we're dealing
+
+Heritage Reporting Corporation
+
+Your cert
+
+Official - Subject to Final Review
+29
+1
+
+with performance -- underperformance
+
+2
+
+allegations, do apples need to be apples?
+
+3
+
+there need to be many -- a meaningful
+
+4
+
+benchmark?
+
+5
+
+address.
+
+6
+
+seems to be saying, yeah, that's true, answer
+
+7
+
+the QP yes, but our complaint has a whole lot
+
+8
+
+more.
+
+Does
+
+That's the question you asked us to
+
+And the argument I'm hearing today
+
+9
+
+And I -- I guess I'm just wondering,
+
+10
+
+you know, are -- are you shifting ground on us
+
+11
+
+here?
+
+12
+
+MR. WESSLER:
+
+Yeah, I mean, I -- I
+
+13
+
+don't think we're shifting ground.
+
+I think
+
+14
+
+that the question we asked you to decide is
+
+15
+
+whether the Ninth Circuit's rule --
+
+16
+
+JUSTICE GORSUCH:
+
+Well, no.
+
+No,
+
+17
+
+that's not the question you asked us to decide.
+
+18
+
+I've got the question.
+
+19
+
+MR. WESSLER:
+
+20
+
+JUSTICE GORSUCH:
+
+You wrote it.
+
+You
+
+know it.
+
+23
+
+MR. WESSLER:
+
+24
+
+JUSTICE GORSUCH:
+
+25
+
+The
+
+actual question.
+
+21
+22
+
+Yeah, I understand.
+
+Yes.
+It's -- it's
+
+whether -- whether, for claims predicated on
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+30
+1
+
+fund underperformance, a meaningful benchmark
+
+2
+
+is required.
+
+3
+
+MR. WESSLER:
+
+4
+
+JUSTICE GORSUCH:
+
+5
+
+Right.
+
+but that's --
+
+6
+
+MR. WESSLER:
+
+7
+
+JUSTICE GORSUCH:
+
+8
+9
+
+I'm paraphrasing,
+
+Yes.
+-- that is what
+
+you -MR. WESSLER:
+
+Yes, and -- and I -- our
+
+10
+
+claim here is predicated on underperformance in
+
+11
+
+the sense that we need those allegations to get
+
+12
+
+us over the plausibility line.
+
+13
+
+of the claim, but they're not the only part of
+
+14
+
+the claim.
+
+15
+
+JUSTICE SOTOMAYOR:
+
+They are part
+
+So tell me how you
+
+16
+
+define "meaningful."
+
+I think that's what we're
+
+17
+
+coming down to.
+
+18
+
+with comparators.
+
+19
+
+Justice Barrett's question, which is what kind
+
+20
+
+of apple is it?
+
+You're saying, I provided you
+But you haven't answered
+
+21
+
+MR. WESSLER:
+
+22
+
+JUSTICE SOTOMAYOR:
+
+23
+24
+25
+
+Yep.
+So how do you
+
+define what kind of apples should be compared?
+MR. WESSLER:
+
+Yep.
+
+I think it's
+
+entirely context-dependent.
+
+What does the
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+31
+1
+
+complaint do to connect the dots between the
+
+2
+
+challenged fund and the proposed comparison?
+
+3
+
+But I -- and it could take --
+
+4
+
+JUSTICE SOTOMAYOR:
+
+But I have a
+
+5
+
+problem, which is we know that the -- the
+
+6
+
+stated aim of this investment was to minimize
+
+7
+
+long-term risk, correct?
+
+8
+
+MR. WESSLER:
+
+Yes.
+
+9
+
+JUSTICE SOTOMAYOR:
+
+10
+
+not the aim of equity funds.
+
+11
+
+at an equity fund, they want to make short-term
+
+12
+
+profit, not long-term risk management.
+
+13
+
+where in the complaint -- and that's what I
+
+14
+
+thought the Ninth Circuit was saying that it
+
+15
+
+couldn't find -- do you say other funds --
+
+16
+
+MR. WESSLER:
+
+17
+
+JUSTICE SOTOMAYOR:
+
+18
+
+That's
+
+So, when I look
+
+So
+
+Yep.
+-- these are
+
+them --
+
+19
+
+MR. WESSLER:
+
+20
+
+JUSTICE SOTOMAYOR:
+
+21
+
+All right.
+
+Yep.
+-- who want to
+
+control for long-term risk management --
+
+22
+
+MR. WESSLER:
+
+Yep.
+
+23
+
+JUSTICE SOTOMAYOR:
+
+-- don't invest in
+
+24
+
+hedge funds, they invest in something else,
+
+25
+
+they do something else and why?
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+32
+1
+
+MR. WESSLER:
+
+Yep.
+
+2
+
+JUSTICE SOTOMAYOR:
+
+I don't see that.
+
+3
+
+MR. WESSLER:
+
+So I'll point you
+
+Sure.
+
+4
+
+specifically to a couple of examples.
+
+If you
+
+5
+
+go to JA 248, as one example, you will see that
+
+6
+
+the complaint attempts to provide a comparison
+
+7
+
+for the global diversified fund to a 60/40
+
+8
+
+equity/bond fund.
+
+9
+
+says, if you're trying to do risk mitigation,
+
+10
+
+an effective and common way to do that is to
+
+11
+
+invest in 40 percent bonds.
+
+And the -- and the complaint
+
+12
+
+So that's one example of a comparison
+
+13
+
+that the complaint provided that attempted to
+
+14
+
+compare a fund with similar objectives, like
+
+15
+
+risk mitigation, to the approach that the
+
+16
+
+fiduciaries adopted.
+
+17
+
+Now that was screened out under the
+
+18
+
+Ninth Circuit's definition because it didn't
+
+19
+
+include a similar asset allocation.
+
+20
+
+have the kind of hedge fund allocation that
+
+21
+
+the -- that the -- that the fiduciary funds
+
+22
+
+had.
+
+23
+24
+25
+
+CHIEF JUSTICE ROBERTS:
+
+It didn't
+
+Thank you,
+
+counsel.
+Justice Thomas, anything?
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+33
+1
+
+Justice Alito?
+
+2
+
+Anything further, Justice Sotomayor?
+
+3
+
+Justice Kavanaugh?
+
+4
+
+Justice Gorsuch?
+
+5
+
+JUSTICE KAVANAUGH:
+
+Yeah.
+
+Just to
+
+6
+
+follow up on Judge Murphy's dissent in the
+
+7
+
+Sixth Circuit, who raises the question about
+
+8
+
+why performance -- underperformance would ever
+
+9
+
+be relevant.
+
+10
+
+You've used the phrase "performance
+
+11
+
+allegations" a number of times.
+
+12
+
+to be clear.
+
+13
+
+underperformance alone is a violation, correct?
+
+You're not suggesting that
+
+14
+
+MR. WESSLER:
+
+15
+
+JUSTICE KAVANAUGH:
+
+16
+17
+
+I just want
+
+No.
+
+But -And -- and why
+
+does underperformance become relevant then?
+MR. WESSLER:
+
+Sure.
+
+It can become
+
+18
+
+relevant if it corroborates a theory of
+
+19
+
+imprudence that the complaint attempts to
+
+20
+
+allege by showing --
+
+21
+
+JUSTICE KAVANAUGH:
+
+You could have a
+
+22
+
+terrible strategy that -- that is imprudent and
+
+23
+
+nonetheless works, or you could have --
+
+24
+
+MR. WESSLER:
+
+For -- for sure.
+
+25
+
+JUSTICE KAVANAUGH:
+
+-- a really good
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+34
+1
+
+strategy that ends up losing because of the way
+
+2
+
+the market turned.
+
+3
+
+MR. WESSLER:
+
+For sure.
+
+And to get
+
+4
+
+back, Justice Kavanaugh, to a point you made
+
+5
+
+earlier, ultimately, the statute focuses on
+
+6
+
+fiduciary decision-making, a process.
+
+7
+
+the fiduciaries engage in a decision-making
+
+8
+
+process that led them to adopt a particular
+
+9
+
+strategy?
+
+10
+
+JUSTICE KAVANAUGH:
+
+Right.
+
+How did
+
+And this
+
+11
+
+whole case -- I mean, the question presented
+
+12
+
+we're going to decide, but I think, actually,
+
+13
+
+this case, your complaint's really about:
+
+14
+
+Is it reasonable to have hedge funds in a
+
+15
+
+risk-mitigation strategy?
+
+16
+
+MR. WESSLER:
+
+And -- and one thing
+
+17
+
+that plaintiffs don't have access to is direct
+
+18
+
+information about the fiduciaries'
+
+19
+
+decision-making process.
+
+20
+
+of these cases --
+
+21
+
+So, instead, in most
+
+JUSTICE KAVANAUGH:
+
+But I think you
+
+22
+
+would have to make a threshold argument that
+
+23
+
+using hedge funds to try to mitigate risk was
+
+24
+
+sufficiently unreasonable to get past the
+
+25
+
+motion-to-dismiss stage.
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+35
+1
+2
+
+MR. WESSLER:
+
+Yeah, correct.
+
+And --
+
+and I think the way that this complaint --
+
+3
+
+JUSTICE KAVANAUGH:
+
+I'm not sure
+
+4
+
+how performance has anything to do with that,
+
+5
+
+but --
+
+6
+
+MR. WESSLER:
+
+Sure.
+
+So the way that
+
+7
+
+this complaint tries to do that is it attempts
+
+8
+
+to demonstrate -- and, again, the allegations
+
+9
+
+in the complaint are entitled to -- to be taken
+
+10
+
+as true -- that the hedge funds, by their
+
+11
+
+nature, are in -- are inappropriate kinds of
+
+12
+
+investments to achieve that -- that kind of
+
+13
+
+risk-mitigation goal.
+
+14
+15
+
+And then the performance allegations
+demonstrate --
+
+16
+
+JUSTICE KAVANAUGH:
+
+One -- one of the
+
+17
+
+responses to that would be that they were very
+
+18
+
+common.
+
+19
+
+MR. WESSLER:
+
+Sorry?
+
+20
+
+JUSTICE KAVANAUGH:
+
+They were commonly
+
+21
+
+used, correct, hedge funds, by -- by many
+
+22
+
+funds?
+
+23
+24
+25
+
+MR. WESSLER:
+
+Hedge funds are --
+
+are -JUSTICE KAVANAUGH:
+
+Were commonly used
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+36
+1
+
+by funds seeking to mitigate risk?
+
+2
+
+MR. WESSLER:
+
+Yes, but not in the
+
+3
+
+allocations that the Intel fiduciaries used
+
+4
+
+here.
+
+5
+
+fund in a similarly sized plan that was
+
+6
+
+anywhere close to the allocation percentages
+
+7
+
+that the fiduciaries used here, which, if I
+
+8
+
+can, just points up one additional problem with
+
+9
+
+the Ninth Circuit's test because in requiring a
+
+10
+
+comparison to be materially indistinguishable
+
+11
+
+means that you would need to identify another
+
+12
+
+fund that was at the same asset allocation
+
+13
+
+levels as the Intel fiduciaries' fund, and the
+
+14
+
+absence of any such fund would mean that the
+
+15
+
+performance allegations are out of the case.
+
+In fact, there is no other example of a
+
+16
+
+JUSTICE KAVANAUGH:
+
+17
+
+CHIEF JUSTICE ROBERTS:
+
+18
+
+Thank you.
+Justice
+
+Barrett?
+
+19
+
+Justice Jackson?
+
+20
+
+JUSTICE JACKSON:
+
+Can I just go back
+
+21
+
+to my initial question to you, which is, if
+
+22
+
+we're focusing on the asset allocation strategy
+
+23
+
+part of your complaint, which I take it is the
+
+24
+
+thrust of your imprudence claim, is it your
+
+25
+
+view that you don't need a meaningful
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+37
+1
+
+comparator in order to establish or to support
+
+2
+
+that claim or those allegations?
+
+3
+
+MR. WESSLER:
+
+Our view is that if you
+
+4
+
+are attempting to rely on performance
+
+5
+
+allegations as part of that claim, that
+
+6
+
+inherently requires some point of comparison.
+
+7
+
+JUSTICE JACKSON:
+
+If you are
+
+8
+
+attempting to bring in the performance
+
+9
+
+allegations, okay, which you admit that you did
+
+10
+
+in this case --
+
+11
+
+MR. WESSLER:
+
+Yes.
+
+12
+
+JUSTICE JACKSON:
+
+13
+
+performance allegations --
+
+14
+
+MR. WESSLER:
+
+15
+
+JUSTICE JACKSON:
+
+-- you have some
+
+Yes.
+-- could you make
+
+16
+
+out the claim without the performance
+
+17
+
+allegations?
+
+18
+
+MR. WESSLER:
+
+I -- I could -- I could
+
+19
+
+imagine a case where you could -- you wouldn't
+
+20
+
+need to rely on performance allegations.
+
+21
+
+JUSTICE JACKSON:
+
+And if you didn't do
+
+22
+
+so, would you need a comparator to establish
+
+23
+
+that non-performance --
+
+24
+25
+
+MR. WESSLER:
+
+No, I don't -- I don't
+
+think so.
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+38
+1
+2
+
+JUSTICE JACKSON:
+
+have to show or wouldn't -- wouldn't --
+
+3
+
+MR. WESSLER:
+
+4
+
+JUSTICE JACKSON:
+
+5
+
+MR. WESSLER:
+
+6
+
+How -- wouldn't you
+
+Imagine -Yes, please.
+
+-- if I can give you a
+
+hypothetical.
+
+7
+
+JUSTICE JACKSON:
+
+8
+
+MR. WESSLER:
+
+Please.
+
+Imagine a situation
+
+9
+
+in which the fiduciaries' funds included
+
+10
+
+50 percent lottery tickets --
+
+11
+
+JUSTICE JACKSON:
+
+12
+
+MR. WESSLER:
+
+Mm-hmm.
+
+-- as a -- as a -- as --
+
+13
+
+as -- as implementing a particular strategic
+
+14
+
+objective.
+
+15
+
+I don't -- in that context, I don't
+
+16
+
+think you would need a comparator to -- to
+
+17
+
+potentially permit a plausible inference of
+
+18
+
+imprudence because, on its face, that strategy
+
+19
+
+would be --
+
+20
+
+JUSTICE JACKSON:
+
+21
+
+world that we have --
+
+22
+
+MR. WESSLER:
+
+23
+
+JUSTICE JACKSON:
+
+Right.
+
+But, in the
+
+Yep.
+-- we're talking
+
+24
+
+about hedge funds and private equity.
+
+25
+
+Kavanaugh says that was pretty common.
+
+Heritage Reporting Corporation
+
+Justice
+
+Official - Subject to Final Review
+39
+1
+
+Wouldn't, in order to make a plausible
+
+2
+
+claim with these facts, you have to demonstrate
+
+3
+
+that there were other funds that did not
+
+4
+
+have -- you know, that had the same aims, risks
+
+5
+
+and reward strategy but did not have that same
+
+6
+
+basket of assets, that did not --
+
+7
+
+MR. WESSLER:
+
+8
+
+JUSTICE JACKSON:
+
+9
+
+Oh, yes.
+
+And -- and --
+
+So isn't that a
+
+comparator?
+
+10
+
+MR. WESSLER:
+
+I mean, it is a
+
+11
+
+comparator.
+
+The Ninth Circuit does not apply
+
+12
+
+this rule to allegations that are outside of
+
+13
+
+the performance category in a complaint.
+
+14
+
+JUSTICE JACKSON:
+
+15
+
+MR. WESSLER:
+
+16
+
+JUSTICE JACKSON:
+
+17
+
+Yes.
+All right.
+
+Thank
+
+you.
+
+18
+19
+
+I see.
+
+CHIEF JUSTICE ROBERTS:
+
+Thank you,
+
+counsel.
+
+20
+
+Mr. McCloud.
+
+21
+
+ORAL ARGUMENT OF CHARLES L. McCLOUD
+
+22
+
+ON BEHALF OF THE RESPONDENTS
+
+23
+24
+25
+
+MR. McCLOUD:
+
+Thank you, Mr. Chief
+
+Justice, and may it please the Court:
+I'd like to start today by noting that
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+40
+1
+
+much of my friend's arguments had little to do
+
+2
+
+with the question presented.
+
+3
+
+The question presented today is
+
+4
+
+important but narrow:
+
+5
+
+plausible claim for a breach of the duty of
+
+6
+
+prudence based on a comparison of two funds
+
+7
+
+that aren't meaningfully similar?
+
+8
+
+Can a plaintiff state a
+
+And as Judge Miller's opinion
+
+9
+
+explained for the Ninth Circuit below, the
+
+10
+
+answer is no for multiple reasons.
+
+11
+
+You can start with ERISA's text and
+
+12
+
+purpose.
+
+13
+
+can make a wide range of prudent decisions,
+
+14
+
+including the decision that Intel's fiduciaries
+
+15
+
+made here to pursue a more conservative
+
+16
+
+strategy through diversification.
+
+17
+
+ERISA recognizes that fiduciaries
+
+Just because one strategy produces
+
+18
+
+lower returns doesn't make it imprudent.
+
+And,
+
+19
+
+in assessing prudence, the statute commands a
+
+20
+
+comparison to a fiduciary with like aims acting
+
+21
+
+in like capacity, not an identical fiduciary
+
+22
+
+and not identical investments but similar
+
+23
+
+enough to make the comparison meaningful.
+
+24
+
+Requiring meaningful comparisons also
+
+25
+
+follows from well-established federal pleading
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+41
+1
+
+standards.
+
+2
+
+alone is not a violation of ERISA, as my
+
+3
+
+friend conceded.
+
+4
+
+Again, underperformance standing
+
+So the mere existence of a difference
+
+5
+
+in performance between two funds doesn't
+
+6
+
+plausibly suggest any wrongdoing, especially
+
+7
+
+when accounting for the obvious alternative
+
+8
+
+explanation that different funds are designed
+
+9
+
+to perform differently.
+
+10
+
+To rule out that explanation, a
+
+11
+
+plaintiff needs to allege that the funds being
+
+12
+
+compared had similar aims but performed better
+
+13
+
+or cost less.
+
+14
+
+Mr. Wessler has called this
+
+15
+
+requirement of an apples-to-apples comparison
+
+16
+
+an improper heightened pleading standard.
+
+17
+
+That's not correct.
+
+This Court
+
+18
+
+regularly draws clear lines at the pleading
+
+19
+
+stage.
+
+20
+
+parallel conduct.
+
+21
+
+allegations based on insider information.
+
+22
+
+Hikma did it most recently for allegations
+
+23
+
+based on inaction.
+
+24
+25
+
+Twombly did it for allegations of
+Dudenhoeffer did it for
+
+The meaningful benchmark standard does
+the same thing for allegations that a fund
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+42
+1
+
+costs too much or didn't earn enough.
+
+2
+
+I welcome the Court's questions.
+
+3
+
+JUSTICE THOMAS:
+
+4
+
+a meaningful benchmark?
+
+5
+
+MR. McCLOUD:
+
+How would you define
+
+So, Justice Thomas, the
+
+6
+
+way that most of the courts have looked at it
+
+7
+
+is to start with the aims of the fund, so, for
+
+8
+
+example, are you targeting aggressive growth?
+
+9
+
+Are you trying to track the market?
+
+10
+
+have a more conservative strategy like the
+
+11
+
+Intel fiduciaries?
+
+12
+
+Do you
+
+From there, you could look at things
+
+13
+
+like how do you implement that goal, the
+
+14
+
+particular allocation decisions that you're
+
+15
+
+making, the sort of risk/reward tradeoff.
+
+16
+
+But, to be clear, I don't think the
+
+17
+
+Ninth Circuit required the sort of identicality
+
+18
+
+that Mr. Wessler has suggested.
+
+19
+
+it's also true, when you look at the court
+
+20
+
+decisions that have applied this standard,
+
+21
+
+they're not requiring that you have materially
+
+22
+
+the same investment.
+
+23
+
+be an onerous standard.
+
+24
+
+enough similarity to make the comparison
+
+25
+
+meaningful, and that's going to vary from
+
+And I think
+
+I acknowledge that would
+They are requiring
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+43
+1
+2
+
+case to case.
+JUSTICE THOMAS:
+
+Do you think it's
+
+3
+
+appropriate -- well, you probably do -- but
+
+4
+
+does it seem appropriate to make -- make this
+
+5
+
+determination at the pleading stage on a motion
+
+6
+
+to dismiss?
+
+7
+
+MR. McCLOUD:
+
+I do, Your Honor, for
+
+8
+
+this reason:
+
+In order to have a plausible
+
+9
+
+inference of wrongdoing, you need a comparison
+
+10
+
+that is itself meaningful.
+
+11
+
+respect, it's very similar to the allegations
+
+12
+
+of parallel conduct in Twombly.
+
+13
+
+the Court said those allegations are equally
+
+14
+
+consistent with lawful conduct.
+
+I think, in that
+
+In Twombly,
+
+15
+
+And the same thing is true here.
+
+16
+
+fact that Fund A underperforms Fund B is
+
+17
+
+equally consistent with those funds either
+
+18
+
+being different because of the vagaries of the
+
+19
+
+market or because of intentional difference in
+
+20
+
+strategy between the two funds.
+
+21
+
+JUSTICE BARRETT:
+
+The
+
+Mr. McCloud, can
+
+22
+
+I -- can I ask you, would you be -- or would
+
+23
+
+you be satisfied or would it be a good idea for
+
+24
+
+the Court to simply answer the QP in this way?
+
+25
+
+You know, it asks whether, when allegations are
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+44
+1
+
+based on underperformance, the plaintiff must
+
+2
+
+allege a meaningful benchmark.
+
+Yes, period.
+
+3
+
+Or do you think that we would need,
+
+4
+
+in a rules statement, to say more about what
+
+5
+
+"meaningful" means?
+
+6
+
+MR. McCLOUD:
+
+I don't think, Your
+
+7
+
+Honor, this is a case where you need to explain
+
+8
+
+what "meaningful" means.
+
+9
+
+not struggled with that question.
+
+10
+
+considered it for a number of years now, and I
+
+11
+
+think they are getting it right more often than
+
+12
+
+not.
+
+13
+
+necessary for the Court to provide further
+
+14
+
+guidance.
+
+15
+
+The lower courts have
+They have
+
+So this is not a case where I think it's
+
+JUSTICE BARRETT:
+
+What do you make of
+
+16
+
+all of the arguments that your friend on the
+
+17
+
+other side is making about the extra
+
+18
+
+allegations that didn't relate to
+
+19
+
+underperformance that the complaint had that he
+
+20
+
+thinks should have gotten the allegations about
+
+21
+
+underperformance over the edge?
+
+22
+
+MR. McCLOUD:
+
+So, Justice Barrett, I
+
+23
+
+would have a harder case if the Ninth Circuit
+
+24
+
+had said your underperformance allegations
+
+25
+
+aren't sufficient and so we're not going to
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+45
+1
+
+consider anything else in your complaint.
+
+2
+
+That's clearly not what the Ninth Circuit did.
+
+3
+
+I think Mr. Wessler and I just
+
+4
+
+fundamentally disagree about how to read the
+
+5
+
+Ninth Circuit opinion.
+
+6
+
+detail the allegations about our supposedly
+
+7
+
+outlier strategy and the allegations about
+
+8
+
+hedge funds and private equity being evil, and
+
+9
+
+it found that those failed, but they failed for
+
+10
+
+reasons that are separate and apart from the
+
+11
+
+meaningful benchmark standard.
+
+It went through in
+
+12
+
+JUSTICE BARRETT:
+
+Thank you.
+
+13
+
+JUSTICE GORSUCH:
+
+Should we also
+
+14
+
+bracket the question that Justice Kavanaugh
+
+15
+
+raised and Judge Murphy have raised about
+
+16
+
+whether underperformance can ever be enough to
+
+17
+
+show imprudence?
+
+18
+
+MR. McCLOUD:
+
+So, Justice Gorsuch, I
+
+19
+
+think it is true that, as a general matter,
+
+20
+
+underperformance is going to rarely be
+
+21
+
+indicative of any sort of imprudence.
+
+22
+
+The example that comes to mind where
+
+23
+
+it might be probative is let's say you had two
+
+24
+
+funds that had a similar goal of trying to
+
+25
+
+track the S&P 500, and you see Fund A
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+46
+1
+
+consistently meets that goal and Fund B
+
+2
+
+consistently fails to meet that goal.
+
+3
+
+That might suggest the fiduciaries of
+
+4
+
+Fund B were not adequately monitoring to make
+
+5
+
+sure that they were actually trying to hit
+
+6
+
+their goal.
+
+7
+
+underperformance.
+
+8
+
+the line.
+
+9
+
+that alone would plausibly suggest imprudence.
+
+10
+
+That could be indicative of
+It might get you close to
+
+I don't know that I would say that
+
+JUSTICE GORSUCH:
+
+And so we should
+
+11
+
+take care to bracket that question about the
+
+12
+
+relative importance of underperformance in a
+
+13
+
+prudence -- imprudence claim.
+
+14
+
+to answer that question.
+
+15
+
+answer the question, when you're relying on
+
+16
+
+underperformance, whether a meaningful
+
+17
+
+benchmark --
+
+18
+
+MR. McCLOUD:
+
+We're not going
+
+We're just going to
+
+I think that would be
+
+19
+
+appropriate, Your Honor.
+
+20
+
+JUSTICE GORSUCH:
+
+21
+
+MR. McCLOUD:
+
+Thank you.
+
+And I want to be clear.
+
+22
+
+Requiring a meaningful benchmark does not
+
+23
+
+prevent plaintiffs from making other sorts of
+
+24
+
+allegations of imprudence.
+
+25
+
+JUSTICE GORSUCH:
+
+We should -- we
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+47
+1
+
+should make sure to take -- take care to say
+
+2
+
+that we're hardly suggesting you have to do
+
+3
+
+this?
+
+4
+
+MR. McCLOUD:
+
+Exactly.
+
+And I think
+
+5
+
+Judge Berzon's concurrence is exactly on point
+
+6
+
+on these issues.
+
+7
+
+to endorse the points that Judge Berzon made,
+
+8
+
+we would have no objection to that.
+
+9
+
+And so, if the Court wanted
+
+JUSTICE KAGAN:
+
+And, Mr. McCloud, if I
+
+10
+
+could go back to Justice Barrett's first
+
+11
+
+question, I mean, why wouldn't we want to say
+
+12
+
+something about what a meaningful comparator
+
+13
+
+is?
+
+14
+
+that, this is -- all this opinion would do is
+
+15
+
+to say something that everybody agrees to and
+
+16
+
+leave a lot of questions open as to how that
+
+17
+
+should be applied.
+
+18
+
+You know, if you don't say anything about
+
+And I would think that, you know, this
+
+19
+
+is a case where we have a decision that's
+
+20
+
+actually a pretty reasonable decision when I
+
+21
+
+read it in terms of what meaningfulness is
+
+22
+
+required and how that is different from
+
+23
+
+requiring essentially identical funds.
+
+24
+25
+
+So why wouldn't we want to say some
+things about that?
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+48
+1
+
+MR. McCLOUD:
+
+So, Justice Kagan, I
+
+2
+
+agree with you this decision is very
+
+3
+
+reasonable.
+
+4
+
+endorses is helpful and instructive and, in
+
+5
+
+fact, many district courts in the Ninth Circuit
+
+6
+
+have looked to it and applied it in assessing
+
+7
+
+these allegations.
+
+8
+
+I think the analysis that it
+
+JUSTICE KAGAN:
+
+Because, when I look
+
+9
+
+at some of the lower court decisions -- and
+
+10
+
+this may be different from what you said to
+
+11
+
+Justice Barrett -- I think that there is a
+
+12
+
+range of ways in which the circuit courts have
+
+13
+
+approached this, and some of them have
+
+14
+
+suggested you sort of need the same asset
+
+15
+
+allocations.
+
+16
+
+the same percentage in international funds,
+
+17
+
+we're going to strike your comparators.
+
+18
+
+that seems to me to be going too far.
+
+19
+
+So, you know, unless you invest
+
+And
+
+So we could do something useful here,
+
+20
+
+couldn't we, by saying:
+
+Yeah, it needs to be
+
+21
+
+meaningfully similar.
+
+22
+
+identical.
+
+23
+
+you look to, and the kinds of things are
+
+24
+
+actually the kinds of things that you talk
+
+25
+
+about in your brief and, even more, the SG
+
+That doesn't mean
+
+Here are the kinds of things that
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+49
+1
+
+talks about in its brief.
+
+2
+
+MR. McCLOUD:
+
+I don't have any
+
+3
+
+objection to that.
+
+I will say I think even the
+
+4
+
+narrower version of the opinion that just says
+
+5
+
+you need a meaningful comparison is still
+
+6
+
+helpful because we have the Sixth Circuit in
+
+7
+
+the Parker-Hannifin case that seemed to suggest
+
+8
+
+that you didn't need an apples-to-apples
+
+9
+
+comparison.
+
+10
+
+Circuit in line through an opinion that's
+
+11
+
+narrower.
+
+And so you could bring the Sixth
+
+12
+
+But, again, I have no objection to
+
+13
+
+endorsing the analysis in the Ninth Circuit
+
+14
+
+opinion.
+
+15
+
+I think it's -- it's spot on.
+CHIEF JUSTICE ROBERTS:
+
+Well, I mean,
+
+16
+
+your -- your friend on the other side spent
+
+17
+
+some time explaining the difficulty of giving
+
+18
+
+some substance to this.
+
+19
+
+we're going to have a meaningful ruling, it --
+
+20
+
+it -- you can't simply make it sort of
+
+21
+
+everything -- almost everything works in
+
+22
+
+satisfying the test or -- or is required.
+
+And I'm concerned, if
+
+23
+
+In other words, the point -- and I
+
+24
+
+think the Eighth Circuit emphasized this as
+
+25
+
+well -- is that it has to do some meaningful
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+50
+1
+
+work, and, I mean, there has to be some
+
+2
+
+difference between the discussion of what this
+
+3
+
+means from your friend and what you're saying
+
+4
+
+here.
+
+5
+
+MR. McCLOUD:
+
+So, if you want to --
+
+6
+
+CHIEF JUSTICE ROBERTS:
+
+So could you
+
+7
+
+give -- I mean, you've been very accepting of
+
+8
+
+various proposals about what it might mean, but
+
+9
+
+I wonder if you could give us a narrower
+
+10
+
+understanding, or maybe the answer is you
+
+11
+
+can't, in which case maybe the decision we
+
+12
+
+issue won't be much help at all.
+
+13
+
+MR. McCLOUD:
+
+Sure.
+
+Maybe I can use
+
+14
+
+the facts of this case to illustrate a helpful
+
+15
+
+comparison.
+
+16
+
+from Mr. Wessler, the argument was that we had
+
+17
+
+an acceptable strategy and we implemented it in
+
+18
+
+a bad way by over-allocating the hedge funds in
+
+19
+
+private equity.
+
+20
+
+So, in this case, as you heard
+
+To make the comparison meaningful, you
+
+21
+
+need to control for the strategy, keep the
+
+22
+
+strategy the same, but point to someone who
+
+23
+
+they say did it better by using fewer hedge
+
+24
+
+fund and private equity investments.
+
+25
+
+That's the sort of comparison that
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+51
+1
+
+might suggest imprudence because it would
+
+2
+
+suggest the difference in performance was
+
+3
+
+really due to our inclusion of hedge funds and
+
+4
+
+private equity.
+
+5
+
+That's not the comparison that they
+
+6
+
+tried to make in this case.
+
+7
+
+were saying:
+
+8
+
+equity-heavy funds that prioritized more
+
+9
+
+aggressive growth.
+
+10
+
+do as well because that wasn't our strategy.
+
+11
+
+We told everyone we were trying to be more
+
+12
+
+conservative and to make sure that retirees had
+
+13
+
+lots of money at the end of the day without
+
+14
+
+taking unnecessary risks.
+
+15
+
+In this case, they
+
+You didn't do as well as
+
+Well, of course, we didn't
+
+So the obvious explanation for the
+
+16
+
+difference in performance in this case is the
+
+17
+
+difference in strategy.
+
+18
+
+JUSTICE ALITO:
+
+Do --
+
+19
+
+JUSTICE KAGAN:
+
+Is this --
+
+20
+
+JUSTICE ALITO:
+
+-- do experts on
+
+21
+
+portfolio management have analytical tools that
+
+22
+
+measure investment returns on a risk-adjusted
+
+23
+
+basis?
+
+24
+
+MR. McCLOUD:
+
+They do.
+
+25
+
+JUSTICE ALITO:
+
+And suppose that a
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+52
+1
+
+complaint relied on one of those.
+
+2
+
+provide a meaningful comparison?
+
+3
+
+MR. McCLOUD:
+
+It could.
+
+Would that
+
+It could be
+
+4
+
+the -- the basis for allegations of similar --
+
+5
+
+I would want to know more about the actual
+
+6
+
+allegations in the complaint, but I think that
+
+7
+
+sort of information could be relevant.
+
+8
+
+there are district court decisions that have
+
+9
+
+credited similar sort of information.
+
+10
+
+JUSTICE JACKSON:
+
+And
+
+Can I just go back
+
+11
+
+to your response to the Chief Justice?
+
+12
+
+said that the claim, as you understood it from
+
+13
+
+them, is that there -- that you all have a
+
+14
+
+meaningful strategy but problematically
+
+15
+
+over-allocated the assets in these kinds of
+
+16
+
+risky funds.
+
+17
+
+would you need a comparator -- comparison in
+
+18
+
+your take on things to make out that claim?
+
+19
+
+You
+
+And so, for you, first of all,
+
+MR. McCLOUD:
+
+If the argument is you
+
+20
+
+had an okay strategy, but you implemented it
+
+21
+
+poorly, I think you probably do want a
+
+22
+
+comparison.
+
+23
+
+helpful because that's a way to control for the
+
+24
+
+strategy and show a difference.
+
+25
+
+It's not required, but it would be
+
+I think you could have attacks on the
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+53
+1
+
+strategy itself that wouldn't require a
+
+2
+
+comparison.
+
+I agree with Mr. Wessler --
+
+3
+
+JUSTICE JACKSON:
+
+4
+
+MR. McCLOUD:
+
+5
+
+JUSTICE JACKSON:
+
+But --
+
+-- on that.
+-- but, if we have
+
+6
+
+this case, you're saying they wouldn't -- they
+
+7
+
+might not need to have a comparison, but if
+
+8
+
+they did, it would have to be meaningful, and
+
+9
+
+the meaningful nature of it would be someone
+
+10
+
+with the same strategy who perhaps allocated
+
+11
+
+differently?
+
+12
+
+MR. McCLOUD:
+
+Exactly.
+
+Exactly.
+
+But,
+
+13
+
+again, if you want to attack the strategy
+
+14
+
+itself, if you want to say you can't invest in
+
+15
+
+hedge funds, in private equity, that is an
+
+16
+
+argument you could make.
+
+17
+
+did make it here.
+
+18
+
+rejected it, but it rejected it for reasons
+
+19
+
+that are outside of the question presented and
+
+20
+
+don't have anything to do with the meaningful
+
+21
+
+benchmark standard.
+
+22
+
+And, in fact, they
+
+And the Ninth Circuit
+
+JUSTICE BARRETT:
+
+So, Mr. McCloud, do
+
+23
+
+you think it would be helpful then in defining
+
+24
+
+"meaningful" to say that the comparator must
+
+25
+
+have like aims and strategies?
+
+Does that give
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+54
+1
+
+enough guidance, or does that risk having lower
+
+2
+
+courts look for a twin?
+
+3
+
+MR. McCLOUD:
+
+I think that you could
+
+4
+
+say like aims and strategies, but "like" simply
+
+5
+
+means similar, not identical.
+
+6
+
+would clear up, to the extent there's confusion
+
+7
+
+in the lower courts, some of that confusion.
+
+8
+
+And, again, from my read of the cases, all of
+
+9
+
+the courts seem to agree that like aims, the
+
+10
+
+goals of the investments, is the most important
+
+11
+
+consideration.
+
+12
+
+JUSTICE SOTOMAYOR:
+
+I think that
+
+That is.
+
+But your
+
+13
+
+opposing counsel seems to suggest that courts
+
+14
+
+are looking for exact asset allocations when
+
+15
+
+the challenge here is that the asset allocation
+
+16
+
+here was imprudent.
+
+17
+
+So how do we address that?
+
+18
+
+MR. McCLOUD:
+
+I think you can simply
+
+19
+
+say you don't need an identical asset
+
+20
+
+allocation.
+
+21
+
+difference in asset allocation will be
+
+22
+
+probative of whether there's imprudence,
+
+23
+
+especially where, as here, you're saying the
+
+24
+
+asset allocation was the problem.
+
+25
+
+And, in fact, in many cases, a
+
+And the Ninth Circuit, to be clear, I
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+55
+1
+
+don't think, required a similar asset
+
+2
+
+allocation.
+
+3
+
+JUSTICE SOTOMAYOR:
+
+Neither do I, and
+
+4
+
+that's what I find interesting, because I think
+
+5
+
+what they were saying is that Intel didn't
+
+6
+
+identify anybody specifically whose intent was
+
+7
+
+risk management over the long term, correct?
+
+8
+9
+10
+
+MR. McCLOUD:
+
+that there were no similarly situated -JUSTICE SOTOMAYOR:
+
+11
+
+didn't even allege --
+
+12
+
+MR. McCLOUD:
+
+13
+14
+15
+16
+
+That the allegation was
+
+Yes.
+
+That they
+
+Oh, that the plaintiffs
+
+didn't allege?
+JUSTICE SOTOMAYOR:
+
+Yes, that the
+
+plaintiffs.
+MR. McCLOUD:
+
+Yes, absolutely.
+
+17
+
+They -- they never even tried to allege that
+
+18
+
+there was another fund that had a similar goal
+
+19
+
+that they were trying to compare us to.
+
+20
+
+wanted to compare us to things like the S&P
+
+21
+
+500, which isn't even a -- an investment
+
+22
+
+strategy.
+
+23
+
+strategies of 500 different companies.
+
+24
+25
+
+They
+
+It is just the agglomerated
+
+The other thing they could have
+done -- and I disagree with Mr. Wessler about
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+56
+1
+
+this too -- is they could have tried to compare
+
+2
+
+us to our own disclosed benchmarks.
+
+3
+
+benchmark that we told participants --
+
+4
+
+participants about.
+
+5
+
+We had a
+
+Mr. Wessler suggested they did that
+
+6
+
+comparison.
+
+The Ninth Circuit was very clear
+
+7
+
+and the district court was very clear that the
+
+8
+
+things that they called our benchmarks were not
+
+9
+
+our benchmarks.
+
+10
+
+available option for plaintiffs in these cases.
+
+But I think that is an
+
+11
+
+And there are a number of cases that
+
+12
+
+have found, if you make allegations against a
+
+13
+
+fund's own benchmarks, that can be probative of
+
+14
+
+imprudence.
+
+15
+16
+
+CHIEF JUSTICE ROBERTS:
+
+Justice
+
+Thomas, anything further?
+
+17
+
+Anything else?
+
+18
+
+JUSTICE GORSUCH:
+
+19
+
+CHIEF JUSTICE ROBERTS:
+
+20
+
+JUSTICE GORSUCH:
+
+21
+
+(Laughter.)
+
+22
+
+JUSTICE GORSUCH:
+
+Sorry.
+Okay.
+
+Do you think --
+
+-- do you -- do you
+
+23
+
+think that under -- in an underperformance
+
+24
+
+claim, you always have to have a benchmark?
+
+25
+
+MR. McCLOUD:
+
+I think you do because
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+57
+1
+
+the premise --
+
+2
+3
+4
+5
+
+JUSTICE GORSUCH:
+enough.
+
+That's -- that's
+
+Thank you.
+CHIEF JUSTICE ROBERTS:
+
+Justice
+
+Kavanaugh?
+
+6
+
+JUSTICE BARRETT:
+
+7
+
+do always have to have a benchmark?
+
+8
+
+thought that before -- maybe I misheard
+
+9
+
+Justice -- I think it was Justice Gorsuch who
+
+10
+
+asked you a question.
+
+11
+
+Mr. Wessler's example, you have a fund that's
+
+12
+
+50 percent lottery tickets?
+
+13
+14
+15
+
+I'm confused.
+
+You
+
+Because I
+
+I mean, what if, to use
+
+I mean, couldn't there be some kind of
+res ipsa where you didn't need a benchmark?
+MR. McCLOUD:
+
+I don't view that as an
+
+16
+
+underperformance claim, Your Honor.
+
+17
+
+just be you had a --
+
+18
+
+JUSTICE BARRETT:
+
+19
+
+MR. McCLOUD:
+
+20
+
+JUSTICE BARRETT:
+
+21
+
+MR. McCLOUD:
+
+That would
+
+Bad strategy?
+
+-- bad strategy.
+Okay.
+
+Thanks.
+
+But, to the extent you
+
+22
+
+are premising your underperformance on saying A
+
+23
+
+did worse than B, I do think that comparison
+
+24
+
+has to be meaningful.
+
+25
+
+JUSTICE BARRETT:
+
+Got it.
+
+Thanks.
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+58
+1
+2
+
+CHIEF JUSTICE ROBERTS:
+
+Justice
+
+Jackson?
+
+3
+
+Thank you, counsel.
+
+4
+
+MR. McCLOUD:
+
+5
+
+CHIEF JUSTICE ROBERTS:
+
+Thank you.
+Ms. Brown.
+
+6
+
+ORAL ARGUMENT OF AIMEE BROWN
+
+7
+
+FOR THE UNITED STATES, AS AMICUS CURIAE,
+
+8
+
+SUPPORTING THE RESPONDENTS
+
+9
+10
+
+MS. BROWN:
+
+Thank you, Mr. Chief
+
+Justice, and may it please the Court:
+
+11
+
+ERISA allows prudent fiduciaries to
+
+12
+
+make a range of reasonable judgments when
+
+13
+
+adopting investment objectives.
+
+14
+
+pursue varying degrees of exposure to market
+
+15
+
+upside and varying degrees of protection from
+
+16
+
+market downside.
+
+17
+
+lead to different results, that does not
+
+18
+
+suggest imprudence.
+
+They can
+
+When different objectives
+
+19
+
+In this case, Intel's fiduciaries had
+
+20
+
+the objective of reducing exposure to losses at
+
+21
+
+the acknowledged expense of some potential
+
+22
+
+upside.
+
+23
+
+prudence of that objective.
+
+24
+
+asked the lower courts to infer that the
+
+25
+
+fiduciaries imprudently implemented that
+
+Petitioners have not challenged the
+Instead, they have
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+59
+1
+
+objective based on the fact that Intel's funds
+
+2
+
+underperformed other funds.
+
+3
+
+But, to create that inference,
+
+4
+
+Petitioners have to compare Intel's funds to
+
+5
+
+other funds with similar objectives.
+
+6
+
+Otherwise, the obvious alternative explanation
+
+7
+
+for the difference in results is the difference
+
+8
+
+in objectives.
+
+9
+
+That common-sense understanding does
+
+10
+
+not mean that plaintiffs in every case need to
+
+11
+
+plead a comparator.
+
+12
+
+pleading imprudence without relying on
+
+13
+
+performance at all.
+
+14
+
+premised on underperformance, the comparator
+
+15
+
+has to be similar to make the comparison
+
+16
+
+probative of the claim.
+
+There are myriad ways of
+
+But, when a claim is
+
+17
+
+I welcome the Court's questions.
+
+18
+
+JUSTICE THOMAS:
+
+19
+20
+
+Do you have any
+
+disagreement with the argument of Mr. McCloud?
+MS. BROWN:
+
+I don't.
+
+I think we're --
+
+21
+
+we're well-aligned on the instances in which a
+
+22
+
+comparator is necessary, the work that it's
+
+23
+
+doing in these kinds of cases.
+
+24
+
+JUSTICE ALITO:
+
+25
+
+Well, Mr. McCloud,
+
+representing his client, I think, would be
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+60
+1
+
+satisfied with an affirmance in any opinion.
+
+2
+
+certainly would if I were in his position.
+
+3
+
+But you're in a different position.
+
+4
+
+So how much guidance do you think it would be
+
+5
+
+prudent for us to give in this case?
+
+6
+
+MS. BROWN:
+
+I
+
+I do think that it would
+
+7
+
+be helpful to suggest some parameters for what
+
+8
+
+the meaningful benchmark here, the meaningful
+
+9
+
+comparator, needs to be.
+
+10
+
+way to do that is to assess it within the
+
+11
+
+confines of what we're doing with the duty of
+
+12
+
+prudence.
+
+13
+
+about performance.
+
+14
+
+I think the easiest
+
+Prudence is about process and not
+
+And so the plaintiff does have to
+
+15
+
+connect the dots back from the performance to
+
+16
+
+the process.
+
+17
+
+to mean that the plaintiff is essentially
+
+18
+
+alleging that if its fiduciaries were acting
+
+19
+
+prudently, they would have selected the
+
+20
+
+better-performing fund.
+
+21
+
+for that to be the correct inference, you have
+
+22
+
+to hold constant the things that go into that
+
+23
+
+decision that the Petitioners are not
+
+24
+
+challenging as imprudent themselves.
+
+25
+
+In a case like this, that's going
+
+But, again, in order
+
+And, here, that is the goals, the
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+61
+1
+
+objectives, the aims, sometimes it's been
+
+2
+
+called the strategy, of the funds to -- to
+
+3
+
+mitigate against potential down -- down --
+
+4
+
+downturns in the market.
+
+5
+
+those constant and you provide two, you know,
+
+6
+
+different funds, one of which performed better
+
+7
+
+than the other, then maybe you have an
+
+8
+
+indication of some imprudence in selecting kind
+
+9
+
+of the worst-performing of the funds.
+
+10
+
+without that kind of comparison that holds
+
+11
+
+constant the factors that go into the decision,
+
+12
+
+the -- the implication just isn't there.
+
+And when you hold
+
+But,
+
+13
+
+And it might be helpful to actually
+
+14
+
+apply that to this case and to show how the
+
+15
+
+Ninth Circuit, I think, did that correctly
+
+16
+
+because, here, the plaintiffs identified funds
+
+17
+
+that had different objectives entirely from
+
+18
+
+Intel's objective.
+
+19
+
+equity-heavy retail funds that wanted more
+
+20
+
+exposure to the potential market upside.
+
+21
+
+They were these
+
+And, you know, they were not
+
+22
+
+challenging, again, that Intel could have
+
+23
+
+prudently decided that that was not the right
+
+24
+
+strategy for them.
+
+25
+
+end up overperforming Intel's funds.
+
+The comparator funds did
+
+Heritage Reporting Corporation
+
+That's
+
+Official - Subject to Final Review
+62
+1
+
+not very surprising.
+
+The market ended up doing
+
+2
+
+pretty well during this relevant time period.
+
+3
+
+But that doesn't suggest that Intel's
+
+4
+
+fiduciaries were imprudent for wanting to
+
+5
+
+protect against potential downside, even if
+
+6
+
+that didn't end up materializing during the
+
+7
+
+relevant period here.
+
+8
+
+JUSTICE KAGAN:
+
+If you were to
+
+9
+
+flyspeck the Ninth Circuit's opinion and not --
+
+10
+
+I'm not asking for things you think are wrong
+
+11
+
+with it such that it would change the result
+
+12
+
+because you've clearly said you think it should
+
+13
+
+be affirmed.
+
+14
+
+But consistent with that disposition,
+
+15
+
+if I asked you to flyspeck the circuit court's
+
+16
+
+decision, would you have said anything
+
+17
+
+different?
+
+18
+
+you have subtracted things?
+
+19
+
+MS. BROWN:
+
+Would you have added things?
+
+Would
+
+Is there anything?
+
+So I think, at various
+
+20
+
+points -- I would have to go back and look at
+
+21
+
+the very, very precise language that they used.
+
+22
+
+Sometimes the courts in these cases have said
+
+23
+
+that it has to have the same objectives, the
+
+24
+
+same risk/reward profile, and the same
+
+25
+
+strategy.
+
+It's used an "and" instead of an
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+63
+1
+
+"or," and sometimes asset allocation is thrown
+
+2
+
+into some of those decisions.
+
+3
+
+Ninth Circuit certainly didn't do that here.
+
+4
+
+We -- we think that's correct.
+
+5
+
+have to be the same asset allocation.
+
+6
+
+I agree that the
+
+It does not
+
+I think where some confusion could
+
+7
+
+happen is how you define what the strategy is.
+
+8
+
+So I've been using kind of objectives and aims
+
+9
+
+as this broader goal of we want to reduce
+
+10
+
+downside.
+
+11
+
+risk-mitigating approach.
+
+12
+
+We want to have kind of a
+
+The strategy in some cases is going to
+
+13
+
+be the way that you implement that objective.
+
+14
+
+And so, here, that would have been allocating
+
+15
+
+assets to the hedge funds and the private
+
+16
+
+equity funds.
+
+17
+
+have to hold that constant because that would
+
+18
+
+then have some of the problems that Petitioners
+
+19
+
+have suggested.
+
+20
+
+Obviously, we don't think you
+
+But I think that the Ninth Circuit
+
+21
+
+generally did the right thing.
+
+22
+
+read the opinion the same way that -- that Mr.
+
+23
+
+McCloud does.
+
+24
+25
+
+JUSTICE KAGAN:
+
+And -- and we
+
+And on this asset
+
+allocation point, I mean, your brief says --
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+64
+1
+
+this is -- I'm reading from page 25, "Where two
+
+2
+
+funds seek to achieve similar levels of risk
+
+3
+
+using different asset allocation strategies,
+
+4
+
+the challenged fund may be compared to a fund
+
+5
+
+with more conventional assets that bear the
+
+6
+
+same level of risk."
+
+7
+
+MS. BROWN:
+
+8
+
+JUSTICE KAGAN:
+
+Exactly.
+If you didn't allow
+
+9
+
+that, you would be essentially foreclosing
+
+10
+
+these claims from the outset.
+
+11
+
+MS. BROWN:
+
+Exactly.
+
+And we think
+
+12
+
+that Petitioners were perfectly capable of
+
+13
+
+doing that here.
+
+14
+
+assets that have the kind of downside
+
+15
+
+protection that Intel said it was using the
+
+16
+
+private equity funds and the hedge funds here
+
+17
+
+to accomplish.
+
+18
+
+There are many different
+
+And so they could have compared this
+
+19
+
+to a fund that had more allocations to bonds or
+
+20
+
+to high-yield savings accounts or something
+
+21
+
+like that.
+
+22
+
+here just chose not to do so.
+
+23
+
+were comparing these to these kind of
+
+24
+
+equity-heavy funds that wanted to have more --
+
+25
+
+more exposure to the potential for the upside.
+
+Intel -- or the -- the plaintiffs
+Instead, they
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+65
+1
+
+And I -- I don't think that the
+
+2
+
+correct kind of implication to draw from that
+
+3
+
+is that there weren't those kinds of funds
+
+4
+
+available.
+
+5
+
+that if they had tried to draw those kinds of
+
+6
+
+comparisons, Intel's funds just wouldn't really
+
+7
+
+have underperformed to any significant degree.
+
+I think, more likely, the case is
+
+8
+
+That's consistent with the way the
+
+9
+
+Ninth Circuit kind of understood the -- the
+
+10
+
+complaint here.
+
+11
+
+complaint tend to just suggest that Intel's
+
+12
+
+funds performed pretty much exactly as they
+
+13
+
+anticipated they would.
+
+14
+
+Some of the charts in the
+
+JUSTICE JACKSON:
+
+On this question of
+
+15
+
+the Ninth Circuit's opinion, do -- do you --
+
+16
+
+how do you respond to Petitioners' reading of
+
+17
+
+the opinion as isolating the underperformance
+
+18
+
+allegations and treating them in a certain way
+
+19
+
+before dealing with the others or however he
+
+20
+
+characterized it?
+
+21
+
+agree with that view?
+
+22
+
+MS. BROWN:
+
+Do you -- does the -- do you
+
+I think it's correct that
+
+23
+
+the Ninth Circuit first looked at the
+
+24
+
+underperformance allegations and determined
+
+25
+
+whether those under -- whether those
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+66
+1
+
+allegations were going to be probative at all
+
+2
+
+in the analysis, and it held that they were
+
+3
+
+not.
+
+4
+
+I don't think that that's incorrect
+
+5
+
+to -- to do that that way.
+
+6
+
+consistent with Twombly, for example.
+
+7
+
+for those allegations to do any work, they have
+
+8
+
+to be tied to a meaningful comparator because,
+
+9
+
+otherwise, they are equally consistent with the
+
+10
+
+lawful alternative explanation here that these
+
+11
+
+just had different objectives, and so the
+
+12
+
+different results don't tell you anything.
+
+13
+
+That's not enough to take the complaint outside
+
+14
+
+of neutral territory, is the term that Twombly
+
+15
+
+uses at one point.
+
+16
+
+I think that's very
+In order
+
+But then I think the Ninth Circuit did
+
+17
+
+continue on to look at all of the rest of the
+
+18
+
+allegations in the complaint and assess them on
+
+19
+
+their own merit to see if those allegations
+
+20
+
+moved the complaint outside of neutral
+
+21
+
+territory.
+
+22
+
+for reasons that had nothing to do with
+
+23
+
+underperformance, as Mr. McCloud was saying.
+
+24
+
+I do want to reiterate, though, that
+
+25
+
+They were insufficient on their own
+
+we agree that there is going to be
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+67
+1
+
+circumstances in which it's very possible to
+
+2
+
+plead these kinds of complaints without any
+
+3
+
+need for underperformance allegations at all.
+
+4
+
+And that can be the case when you are
+
+5
+
+challenging both, you know, the overall
+
+6
+
+objective that the fund is adopting, or it
+
+7
+
+could be the case even when you're challenging
+
+8
+
+the implementation of that objective.
+
+9
+
+So, if you had a fund, for example,
+
+10
+
+that stated that its objective was be -- to be
+
+11
+
+quite conservative and to not have a lot of
+
+12
+
+exposure to market downside, and then they --
+
+13
+
+they turned around and invested, you know,
+
+14
+
+45 percent of their assets in the biotech
+
+15
+
+industry alone, that on its face is just
+
+16
+
+inconsistent with the -- with the objective
+
+17
+
+that they have announced.
+
+18
+
+need to find a comparator in order to make that
+
+19
+
+kind of claim.
+
+I don't think you
+
+20
+
+And I think the same thing is going to
+
+21
+
+be true for allegations that go to the strategy
+
+22
+
+itself.
+
+23
+
+overall objective itself.
+
+24
+
+necessarily need a comparator.
+
+25
+
+You're not necessarily -- or go to the
+You don't
+
+The cases in which a comparator has
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+68
+1
+
+generally been more useful is when you're
+
+2
+
+challenging fees because it can be helpful to
+
+3
+
+see kind of what else is on the market
+
+4
+
+fees-wise.
+
+5
+
+you -- if you made some kind of allegation that
+
+6
+
+the -- the -- the fees you're paying are for
+
+7
+
+duplicative services or something like that,
+
+8
+
+that can be a situation in which you don't need
+
+9
+
+a comparator too.
+
+Even in those cases, you know, if
+
+10
+
+So it really all depends on whether
+
+11
+
+the Petitioner or the plaintiff in this case
+
+12
+
+has decided to put that comparison in the
+
+13
+
+complaint.
+
+14
+
+analysis is going to come into play.
+
+15
+16
+
+That's when this kind of benchmark
+
+CHIEF JUSTICE ROBERTS:
+
+Thank you,
+
+counsel.
+
+17
+
+Anything further down on this end?
+
+18
+
+JUSTICE THOMAS:
+
+19
+
+CHIEF JUSTICE ROBERTS:
+
+20
+
+Rebuttal, Mr. Wessler?
+
+No.
+Thank you.
+
+21
+
+REBUTTAL ARGUMENT OF MATTHEW W.H. WESSLER
+
+22
+
+ON BEHALF OF THE PETITIONERS
+
+23
+24
+25
+
+MR. WESSLER:
+
+Thank you.
+
+Just a few
+
+quick points in rebuttal.
+You just heard the government agree
+
+Heritage Reporting Corporation
+
+Official - Subject to Final Review
+69
+1
+
+that the Ninth Circuit's approach requires
+
+2
+
+isolating a specific subset of allegations and
+
+3
+
+asking, separate and apart from the rest of the
+
+4
+
+allegations, whether those isolated allegations
+
+5
+
+are sufficient to permit an inference of
+
+6
+
+imprudence.
+
+7
+
+That is flatly inconsistent with Rule
+
+8
+
+8 and the approach that this Court has said
+
+9
+
+time and again applies to ERISA as it does
+
+10
+
+everywhere else, that all of the allegations
+
+11
+
+have to be taken together and assessed
+
+12
+
+holistically.
+
+13
+
+like this, where you have an allegation about
+
+14
+
+an imprudent either strategy or implementation
+
+15
+
+of that strategy that then turns out badly.
+
+16
+
+The performance allegations play a
+
+I think that matters in a case
+
+17
+
+significant role in allowing a court to assess
+
+18
+
+whether, taken together, they permit a
+
+19
+
+plausible inference of imprudence, but that
+
+20
+
+kind of holistic analysis is foreclosed under
+
+21
+
+the Ninth Circuit's approach.
+
+22
+
+I also would caution this Court
+
+23
+
+against attempting to define at the outset what
+
+24
+
+can count as meaningful in this context.
+
+25
+
+ultimately a project doomed to fail because it
+
+Heritage Reporting Corporation
+
+It's
+
+Official - Subject to Final Review
+70
+1
+
+doesn't take account of the broad range of
+
+2
+
+contexts in which some kind of comparator could
+
+3
+
+be relevant.
+
+Is it aims?
+
+Is it asset
+
+4
+
+allocations?
+
+Is it risks?
+
+All of that could
+
+5
+
+be relevant, or none of it could be relevant.
+
+6
+
+And a -- and an attempt to provide a comparator
+
+7
+
+could be pointing to a dissimilar fund that is
+
+8
+
+different in the kinds of aims or objectives
+
+9
+
+that the challenged fund has.
+
+10
+
+That's why Rule 8 contemplates -- and
+
+11
+
+ERISA as well -- a context-specific inquiry
+
+12
+
+that doesn't rely on the kind of bright-line
+
+13
+
+rules that the Ninth Circuit embraced here.
+
+14
+
+Thank you.
+
+15
+
+CHIEF JUSTICE ROBERTS:
+
+16
+
+Thank you,
+
+counsel.
+
+17
+
+The case is submitted.
+
+18
+
+(Whereupon, at 11:04 a.m., the case
+
+19
+
+was submitted.)
+
+20
+21
+22
+23
+24
+25
+
+Heritage Reporting Corporation
+
+71
+Official - Subject to Final Review
+25 25:4,5,8 26:7 27:16 28: answered [2] 8:10 30:18
+acknowledge [1] 42:22
+[1]
+7 29:2 30:11 33:11 35:8,14 anticipated [1] 65:13
+acknowledged 58:21
+[2]
+[1]
+36:15 37:2,5,9,13,17,20 39: any [12] 17:9 18:3 26:6 36:
+acting 40:20 60:18
+10:03 4:2
+[2]
+[2]
+12 41:19,21,22,25 43:11,13, 14 41:6 45:21 49:2 59:18
+actual 29:20 52:5
+14a 24:3,10
+25 44:18,20,24 45:6,7 46:
+60:1 65:7 66:7 67:2
+actually [8] 8:17 10:13 24:
+15a [1] 24:11
+13 34:12 46:5 47:20 48:24
+24 48:7 52:4,6 56:12 65:18, anybody [1] 55:6
+61:13
+24 66:1,7,18,19 67:3,21 69: anything [16] 21:17 23:20
+[1]
+added
+62:17
+2,4,4,10,16
+27:2,3 32:25 33:2 35:4 45:
+[1]
+248 32:5
+adding [1] 20:13
+allege [7] 4:17 33:20 41:11
+1 47:13 53:20 56:16,17 62:
+25 [1] 64:1
+44:2 55:11,13,17
+16,18 66:12 68:17
+addition [2] 11:25 12:3
+25-498 [1] 4:4
+alleged [2] 7:1 28:15
+anywhere [1] 36:6
+additional [1] 36:8
+address [4] 28:24,25 29:5
+alleges [1] 22:6
+apart [3] 19:24 45:10 69:3
+[3]
+[1] 2:1
+5:20
+25:13
+60:
+appearances
+54:17
+alleging
+30 [1] 20:9
+[1]
+[1]
+18
+appears
+46:4
+23:14
+adequately
+39 [1] 3:7
+allocated [1] 53:10
+admit [1] 37:9
+appendix [1] 24:4
+adopt [1] 34:8
+allocating [1] 63:14
+apple [7] 8:9 12:3,6,9 18:25,
+[6] 8:16 10:7 13:18 allocation [20] 14:3 20:20
+adopted
+25 30:20
+4 [1] 3:4
+[7] 7:9 8:7 15:15 18:
+16:4
+27:18
+32:16
+23:15
+25:19
+28:3
+32:19,20
+apples
+[1]
+40 32:11
+[2]
+36:6,12,22 42:14 54:15,20, 15 29:2,2 30:23
+adopting 58:13 67:6
+45 [1] 67:14
+21,24 55:2 63:1,5,25 64:3
+apples-to-apples [2] 41:15
+affirmance [1] 60:1
+affirmed [1] 62:13
+allocations [6] 8:19 27:23
+49:8
+[1] 27:21
+[1] 14:9
+36:3
+48:15
+54:14
+64:19
+application
+after
+50 [2] 38:10 57:12
+[11] 19:20 24:17 28:2
+[1] 64:8
+[3] 42:20 47:17 48:6
+again
+applied
+allow
+500 [3] 45:25 55:21,23
+35:8 41:1 49:12 53:13 54:8 allowed [2] 13:18 22:23
+applies [4] 10:23 17:10 26:5
+58 [1] 3:11
+allowing [1] 69:17
+69:9
+60:20 61:22 69:9
+apply [2] 39:11 61:14
+against [6] 7:13 13:13 56:12 allows [1] 58:11
+61:3 62:5 69:23
+almost [1] 49:21
+approach [9] 10:7 12:19 14:
+60/40 [1] 32:7
+[1]
+[4]
+agglomerated 55:22
+alone 33:13 41:2 46:9 67: 12 26:2 32:15 63:11 69:1,8,
+68 [1] 3:14
+aggressive [2] 42:8 51:9
+15
+21
+agree [11] 7:14 8:6 16:11 18: also [8] 10:15 11:8 13:17 16: approached [1] 48:13
+12 48:2 53:2 54:9 63:2 65:
+23 40:24 42:19 45:13 69:
+approaches [1] 28:10
+8 [2] 4:22 69:8
+21 66:25 68:25
+22
+appropriate [4] 19:6 43:3,4
+alternative [3] 41:7 59:6 66: 46:19
+agreeing [1] 19:5
+agrees [2] 5:19 47:15
+10
+are [59] 4:20 5:6,23 6:6 10:9,
+a.m [1] 4:2
+[2]
+[2]
+aim 31:6,10
+always 56:24 57:7
+17 13:3 14:2,2,4,24 15:8,13
+ability [1] 15:24
+aimee [3] 2:6 3:9 58:6
+am [1] 23:8
+19:5 20:22,23,25 21:9,19
+able [2] 26:8 28:3
+aims [12] 8:18 9:2 23:18 39: amicus [3] 2:8 3:10 58:7
+23:17 24:9 26:8 27:22 29:
+about [38] 13:9 15:19,23 16: 4 40:20 41:12 42:7 53:25
+amounts [1] 25:17
+10,10 30:12 31:17 35:9,11,
+9 17:9 19:7 21:11 23:5,21
+54:4,9 61:1 63:8
+an [43] 6:3 7:9 8:9,9,13,17
+11,23,24 36:15 37:4,7 39:
+26:13,14,15 27:13 28:18
+alito [11] 15:11,13 16:8 26:
+12:8,24 14:8 15:6 18:5,25,
+12 41:8 42:8,9,23 43:13,25
+33:7 34:13,18 38:24 44:4,
+11 27:8,10 33:1 51:18,20,
+25 20:14 22:12 25:9,13,20
+44:11 45:10 48:22,23 52:8
+17,20 45:4,6,7,15 46:11 47: 25 59:24
+26:3 28:18 31:11 32:10 40: 53:19 54:14 56:11 57:22
+12,13,25 48:25 49:1 50:8
+all [26] 5:13 7:15 9:22 11:23 21 41:15,16 42:23 49:8,10
+59:11 60:23 62:10 64:13
+52:5 55:25 56:4 60:12,13
+12:8 13:1 15:3,5 17:22 18:
+50:17 52:20 53:15 54:19
+66:9 67:4 68:6 69:5
+69:13
+8 21:9 26:7 31:9 39:16 44:
+55:21 56:9,23 57:15 60:1
+aren't [2] 40:7 44:25
+absence [1] 36:14
+16 47:14 50:12 52:13,16
+61:7 62:25,25 69:5,13,14
+arguing [1] 27:11
+absolutely [2] 12:15 55:16
+54:8 59:13 66:1,17 67:3 68: analysis [9] 10:18 14:18,25 argument [22] 3:2,5,8,12 4:4,
+acceptable [1] 50:17
+10 69:10
+20:8 48:3 49:13 66:2 68:14 8 10:22 22:14 23:13,14 26:
+accepting [1] 50:7
+allega [1] 17:12
+69:20
+14,14 28:18 29:5 34:22 39:
+access [1] 34:17
+allegation [8] 9:3 14:19 25:7, analytical [1] 51:21
+21 50:16 52:19 53:16 58:6
+accomplish [3] 22:7 24:12
+25 27:22 55:8 68:5 69:13
+analyze [1] 26:21
+59:19 68:21
+64:17
+[95]
+allegations
+4:16 5:1,6,
+anderson [2] 4:4 16:23
+arguments [3] 26:13 40:1
+accomplished [1] 20:19
+14 6:16,19 7:5,20 9:20,21, announced [1] 67:17
+44:16
+accounting [1] 41:7
+23 10:5,9,17 11:2,5,14,22, another [5] 5:21 8:23 12:3
+around [1] 67:13
+accounts [1] 64:20
+22 14:20,21,23 15:3,7,8 16: 36:11 55:18
+as [45] 2:8 3:10 4:13,17 8:11,
+accurate [1] 12:24
+13 17:12 18:17,22 19:22,24, answer [9] 17:17,24 22:18
+22,24 15:24,24 16:2,25 17:
+achieve [6] 21:16,22 22:12
+25 20:1,5,18 21:2,4 22:24,
+29:6 40:10 43:24 46:14,15
+1,6 18:7,7 28:21 32:5 35:
+27:18 35:12 64:2
+25,25 23:3,5 24:14,14,21,
+50:10
+10 36:13 37:5 38:12,12,12,
+
+1
+
+2
+
+3
+4
+
+5
+
+6
+8
+
+A
+
+Heritage Reporting Corporation
+Sheet 1
+
+10:03 - as
+
+72
+Official - Subject to Final Review
+13,13 40:8 41:2 45:19 47:
+based [11] 13:15 15:7 19:25 biotech [1] 67:14
+1 44:7,12,23 47:19 49:7 50:
+16 49:24 50:15 51:7,7,10
+22:24 24:6 26:17 40:6 41:
+bit [1] 19:7
+11,14,15 51:6,6,16 53:6 58:
+block-ported [1] 10:11
+52:12 54:23 57:15 58:7 60: 21,23 44:1 59:1
+19 59:10 60:5,16 61:14 65:
+[1]
+bonds [2] 32:11 64:19
+24 63:9 65:12,17 66:23 69: basic 14:11
+4 67:4,7 68:11 69:12
+basis [5] 14:11 16:2 25:21
+both [4] 4:22 6:2 11:7 67:5
+9,24
+cases [12] 9:15,18 34:20 54:
+51:23 52:4
+bracket [2] 45:14 46:11
+8,20 56:10,11 59:23 62:22
+ask [9] 10:20 19:25 21:24
+22:24 25:3,8 26:7,10 43:22 basket [1] 39:6
+breach [2] 7:1 40:5
+63:12 67:25 68:4
+be [86] 6:4 7:17 8:10,16 12:5, brief [4] 15:19 48:25 49:1 63: categorical [1] 4:17
+asked [9] 13:25 22:8 28:23
+29:4,14,17 57:10 58:24 62: 8,16,18 15:4,22 17:14 18:
+25
+category [5] 14:19 15:24 25:
+[1]
+7,24 39:13
+15
+17 19:1,8 20:7,19 21:9 23: bright-line 4:15
+caution [1] 69:22
+asking [4] 7:5 14:20 62:10
+21,23 26:17,18 27:4,13 29: bring [3] 23:20 37:8 49:9
+69:3
+cert [2] 28:24,24
+2,3,6 30:23 33:9,12 35:9,17 broader [1] 63:9
+brown [11] 2:6 3:9 58:5,6,9 certain [2] 19:2 65:18
+asks [6] 4:25 22:11 24:6,21
+36:10 38:19 42:16,23 43:
+28:25 43:25
+certainly [2] 60:2 63:3
+22,23,23 45:16,20,23 46:6, 59:20 60:6 62:19 64:7,11
+challenge [2] 15:24 54:15
+assess [5] 5:13 19:22 60:10 18,21 47:17 48:10,18,20 50: 65:22
+66:18 69:17
+challenged [5] 10:1 19:12
+1,12 51:11 52:3,7,22 53:8,9, but [75] 5:12 7:2,11,18 8:8,
+31:2 58:22 64:4
+assessed [1] 69:11
+23 54:21,25 56:13 57:13,17, 20,22 9:2,15 10:3,15 12:8,
+assessing [2] 40:19 48:6
+24 59:15,25 60:4,7,9,21 61: 13 14:18 15:15,18 17:11,18, challenges [1] 16:2
+assessment [1] 5:17
+13 62:13 63:5,13 64:4,9 66: 24 18:11,11,24 19:8,9 23:7, challenging [7] 16:24,24 60:
+[19]
+8:19 14:3 16:6 25: 1,8,25 67:4,7,10,10,21 68:2, 12 25:23 26:12 27:4 28:23
+asset
+24 61:22 67:5,7 68:2
+16,19 32:19 36:12,22 48:14 8 69:11
+29:7 30:5,13,18 31:3,4 33: change [1] 62:11
+characterized [1] 65:20
+54:14,15,19,21,24 55:1 63: bear [1] 64:5
+14 34:12,21 35:5 36:2 38:
+because [28] 4:20 6:1 9:1
+charles [3] 2:4 3:6 39:21
+1,5,24 64:3
+20 39:5 40:4,22 41:12 42:
+10:18 14:14 18:6 23:16 32: 16 43:3 45:9 49:12 50:8,22 charts [1] 65:10
+assets [8] 12:16 25:15 39:6
+52:15 63:15 64:5,14 67:14
+18 34:1 36:9 38:18 40:17
+52:6,14,20,22 53:3,5,7,12, chief [18] 4:3,10 14:7 32:23
+assistant [1] 2:6
+43:18,19 48:8 49:6 51:1,10 18 54:4,12 56:9 57:21 59:3, 36:17 39:18,23 49:15 50:6
+at [36] 8:11 9:15,23 13:11,22, 52:23 55:4 56:25 57:7 61:
+13 60:3,20 61:9 62:3,14 63: 52:11 56:15,19 57:4 58:1,5,
+24 22:17 24:10,11 25:24
+9 68:15,19
+16 62:12 63:17 66:8 68:2
+20 66:16 69:19
+26:1,24 27:23 28:2,13,16
+69:25
+by [20] 5:2,8,9 6:8 8:1,10 13: chose [1] 64:22
+19 15:14 24:15 25:13,23
+circuit [48] 7:2,8,18 9:10,11,
+31:11 36:12 41:18 42:6,12, become [2] 33:16,17
+been [6] 28:3 50:7 61:1 63:8, 33:20 35:10,21,21 36:1 39: 12,22 10:7 12:11,13,14,25
+19 43:5 48:9 50:12 51:13
+14 68:1
+13:1,15,18 14:16 15:2 16:
+25 48:20 50:18,23
+58:20 59:13 62:19,20 65:
+before [4] 14:24 18:21 57:8
+23 18:7,20 19:14,19 22:19,
+23 66:1,15,17 67:3 69:23
+65:19
+21 31:14 33:7 39:11 40:9
+attack [1] 53:13
+attacks [1] 52:25
+behalf [8] 2:3,5 3:4,7,14 4:9 c [2] 3:1 4:1
+42:17 44:23 45:2,5 48:5,12
+attempt [4] 15:6 20:14 25:7
+39:22 68:22
+49:6,10,13,24 53:17 54:25
+called [3] 41:14 56:8 61:2
+26:3
+being [4] 28:19 41:11 43:18 came [1] 9:9
+56:6 61:15 62:15 63:3,20
+45:8
+attempted [4] 7:3 8:25 18:
+65:9,23 66:16
+can [41] 5:2 6:7,17 8:11,13,
+[21] 4:23 5:18 8:14,
+21 32:13
+below [1] 40:9
+circuit's
+13 9:6 10:20 13:4,11,25 14:
+25 9:7 10:6 14:6 17:8 19:
+attempting [7] 8:1 9:5,19 14: benchmark [30] 4:24 5:16 6: 17 15:14,14 18:22 20:8,8
+16 37:4,8 69:23
+2 8:15 9:8,14 13:16 14:15
+15 23:10 24:17,19 25:11
+22:14 23:24 24:2,2 26:10
+attempts [4] 19:15 32:6 33:
+15:1 16:20 18:2,8,14,14 19: 33:17 36:8,20 38:5 40:4,11, 26:2 29:15 32:18 36:9 62:9
+19 35:7
+5 29:4 30:1 41:24 42:4 44:
+65:15 69:1,21
+13 43:21,22 45:16 50:13
+available [2] 56:10 65:4
+2 45:11 46:17,22 53:21 56: 52:10 54:18 56:13 58:13
+circumstances [1] 67:1
+claim [30] 5:16,25 6:17 7:16
+3,24 57:7,14 60:8 68:13
+67:4 68:2,8 69:24
+9:13,20 15:6,14 16:3 25:6,
+benchmarking [3] 5:9 13:20, cannot [1] 26:16
+[4]
+[9]
+24
+13,21
+26:9 30:10,13,14 36:
+b 43:16 46:1,4 57:23
+can't 7:8,11 8:7,10 12:5,
+24 37:2,5,16 39:2 40:5 46:
+back [9] 9:9 12:1 24:18 34:4 benchmarks [8] 5:7 13:8 19: 18 49:20 50:11 53:14
+17,17 56:2,8,9,13
+13 52:12,18 56:24 57:16
+36:20 47:10 52:10 60:15
+capable [2] 5:23 64:12
+berzon [1] 47:7
+59:13,16 67:19
+capacity [1] 40:21
+62:20
+berzon's [1] 47:5
+claims [7] 16:19 17:10,25
+care [2] 46:11 47:1
+bad [4] 28:19 50:18 57:18,
+[7]
+better 5:4,21 9:25 10:2
+18:13 26:5 29:25 64:10
+19
+careful [1] 4:21
+41:12 50:23 61:6
+class [3] 16:7 25:15,16
+caricature [1] 12:13
+badly [1] 69:15
+clear [9] 15:23 33:12 41:18
+better-performing [2] 22:6
+bar [1] 8:3
+carved [1] 22:22
+[13]
+[44]
+60:20
+18:24 20:3 36:18
+4:4 9:17,21 10:3,8 42:16 46:21 54:6,25 56:6,7
+barrett
+case
+[6]
+9:25
+19:11
+31:1
+between
+43:21 44:15,22 45:12 48:
+13:21 14:10,24 16:16 17:5 clearly [2] 45:2 62:12
+41:5 43:20 50:2
+11 53:22 57:6,18,20,25
+20:10 21:3 25:2 27:1,3 34: client [1] 59:25
+beyond [1] 7:19
+barrett's [2] 30:19 47:10
+11,13 36:15 37:10,19 43:1, close [2] 36:6 46:7
+
+C
+
+B
+
+Heritage Reporting Corporation
+Sheet 2
+
+as - close
+
+73
+Official - Subject to Final Review
+connect [2] 31:1 60:15
+color [1] 12:7
+42:19 43:13,24 44:13 47:6
+9 55:5,11,13 57:14 62:6 63:
+[1]
+colorfully 4:18
+connection [1] 9:25
+48:9 52:8 56:7 58:10 69:8,
+3 64:8
+come [4] 19:2 28:13,16 68:
+connects [1] 19:11
+17,22
+differed [1] 7:25
+[4]
+[11]
+5:13 42:6 44:8
+14
+conservative 40:15 42:
+difference [10] 41:4 43:19
+courts
+10 51:12 67:11
+48:5,12 54:2,7,9,13 58:24
+50:2 51:2,16,17 52:24 54:
+comes [2] 17:6 45:22
+coming [1] 30:17
+consider [1] 45:1
+62:22
+21 59:7,7
+commands [1] 40:19
+consideration [1] 54:11
+court's [4] 6:5 42:2 59:17
+different [21] 6:18 8:4 9:16
+committee [1] 4:6
+considered [1] 44:10
+62:15
+13:6 26:19 28:17 41:8 43:
+common [3] 32:10 35:18 38: considers [1] 18:22
+crafted [2] 4:15 9:12
+18 47:22 48:10 55:23 58:
+25
+consistent [7] 5:11 43:14,17 create [1] 59:3
+16,17 60:3 61:6,17 62:17
+62:14 65:8 66:6,9
+created [1] 15:2
+commonly [2] 35:20,25
+64:3,13 66:11,12
+common-sense [1] 59:9
+credited [1] 52:9
+consistently [4] 4:14 26:5
+differently [2] 41:9 53:11
+companies [1] 55:23
+46:1,2
+criteria [2] 19:8,18
+differs [1] 24:23
+comparable [2] 13:3 25:15
+curiae [3] 2:8 3:11 58:7
+difficulty [1] 49:17
+constant [4] 60:22 61:5,11
+comparator [23] 8:2,12,16
+63:17
+direct [1] 34:17
+11:13 19:12 37:1,22 38:16 constructing [1] 11:10
+disagree [2] 45:4 55:25
+disagreement [2] 17:9 59:
+39:9,11 47:12 52:17 53:24 context [2] 38:15 69:24
+d [1] 4:1
+19
+59:11,14,22 60:9 61:24 66: context-dependent [2] 6:14 d.c [3] 2:2,4,7
+30:25
+discarded [1] 5:6
+8 67:18,24,25 68:9
+day [1] 51:13
+discarding [1] 25:23
+comparators [8] 5:9 6:24 13: context-sensitive [1] 4:21
+dealing [2] 28:25 65:19
+[4]
+2,7,19 14:1 30:18 48:17
+continue [1] 66:17
+disclosed [1] 56:2
+decide 18:25 29:14,17
+discussion [1] 50:2
+compare [9] 7:8,12 8:7 24:8 contrary [2] 20:21 25:19
+34:12
+32:14 55:19,20 56:1 59:4
+contribute [3] 6:19 7:6,20
+dismiss [4] 5:22 7:18 9:24
+decided [2] 61:23 68:12
+control [3] 31:21 50:21 52:
+compared [4] 30:23 41:12
+decision [9] 24:17 40:14 47: 43:6
+64:4,18
+23
+19,20 48:2 50:11 60:23 61: disposition [1] 62:14
+dissent [1] 33:6
+comparing [4] 6:8,22 15:14 conventional [1] 64:5
+11 62:16
+[1]
+64:23
+convert 26:22
+decision-making [3] 34:6,7, dissimilar [1] 6:8
+[36]
+[1]
+7:4,23 9:1 core 26:1
+district [3] 48:5 52:8 56:7
+comparison
+19
+[1]
+[8]
+12:18 18:10,18,23 19:16
+corporation 4:5
+decisions 9:10,11 40:13 diversification [1] 40:16
+diversified [2] 16:6 32:7
+21:6 31:2 32:6,12 36:10 37: correct [11] 25:23 31:7 33:
+42:14,20 48:9 52:8 63:2
+[1] 4:19
+[1]
+13 35:1,21 41:17 55:7 60:
+divide
+6 40:6,20,23 41:15 42:24
+declined 4:14
+do [74] 4:18 6:11,21 7:15 8:
+43:9 49:5,9 50:15,20,25 51: 21 63:4 65:2,22
+decoupling [1] 27:24
+correctly [1] 61:15
+5 52:2,17,22 53:2,7 56:6
+define [6] 18:21 30:16,23 42: 6 9:1,23 10:12 11:3,12 14:
+correlated [1] 20:23
+20 18:3,11,25 21:17 22:25
+57:23 59:15 61:10 68:12
+3 63:7 69:23
+corroborate [2] 21:3 23:4
+23:11 25:5,8,10,18 29:2 30:
+comparisons [3] 8:5 40:24
+defined [1] 18:7
+65:6
+corroborates [1] 33:18
+22 31:1,15,25 32:9,10 35:4,
+defining [2] 8:11 53:23
+[62]
+[1]
+5:4,7,15,20 6: cost 41:13
+complaint
+definition [9] 8:15,25 9:7 13: 7 37:21 40:1 42:9,13 43:2,
+10,15,18,20 7:1,15,17 8:3, costs [1] 42:1
+3,7 44:3,15 47:2,14 48:19
+4,18 14:6,14,15 32:18
+20 10:3,16,21,24 11:4 13:2, could [32] 6:19 18:10 19:21 degree [1] 65:7
+49:25 51:7,10,18,20,24 52:
+25:12,20 28:18 31:3 33:21, degrees [2] 58:14,15
+5 14:5 15:6,23 16:1 18:9
+21 53:20,22 54:17 55:3 56:
+19:11,23,25 20:2,17 22:4,5, 23 37:15,18,18,19 42:12 46: demonstrate [11] 5:2 6:7 9:
+20,22,22,25 57:7,23 59:18
+6 47:10 48:19 49:9 50:6,9
+8,22 23:22 24:3,22 25:25
+60:4,6,10 63:3 64:22 65:15,
+3 10:19 20:2 22:25 24:15
+27:14,15 29:7 31:1,13 32:6, 52:3,3,7,25 53:16 54:3 55:
+15,16,20,20 66:5,7,22,24
+25:1 35:8,15 39:2
+24 56:1 61:22 63:6 64:18
+8,13 33:19 35:2,7,9 36:23
+does [23] 10:21 15:23 16:8
+denigrating [1] 15:19
+[1]
+20:1 21:7 24:21 27:2 29:2
+39:13 44:19 45:1 52:1,6 65: 67:7
+department 2:7
+30:25 33:16 39:11 41:24
+couldn't [4] 20:19 31:15 48: depends [1] 68:10
+10,11 66:13,18,20 68:13
+20 57:13
+43:4 46:22 53:25 54:1 58:
+complaints [1] 67:2
+designed [2] 7:10 41:8
+complaint's [4] 4:16 5:1 21: counsel [6] 17:20 32:24 39: detail [3] 11:6 13:9 45:6
+17 59:9 60:14 63:4,23 65:
+11 34:13
+19 54:13 58:3 68:16
+determination [2] 4:15 43:5 20 69:9
+conceded [1] 41:3
+count [7] 7:4,23 8:11 13:4
+doesn't [11] 10:4,16 12:5,14
+determined [1] 65:24
+concerned [2] 28:5 49:18
+14:17 18:22 69:24
+14:10 23:20 27:1 40:18 41:
+determining [1] 5:15
+concerns [1] 15:17
+counts [2] 8:2 18:7
+5 48:21 62:3
+did [25] 7:22 10:2 12:25 14:
+concludes [1] 22:20
+couple [5] 12:21 17:2,4,7 32: 4 22:2 25:15 27:15 34:6 37: doing [4] 59:23 60:11 62:1
+concurrence [1] 47:5
+4
+9 39:3,5,6 41:19,20,22 45:2 64:13
+conduct [3] 41:20 43:12,14 course [1] 51:9
+done [4] 7:2 25:23 26:25 55:
+50:23 53:8,17 56:5 57:23
+confines [1] 60:11
+court [28] 4:11,13,18,25 7:4
+25
+61:15,24 63:21 66:16
+confused [1] 57:6
+14:16 18:21 19:21 24:5,6,
+don't [47] 10:18 11:1,14,16,
+didn't [16] 26:25 32:18,19
+confusion [3] 54:6,7 63:6
+12,20 26:4,6 39:24 41:17
+37:21 42:1 44:18 49:8 51:7, 17,18,19,21,24 12:23 17:8
+
+D
+
+Heritage Reporting Corporation
+Sheet 3
+
+color - don't
+
+74
+Official - Subject to Final Review
+18:24 19:1,17 20:24 21:16
+23:7,9 26:12 27:10 28:17
+29:13 31:23 32:2 34:17 36:
+25 37:24,24 38:15,15 42:16
+44:6 46:8 47:13 49:2 53:20
+54:19 55:1 57:15 59:20 63:
+16 65:1 66:4,12 67:17,23
+68:8
+doomed [1] 69:25
+dots [3] 19:11 31:1 60:15
+doubt [1] 28:18
+down [5] 26:23 30:17 61:3,3
+68:17
+downside [6] 28:1 58:16 62:
+5 63:10 64:14 67:12
+downturns [1] 61:4
+draw [2] 65:2,5
+draws [1] 41:18
+dudenhoeffer [2] 4:18 41:20
+due [1] 51:3
+duplicative [1] 68:7
+during [2] 62:2,6
+duty [3] 4:12 40:5 60:11
+
+E
+e [3] 3:1 4:1,1
+earlier [1] 34:5
+earn [1] 42:1
+easiest [1] 60:9
+edge [1] 44:21
+effective [1] 32:10
+eighth [8] 9:10,11,12,22 10:
+7 15:2 24:19 49:24
+either [3] 21:11 43:17 69:14
+else [6] 31:24,25 45:1 56:17
+68:3 69:10
+emphasized [2] 26:5 49:24
+employed [1] 28:9
+end [5] 12:17 51:13 61:25
+62:6 68:17
+ended [1] 62:1
+endorse [1] 47:7
+endorses [1] 48:4
+endorsing [1] 49:13
+ends [1] 34:1
+engage [1] 34:7
+enough [7] 40:23 42:1,24
+45:16 54:1 57:3 66:13
+entertain [1] 25:18
+entirely [2] 30:25 61:17
+entitled [1] 35:9
+equally [3] 43:13,17 66:9
+equity [15] 7:10 15:20 16:1
+23:17 27:25 31:10,11 38:
+24 45:8 50:19,24 51:4 53:
+15 63:16 64:16
+equity/bond [1] 32:8
+equity-heavy [3] 51:8 61:19
+
+far [1] 48:18
+features [1] 14:1
+featuring [1] 15:19
+federal [1] 40:25
+fees [2] 68:2,6
+fees-wise [1] 68:4
+few [1] 68:23
+fewer [1] 50:23
+fiduciaries [26] 5:8 11:9 13:
+10 15:25 16:4 20:12,22,25
+22:2 27:18,24 28:5,9 32:16
+34:7 36:3,7 40:12,14 42:11
+46:3 58:11,19,25 60:18 62:
+4
+fiduciaries' [6] 11:6 13:24
+23:15 34:18 36:13 38:9
+fiduciary [4] 32:21 34:6 40:
+20,21
+fiduciary's [2] 13:8 19:16
+fighting [1] 19:6
+find [3] 31:15 55:4 67:18
+finish [1] 17:20
+first [5] 4:25 24:20 47:10 52:
+16 65:23
+fit [1] 26:15
+flatly [1] 69:7
+flawed [1] 15:16
+flexible [1] 4:13
+flyspeck [2] 62:9,15
+focus [1] 23:12
+focuses [1] 34:5
+focusing [3] 23:22,23 36:22
+follow [1] 33:6
+follows [1] 40:25
+for [59] 2:7 3:10 14:1,11,17
+16:2,18 17:25 18:16,16,22
+19:13 23:13 27:19 29:25
+31:21 32:7 33:24,24 34:3
+40:5,9,10 41:7,19,20,22,25
+42:7 43:7,23 44:10,13 45:9
+50:21 51:15 52:4,16,23 53:
+18 54:2,14 56:10 58:7 59:7
+60:5,7,21 61:24 62:4,10 64:
+25 66:6,7,22 67:3,9,21 68:6
+foreclose [1] 8:3
+foreclosed [1] 69:20
+foreclosing [1] 64:9
+forth [1] 5:12
+forward [1] 10:23
+found [2] 45:9 56:12
+face [2] 38:18 67:15
+fact [9] 20:23 26:25 27:2 36: fourth [1] 26:22
+framework [2] 5:11,13
+4 43:16 48:5 53:16 54:20
+friend [4] 41:3 44:16 49:16
+59:1
+[1]
+50:3
+factors 61:11
+friend's [1] 40:1
+facts [2] 39:2 50:14
+from [26] 4:19 8:4 9:10,16
+fail [3] 9:1 25:1 69:25
+19:2,24 26:23 27:25 40:25
+failed [2] 45:9,9
+42:12,25 45:10 46:23 47:
+fails [2] 5:4 46:2
+
+64:24
+erisa [7] 4:22 22:11 26:5 40:
+12 41:2 58:11 69:9
+erisa's [2] 4:12 40:11
+especially [2] 41:6 54:23
+esq [4] 3:3,6,9,13
+esquire [2] 2:2,4
+essentially [3] 47:23 60:17
+64:9
+establish [2] 37:1,22
+evaluate [1] 13:12
+even [13] 5:7,19 9:4 24:7 25:
+16 48:25 49:3 55:11,17,21
+62:5 67:7 68:4
+ever [3] 18:21 33:8 45:16
+every [1] 59:10
+everybody [1] 47:15
+everyone [2] 5:19 51:11
+everything [4] 12:15 14:3
+49:21,21
+everywhere [1] 69:10
+evil [1] 45:8
+evolved [1] 24:19
+exact [1] 54:14
+exactly [9] 12:11 21:6 47:4,
+5 53:12,12 64:7,11 65:12
+example [10] 8:14 23:13 32:
+5,12 36:4 42:8 45:22 57:11
+66:6 67:9
+examples [2] 28:7 32:4
+exclusively [4] 9:19 10:4 15:
+7 17:11
+existence [1] 41:4
+existing [2] 8:17 10:13
+expense [1] 58:21
+experts [5] 5:9 13:20,22 14:
+4 51:20
+explain [2] 6:24 44:7
+explained [2] 27:17 40:9
+explaining [2] 27:22 49:17
+explains [1] 20:21
+explanation [5] 41:8,10 51:
+15 59:6 66:10
+exposure [5] 58:14,20 61:20
+64:25 67:12
+extent [3] 24:5 54:6 57:21
+extra [1] 44:17
+
+F
+
+22 48:10 50:3,16 52:12 54:
+8 58:15 60:15 61:17 64:1,
+10 65:2 69:3
+front [1] 13:15
+fulfill [2] 21:13,15
+function [2] 15:1 19:20
+fund [57] 5:3,5,20 6:15,23 7:
+9,10,12,25 8:17,21,22,22,
+23,24 9:4,4 10:1,1,2,14,16
+12:19 13:12 14:22 16:6,19
+19:12 24:23 28:8 30:1 31:2,
+11 32:7,8,14,20 36:5,12,13,
+14 41:25 42:7 43:16,16 45:
+25 46:1,4 50:24 55:18 57:
+11 60:20 64:4,4,19 67:6,9
+fundamental [1] 14:12
+fundamentally [1] 45:4
+funds [77] 6:8 9:1 11:7,7 13:
+10,12,13,24 14:1 15:21,25
+16:5 20:13,14,20,21,22 21:
+5,9,13,21 22:13 23:16,17
+24:8 27:22 28:2,21 31:10,
+15,24 32:21 34:14,23 35:10,
+21,22,23 36:1 38:9,24 39:3
+40:6 41:5,8,11 43:17,20 45:
+8,24 47:23 48:16 50:18 51:
+3,8 52:16 53:15 59:1,2,4,5
+61:2,6,9,16,19,24,25 63:15,
+16 64:2,16,16,24 65:3,6,12
+fund's [1] 56:13
+further [4] 33:2 44:13 56:16
+68:17
+
+G
+g [1] 4:1
+general [4] 2:6 12:19 18:12
+45:19
+generally [2] 63:21 68:1
+get [7] 9:24 11:22 17:22 30:
+11 34:3,24 46:7
+gets [1] 22:17
+getting [1] 44:11
+give [7] 8:13 20:9 38:5 50:7,
+9 53:25 60:5
+given [1] 14:1
+giving [1] 49:17
+global [2] 16:6 32:7
+go [10] 24:3 32:5 36:20 47:
+10 52:10 60:22 61:11 62:
+20 67:21,22
+goal [14] 21:22 22:5,7,13 27:
+19,20 35:13 42:13 45:24
+46:1,2,6 55:18 63:9
+goals [2] 54:10 60:25
+goats [1] 4:20
+goes [1] 24:18
+going [22] 9:16,22 12:1 17:
+17 21:9,12 24:16 34:12 42:
+
+Heritage Reporting Corporation
+Sheet 4
+
+don't - going
+
+75
+Official - Subject to Final Review
+25 44:25 45:20 46:13,14
+intel's [9] 40:14 58:19 59:1,
+67:8 69:14
+36:4,7 40:15 43:15 48:19,
+[3]
+48:17,18 49:19 60:16 63:
+4 61:18,25 62:3 65:6,11
+22 50:4 53:17 54:15,16,23 implemented 50:17 52:
+12 66:1,25 67:20 68:14
+intent [1] 55:6
+60:8,25 61:16 62:7 63:3,14 20 58:25
+intentional [1] 43:19
+implementing [1] 38:13
+good [6] 11:24 12:18 26:22
+64:13,16,22 65:10 66:10
+28:19 33:25 43:23
+implication [2] 61:12 65:2
+interesting [1] 55:4
+here's [2] 12:25 18:6
+importance [1] 46:12
+international [1] 48:16
+gorsuch [29] 16:15,18,22 17: he's [1] 16:24
+3,5,13,16,19,22 18:11 28:
+high [1] 7:10
+important [2] 40:4 54:10
+into [10] 4:15 10:8 11:7 13:9
+improper [1] 41:16
+20:14,20 60:22 61:11 63:2
+11,13,16 29:16,21,24 30:4, high-yield [1] 64:20
+hikma [1] 41:22
+imprudence [33] 4:17 5:2 6: 68:14
+7 33:4 45:13,18 46:10,20,
+his [2] 59:25 60:2
+7,17 7:16,21 10:19 15:10
+invest [6] 15:25 31:23,24 32:
+25 56:18,20,22 57:2,9
+[3]
+[1]
+hit 46:5
+16:2 20:11 23:1 24:6,15 25: 11 48:15 53:14
+got 12:8 29:18 57:25
+gotten [1] 44:20
+hold [3] 60:22 61:4 63:17
+invested [4] 12:16 23:19 25:
+1,9,13,21 33:19 36:24 38:
+government [1] 68:25
+holds [1] 61:10
+18 45:17,21 46:9,13,24 51: 14 67:13
+ground [2] 29:10,13
+holistic [6] 10:17 14:25 20:7 1 54:22 56:14 58:18 59:12 investing [1] 25:16
+growth [5] 8:22 9:3 28:20
+26:11 27:5 69:20
+investment [8] 4:5 11:10 13:
+61:8 69:6,19
+42:8 51:9
+holistically [2] 26:8 69:12
+imprudent [9] 8:21 23:16 25: 23 31:6 42:22 51:22 55:21
+honor [4] 43:7 44:7 46:19
+17 33:22 40:18 54:16 60:
+guess [4] 11:21 22:19 23:7
+58:13
+29:9
+57:16
+24 62:4 69:14
+investments [7] 24:9 28:8,
+22 35:12 40:22 50:24 54:
+guidance [3] 44:14 54:1 60: how [23] 6:11 7:5 10:22 16: imprudently [1] 58:25
+4
+15 26:13,17 27:13 28:2 30: inaction [1] 41:23
+10
+15,22 34:6 35:4 38:1 42:3, inappropriate [2] 27:19 35: investor [1] 23:18
+involved [1] 13:23
+13 45:4 47:16,22 54:17 60: 11
+ipsa [1] 57:14
+incapable [2] 15:9 27:23
+4 61:14 63:7 65:16
+had [24] 9:12,18 15:3 32:22
+include [1] 32:19
+iqbal [3] 5:12 6:3 11:23
+however [2] 5:23 65:19
+39:4 40:1 41:12 44:19,24
+hypothetical [1] 38:6
+included [3] 27:21 28:7 38:9 isn't [5] 5:18 9:4 39:8 55:21
+45:23,24 50:16 51:12 52:
+including [3] 12:15 13:7 40: 61:12
+20 55:18 56:2 57:17 58:19
+14
+isolate [3] 19:23 22:23 25:7
+61:17 64:19 65:5 66:11,22
+[1]
+[1]
+isolated [1] 69:4
+inclusion 51:3
+i'd 39:25
+67:9
+[4]
+[1]
+[2]
+inconsistent 4:20 11:8
+isolates [1] 24:20
+idea 25:18 43:23
+half 21:8
+[3] 14:18 65:17 69:
+[1]
+[6]
+67:16
+69:7
+isolating
+happen 63:7
+identical 40:21,22 47:23
+[1]
+[1]
+66:4
+2
+incorrect
+harder 44:23
+48:22 54:5,19
+indication [1] 61:8
+issue [1] 50:12
+hardly [1] 47:2
+identicality [1] 42:17
+issues [1] 47:6
+has [23] 4:13 7:2,3 11:4 12: identified [6] 5:9 13:6,10,19 indicative [2] 45:21 46:6
+indistinguishable [5] 5:3 7: its [8] 13:4 16:2 26:1 38:18
+16 15:6 19:1,2,8 21:17 26:
+22:8 61:16
+25 14:22 24:23 36:10
+49:1 60:18 67:10,15
+4 29:7 35:4 41:14 42:18 49: identifies [2] 7:24 8:21
+industry [1] 67:15
+it's [24] 6:13 12:8 14:13,18,
+25 50:1 57:24 59:15 62:23 identify [11] 5:5 6:15,22 9:
+infer [2] 24:6 58:24
+20 21:14 26:3,21 29:24,24
+14 10:13,16 13:25 14:21
+67:25 68:12 69:8
+[8] 15:9 25:9 38:
+[1]
+inference
+30:24 42:19 43:2,11 44:12
+24:22 36:11 55:6
+haven't 30:18
+[1]
+[1]
+17
+43:9
+59:3
+60:21
+69:5,19
+49:14,14 52:22 59:22 61:1
+having 54:1
+identifying 5:3
+he [3] 16:23 44:19 65:19
+if [60] 5:4,7,15 7:9,14 8:13 9: information [4] 34:18 41:21 62:25 65:22 67:1 69:24
+itself [6] 17:1 43:10 53:1,14
+hear [1] 4:3
+8,15,22 10:15 11:22,24 14: 52:7,9
+67:22,23
+inherent [1] 18:18
+heard [2] 50:15 68:25
+23 15:5,8 17:13 18:25 19:
+inherently [3] 4:12 23:17 37: i've [2] 29:18 63:8
+hearing [1] 29:5
+17 20:8,8 22:4,4 24:3,24
+6
+heavy [1] 15:20
+25:16 26:21 32:4,9 33:18
+hedge [30] 11:7 15:21,25 20: 36:7,21 37:3,7,21 38:5 44: initial [1] 36:21
+initially [1] 15:2
+ja [1] 32:5
+14,20,21,22 21:13,21 22:13 23 47:6,9,13 49:18 50:5,9
+[1]
+4:14
+inject
+jackson [28] 10:20 11:1,12,
+23:16 27:22 28:2,8,21 31:
+52:19 53:5,7,13,14 56:12
+17 23:7 24:1 25:10 26:10
+24 32:20 34:14,23 35:10,21, 57:10 60:2,18 62:5,8,15 64: inquiry [1] 4:21
+insider [1] 41:21
+36:19,20 37:7,12,15,21 38:
+23 38:24 45:8 50:18,23 51: 8 65:5 66:19 67:9 68:4,5
+insists [1] 16:23
+1,4,7,11,20,23 39:8,14,16
+3 53:15 63:15 64:16
+i'll [2] 21:24 32:3
+instance [2] 19:13 26:18
+illustrate [1] 50:14
+52:10 53:3,5 58:2 65:14
+heightened [1] 41:16
+held [1] 66:2
+i'm [10] 10:21 27:8 29:5,9 30: instances [2] 26:24 59:21
+judge [5] 33:6 40:8 45:15 47:
+help [2] 23:3 50:12
+4 35:3 49:18 57:6 62:10 64: instead [4] 34:19 58:23 62:
+5,7
+[8]
+25 64:22
+helpful 48:4 49:6 50:14
+1
+judged [1] 26:17
+52:23 53:23 60:7 61:13 68: imagine [4] 8:20 37:19 38:3, instructive [1] 48:4
+judgments [1] 58:12
+[1]
+66:21
+insufficient
+8
+judicially [1] 4:14
+2
+intel [9] 4:5 16:4 36:3,13 42: just [46] 4:24 7:19 8:13 9:23
+implement [2] 42:13 63:13
+here [30] 7:3 9:17 10:3 18:
+11 55:5 61:22 64:15,21
+20 20:11 23:2 29:11 30:10 implementation [3] 16:25
+10:9,22,23 14:8,8,19 15:6
+
+H
+
+I
+
+J
+
+Heritage Reporting Corporation
+Sheet 5
+
+going - just
+
+76
+Official - Subject to Final Review
+42:10,13 53:25 54:4,4,9 55: 39:24 48:10 58:10 64:4
+20 60:16 64:21 68:7 69:13 maybe [7] 20:9 27:8 50:10,
+11,13 57:8 61:7
+likely [1] 65:4
+limited [1] 18:13
+mccloud [39] 2:4 3:6 39:20,
+line [5] 11:23 26:23 30:12
+21,23 42:5 43:7,21 44:6,22
+46:8 49:10
+45:18 46:18,21 47:4,9 48:1
+lines [1] 41:18
+49:2 50:5,13 51:24 52:3,19
+little [2] 19:7 40:1
+53:4,12,22 54:3,18 55:8,12,
+long [1] 55:7
+16 56:25 57:15,19,21 58:4
+long-term [3] 31:7,12,21
+59:19,24 63:23 66:23
+kagan [9] 11:20 13:7 47:9
+me [18] 12:10 14:8 15:22 17:
+48:1,8 51:19 62:8 63:24 64: look [14] 9:15,23 13:11,24
+24:3 26:24 31:10 42:12,19
+19,20 19:4 20:9 21:10 23:
+8
+24 27:9,12,13,13 28:11,13,
+kavanaugh [23] 15:12 16:14 48:8,23 54:2 62:20 66:17
+16 30:15 48:18
+21:7,20,24 22:10,18 33:3,5, looked [3] 42:6 48:6 65:23
+looking [1] 54:14
+mean [21] 6:9 11:22 12:11
+15,21,25 34:4,10,21 35:3,
+19:4 21:18 23:10 29:12 34:
+16,20,25 36:16 38:25 45:14 losing [1] 34:1
+losses [2] 7:13 58:20
+11 36:14 39:10 47:11 48:
+57:5
+lot [4] 15:18 29:7 47:16 67:
+21 49:15 50:1,7,8 57:10,13
+kavanaugh's [1] 23:9
+11
+59:10 60:17 63:25
+keep [1] 50:21
+meaningful [47] 4:23 5:16 6:
+kind [33] 7:3,16,22 8:2 9:17 lots [1] 51:13
+1 8:15 9:8,14 13:16 14:15
+12:8,12 16:6 18:14,15 19:3 lottery [2] 38:10 57:12
+[2]
+21:12,22
+low
+15:1 16:20 18:1,8,14 19:5,
+20:24 25:6 26:12 28:4 30:
+lower [7] 21:10 40:18 44:8
+7 29:3 30:1,16 36:25 40:23,
+19,23 32:20 35:12 57:13
+48:9 54:1,7 58:24
+24 41:24 42:4,25 43:10 44:
+61:8,10 63:8,10 64:14,23
+2,5,8 45:11 46:16,22 47:12
+65:2,9 67:19 68:3,5,13 69:
+49:5,19,25 50:20 52:2,14
+20
+kinds [13] 8:5 11:13 13:6 28: made [4] 34:4 40:15 47:7 68: 53:8,9,20,24 57:24 60:8,8
+66:8 69:24
+8 35:11 48:22,23,24 52:15
+5
+meaningfully [3] 24:9 40:7
+59:23 65:3,5 67:2
+magic [1] 26:12
+48:21
+make [28] 6:15 25:10,13,20
+know [22] 12:7,17 13:5,17
+[1] 47:21
+meaningfulness
+19:2 21:16 27:5 29:10,22
+31:11 34:22 37:15 39:1 40:
+means [8] 21:12,15 22:12
+31:5 39:4 43:25 46:8 47:13, 13,18,23 42:24 43:4,4 44:
+36:11 44:5,8 50:3 54:5
+18 48:15 52:5 61:5,21 67:5, 15 46:4 47:1 49:20 50:20
+13 68:4
+51:6,12 52:18 53:16,17 56: measure [1] 51:22
+median [1] 21:10
+12 58:12 59:15 67:18
+[3]
+making 42:15 44:17 46: meet [2] 19:18 46:2
+meets [1] 46:1
+23
+l [3] 2:4 3:6 39:21
+[4]
+mention [1] 23:11
+management 31:12,21
+labeled [2] 8:22,24
+[1] 41:4
+mere
+[1]
+51:21 55:7
+laid 10:23
+[1] 5:20
+[1]
+merely
+[1]
+11:9
+managing
+language 62:21
+[1]
+[1]
+66:19
+merit
+[1]
+18:8
+manner
+large 26:24
+many [5] 29:3 35:21 48:5 54: meritless [2] 4:20 5:24
+latter [1] 21:15
+meritorious [1] 5:24
+20 64:13
+laughter [1] 56:21
+market [12] 20:23 28:1 34:2 methodological [1] 10:6
+lawful [2] 43:14 66:10
+might [10] 15:4 25:3 26:19
+42:9 43:19 58:14,16 61:4,
+lays [1] 20:17
+45:23 46:3,7 50:8 51:1 53:
+20 62:1 67:12 68:3
+lead [1] 58:17
+[1]
+7 61:13
+[1]
+markets 27:25
+least 27:23
+[1] 40:8
+[1]
+miller's
+[1]
+28:9
+matched
+leave 47:16
+[2]
+[1]
+23:20 45:22
+mind
+[1]
+62:6
+materializing
+led 34:8
+[1] 31:6
+[5]
+minimize
+[2]
+7:24
+14:22
+24:
+materially
+less 26:6 41:13
+misheard [1] 57:8
+let [12] 15:22 17:19,20 23:24 22 36:10 42:21
+mitigate [5] 20:14 28:20 34:
+matter [2] 21:8 45:19
+27:7,9,12,12,13 28:11,13,
+[3]
+23 36:1 61:3
+matters 19:10 20:10 69:
+16
+mitigation [6] 20:25 22:5 27:
+12
+let's [3] 17:16,24 45:23
+19,20 32:9,15
+matthew [5] 2:2 3:3,13 4:8
+level [2] 28:3 64:6
+[1] 38:11
+mm-hmm
+[2]
+68:21
+levels 36:13 64:2
+[1]
+[1]
+51:13
+money
+[20]
+9:5
+maximize
+5:25 12:3,5 16:9 20:
+like
+may [8] 4:11 17:14,14 26:18 monitoring [1] 46:4
+10 32:14 39:25 40:20,21
+17:10,20,20 19:13 20:1 21:
+14,24 22:14,23 25:8,20 26:
+3,10,19 27:13 29:9 33:5,11
+36:8,20 40:17 45:3 46:14
+49:4 52:10 55:22 57:17 61:
+12 64:22 65:6,11 66:11 67:
+15 68:23,25
+
+K
+
+M
+
+L
+
+more [22] 5:20 14:14 20:4,
+13 25:14 28:20 29:8 40:15
+42:10 44:4,11 48:25 51:8,
+11 52:5 61:19 64:5,19,24,
+25 65:4 68:1
+morning [1] 4:4
+most [4] 34:19 41:22 42:6
+54:10
+motion [4] 5:22 7:18 9:24
+43:5
+motion-to-dismiss [1] 34:25
+moved [1] 66:20
+ms [8] 58:5,9 59:20 60:6 62:
+19 64:7,11 65:22
+much [7] 12:11 25:14 40:1
+42:1 50:12 60:4 65:12
+multiple [1] 40:10
+murphy [1] 45:15
+murphy's [1] 33:6
+must [8] 5:13 10:14 24:7,8,
+14 26:6 44:1 53:24
+my [5] 12:24 36:21 40:1 41:
+2 54:8
+myriad [1] 59:11
+
+N
+n [3] 3:1,1 4:1
+namely [2] 21:13 22:13
+narrow [1] 40:4
+narrower [3] 49:4,11 50:9
+nature [3] 23:6 35:11 53:9
+necessarily [2] 67:22,24
+necessary [3] 5:19 44:13 59:
+22
+need [30] 7:20 11:12,17,24
+12:2 18:1 29:2,3 30:11 36:
+11,25 37:20,22 38:16 43:9
+44:3,7 48:14 49:5,8 50:21
+52:17 53:7 54:19 57:14 59:
+10 67:3,18,24 68:8
+needs [5] 6:15 18:18 41:11
+48:20 60:9
+neither [1] 55:3
+neutral [2] 66:14,20
+never [1] 55:17
+next [1] 24:11
+ninth [56] 4:23 5:18 7:2,8,18
+8:14,25 9:7 10:6 12:10,13,
+14,25 13:1,15,18 14:6,16
+16:22 17:8 18:7,20 19:13,
+14,18 22:19,21 23:10 24:16
+25:11 26:2 29:15 31:14 32:
+18 36:9 39:11 40:9 42:17
+44:23 45:2,5 48:5 49:13 53:
+17 54:25 56:6 61:15 62:9
+63:3,20 65:9,15,23 66:16
+69:1,21
+no [18] 6:14 9:20 11:15,15
+
+Heritage Reporting Corporation
+Sheet 6
+
+just - no
+
+77
+Official - Subject to Final Review
+12 44:21 55:7
+22:4,19 23:17 26:6 29:16,
+9 58:22 59:4 60:23 63:18
+25 53:4 57:22 59:1,12,14,
+16 33:14 36:4 37:24 40:10
+64:12 68:22
+21 63:24 65:14 66:17,18,21 overall [4] 6:20 10:10 67:5,
+23
+47:8 49:12 55:9 68:18
+petitioners' [1] 65:16
+67:15 68:3,10,17,22
+[1]
+[24]
+[1]
+5:20 6:9,14,23 7:23 overallocated 16:5
+phrase [1] 33:10
+non-conclusory 5:14
+one
+none [1] 13:3
+11:17 20:11 22:4 25:4,24
+over-allocated [1] 52:15
+picture [1] 10:10
+nonetheless [1] 33:23
+over-allocating [1] 50:18
+piggy-backing [1] 23:8
+26:3,18 28:18,19 32:5,12
+non-performance [5] 9:21
+plaintiff [10] 24:5,8,13 25:12
+34:16 35:16,16 36:8 40:17 over-allocation [1] 11:6
+11:5 20:5 21:3 37:23
+overperforming [1] 61:25
+40:4 41:11 44:1 60:14,17
+52:1 61:6 66:15
+own [10] 5:2 10:18 13:8 19:
+non-performance-related
+68:11
+onerous [1] 42:23
+[1] 23:5
+one-yard [1] 26:23
+16 24:25 25:8 56:2,13 66:
+plaintiffs [11] 9:13,18 13:21
+nor [1] 27:2
+only [7] 7:22,25 10:12 14:15 19,21
+34:17 46:23 55:12,15 56:
+[66]
+4:18 7:17 9:2 10:12
+not
+22:24 24:23 30:13
+10 59:10 61:16 64:21
+14:15,23 15:23 16:9,9,24
+open [1] 47:16
+plan [2] 25:14 36:5
+opinion [15] 12:13,14 23:10 p [1] 4:1
+plans [2] 11:10 25:16
+17:10 18:15 21:22 22:1,1
+plausibility [4] 6:20 7:6 14:
+24:24 25:17 26:16 27:8 28: 25:11 40:8 45:5 47:14 49:4, page [3] 3:2 24:11 64:1
+18 30:12
+10,14 60:1 62:9 63:22 65:
+3,23 29:17 30:13 31:10,12
+paragraph [2] 27:21,21
+plausible [7] 4:19 15:9 38:
+15,17
+33:12 35:3 36:2 39:3,5,6,
+paragraphs [1] 11:5
+17 39:1 40:5 43:8 69:19
+11 40:21,22 41:2,17 42:21 opposed [3] 16:25 17:1 28: parallel [2] 41:20 43:12
+plausibly [5] 4:16 5:2,15 41:
+44:9,12,12,25 45:2 46:4,13, 21
+parameters [1] 60:7
+6 46:9
+22 51:5 52:22 53:7 54:5 56: opposing [1] 54:13
+paraphrasing [1] 30:4
+play [2] 68:14 69:16
+8 58:17,22 59:10 60:12,23 option [1] 56:10
+parker-hannifin [1] 49:7
+61:21,23 62:1,9,10 63:4 64: options [1] 11:11
+part [9] 10:9 23:2,22 24:7 25: plead [2] 59:11 67:2
+or [38] 5:8 6:7 11:14 16:1 21: 11 30:12,13 36:23 37:5
+pleading [9] 5:11,22 13:22
+22 66:3,13 67:11,22
+9,12,15,22 23:4 24:9 26:16 participants [4] 13:11 20:12 26:3 40:25 41:16,18 43:5
+nothing [1] 66:22
+noting [1] 39:25
+28:19,19,21 33:23 37:1,2
+59:12
+56:3,4
+now [3] 12:4 32:17 44:10
+38:2 41:13 42:1 43:19,22,
+please [5] 4:11 38:4,7 39:24
+particular [9] 14:10 26:16,
+number [4] 26:24 33:11 44:
+23 44:3 49:22,22 50:10 54: 18 27:1,3,17 34:8 38:13 42: 58:10
+10 56:11
+point [11] 9:2 19:16 23:24
+1 63:1 64:19,20,21 65:19
+14
+[1]
+32:3 34:4 37:6 47:5 49:23
+67:6,22 68:7,11 69:14
+particularly 25:14
+50:22 63:25 66:15
+oral [6] 3:2,5,8 4:8 39:21 58: past [1] 34:24
+6
+points [5] 21:6 36:8 47:7 62:
+o [2] 3:1 4:1
+paying [1] 68:6
+20 68:24
+objection [6] 14:8 18:3,6 47: orange [1] 8:10
+per [1] 25:17
+oranges [4] 7:9 8:7 15:15
+8 49:3,12
+percent [4] 32:11 38:10 57: policy [1] 4:5
+poorly [1] 52:21
+12 67:14
+objective [13] 20:15 21:1 38: 18:15
+[6]
+ported [1] 10:8
+14 58:20,23 59:1 61:18 63: order 37:1 39:1 43:8 60: percentage [1] 48:16
+[1]
+20 66:6 67:18
+portfolio [1] 51:21
+percentages 36:6
+13 67:6,8,10,16,23
+[2]
+[12]
+[2]
+position [2] 60:2,3
+ordinary 5:11,22
+10:15 14:2
+perfectly 5:23 64:12
+objectives
+[19]
+[2]
+6:23
+11:9
+13:10
+other
+possible [2] 25:12 67:1
+32:14 58:13,16 59:5,8 61:1,
+perform 18:10 41:9
+[8] 6:23 8:5,18 58:
+[61]
+21:5
+22:6
+25:15
+26:6
+28:21
+potential
+5:1,5 6:16,
+performance
+17 62:23 63:8 66:11
+19,23,25 7:5,20 8:1 9:19,23 21 61:3,20 62:5 64:25
+obvious [3] 41:7 51:15 59:6 31:15 36:4 39:3 44:17 46:
+23 49:16,23 55:24 59:2,5
+obviously [1] 63:16
+10:4,9,17 11:2 13:12 14:19, potentially [3] 8:21 18:9 38:
+61:7
+occur [1] 18:19
+21,23 15:3,7,8 16:12 18:17 17
+others [1] 65:19
+often [2] 20:23 44:11
+19:23 20:1,18 21:2,5,8 22: precise [1] 62:21
+[2]
+otherwise 59:6 66:9
+oh [2] 39:7 55:12
+23 23:3 24:7,8,14,20,24,25 precisely [2] 12:6,6
+[11]
+[11]
+13:12 20:6 29:7 30: 25:4,24 27:16 28:6 29:1 33: precludes [1] 5:17
+13:2,8 17:13,13 18: our
+okay
+9
+37:3
+45:6
+51:3,10 56:2,8, 8,10 35:4,14 36:15 37:4,8, predefine [3] 7:3 8:1 14:17
+11 20:16 25:3 37:9 52:20
+predicated [3] 16:19 29:25
+9
+56:19 57:20
+13,16,20 39:13 41:5 51:2,
+30:10
+on [84] 2:2,4 3:4,7,14 4:9 5: out [23] 5:24 6:2 10:17 13:1, 16 59:13 60:13,15 69:16
+14,19,21 14:5,11,24 15:10 performed [6] 5:4,21 26:17 premise [2] 7:16 57:1
+1,7 7:16 8:4 9:16,19 10:4,
+premised [1] 59:14
+41:12 61:6 65:12
+18,21 11:2,3 13:15,15 15:7, 18:8 19:15 20:17 25:2,13,
+premising [1] 57:22
+perhaps [1] 53:10
+20 16:19 17:11,12,12 20:1, 20 32:17 36:15 37:16 41:
+presented [8] 15:17 16:16
+10 52:18 69:15
+period [3] 44:2 62:2,7
+4 22:14,24 23:8,12,14,22,
+[1]
+[5]
+17:17,25 34:11 40:2,3 53:
+outlier 45:7
+permit 24:13 25:9 38:17
+23 24:6,13,16,25 25:8,21
+outset [4] 8:11 25:24 64:10
+19
+69:5,18
+26:17 28:21 29:10,25 30:
+pretty [6] 9:25 12:11 38:25
+permitting [1] 15:9
+10 33:6 34:5 36:22 37:4,20 69:23
+47:20 62:2 65:12
+38:18 39:22 40:6 41:21,23 outside [7] 20:17 27:15 28: petition [3] 24:4 28:24,25
+15 39:12 53:19 66:13,20
+prevent [2] 28:4 46:23
+petitioner [1] 68:11
+43:5 44:1,16 46:15 47:5,6
+49:14,16 51:20,22 52:1,18, over [6] 10:8 11:23 20:19 30: petitioners [10] 2:3 3:4,14 4: principle [1] 18:12
+
+P
+
+O
+
+Heritage Reporting Corporation
+Sheet 7
+
+no - principle
+
+78
+Official - Subject to Final Review
+prioritized [1] 51:8
+private [11] 15:20 16:1 23:
+16 38:24 45:8 50:19,24 51: r [1] 4:1
+4 53:15 63:15 64:16
+raised [2] 45:15,15
+probably [2] 43:3 52:21
+raises [1] 33:7
+probative [5] 45:23 54:22
+range [5] 8:4 13:6 40:13 48:
+56:13 59:16 66:1
+12 58:12
+problem [8] 6:4 10:6 18:19
+rarely [1] 45:20
+23:2 26:1 31:5 36:8 54:24
+rather [1] 28:20
+problematically [1] 52:14
+reach [1] 14:24
+problems [1] 63:18
+read [4] 45:4 47:21 54:8 63:
+[6]
+process 13:20 34:6,8,19 22
+60:12,16
+readily [1] 4:19
+produce [1] 7:10
+reading [3] 12:24 64:1 65:16
+produces [1] 40:17
+really [10] 10:5 19:4 21:11
+professionals [1] 13:23
+22:3 27:1 33:25 34:13 51:3
+profile [2] 12:20 62:24
+65:6 68:10
+profit [1] 31:12
+reason [2] 20:13 43:8
+project [1] 69:25
+reasonable [6] 21:21 26:16
+promise [1] 17:23
+34:14 47:20 48:3 58:12
+proposals [1] 50:8
+reasons [4] 40:10 45:10 53:
+proposed [3] 13:2 19:12 31: 18 66:22
+2
+rebuttal [4] 3:12 68:20,21,24
+proposition [1] 23:14
+recently [1] 41:22
+protect [2] 7:12 62:5
+recognition [1] 7:19
+protection [3] 28:2 58:15 64: recognizes [1] 40:12
+15
+reduce [1] 63:9
+prove [1] 6:7
+reducing [1] 58:20
+[6]
+provide 19:16 20:24 32: regularly [1] 41:18
+6 44:13 52:2 61:5
+reinforce [1] 23:4
+provided [3] 28:1 30:17 32: reiterate [1] 66:24
+13
+rejected [3] 6:4 53:18,18
+prudence [7] 4:12 40:6,19
+relate [1] 44:18
+46:13 58:23 60:12,12
+relative [1] 46:12
+prudent [5] 21:21 23:18 40: relevance [2] 11:21 14:17
+13 58:11 60:5
+relevant [13] 6:16,22,25 8:
+[2]
+prudently 60:19 61:23
+12 13:25 18:9,17 33:9,16,
+purpose [1] 40:12
+18 52:7 62:2,7
+purposes [1] 18:23
+reliance [1] 15:20
+pursue [2] 40:15 58:14
+relied [1] 52:1
+put [2] 4:18 68:12
+relies [1] 5:7
+putting [2] 20:4 25:4
+rely [11] 9:19 10:4,21 11:2,3
+17:11,11 24:13 28:21 37:4,
+20
+qp [3] 16:16 29:7 43:24
+relying [3] 8:4 46:15 59:12
+qualify [1] 19:19
+represent [1] 14:10
+[33]
+8:9,10 12:2 15: representing [1] 59:25
+question
+17 17:17,24 21:25 22:11,15, require [3] 4:22 18:1 53:1
+required [8] 16:20 18:15 30:
+17 23:9 28:17,23 29:4,14,
+2 42:17 47:22 49:22 52:22
+17,18,20 30:19 33:7 34:11
+36:21 40:2,3 44:9 45:14 46: 55:1
+11,14,15 47:11 53:19 57:10 requirement [5] 4:24 5:16 9:
+8 26:4 41:15
+65:14
+requires [3] 8:16 37:6 69:1
+questions [4] 6:5 42:2 47:
+16 59:17
+requiring [6] 36:9 40:24 42:
+[1]
+21,23 46:22 47:23
+quick 68:24
+quite [1] 67:11
+res [1] 57:14
+respect [1] 43:11
+
+R
+
+Q
+
+respond [1] 65:16
+64:15 69:8
+respondents [6] 2:5,9 3:7,
+same [24] 10:14 12:6,7,16,
+11 39:22 58:8
+19 23:18 28:17 36:12 39:4,
+respondents' [1] 5:10
+5 41:25 42:22 43:15 48:14,
+response [1] 52:11
+16 50:22 53:10 62:23,24,24
+responses [3] 12:22 17:7 35: 63:5,22 64:6 67:20
+17
+satisfied [2] 43:23 60:1
+rest [5] 19:24 23:14 25:5 66: satisfying [1] 49:22
+17 69:3
+savings [1] 64:20
+[2]
+say [25] 7:22 11:1 12:4,14
+result 4:13 62:11
+[3]
+results 58:17 59:7 66:12 17:24 19:1 23:13,23 25:19
+retail [1] 61:19
+27:5 31:15 44:4 45:23 46:8
+retained [1] 13:22
+47:1,11,13,15,24 49:3 50:
+retirees [1] 51:12
+23 53:14,24 54:4,19
+returns [5] 7:11,11 9:5 40:
+saying [18] 6:6 7:8 10:2 15:
+18 51:22
+13 18:3 20:25 24:12 29:6
+reward [1] 39:5
+30:17 31:14 48:20 50:3 51:
+rewards [2] 8:18 10:15
+7 53:6 54:23 55:5 57:22 66:
+right [12] 15:22 16:21 19:7
+23
+21:23 30:3 31:9 34:10 38:
+says [8] 8:22 12:17 24:5 25:
+12 32:9 38:25 49:4 63:25
+20 39:16 44:11 61:23 63:
+screen [2] 19:14,15
+21
+screened [1] 32:17
+risk [19] 20:15,24 21:12,22
+22:4 27:18,19 28:20 31:7,
+screens [1] 18:8
+se [1] 25:17
+12,21 32:9,15 34:23 36:1
+search [1] 6:3
+54:1 55:7 64:2,6
+[3]
+risk/reward 12:20 42:15 seconds [1] 20:9
+62:24
+see [11] 9:6,9 23:8,9 24:4 32:
+[1]
+2,5 39:14 45:25 66:19 68:3
+risk-adjusted 51:22
+riskier [1] 7:11
+seek [2] 28:20 64:2
+risk-mitigating [1] 63:11
+seeking [1] 36:1
+risk-mitigation [2] 34:15 35: seem [5] 23:21 25:18 27:4
+13
+43:4 54:9
+risks [4] 8:18 10:15 39:4 51: seemed [1] 49:7
+14
+seemingly [1] 27:6
+[4]
+seems [7] 12:10 14:8 19:4
+risky 11:7 23:17 25:14
+52:16
+21:10 29:6 48:18 54:13
+roberts [14] 4:3 14:7 32:23
+selected [4] 5:8 13:8 19:17
+36:17 39:18 49:15 50:6 56: 60:19
+15,19 57:4 58:1,5 68:15,19 selecting [1] 61:8
+sense [2] 21:8 30:11
+role [1] 69:17
+round [1] 19:2
+separate [3] 19:24 45:10 69:
+[20]
+4:22,24 5:10,18 6:2 3
+rule
+8:14 9:12 10:7,11 13:19 14: series [1] 9:10
+9 15:1 17:8,10 19:15 24:19 services [1] 68:7
+set [2] 5:12 8:2
+29:15 39:12 41:10 69:7
+sg [1] 48:25
+ruled [3] 13:1,14 14:5
+rules [3] 4:15,17 44:4
+share [2] 9:2 10:14
+ruling [1] 49:19
+shares [1] 8:17
+run [1] 6:17
+sheep [1] 4:19
+shifting [3] 20:3 29:10,13
+short-term [1] 31:11
+[2]
+should [10] 6:4 23:23 30:23
+s 3:1 4:1
+[2]
+44:20 45:13 46:10,25 47:1,
+s&p 45:25 55:20
+17 62:12
+said [20] 9:13,22 10:12 12:
+[7] 21:4 27:1,3 38:2
+show
+11 13:3,10 16:23 19:19 20:
+45:17 52:24 61:14
+22 21:14 25:20 43:13 44:
+24 48:10 52:12 62:12,16,22 showing [1] 33:20
+
+S
+
+Heritage Reporting Corporation
+Sheet 8
+
+prioritized - showing
+
+79
+Official - Subject to Final Review
+side [3] 25:5 44:17 49:16
+18:18 19:8 21:19,19 22:6
+3 35:3,6 46:5 47:1 50:13
+spent [1] 49:16
+[1]
+sidestep 26:4
+spot [1] 49:14
+24:4,21 29:3 36:4 39:3 42:
+51:12
+significant [2] 65:7 69:17
+stable [1] 8:24
+12 48:11 50:1 52:8,13 55:9,
+surprising [1] 62:1
+similar [22] 8:17,18,18,19 9: stage [4] 13:22 34:25 41:19 survive [2] 5:21 7:17
+18 56:11 57:13 59:11 61:
+2 24:9 32:14,19 40:7,22 41: 43:5
+sustain [1] 11:13
+12 62:18 64:13 65:3 66:25
+12 43:11 45:24 48:21 52:4, standard [10] 13:16,17 19:6
+there's [3] 15:18 54:6,22
+24:24 41:16,24 42:20,23
+these [25] 11:7 13:11 14:1
+9 54:5 55:1,18 59:5,15 64:
+16:5 20:13 21:5 27:6,18,24
+45:11 53:21
+2
+t [2] 3:1,1
+28:2 31:17 34:20 39:2 47:6
+standards [2] 5:23 41:1
+similarity [1] 42:24
+take [8] 26:7 31:3 36:23 46:
+similarly [3] 11:9 36:5 55:9 standing [1] 41:1
+48:7 52:15 56:10 59:23 61:
+11 47:1,1 52:18 66:13
+simply [4] 43:24 49:20 54:4, start [3] 39:25 40:11 42:7
+taken [4] 20:7 35:9 69:11,18 18 62:22 64:10,23,23 66:10
+18
+state [7] 9:13,20 15:6,14 25: taking [1] 51:14
+67:2
+5 26:9 40:4
+situated [1] 55:9
+they [71] 4:20 10:18 11:24
+talk [1] 48:24
+situation [2] 38:8 68:8
+14:2,5 16:4 18:17,18 20:6,
+stated [3] 20:15 31:6 67:10 talking [1] 38:23
+sixth [3] 33:7 49:6,9
+statement [1] 44:4
+13,23,24 21:4 23:10,11,12,
+talks [1] 49:1
+sized [2] 11:9 36:5
+states [4] 2:8 3:10 5:15 58:7 target-date [1] 16:5
+13,21,23 25:18,23 26:8,19
+slightly [1] 22:17
+statute [2] 34:5 40:19
+30:12 31:11,24,25 35:17,20
+targeting [1] 42:8
+smaller [1] 25:17
+step [1] 6:2
+42:23 44:9,11 45:9 46:5 50:
+taste [1] 12:7
+so [66] 6:6,11,13 8:6,14 10: still [1] 49:5
+23 51:5,6,24 53:6,6,8,16 55:
+tell [2] 30:15 66:12
+12,20 11:1,2,12 12:21 15:
+strategic [1] 38:13
+5,10,17,17,19,19,24 56:1,5,
+tend [1] 65:11
+22 17:2,3 19:9,13 20:3 21: strategies [4] 53:25 54:4 55: term [2] 55:7 66:14
+8 58:13,23 60:19 61:18,21
+[1]
+23 64:3
+23 23:17,24 24:3,16 25:1
+62:21 64:18,22 65:5,12,13
+terms 47:21
+strategy [56] 15:16,19 16:3, terrible [1] 33:22
+27:15 30:15,22 31:10,12
+66:2,7,9,21 67:12,13,17 69:
+9,12,25 17:1 20:16,18 21:
+32:3,12 34:19 35:6 37:22,
+18
+territory [2] 66:14,21
+12,13,15,16,21 23:6,15 26: test [2] 36:9 49:22
+25 39:8 41:4 42:5,7 44:12,
+they're [5] 11:15 25:2 26:19
+30:13 42:21
+14,16,17,22 27:17 28:19 33: text [1] 40:11
+22,25 45:18 46:10 47:6,24
+thing [7] 12:2 34:16 41:25
+22 34:1,9,15 36:22 38:18
+48:1,15,19 49:9 50:5,6,15
+texture [1] 12:7
+39:5 40:16,17 42:10 43:20 than [10] 5:21 10:2 14:14 21: 43:15 55:24 63:21 67:20
+51:15 52:16 53:22 54:17
+45:7 50:17,21,22 51:10,17
+60:4,14 62:19 63:8,14 64:
+10 25:15 26:6 28:20 44:11 things [14] 26:20 27:6 42:12
+47:25 48:22,23,24 52:18
+52:14,20,24 53:1,10,13 55: 57:23 61:7
+18,22 66:11 67:9 68:10
+55:20 56:8 60:22 62:10,17,
+22 57:18,19 61:2,24 62:25 thank [14] 32:23 36:16 39:
+solely [1] 11:2
+solicitor [1] 2:6
+18
+63:7,12 67:21 69:14,15
+16,18,23 45:12 46:20 57:3
+solution [1] 6:3
+think [90] 7:7,19 8:8 9:6 10:
+strike [1] 48:17
+58:3,4,9 68:15,19,23
+some [24] 15:4 18:14,15 19: struggled [1] 44:9
+5 12:1,23 14:13,25 15:4 17:
+thanks [2] 57:20,25
+8 37:6,12 47:24 48:9,13 49: submit [1] 25:6
+that's [44] 10:5 14:7,8,25 15: 9 18:16,19 19:9,20 20:8,10
+subset [1] 69:2
+17,18,25 50:1 54:7 57:13
+22:2,8,11,17 23:2,25 25:22
+5,5 17:5 18:4 19:20 22:3,
+58:21 60:7 61:8 63:2,6,12, substance [1] 49:18
+26:1 29:13,13 30:16,24 34:
+14 24:10,24 25:22 26:25
+subtracted [1] 62:18
+18 65:10 68:5
+28:23 29:4,6,17 30:5,16 31: 12,21 35:2 37:25 38:16 42:
+such [4] 4:24 15:20 36:14
+someone [2] 50:22 53:9
+9,13 32:12 41:17 42:25 45: 16,18 43:2,10 44:3,6,11,12
+something [8] 11:25 31:24,
+62:11
+45:3,19 46:18 47:4,18 48:3,
+2 47:19 49:10 50:25 51:5
+25 47:12,15 48:19 64:20
+sufficient [2] 44:25 69:5
+52:23 55:4 57:2,2,11 60:16 11 49:3,14,24 52:6,21,25
+sufficiently [2] 27:25 34:24
+68:7
+53:23 54:3,5,18 55:1,4 56:
+61:25 63:4 65:8 66:4,5,13
+[3]
+suggest [11] 41:6 46:3,9 49: 68:13
+sometimes 61:1 62:22
+9,20,23,25 57:9,23 59:20,
+63:1
+7 51:1,2 54:13 58:18 60:7
+their [12] 5:1 10:18 11:10 14: 25 60:4,6,9 61:15 62:10,12,
+sorry [3] 17:21 35:19 56:18
+62:3 65:11
+2 21:1 24:25 25:8 35:10 46: 19 63:4,6,16,20 64:11 65:1,
+sort [9] 23:8 42:15,17 45:21 suggested [4] 42:18 48:14
+4,22 66:4,5,16 67:17,20 69:
+6 66:19,21 67:14
+[11]
+48:14 49:20 50:25 52:7,9
+56:5 63:19
+12
+11:25 13:3,25 23:
+them
+sorts [1] 46:23
+suggesting [3] 12:12 33:12
+19 31:18 34:8 48:13 52:13 thinks [1] 44:20
+sotomayor [13] 30:15,22 31: 47:2
+this [86] 4:4,13,17 5:10 8:22
+61:24 65:18 66:18
+4,9,17,20,23 32:2 33:2 54: suggestion [1] 15:16
+themselves [5] 5:8 11:23 24: 9:7,12 10:3,7,13 13:2,15,21
+suggests [1] 21:14
+12 55:3,10,14
+14:14,15 15:1,23 16:6 17:9
+15 27:25 60:24
+[1]
+supplement [1] 15:15
+sound 16:8
+20:10,15,19 21:3 22:3,9,22
+then [14] 11:24 15:8 24:11,
+specific [11] 5:5 6:14 7:24 8: support [2] 6:16 37:1
+23:6 24:17,18,18 25:18,25
+25 25:3 28:6 33:16 35:14
+16 10:14 14:21 19:18 24:
+supporting [3] 2:8 3:11 58:8 53:23 61:7 63:18 66:16 67: 26:4 27:14,15 28:3 31:6 34:
+suppose [2] 17:16 51:25
+22 27:13 28:7 69:2
+10,13 35:2,7 37:10 39:12
+12 69:15
+[5]
+specifically [3] 21:4 32:4 55: supposedly [1] 45:6
+41:14,17 42:20 43:4,8,24
+theory 6:25 7:21 16:12
+6
+sure [15] 6:13 10:25 12:21
+44:7,12 47:3,14,14,18 48:2,
+20:11 33:18
+22:16,16 32:3 33:17,24 34: there [29] 6:14 9:16,20 17:9
+spectrum [1] 6:18
+10,13 49:18,24 50:2,14,15
+
+T
+
+Heritage Reporting Corporation
+Sheet 9
+
+side - this
+
+80
+Official - Subject to Final Review
+6 40:6 41:5 43:20 45:23 61: varying [2] 58:14,15
+51:6,6,16,19 53:6 56:1 58:
+well-aligned [1] 59:21
+[1]
+19 60:5,16 61:14 62:2 63:9, 5 64:1
+version 49:4
+well-established [1] 40:25
+[7]
+[1]
+went [4] 7:19 13:9,21 45:5
+24 64:1,18 65:14 68:11,13, twombly 5:12 6:2 41:19 versus 4:5
+[14]
+6:17 9:16 23:22 35: were [33] 9:20 11:10 13:14,
+43:12,12 66:6,14
+very
+17 69:8,13,22,24
+17 43:11 48:2 50:7 56:6,7
+23 14:5 15:3 20:13 22:6 28:
+thomas [11] 6:6,11 7:7 8:6
+32:25 42:3,5 43:2 56:16 59:
+62:1,21,21 66:5 67:1
+5,12 35:17,20,25 39:3 46:4,
+18 68:18
+5 51:7,11 55:5,9,19 56:8
+ultimately [4] 6:1 22:22 34:5 view [8] 5:10 12:24 19:21
+20:6 36:25 37:3 57:15 65:
+thomas's [1] 12:2
+60:2,18 61:18,21 62:4,8 64:
+69:25
+those [34] 9:15,17 11:13,21, under [11] 4:25 5:12 8:24 13: 21
+12,23 66:1,2,21
+22 13:13,14 14:4,20,23 19: 4 14:6,14 20:7 32:17 56:23 violation [2] 33:13 41:2
+we're [17] 17:16 18:13 28:25
+virtually [1] 5:3
+29:13 30:16 34:12 36:22
+17 20:1 21:3 22:24,25 24:
+65:25 69:20
+[1]
+volatile [2] 20:24 28:10
+38:23 44:25 46:13,14 47:2
+14 25:8 28:9 30:11 37:2 43: underperform 21:9
+48:17 49:19 59:20,21 60:
+13,17 45:9 52:1 61:5 63:2
+underperformance [34] 15: volatility [1] 28:4
+11
+65:3,5,25,25 66:7,19 68:4
+18 16:10,19 17:11 18:1,13
+weren't [1] 65:3
+69:4
+21:17 23:12,21 26:15 29:1
+though [2] 10:12 66:24
+30:1,10 33:8,13,16 41:1 44: w.h [5] 2:2 3:3,13 4:8 68:21 wessler [91] 2:2 3:3,13 4:7,8,
+thought [2] 31:14 57:8
+10 6:9,13 7:14 8:8 10:25
+walk [1] 20:9
+1,19,21,24 45:16,20 46:7,
+threshold [1] 34:22
+11:4,15,18,20 12:21 14:13
+12,16 56:23 57:16,22 59:14 want [17] 17:23 26:21 27:5
+through [6] 9:24 20:9,19 40: 65:17,24 66:23 67:3
+15:22 16:11,17,21 17:2,4,7,
+31:11,20 33:11 46:21 47:
+16 45:5 49:10
+15,18,21 18:5,16 19:9 20:6
+underperformed [3] 21:5 59: 11,24 50:5 52:5,21 53:13,
+throw [1] 27:5
+21:18,23 22:1,16,21 23:24
+2 65:7
+14 63:9,10 66:24
+[2]
+[4]
+throwing [1] 14:11
+24:2
+25:22 27:7,9,12 28:12,
+underperforming 8:23 9: wanted 47:6 55:20 61:19
+thrown [1] 63:1
+15 29:12,19,23 30:3,6,9,21,
+4
+64:24
+thrust [2] 22:3 36:24
+24 31:8,16,19,22 32:1,3 33:
+underperforms [1] 43:16
+wanting [1] 62:4
+tickets [2] 38:10 57:12
+14,17,24 34:3,16 35:1,6,19,
+understand [6] 10:22 11:21 was [37] 6:25 7:15,15,22 9:
+tied [1] 66:8
+23 36:2 37:3,11,14,18,24
+12:4 26:13 27:10 29:19
+18 10:12 11:7 15:2,16 20:
+tight [1] 9:25
+38:3,5,8,12,22 39:7,10,15
+understandable [1] 15:5
+14,15 21:20 22:5,12 23:15
+time [4] 17:23 49:17 62:2 69: understanding [2] 50:10 59: 27:19 31:6,14 32:17 34:23
+41:14 42:18 45:3 50:16 53:
+9
+2 55:25 56:5 68:20,21,23
+9
+36:5,12 38:25 50:16 51:2
+times [1] 33:11
+wessler's [1] 57:11
+understood [2] 52:12 65:9
+54:16,24 55:6,8,18 56:6,7
+today [3] 29:5 39:25 40:3
+united [3] 2:8 3:10 58:7
+57:9 61:23 64:15 66:23 67: what [59] 7:2,7,22 8:9,9,11 9:
+together [8] 5:14 20:7 26:7, unless [2] 12:18 48:15
+6,9,18,18 10:12,21 11:2 12:
+10
+8,15 27:6 69:11,18
+24 13:4,5 14:2,2,17 16:1
+unnecessary [2] 6:3 51:14
+washington [3] 2:2,4,7
+told [4] 13:11 20:12 51:11
+17:14 18:7,22 19:7,10 20:
+unprecedented [1] 11:8
+wasn't [1] 51:10
+56:3
+22 21:11,14 22:19 24:4 25:
+unreasonable [2] 22:12 34: way [27] 6:9,21,22 8:3 11:8
+too [4] 42:1 48:18 56:1 68:9 24
+18:20 19:10,21 22:1,22 24: 6,10,20 27:11,15 30:7,16,
+tools [2] 28:22 51:21
+unrelated [1] 27:6
+18 28:1,17 32:10 34:1 35:2, 19,23,25 31:13 44:4,8,15
+trace [1] 9:9
+45:2 47:12,21 48:10 50:2,3,
+up [9] 22:22 28:9 33:6 34:1
+6 42:6 43:24 50:18 52:23
+track [2] 42:9 45:25
+36:8 54:6 61:25 62:1,6
+60:10 63:13,22 65:8,18 66: 8 55:4,5 57:10 60:7,11 63:
+tradeoff [1] 42:15
+7 68:3 69:23
+upside [4] 58:15,22 61:20
+5
+treating [1] 65:18
+64:25
+ways [7] 6:18 15:4 18:9 21:6 whatever [2] 10:1 17:14
+tree [1] 19:3
+what's [2] 9:16 24:16
+22:7 48:12 59:11
+us [13] 16:16 17:6 28:24,25
+[4]
+tried 51:6 55:17 56:1 65: 29:4,10,17 30:12 50:9 55:
+when [20] 7:4 12:4 18:12 28:
+we [43] 4:3 7:14 11:1 13:5,
+5
+17 17:24 18:5 25:3,6 29:14 25 31:10 41:7 42:19 43:25
+19,20 56:2 60:5
+tries [1] 35:7
+46:15 47:20 48:8 54:14 58:
+use [5] 6:19 21:21 22:13 50: 30:11 31:5 38:21 44:3 45:
+trio [1] 9:11
+13 57:10
+13 46:10,25,25 47:8,11,19, 12,16 59:13 61:4 67:4,7 68:
+true [8] 5:6 18:4 29:6 35:10 used [8] 27:24 33:10 35:21,
+24 48:19,20 49:6 50:11,16, 1,13
+42:19 43:15 45:19 67:21
+where [15] 15:3 23:25 25:11
+25 36:3,7 62:21,25
+17 51:9,11,11 53:5 54:17
+truly [2] 5:24 13:3
+useful [2] 48:19 68:1
+56:2,3 63:4,4,9,10,16,21 64: 26:24 31:13 37:19 44:7,12
+try [6] 9:24 26:22 27:12,13
+45:22 47:19 54:23 57:14
+uses [1] 66:15
+11 66:25
+28:19 34:23
+63:6 64:1 69:13
+using [5] 34:23 50:23 63:8
+weeding [1] 5:24
+trying [9] 7:15 10:22 27:4
+whether [21] 4:16,25 16:18
+64:3,15
+weight [1] 20:4
+32:9 42:9 45:24 46:5 51:11
+17:25,25 22:11 26:8,15,21
+welcome [3] 6:5 42:2 59:17
+55:19
+29:15,25,25 43:25 45:16
+well [20] 11:20,23 14:7 15:
+turned [2] 34:2 67:13
+46:16 54:22 65:25,25 68:
+11 16:8 19:1 21:18 22:10,
+vagaries [1] 43:18
+turns [1] 69:15
+10 69:4,18
+[1]
+21 25:3 26:11 29:16 43:3
+value 8:24
+[23] 9:11,12 10:8 16:4
+twin [1] 54:2
+which
+[2]
+49:15,25
+51:7,9,10
+59:24
+various 50:8 62:19
+two [10] 9:1 21:19 26:19 27: vary [1] 42:25
+18:20 19:10 20:12 26:6 30:
+62:2
+
+U
+
+W
+
+V
+
+Heritage Reporting Corporation
+Sheet 10
+
+this - which
+
+81
+Official - Subject to Final Review
+19 31:5 36:7,21,23 37:9 38: years [1] 44:10
+9 48:12 50:11 55:21 59:21 yep [7] 30:21,24 31:16,19,22
+61:6 67:1,25 68:8
+32:1 38:22
+who [6] 13:22 31:20 33:7 50: yes [20] 8:8 17:2 18:5 19:9
+22 53:10 57:9
+24:1 29:7,23 30:6,9 31:8
+36:2 37:11,14 38:4 39:7,15
+whole [3] 8:4 29:7 34:11
+44:2 55:10,14,16
+whose [1] 55:6
+why [19] 6:24 11:6 12:25 13: you'll [2] 17:22 24:4
+9 15:12 16:14 18:6 20:9,18 your [35] 10:21,23 14:9 15:
+21:7,7,16 27:17,22 31:25
+18 20:4 21:11 22:5 23:12
+33:8,15 47:11,24
+26:13,13,14,14 28:24,24 34:
+13 36:23,24,24 43:7 44:6,
+wide [2] 6:17 40:13
+16,24 45:1 46:19 48:17,25
+will [7] 4:3 7:4,23 25:1 32:5
+49:3 54:21
+49:16,16 50:3 52:11,18 54:
+12 57:16,22 63:25
+with [50] 4:21 5:11 6:2,23
+11:8 12:6,19 15:15 16:11,
+you're [23] 9:22 10:1 12:12,
+16 18:12 21:17 23:18 26:1
+12,12 15:10 19:6 20:3,4 27:
+28:5,9 29:1 30:18 32:14 35: 11 30:17 32:9 33:12 42:14
+4 36:8 39:2 40:2,11,20 42:
+46:15 50:3 53:6 54:23 60:3
+7 43:14,17 44:9 48:2 53:2,
+67:7,22 68:1,6
+10,20 55:25 59:5,19 60:1,
+you've [3] 33:10 50:7 62:12
+11 62:11,14 64:5 65:8,19,
+21 66:6,9,22 67:16,16 69:7
+within [1] 60:10
+without [6] 5:19 37:16 51:13
+59:12 61:10 67:2
+wonder [1] 50:9
+wondering [1] 29:9
+won't [2] 5:21 50:12
+word [1] 26:12
+words [1] 49:23
+work [4] 26:25 50:1 59:22
+66:7
+worked [2] 27:2,14
+works [2] 33:23 49:21
+world [1] 38:21
+worse [1] 57:23
+worst-performing [1] 61:9
+would [61] 6:11,21,22,24 7:
+17,17 8:3 9:1 19:14,14,15
+23:18 26:23 28:1,3 33:8 34:
+22 35:17 36:11,14 37:22
+38:16,19 42:3,22 43:22,22,
+23 44:3,23 46:8,9,18 47:8,
+14,18 51:1 52:1,5,17,22 53:
+8,9,23 54:6 57:16 59:25 60:
+2,4,6,19 62:11,16,17,17,20
+63:14,17 64:9 65:13 69:22
+wouldn't [10] 37:19 38:1,2,2
+39:1 47:11,24 53:1,6 65:6
+wrong [1] 62:10
+wrongdoing [2] 41:6 43:9
+wrote [1] 29:21
+
+Y
+yeah [10] 16:17 17:15,18 27:
+9 29:6,12,19 33:5 35:1 48:
+20
+
+Heritage Reporting Corporation
+Sheet 11
+
+which - you've
+
+

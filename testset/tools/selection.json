@@ -1,0 +1,459 @@
+{
+  "scotus-25-498": {
+    "overall_speech_ratio": 0.897,
+    "clips": [
+      {
+        "start_s": 0.098,
+        "end_s": 205.344,
+        "duration_s": 205.246,
+        "score": -0.098,
+        "start_pause_s": 0.45,
+        "end_pause_s": 0.32,
+        "speech_ratio": 0.901,
+        "longest_gap_s": 1.12,
+        "pauses_per_min": 9.062,
+        "floor_db": -20.909
+      },
+      {
+        "start_s": 3248.674,
+        "end_s": 3463.134,
+        "duration_s": 214.46,
+        "score": 0.9782,
+        "start_pause_s": 0.96,
+        "end_pause_s": 3.84,
+        "speech_ratio": 0.964,
+        "longest_gap_s": 0.64,
+        "pauses_per_min": 3.077,
+        "floor_db": -19.558
+      }
+    ]
+  },
+  "scotus-25-459": {
+    "overall_speech_ratio": 0.907,
+    "clips": [
+      {
+        "start_s": 2591.97,
+        "end_s": 2803.326,
+        "duration_s": 211.356,
+        "score": 0.9838,
+        "start_pause_s": 0.86,
+        "end_pause_s": 0.61,
+        "speech_ratio": 0.943,
+        "longest_gap_s": 0.864,
+        "pauses_per_min": 4.542,
+        "floor_db": -22.571
+      },
+      {
+        "start_s": 3404.642,
+        "end_s": 3617.758,
+        "duration_s": 213.116,
+        "score": 0.9782,
+        "start_pause_s": 1.31,
+        "end_pause_s": 0.51,
+        "speech_ratio": 0.931,
+        "longest_gap_s": 1.12,
+        "pauses_per_min": 3.942,
+        "floor_db": -22.938
+      }
+    ]
+  },
+  "ca9-25-4867": {
+    "overall_speech_ratio": 0.899,
+    "clips": [
+      {
+        "start_s": 539.394,
+        "end_s": 750.398,
+        "duration_s": 211.004,
+        "score": 0.9705,
+        "start_pause_s": 1.47,
+        "end_pause_s": 0.77,
+        "speech_ratio": 0.906,
+        "longest_gap_s": 0.96,
+        "pauses_per_min": 7.109,
+        "floor_db": -39.97
+      }
+    ]
+  },
+  "ca9-24-5666": {
+    "overall_speech_ratio": 0.792,
+    "clips": [
+      {
+        "start_s": 580.45,
+        "end_s": 791.934,
+        "duration_s": 211.484,
+        "score": 0.9461,
+        "start_pause_s": 0.8,
+        "end_pause_s": 2.08,
+        "speech_ratio": 0.881,
+        "longest_gap_s": 1.344,
+        "pauses_per_min": 8.795,
+        "floor_db": -44.034
+      }
+    ]
+  },
+  "nasa-crew13-presser": {
+    "overall_speech_ratio": 0.865,
+    "clips": [
+      {
+        "start_s": 249.826,
+        "end_s": 452.478,
+        "duration_s": 202.652,
+        "score": 0.9819,
+        "start_pause_s": 1.89,
+        "end_pause_s": 0.99,
+        "speech_ratio": 0.925,
+        "longest_gap_s": 0.672,
+        "pauses_per_min": 4.145,
+        "floor_db": -24.983
+      },
+      {
+        "start_s": 2416.45,
+        "end_s": 2625.982,
+        "duration_s": 209.532,
+        "score": 0.9985,
+        "start_pause_s": 2.75,
+        "end_pause_s": 1.22,
+        "speech_ratio": 0.918,
+        "longest_gap_s": 2.016,
+        "pauses_per_min": 5.441,
+        "floor_db": -25.27
+      }
+    ]
+  },
+  "nasa-hwhap-ep440": {
+    "overall_speech_ratio": 0.872,
+    "clips": [
+      {
+        "start_s": 589.154,
+        "end_s": 805.31,
+        "duration_s": 216.156,
+        "score": 0.9795,
+        "start_pause_s": 1.6,
+        "end_pause_s": 0.38,
+        "speech_ratio": 0.938,
+        "longest_gap_s": 0.768,
+        "pauses_per_min": 4.441,
+        "floor_db": -36.487
+      },
+      {
+        "start_s": 2254.37,
+        "end_s": 2464.352,
+        "duration_s": 209.982,
+        "score": 0.9802,
+        "start_pause_s": 0.38,
+        "end_pause_s": 0.32,
+        "speech_ratio": 0.959,
+        "longest_gap_s": 0.704,
+        "pauses_per_min": 2.572,
+        "floor_db": -31.426
+      }
+    ]
+  },
+  "nasa-hwhap-ep415": {
+    "overall_speech_ratio": 0.894,
+    "clips": [
+      {
+        "start_s": 1991.682,
+        "end_s": 2197.79,
+        "duration_s": 206.108,
+        "score": 1.009,
+        "start_pause_s": 1.6,
+        "end_pause_s": 0.86,
+        "speech_ratio": 0.947,
+        "longest_gap_s": 0.704,
+        "pauses_per_min": 2.911,
+        "floor_db": -24.382
+      }
+    ]
+  },
+  "nasa-chapea-ep442": {
+    "overall_speech_ratio": 0.868,
+    "clips": [
+      {
+        "start_s": 1444.354,
+        "end_s": 1655.55,
+        "duration_s": 211.196,
+        "score": 0.9627,
+        "start_pause_s": 1.73,
+        "end_pause_s": 0.64,
+        "speech_ratio": 0.901,
+        "longest_gap_s": 1.088,
+        "pauses_per_min": 5.114,
+        "floor_db": -32.79
+      }
+    ]
+  },
+  "nasa-chapea-ep431": {
+    "overall_speech_ratio": 0.881,
+    "clips": [
+      {
+        "start_s": 2137.794,
+        "end_s": 2345.086,
+        "duration_s": 207.292,
+        "score": 1.0135,
+        "start_pause_s": 0.83,
+        "end_pause_s": 1.76,
+        "speech_ratio": 0.95,
+        "longest_gap_s": 1.6,
+        "pauses_per_min": 2.605,
+        "floor_db": -34.047
+      }
+    ]
+  },
+  "apollo11-onboard-2": {
+    "overall_speech_ratio": 0.219,
+    "clips": [
+      {
+        "start_s": 94.53,
+        "end_s": 265.278,
+        "duration_s": 170.748,
+        "score": -0.722,
+        "start_pause_s": 51.58,
+        "end_pause_s": 25.5,
+        "speech_ratio": 0.29,
+        "longest_gap_s": 21.152,
+        "pauses_per_min": 14.759,
+        "floor_db": -4.479
+      }
+    ]
+  },
+  "apollo11-onboard-3": {
+    "overall_speech_ratio": 0.415,
+    "clips": [
+      {
+        "start_s": 5.986,
+        "end_s": 184.286,
+        "duration_s": 178.3,
+        "score": 0.2934,
+        "start_pause_s": 1.63,
+        "end_pause_s": 2.27,
+        "speech_ratio": 0.611,
+        "longest_gap_s": 5.28,
+        "pauses_per_min": 20.191,
+        "floor_db": -6.398
+      }
+    ]
+  },
+  "cdc-eid-snowshoe": {
+    "overall_speech_ratio": 0.926,
+    "clips": [
+      {
+        "start_s": 1627.042,
+        "end_s": 1831.87,
+        "duration_s": 204.828,
+        "score": 1.028,
+        "start_pause_s": 7.07,
+        "end_pause_s": 2.85,
+        "speech_ratio": 0.95,
+        "longest_gap_s": 0.576,
+        "pauses_per_min": 3.808,
+        "floor_db": -39.241
+      }
+    ]
+  },
+  "cdc-eid-cre": {
+    "overall_speech_ratio": 0.883,
+    "clips": [
+      {
+        "start_s": 2079.234,
+        "end_s": 2289.504,
+        "duration_s": 210.27,
+        "score": 0.9678,
+        "start_pause_s": 2.21,
+        "end_pause_s": 0.32,
+        "speech_ratio": 0.914,
+        "longest_gap_s": 2.72,
+        "pauses_per_min": 5.136,
+        "floor_db": -33.615
+      }
+    ]
+  },
+  "cdc-eid-campylobacter": {
+    "overall_speech_ratio": 0.886,
+    "clips": [
+      {
+        "start_s": 391.714,
+        "end_s": 601.982,
+        "duration_s": 210.268,
+        "score": 0.9867,
+        "start_pause_s": 1.12,
+        "end_pause_s": 0.54,
+        "speech_ratio": 0.937,
+        "longest_gap_s": 1.056,
+        "pauses_per_min": 5.136,
+        "floor_db": -56.262
+      }
+    ]
+  },
+  "cdc-eid-fungi": {
+    "overall_speech_ratio": 0.86,
+    "clips": [
+      {
+        "start_s": 1761.314,
+        "end_s": 1971.838,
+        "duration_s": 210.524,
+        "score": 0.9587,
+        "start_pause_s": 0.96,
+        "end_pause_s": 1.12,
+        "speech_ratio": 0.898,
+        "longest_gap_s": 1.056,
+        "pauses_per_min": 5.7,
+        "floor_db": -35.461
+      }
+    ]
+  },
+  "cdc-lead-teaching-data": {
+    "overall_speech_ratio": 0.769,
+    "clips": [
+      {
+        "start_s": 500.002,
+        "end_s": 712.606,
+        "duration_s": 212.604,
+        "score": 0.9165,
+        "start_pause_s": 1.47,
+        "end_pause_s": 2.3,
+        "speech_ratio": 0.834,
+        "longest_gap_s": 1.6,
+        "pauses_per_min": 12.135,
+        "floor_db": -57.728
+      }
+    ]
+  },
+  "cdc-mmwr-250317": {
+    "overall_speech_ratio": 0.864,
+    "clips": [
+      {
+        "start_s": 11.458,
+        "end_s": 204.702,
+        "duration_s": 193.244,
+        "score": 0.9472,
+        "start_pause_s": 5.66,
+        "end_pause_s": 0.86,
+        "speech_ratio": 0.893,
+        "longest_gap_s": 0.992,
+        "pauses_per_min": 7.452,
+        "floor_db": -39.306
+      }
+    ]
+  },
+  "cdc-niosh-spanish": {
+    "overall_speech_ratio": 0.896,
+    "clips": [
+      {
+        "start_s": 26.722,
+        "end_s": 224.798,
+        "duration_s": 198.076,
+        "score": 0.9358,
+        "start_pause_s": 0.67,
+        "end_pause_s": 0.74,
+        "speech_ratio": 0.898,
+        "longest_gap_s": 1.024,
+        "pauses_per_min": 7.27,
+        "floor_db": -31.015
+      }
+    ]
+  },
+  "cdc-covidflu-spanish": {
+    "overall_speech_ratio": 0.863,
+    "clips": [
+      {
+        "start_s": 6.594,
+        "end_s": 206.846,
+        "duration_s": 200.252,
+        "score": 0.9405,
+        "start_pause_s": 1.34,
+        "end_pause_s": 0.74,
+        "speech_ratio": 0.879,
+        "longest_gap_s": 1.152,
+        "pauses_per_min": 9.588,
+        "floor_db": -50.461
+      }
+    ]
+  },
+  "noaa-nop86": {
+    "overall_speech_ratio": 0.915,
+    "clips": [
+      {
+        "start_s": 397.09,
+        "end_s": 601.79,
+        "duration_s": 204.7,
+        "score": 0.958,
+        "start_pause_s": 0.48,
+        "end_pause_s": 1.31,
+        "speech_ratio": 0.937,
+        "longest_gap_s": 0.832,
+        "pauses_per_min": 4.397,
+        "floor_db": -21.017
+      }
+    ]
+  },
+  "noaa-nop85": {
+    "overall_speech_ratio": 0.858,
+    "clips": [
+      {
+        "start_s": 899.874,
+        "end_s": 1109.55,
+        "duration_s": 209.676,
+        "score": 0.9337,
+        "start_pause_s": 0.93,
+        "end_pause_s": 1.47,
+        "speech_ratio": 0.862,
+        "longest_gap_s": 0.928,
+        "pauses_per_min": 12.01,
+        "floor_db": -45.962,
+        "note": "end trimmed 0.14 s to drop a trailing breath"
+      }
+    ]
+  },
+  "noaa-nop83": {
+    "overall_speech_ratio": 0.866,
+    "clips": [
+      {
+        "start_s": 710.946,
+        "end_s": 919.518,
+        "duration_s": 208.572,
+        "score": 0.9486,
+        "start_pause_s": 1.47,
+        "end_pause_s": 1.09,
+        "speech_ratio": 0.875,
+        "longest_gap_s": 1.664,
+        "pauses_per_min": 10.356,
+        "floor_db": -30.004
+      }
+    ]
+  },
+  "noaa-nop82": {
+    "overall_speech_ratio": 0.859,
+    "clips": [
+      {
+        "start_s": 224.194,
+        "end_s": 434.046,
+        "duration_s": 209.852,
+        "score": 0.9612,
+        "start_pause_s": 4.67,
+        "end_pause_s": 0.93,
+        "speech_ratio": 0.889,
+        "longest_gap_s": 0.96,
+        "pauses_per_min": 8.577,
+        "floor_db": -22.857
+      }
+    ]
+  },
+  "noaa-nop80": {
+    "overall_speech_ratio": 0.898,
+    "clips": [
+      {
+        "start_s": 1255.33,
+        "end_s": 1463.934,
+        "duration_s": 208.604,
+        "score": 0.9671,
+        "start_pause_s": 0.54,
+        "end_pause_s": 0.51,
+        "speech_ratio": 0.939,
+        "longest_gap_s": 0.512,
+        "pauses_per_min": 3.164,
+        "floor_db": -31.748
+      }
+    ]
+  }
+}

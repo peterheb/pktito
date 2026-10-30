@@ -1,0 +1,383 @@
+# Reference transcript: Houston We Have a Podcast, Ep 415: Air Force Rescue and Recovery
+# Source: https://www.nasa.gov/podcasts/houston-we-have-a-podcast/air-force-rescue-and-recovery/
+# Covers the whole recording (57 min), not just the clip(s); see manifest.json for clip offsets. Text as published, not aligned to audio.
+
+Leah Cheshier
+
+Houston We Have a Podcast. Welcome to the official podcast of the NASA Johnson Space Center, Episode 415: Air Force Rescue and Recovery. I’m Leah Cheshier, and I’ll be your host today. On this podcast, we bring in the experts, scientists, engineers, and astronauts, all to let you know what’s going on in the world of human space flight and more.
+
+At NASA, we believe it takes a team to make a mission successful, and sometimes that includes teams outside the agency. The First Air Force Detachment 3 has a storied history supporting rescue and recovery for NASA, beginning with the Mercury program in the late 50s. This specialized team coordinates Commercial Crew Program, Artemis, and Soyuz launch and recovery support, integrates with the launch support officers in Mission Control, conducts water survival and recovery training for space flight crews, advises the Flight Operations Directorate on rescue and recovery capabilities, and more.
+
+Joining me today to discuss all things recovery is Lieutenant Colonel Dan Kulp, Lieutenant Colonel Brian Strack, and retired Navy SEAL Master Chief Dan Kirkbride. We’ll talk through the history of their program, how they trained for various missions, and the importance of having their team ready to jump into action.
+
+Let’s do it.
+
+<Intro Music>
+
+Leah Cheshier
+
+Everyone. Thank you so much for joining us here today on Houston We Have a Podcast.
+
+Brian Strack
+
+Thank you. It’s great to be here.
+
+Daniel Kulp
+
+Thanks. Thanks for having us.
+
+Dan Kirkbride
+
+Great to be here.
+
+Leah Cheshier
+
+Well, thank you all for joining here today. I would love to start by just learning a little bit more about each of you, where you come from, and what your jobs look like right now.
+
+Daniel Kulp
+
+Guess I’ll start. My name is Daniel Kulp I’m a lieutenant colonel in the Air Force, and my role here at JSC is I’m the Deputy Chief of Department of War, Human Space Flight Support. I commissioned to the Air Force out of University of Colorado at Boulder at Detachment 105, go Thunder Chiefs. And have a interest in space for a long time, and have got Master’s in Space Studies from University of North Dakota, Flight Test Engineering at Florida Institute of Technology, and now I’m a PhD student at Colorado School of Mines, working in Space Resources. So being out here at JSC is just kind of a kid in a candy shop.
+
+Brian Strack
+
+Hey, Brian Strack, I’m also a lieutenant colonel in the Air Force, also a pilot. Flew a couple of things back in the day, and I’ve been a lead for the mission that’s a NASA facing mission, for the Department of Defense now, the Department of War, for about 10 years now. So I was out at Vandenberg Air Force Base. Then moved up to United States Space Command, which is relatively new. They reinstated US Space Comm, as they call it, up in Colorado Springs. So I was able to stand up the office that is a NASA facing an Integration Office there and then I’m hopefully my final assignment here as the as the Chief of the Office. So I work with Dan and Dan. Grew up in a small town in Montana, went to University of North Dakota, and have been in the Air Force now for about 24 years.
+
+Dan Kirkbride
+
+Hey, I’m Dane Kirkbride. I’m like the other two fine gentlemen here as Air Force officers. I’m the token Navy guy making this truly a joint operation. Retired Navy SEAL Master Chief, one of my roles in when I was on active duty was the personnel recovery and Survival, Evasion, Resistance and Escape, or SERE, program manager. So a lot of combat search and rescue and personnel recovery operations and management, and my background, this is a joint operation that we’ll obviously get into with the particulars between rescue and recovery. So it’s heavy on Air Force and heavy on Navy. So really stoked to be able to represent the maritime side of things.
+
+Leah Cheshier
+
+Wow, I’m excited. So two of you went to the same school, though, right? Who was that? Did y’all know each other in school?
+
+Daniel Kulp
+
+I think Brian and I both have master’s from University of North Dakota in the Space Studies program out there, so we didn’t overlap. But that was one of those great distance learning opportunities that we get to kind of have in the military, where we can get some good degrees from some schools online.
+
+Brian Strack
+
+I was, I was there as an undergrad. He got his master’s there. I went, I did my undergrad, and then undergrad there, or a master’s there, and Embry Riddle.
+
+Leah Cheshier
+
+Okay, cool.
+
+Daniel Kulp
+
+Yeah, I think it’s fair to say we’re a team of space nerds, so we’ve all been working kind of like academically in the space. And it’s really cool that we’re all three here at the same time.
+
+Leah Cheshier
+
+Thank you all for breaking down a little bit more about who you are, what you’ve been doing up until this point. And so the Air Force recovery team really became involved with NASA during the Mercury era. So at our beginnings of human space flight, what did that involvement look like? What was the early partnership there?
+
+Brian Strack
+
+I’ll go ahead and take that. So if you think back to what it was, and that caused the Mercury program to be formed, right? So the early days of NASA, as it was coming out of the NACA days, right? It was kind of a Cold War push, originally, right. So it was absolutely a whole of government approach to this new agency of what NASA was going to look like and how they’re going to accomplish Project Mercury. So when NASA was literally one day old, the next day after the ink was dry, creating NASA, the DoD was turned to as part of the whole of government approach for the space race as it as it began. And if you, if you look back at old footage, it’s not like a NASA aircraft carrier, it’s not a NASA helicopter. It’s not NASA frog men or PJs or rescue folks, right? That was all DoD.
+
+So there was a very high level general that was in the early formulation of that approach and they, they created what’s called DDMS. And some of us, I don’t know if you’ve seen us on uniform, will have a little patch. It says DDMS is part of the heritage, and that stands for the Department of Defense, Mercury Support. Oh, cool. It has changed names as Mercury transitioned into Gemini and Apollo, but the original organization was very high up at the Chairman of the Joint Chiefs level, so they kind of earmarked ships and rescue folks and missile ranges. As you know, Cape Canaveral was not- It was, it was a missile range in the early days, right? So the DoD presence in the early creation of NASA, while it was very explicit that it was a exploration and a science based agency, the DoD support, was really on all sides of that, to include the rescue and recovery mission.
+
+Leah Cheshier
+
+I think that makes it even more clear, like from the beginning of NASA, that we have always prioritized and valued how much further we can go when we work with people beyond ourselves. We see it now with our international partners, but still so much with our home territory. There’s no way that we could achieve our mission, just as NASA, you know? So it’s very interesting. What was that level of support at that time?
+
+Brian Strack
+
+It was, so it has ebbed and flowed through the years, depending on the ops tempo of the programs that were flying like, and I’ll skip forward a little bit, for example and use an example of the space shuttle days, right? Very, very high ops tempo, very high launch and landing rate. The DoD support was huge. I mean, they had off stations all the TAL [Transoceanic Abort Landing] landing sites and everything there was, there’s DoD support for all of those. But as we go back to the Mercury days, there was probably a handful of ships, right? And a lot of missile range type folks and capabilities earmarked. When you talk about specifically rescue, they basically, if something were to happen, NASA had access to the entire DoDs rescue capability. So it was, it wasn’t present in the spotlight, but it was, it was the entire team was there and available.
+
+Daniel Kulp
+
+For scale, I have some notes on it for Gordo Cooper’s mission. There was 19 ships, two carriers, almost 200 aircraft, 18,000 personnel around the globe. So what it was, was just a very large global effort, specifically for that mission. He did not have the landing spot known at the time. So basically it was global coverage, and then they could eventually go down in the Apollo missions, about 6000 people, seven ships, 52 aircraft. But it was still a very large coverage area at that time, and they were supporting everything from communications relays. There’s actually special aircraft that did the telemetry relay. Okay, so, just a big, a larger effort than we have to do today.
+
+Leah Cheshier
+
+Wow. I had no idea it was-
+
+Brian Strack
+
+When the Apollo missions were coming back from the moon. They, you know, they had their their plan and backup trajectories over the over the water, and they weren’t as able to they weren’t able to pinpoint them as well as they do now. Yeah. So I think for Apollo 11, there was six, I don’t want to say 16 ships and 7000 sailors just just along the track that they were going to land on right.
+
+So when you fast forward today, and you have a general that’s new to like a new four star general, as they were standing up this Space Command up in Colorado Springs. He’s given this mission by the President to do all the DoD stuff. He’s the manager of all this. And he’ll, he looks around, he goes, What do I got? Well, what did they have back in the day? Well, sir, he had 7000 sailors and, like, 15 ships. He’s like, Well, I want that. Well, it’s a little bit different right now. Like, for Artemis, they get, they get one ship, yeah, you know several, like several hundred folks. But as far as when you drill down to what each specific career field is, they they have maybe 30 rescue folks that they can get out to a location or whatever.
+
+Leah Cheshier
+
+Wow. Was that- I mean, what were the challenges during that timeframe? Obviously, like you said, we didn’t have the telemetry like we do now, so we didn’t know exactly where we were going to land and who would be the it’s not a ship of opportunity in this case, because you’re staged and you’re ready. But beyond that, what other things do you face in those early days?
+
+Dan Kirkbride
+
+I think there’s a lot of unknowns, of of space travel and even what’s outside of our own atmosphere. There’s a lot of study and theory and research, but until an object or a human being actually went there and came back, there’s a lot of kind of hey, besides the fact that we have a spacecraft that has very volatile fuels and toxic things that are having to survive all the vibration and shock of launch and then extreme temperatures and everything coming back in through the atmosphere and ionizing plasma. There’s so many things that we’re kind of like, well, we think this, but there’s a lot of hazards that were, this is an experiment. This is a test flight, and we’re after that kind of protect for all of these potential hazards that we don’t know, what we don’t know yet.
+
+And so obviously, the old expression of standing on the shoulders of giants, you know, this is still another example of on the on the recovery side of hey, when, when folks come back from space, all those initial kind of pioneering explorers that went out ahead of everybody else and went, “Well, we’ll see what really happens when we put people in space and bring them back.” Which brings us to today, which is kind of reflected by the fact that we can tighten up the amount of resources required and kind of expectations for the spacecraft reliability and how space travel affects human beings.
+
+Leah Cheshier
+
+Well, I think that’s such an interesting point, and I’m glad you brought that up because, you know, now, or when we think about the early days of space flight, we think about the astronaut and what they would experience, and what they- what we didn’t know, like you said, and how they would recover, but for the teams recovering the spacecraft, I mean, even today, we see team members when we bring home like Dragon, they’re sniffing for hypergols, those fumes that are toxic if inhaled. And so back then, though, this is really a risk to all the teams that are recovering them as well. So it’s not only what we didn’t know about the astronaut that’s going to space, but it’s how do we also protect the teams coming back? I just think that’s very interesting, that there was a lot of learning to do on the land side as well.
+
+Dan Kirkbride
+
+Absolutely.
+
+Daniel Kulp
+
+There were definitely a lot of tactics, techniques and procedures that were developed. Then there’s some really interesting things you can read online about the history and how they solve problems. Of the Apollo capsule would drift at a high rate because they had a very low draft. And so to have three para rescue jumpers jump into the water and try to swim it down, they developed a way to drop a bundle on a big cord in front of it that then would get caught on the spacecraft, and then slow the spacecraft down with two sea anchors. And so they developed all these things very short amount of time, and got them deployed out in the field. And were, there’s just countless examples of that, of teams operating fast, developing solutions to novel problems.
+
+Brian Strack
+
+Tightening up those operations is, you know, across the joint effort, the team effort.
+
+Leah Cheshier
+
+It’s been, what, 70 years since the Mercury program? So since then, I mean, you’ve supported every mission? Is, is that really how it works?
+
+Brian Strack
+
+Every single one. Since NASA was literally a day old. That was when DDMS was started.
+
+Leah Cheshier
+
+So well, let’s come a little bit forward. Let’s bring us to the present. How are you made aware that there is a mission that you need to support? I know we’ve gotten into kind of a cadence with our Commercial Crew missions, or with Soyuz, or even now with Artemis, but is there a phone call that comes through of, hey, we need you on deck these dates. How does this happen?
+
+Brian Strack
+
+I’ll take that one. So that’s part of our job here, right as liaison. So we’re the DoD or DoW interface to NASA. That’s why we’ve got desks and offices here parked at JSC, but also our home unit. It’s called Detachment 3 of the First Air Force is located at Patrick Space Force Base, right down the road from Kennedy. Lots of its comms, like you said, keep the conversation and the communications going all the time. But that- it’s not secret, right? Like, you know what the guidance is. You know, there’s an upcoming launch. You know when the when a given. An approximate date as, oh, Crew-12 is going to launch whenever we know those dates. And we’ll go back to the Orders process, because they don’t just say, “Hey, anybody pony up? Let’s, you know, go over here and sit there and watch the rocket launch and be ready,” right? That’s, it’s a very, it’s a very defined and pretty complicated process of identifying what the need is, which is the human space flight support. How do we resource that through the Chairman of the Joint Chiefs and the Joint Chiefs process? How do we allocate those forces and those resources to where they need to go? And then we cover down with actual paper orders as they as milestones prior to that launcher landing, like L minus, we call L minus 45 orders, or L minus 60 or whatever, and it’s basically spinning up the awareness for the entire Department of Defense to get ready to go.
+
+Leah Cheshier
+
+So is it rinse and repeat each time? I mean is, you know, when you bring on a new spacecraft or a new, you know, with Commercial Crew program, we really only started flying people six years ago, so I’m sure initially it’s a heavy lift to determine how to position everyone and your assets and hours and shifts and things like that. Since then, is it, does it feel like that, rinse and repeat, or is it really every single time a little bit different?
+
+Dan Kirkbride
+
+I think it’s different on each iteration, and because we cover all the programs, even within CCP, Dragon has the longest track record now, but when Starliner flew for the first time, the hazards of the spacecraft, the flight dynamics of that spacecraft, even all the way down to training the rescue forces, of how to open the hatch, how to make that spacecraft safe and get the astronauts out. All of those things are very specific to each flight. And we have a little heavier involvement with Artemis, because we’re not just on the hook for rescue, but also for recovery operations. So I think we certainly are aware of whenever you have a repeated mission style, not to assume that it’s the same thing being repeated, because that’s how complacency sets in. Kind of assume that, yes, we have a model of success, of how things work. But in every mission, you should be learning new things, finding better ways to do things, finding things that didn’t work so well, things that that did work well, and incorporating all those things.
+
+And so it’s definitely a learning process, and take nothing for granted, as we saw recently with our usual handovers on station of the astronauts at the ISS, if there’s a medical contingency where we need to bring Crew-11 home earlier than schedule, and then have Crew-12, you know, go up separately. That’s a novel situation that we had planned for and, you know, but had never been done before. In the 25 years that we’ve had human presence on station, that’s the first time that there’s been a kind of a medical evacuation or a medical return ahead of schedule. So to actually flex those things and say, here’s how we planned for it. How did this actually go and how do we approve that? I think we approach every mission that way.
+
+Daniel Kulp
+
+And I would say this is well within our wheelhouse of the military, and this is why it’s a great collaboration between us and NASA, because as for example, Dan and I both come from the Special Operations world. So we’re used to spending lots of time doing RoC drills, Rehearsal of Concept drills, over and over again to get your mission right on paper. And then everything’s going to change, but you have this initial concept that you practice, practice, practice, and our group here does those same rehearsal of concepts. So over Artemis, for the last many years, while this program has been going, we’ve been training with the ships underway, doing underway readiness training with the ships, with the crew, with the capsule that we can put out in the water, and practice getting to the capsule and putting it into the well deck of the ship. So we’ve done all these rehearsal of concepts, and then there is always just little things that you have to adapt to on mission day.
+
+Leah Cheshier
+
+So when people hear rescue and recovery, they are thinking, I mean, I can’t guarantee what anybody else is thinking, but I’m thinking like an action movie, you know, helicopters and splash down, and what really is rescue and recovery, like, what are those operations?
+
+Dan Kirkbride
+
+Well, this Dan was just talking about, if it’s a, if it’s a contingency situation where spacecraft is going to be splashing down, hopefully in a, in a planned for location, but we have global coverage, so we can get the C-17 jet with mid-air refueling anywhere that needs to go. Then the pararescue jumpers will parachute out of the rescue aircraft onto the wherever the spacecraft is, and be able to set up shop for up to 72 hours of being able to stay with the astronauts until we can get a recovery ship to them. So it is kind of like an action movie. They’re basically skydiving out of the back of out of a jet with all the boats and rescue equipment that they need and be able to provide medical care and food and shelter and everything they need to survive at sea for 72 hours.
+
+It looks a lot different for the recovery side that we provide for Artemis, which is a lot more what people probably think of because it looks a lot like the Apollo days of a Navy ship and Navy helicopters and Navy divers. Under a nominal return to Earth, being in the right place at the right time and splash down occurs. And after waiting for any kind of debris that comes off of the spacecraft, there’s panels that come off to let the parachutes out, etc. Once it’s clear to approach, they’ll approach with some hazard detection equipment, some hazardous gas sniffers, and make sure that the spacecraft is safe. And once the atmosphere around the spacecraft is safe, they’ll access the crew by opening hatches and get in and start just a medical assessment. Make sure the astronauts are doing well, and if anyone’s not feeling so great, then they can provide any kind of care in that moment. Get everybody out, and then they’ll basically focus mostly on bringing the astronauts over to the recovery ship.
+
+So pull the, basically a giant life raft that is affectionately known as the front porch. Super, super luxurious life raft. Pulled that away from the spacecraft, bring helicopters in to hoist the astronauts up into the helicopters, similar to the Apollo days, and then bring them back to the recovery ship, where they have an entire medical team and medical facilities on board the ship.
+
+Once the astronaut recovery is done, then the focus goes back to recovering the actual spacecraft, and we have Navy divers that after they’re done with the astronauts will basically prepare that spacecraft to be pulled into the back of the ship. And the ship has a well deck in the back of it, and they can essentially flood the back of the ship, slightly sink the ship in the water, so that the basically a giant open swimming pool in the back exists, be able to winch the spacecraft in and then re ballast the ship back up to the water line, and then dry out the well deck and then start making their way back to home port.
+
+So that’s a much more controlled and slow process, very methodical. Obviously, there’s the sense of urgency with getting the astronauts who have just spent time in outer space. And vestibular systems are kind of spinning around a little bit. They’re deconditioned from gravity, so want to make them comfortable and out of the rocking boat of being on the high seas and get them back into a big ship where they can kind of relax and get comfortable. After that, the very careful, methodical recovery the spacecraft takes place.
+
+Daniel Kulp
+
+That’s- just to emphasize one point that Dan was talking about in the space medicine needs of the of the crew. So obviously our number one priority for this entire mission is the health and safety of the crew, and so ever since the DDMS days bioastronautics has been one of the focuses of the DoD DoW mission, and we still provide that support today. So our para rescue men who jump in there all receive special space medicine training, and we have two full time docs who work at our unit in Florida, who are kept up to date on the latest and greatest in space medicine, and provide licenses for those para rescue men to work underneath them to administer various treatments that could be helpful for return to Earth after space.
+
+Brian Strack
+
+Yeah. Dan touched on the those. We call them PJs, pararescue jumpers or pararescue men. There’s a reason that that very specific type of troop, I guess, is earmarked for this mission set there. These are the these are the forces that go in, and their day to day job is combat search and rescue, right? So when, when there’s a battle going on somewhere and somebody has a terrible day, there’s a there’s a battlefield injury, or people are getting, you know, seriously harmed- even in peacetime I guess they exercise this capability- but, but every one of these forces is, is special operations background type of folks with a very high level of medical capability. So every one of these pararescue men or PJs is certified. They could walk into and get a job at like an emergency room right there. So they are, they are technicians, I guess, trained and certified at that level. So when, when NASA says, “Hey, we need to get a capability to go get our folks” they want the highest trained that they can get, and that the entire team of these PJs carries that capability. In addition to be special, to being special operations forces, in addition to being comfortable with open ocean operations and worldwide deployable. And while it’s not directly a combat mission. I mean, you can your brain can go to, you know, places where it might turn into something like that. But that’s not what we’re focusing on. We’re just focusing on that, that capability. So we take that, that pararescue men, and then put them through another course that was developed by the by the Det. 3 bioastronautics team. So they on top of all that training they now have very specific space medicine.
+
+Leah Cheshier
+
+I had no idea that they carried all of that training. And I’m hearing that Liam Neeson quote in my head, that’s like, I carry a very special set of skills, so serious.
+
+Brian Strack
+
+That’s amazing. There are other forces that are, you know, that specialize in those kinds of operations, that carry that medical capability. But the problem we run into there is when you look at the military grabbing those forces and piecing together a team, a PJ team is it’s already a team, right? So we can grab this team or that team, and they actually have alert windows, so these groups of folks will be earmarked for six months at a time, or five months at a time, or whatever. So if anything goes wrong within that that time frame, we know exactly who are that they’re available and they’re ready to go. So it’s part of the alert posture.
+
+Daniel Kulp
+
+We should shout out our Navy partners, to the Navy search and rescue medical technicians, the search and rescue swimmers, whom else am I missing from the Navy team? But all received some of the specialized training as well, not just our Air Force PJ.
+
+Dan Kirkbride
+
+Yeah, that’s been interesting to see the evolution of those forces. And I think at the outset, it was, you know, this is a special operation because it’s space stuff. It’s not a normal thing. It’s not routine. So the PJs, the pararescue community, has been supporting that since the early days, and on the Navy side for recovery, it was actually the underwater demolition teams for the precursors to the SEAL teams, were the first guys that that were doing the nominal recovery. So all the Apollo mission were Navy frog men doing that. And now that’s we have specialized Navy divers that cover all of that stuff, because they don’t need the parachuting and all of the, you know, like, as long as they are good in and under the water and have a specialized medical training, they can, they can cover all that stuff. But then the helicopter crews are- also need to be specialized, because this is a an unusual mission. There’s different hazards, and they also help with with imagery missions, as the spacecraft is coming back in through the atmosphere and when it’s returning and be able to see what the parachute deployments look like. So it is kind of a specialized mission for already specialized people to then support human space flight. So it’s, everybody involved. Always seems to be super enthusiastic about it. This is, it’s really cool.
+
+Brian Strack
+
+There’s a there’s a famous picture out there after Gemini 8 returned of Neil Armstrong and Dave Scott sitting in the in the spacecraft, in the ocean, with the with the hatches open, and they’re kind of recovering from what they just went through, right with, with what happened on orbit with the Agena docking attempt. And they’re floating in the ocean. There’s a there’s a stabilization collar attached to the spacecraft, and they’re, they’re chilling and standing up on that, that stabilization collar like, I think there’s three, maybe four, Air Force PJs, because they went and and were able to jump in and stabilize that spacecraft. Immediately, somebody wrote, you know, Air Force Rescue like, in a Sharpie on the, on the, on the, the inflated yellow stab thing. So they knew their picture was getting taken.
+
+Daniel Kulp
+
+So if we have time for story time for that one that was the first emergency landing from space, basically. So they came back three days early, and it was planned to be an Atlantic landing, and they came down three days early in the Pacific. So that was part of that global reach and support that even back in Gemini, we still, still had and provided. And it was actually pretty incredible whole story to listen to. They were they were there quite quickly to the crew, even despite it being such a contingency and off nominal situation, they landed 500 miles east of Okinawa in the South China Sea, and they were supposed to land in the Atlantic. Wow.
+
+Leah Cheshier
+
+Let’s talk about a mission day. I mean, first, actually, I want to talk about what a typical day looks like when you’re here. You know, we’re not launching today, we’re not launching tomorrow. What does a typical day look like for your team?
+
+Dan Kirkbride
+
+That varies every day. That’s one of the coolest things about this job. If you have an addiction to learning, like we all, all three of us have, there’s always something new to do. There’s there is no real routine for us, and especially because we are here 100% in a supporting role, we don’t have our own agenda or here, our whole purpose here is. To support the needs of human space flight. Primarily, it’s NASA. But because NASA’s partnerships with international partners, commercial partners, other government agencies within the US, however, we can help facilitate and coordinate those those communications, of those get togethers, and a lot of times, because of, like we said before, when people don’t know what we don’t know, and we’re purely here to support astronaut safety, we get invited to, hey, maybe you should sit in on this meeting. There may be some capability that we have or something that we could offer that nobody knows about. So hey, if we peek into this meeting and can we be value added, is a big part of what we do. And sometimes that value is just connective tissue between, hey, since some people get siloed into their very focused, very specialized area, we may be kind of a little bit of a bridge between- hey, we sit in a bunch of different things that are included on several different working groups, and something may come up and go, “Hey, I think some folks over in this other team are already kind of working on something that’s closely aligned with what you guys” and just helping to put those folks together is kind of a another side benefit of way We can provide value to the overall mission.
+
+Brian Strack
+
+The cool part is, I mean, we get to help teach the crew, right? Yeah, so survival is a big thing, right? So, water survival, land survival, egress. We’re involved with getting hands on with all the crews over at the NBL. We work with the teaching teams, I guess, and bring the DoD presence there. And we’re kind of on behalf of what, how the DoD operates, and how the DoD would operate in a contingency or an emergency scenario like that. What is there? There’s like, four classes in this, in the sequence, from very early on in the mission planning all the way up to, you know, we give them a final call at the L minus five brief. “Hey, remember where your radio is and the channels are these, and here’s what your calls are going to be. And look on your cue card. It’s on the back” for, you know, just some reminders right before launch. So, that’s pretty awesome.
+
+Daniel Kulp
+
+It’s a pretty surreal experience. You have to be in the Neutral Buoyancy Lab, in the water with, you know, crew, four astronauts getting ready to go up, and we teach them. I used to fly C-130s, and now we have a model C-130 that we fly around, quote, unquote, the NBL, and teach them aircraft vectoring. So a little bit of a downgrade on the actual plane that I used to fly, but it’s still getting it’s cool to use that experience to get to teach directly to crew.
+
+More of our day job stuff. We during missions, we sit on console at the mission control center next to the LSOs, the Landing Support Officers, so in one of the back rooms. And so we’re tied in, you know, what the fancy ear piece like all the cool people who get to be on TV, on NASA TV, but we’re plugged in there in the back room. And we are, you know, the line of support from the landing support officers to the DoD forces. And so we’re there to help liaise, liaison and execute that, that rescue mission should, should that occur. And so as part of being prepared for that, we do lots of simulators. So there’s always Sims going on in the in the MCC for Artemis right now, high tempo for simulators and commercial crew and Soyuz. We’re basically always there supporting those when the when the LSOs are on console.
+
+Leah Cheshier
+
+That’s amazing. I’m in there too. So I didn’t know. I’m- always nice to have-
+
+Daniel Kulp
+
+They stick us in the back.
+
+Brian Strack
+
+Yeah, keep the military dudes off camera, right? We’re rough around the edges sometimes.
+
+Leah Cheshier
+
+So we talked about kind of a an office day, I guess. But let’s go to a launch day. Tell me about what it looks like for your team on a launch day.
+
+Brian Strack
+
+I’ll start with that. So we’re where we go and where we sit. Dan kind of touched on there. We have our own little singular console up on the third floor in MCC right next to the landing support officers as an extension of the Flight Operations Directorate, but we’re really here as a representation of the organization, the DoD organization, that performs this mission set. They in turn have a Support Operation Center, which is like a very scaled down version of Mission Control, not nearly as cool, far less displays and fancy stuff to look at, but that team will come on to a shift where they’re actually on console and preparing to support several hours before the crew gets out there, several hours before the fueling starts, for example, on a SpaceX mission, and they are actually representing a another safety capability in case something goes wrong on the pad, right.
+
+So if there’s either a Pad Abort or a pad egress scenario, or some sort of, you know, explosion, or whatever else may happen, the military has helicopters right down the road at Patrick that they can lend a hand with. So they’ll spin up a couple hours before we do, because those landing support officers aren’t really, you know, we come on call, essentially when, when they do, and we’ll, we’ll show up, and there’s like, hey, the the military’s here, and we’re here as an extension, both of the LSOs over to the DoD, and as the DoD over to the LSOs. And we’ll sit on console, we’ll rotate out in the shift form, just like any other flight controller would, until, for example, on a Dragon mission, right until orbital insertion. And then the is the military, they don’t all go to bed. They still sit in alert capability until the hatch opens. Oh, so the jet will still be fully loaded and full of all the rescue gear, just in case something were to go awry with that, with that docking process, or maybe something goes sideways during the free flight phase, the DoD is alerted for the entire time until the hatch is open, and then we kind of take a step back and go into a different type of posture.
+
+Leah Cheshier
+
+And where are those locations that the rescue plan is staged? And, you know, where around the world do you have people ready to jump into action?
+
+Daniel Kulp
+
+Yeah. That’s a great question. So touched on the support operations center first. So that’s done at Patrick Space Force Base, and there’s about a dozen folks who staff that. There’s a SOC director, there’s a medical doctor there who’s specially trained in space medicine. There’s experts in aircraft, mission planning, para rescue and dive masters, and so they all bring that expertise there during mission execution and training leading up to the mission execution. There’s sometimes it depends on what option we get into, but there is a combination of Air Force helicopters, Navy helicopters and Navy refueling ship that supports launch aborts out of the cape. And we also back that up with a C-17 and pararescue team out of Charleston. And depending on the mission, and if it’s landing or launch, another C-17 with pararescuemen out in Hawaii. And then with each one of those aircraft, there’s a special rescue package that is full of specialized gear and equipment that the teams will jump into the water with.
+
+Leah Cheshier
+
+Wow. I feel really sorry for those guys in Hawaii.
+
+Brian Strack
+
+There’s extra surfboards in the hotel room.
+
+Leah Cheshier
+
+That’s amazing.
+
+Leah Cheshier
+
+Well, we’ve talked a lot about, obviously, the NASA support. Does your team also offer this for, you know, we have private astronaut missions now that are not necessarily NASA missions. You know, they’ll fly to the space station. Does this support get spun up for that too?
+
+Brian Strack
+
+Officially, the Department of Defense or the Department of War does not it. Extend this capability directly to the private or the commercial mission sets. That may change in the future, depending on what those who knows what those mission types will look like in the future, as maybe NASA astronauts become part of those flights. When you go back to the way our orders and our charters from essentially the presidential level are written the DoD supports. And is a very specific wording, it’s NASA and NASA sponsored astronauts. Okay? So if you look at a Dragon mission, for example, it’s NASA astronauts, and then some ESA or a JAXA or even a Roscosmos member, then we’re not going to pick and choose, right? So it is a NASA mission, a NASA government mission. So our rescue capability applies to that entire crew.
+
+When Inspiration 4 was about ready to launch, that was that made the headlines as the first one right, and where I was sitting at United States Space Command, the general that runs that command was, you know, there was a lot of eyebrows like, Well, we do this thing for NASA. What if that call comes in for a private mission like this? We don’t have guidance on how to say yes or no, so very quickly from the Secretary of Defense level, there was a memo that was ginned up that said, Hey, this is all new. This is private. People are like renting their own dragon. They’re doing their own thing. This is this is not something that we’ve been chartered to support. There are other avenues by which a rescue effort can be enacted, especially if it’s close to or on the continental United States, where there’s an agency called the Air Force Rescue Coordination Center, which is all civilian rescue, recovery, hurricane relief, things like that, if you want to visualize it. And then there’s a national search and rescue plan that involves beacons and satellites and coordination with that Rescue Coordination Center, coordination with the military, if needed. Let’s direct them to go through that process if a contingency happens and they and they need some sort of support, but as to and I get it, that’s a long, rambling answer, when you talk about a commercial mission, the answer immediately, right now, is, well, no, we don’t, we don’t do that. But I would say there’s an asterisk there. We don’t, we don’t do that. Maybe yet, because space flights evolving, Space Station stuff is evolving. We don’t know what that’s gonna look like in the future. So not a hard No, but for right now, it’s a no.
+
+Leah Cheshier
+
+Yeah, interesting, yeah. Let’s talk about water survival training. You touched on it a little bit earlier, you know, training the crew for that sort of thing. What does that look like? Is it fun? I did-
+
+Dan Kirkbride
+
+It’s my favorite part.
+
+Leah Cheshier
+
+I did helicopter egress training and loved it. So is it anything like that?
+
+Dan Kirkbride
+
+Yeah, yeah. It’s a definitely from, from my background as a frog man, it’s super enjoyable to get people who may not be comfortable in the water- astronauts are exceptional human beings and kind of good at everything they apply themselves to. But there’s very, you know, varying amounts of background in in in water survival, water safety. You know, some people just didn’t grow up around the water. So making sure that that everybody is on an even playing field, because you have military test pilots that have been through all their water survival train very comfortable in these situations, but they may vary depending on you know, what the the available survival equipment is for each of the spacecraft, the procedures that we help the NASA teams develop before, before the curriculum gets provided to the crew, we try to make sure we work out all the kinks ahead of time. And I love volunteering to play crash test dummy on anything that we need to try out. It’s nice to be able to bring a background in maritime operations and underwater work, to be able to bring some kind of operational sense of, hey, this, this may work fine in the Neutral Buoyancy Lab with warm water, and, you know, in a swimming pool. How would this work in the North Atlantic at night with extremely cold water? And then imagining how, how capable, as amazing as astronauts are that they’re not immune to deconditioning and just the physiological differences of being on orbit for for months at a time. So there may be assumed capabilities of being able to rescue yourself or help your crew mates out that may be very limited, and so we really have to think worst case scenario, will these procedures still work? Or can everything be done with simple muscle movements, with poor coordination, et cetera.
+
+So being able to kind of work those things out in collaboration with the folks in crew systems here at NASA, and then be able to interactively deliver that to the crew, but with the crew, and getting their immediate feedback as well of how does this work for you guys. Obviously, none of us have been to space, so each person that’s that’s already flown to space kind of knows how they are when they come back. So having that kind of in real time collaboration and providing training so they’re not being taught at. This is very much- This is very much what do you guys need from us? How can we facilitate things so that you feel as comfortable as you can be, to mitigate risk in these, you know, in these situations. But it’s also super fun. I’m I pinch myself every time I’m just in the pool looking around like I’m I’m in the Neutral Buoyancy Lab. There’s a space station underneath me.
+
+Daniel Kulp
+
+Something you pulled on was the can we do these things at night and in cold water? And that’s one of the fascinating things that I don’t know, that really sunk in when I started working here, was that this whole human spaceflight endeavor, everything is risky from from top to bottom. So not only are you in space, which is risky, and re-entering the atmosphere, but then, from our perspective, we really care about, what is the sea temperature? What are the winds at the surface? How big are the white caps and the swells and the and the and the waves? Because all of those things could affect you could make it through this big mission, and then that affects your ability to survive on the water too big of waves might cause your capsule to be inverted and then have to recover itself, and if it doesn’t recover itself automatically, then the PJs will come there and upright it for you, but you might be hanging upside down in 40 degree water for an extended period of time.
+
+Leah Cheshier
+
+How has technology changed all this? I mean, we talked at the beginning about initially having to have 18,000 people standing by and what 16 ships ready, and now we’re down to one, because we have better technology and understand trajectories and landing opportunities much better. But what are some other ways that you know this has progressed through the years?
+
+Brian Strack
+
+I would, I would say, knowing, like you said, trajectories, but also knowing, even in an off nominal situation, where they’re going, where they’re going to be, what their condition is, right. Something as simple as better SAR or Search and Rescue based, GPS driven beacons that work on a system that certainly was not in existence for Apollo, right, right? And a lot of that technology, while it’s.. we look at it as it’s, some of it’s almost commercial, off the shelf. Locators, for example. All that stuff was was developed. Most of it was developed, like, by NASA. So these are things like, like, we always hear stories about things that were developed on, created for, or came out of the ISS program, and how that’s bettering humanity. Some of that technology that was was derived and created through NASA is now being proliferated. So it’s, it’s readily available, right?
+
+And in, in there’s, there’s some cases where, what if the radio doesn’t work? What if the they burn it at a weird angle and the antenna is gone? That doesn’t mean necessarily that now nobody knows where they’re going to be, right. We’re going to have ways to track them through technology that that’s readily available, or some other things that are kind of behind the curtain, that the DoD has to know where these these spacecraft is, and then get to the in a far more expeditious manner, so that that’s kind of where my mind goes, as far as the the tech piece, right?
+
+Dan Kirkbride
+
+Yeah. And I think another kind of at the application level, the kind of modernization, miniaturization of medical technology enables a lot more care to be delivered at, you know, kind of at the at the site upon splash down or landing and and because of that, I think there’s- that translates also into the diagnostic side of things. And we’ve seen that even with with the equipment that’s that’s already on Space Station, that help with making risk decisions and kind of course of action determination for bringing Crew-11 home without a certain amount of diagnostics, it could just be an unknown emergency versus a okay, it just do we have a little bit of time to make a more what appears to be something along a nominal return profile, just unplanned and early versus an emergency splash down somewhere, because we just don’t know what we don’t know. And that’s part of kind of the things we get to participate in here as test subjects for certain things we can volunteer to help out and in particular ultrasound testing, and if they’re trying out new equipment, things like that.
+
+And it’s exciting to be able to see the application of those things for kind of terrestrial rescue options as we look forward to going back to the moon and then on to Mars, as things become more expeditionary. Right now we’re very aware that we have kind of a luxury of having the ISS only 250 miles above us, and they can quickly come home if there’s a problem. When you get onto the moon, and certainly on the way to Mars, you’re kind of on your own. So how can we use technology with knowing where that spacecraft is on its way to Mars. You know, the medical technology that they have, device wise, and then even being able to provide care, specialty care, for whatever you know, whoever the doctor is on board that expedition, having access to maybe AI, enhanced tools for for medical library, quick reference, instructions on how to do certain procedures. All that stuff is being developed now, and in some way, if we get to help participate in that, or test things out, or any of that. So it’s a pretty good feeling.
+
+Leah Cheshier
+
+I’m just realizing that we were talking about sitting in mission control during the sims. And there have been so many asset sims that I’ve been on through the years where, you know, it maybe is an abort to orbit, or abort once around, or just direct abort, or pad- okay, I could go through them all. But then someone comes on and says, we’ll have people overhead in five hours, 17 minutes, and then we’ll have people on the ship and so many hours. That’s you guys! Just putting two and two together.
+
+Daniel Kulp
+
+We sit right next to the LSOs, and they give us the magic words that say we request DoD support. And we get out our calculators in our Google Earth, and we give them our response posture, you know, would be in approximate, like, response times, and then that information is is important because it goes to the LSOs and it goes right to flight, goes right to the flight director.
+
+Leah Cheshier
+
+Wow, that’s very cool, because they call it to the crew, I mean, to let them know that, like, what to expect and when somebody’s coming.
+
+Daniel Kulp
+
+And that’s part of the interaction that we have with the crews, and why it’s so important, because we go through scenarios such as those aborts in tabletop exercises. And then when we do have interaction with the crew, they will often ask detailed questions about our response times and capabilities. So it’s great to have face to faces with them, and we understand that they care, and we really care about, you know, give them that support. So we like to have the loop closed.
+
+Dan Kirkbride
+
+One other thing about the survival training is we did the Detachment 3 trains the rescue forces and how to rescue, you know, and the specifics of each spacecraft and how the hatches operate and all the hazards and all those things. But a big part of training, the other half of who’s on the other side of that hatch is how to be rescued, how to, like, facilitate your own rescue. And I think that’s a big part of and a lot of that is communication. All these astronauts are incredible problem solvers, and we can, if we can arm them with as much information as as they can, as they can have helps them make their own risk decisions and as a team, so that you know when the cavalry arrives, both sides of that operation are in the in the best, best state possible to to affect a good rescue.
+
+Leah Cheshier
+
+Well, without getting into anything too top secret or sensitive, is there a recovery operation that is especially special or memorable to to all of you?
+
+Daniel Kulp
+
+I’m sure Brian has a couple. He’s been here the longest.
+
+Brian Strack
+
+I’ve been in the business as a NASA facing DoD person a while. I was, I was sitting at the the operation center. This is before US Space com was a thing United States Strategic Command used to be the organization that handled all the spacey stuff, right? So all the, all the DoD missions that would proliferate out to other agencies, for example, were all handled by that organization. And I was, I was there when the phone call came in that said, Oh, Nick Hague just went somewhere other than space. They, he’s, we don’t know where they’re at. And granted, that was only minutes that they, you know, they went ballistic, they aborted. They had the beacon. The Russian search and rescue forces knew where they were very quickly. But that was a an instantaneous knee jerk reaction from from the military, our military at the time, even though, the way our support is laid out and structured, normally, we don’t support Soyuz launches. It’s only Soyuz landings, right? But in that case, it’s. It was instantaneously all hands on deck. I know this is a little bit weird. This is not what we normally do, but let’s, you know, turn the lights on and start firing up the the phone lines and computers and see if NASA needs anything. Thankfully, it was, it was resolved very quickly. But that was, that was kind of my first exposure to something happening real time. I mean, historically, there was the Gemini 8 recovery is one we talk about and we can point to. And then, of course, recently, with Crew-11, that wasn’t really a that was a nominal landing, it was just an expeditious timeline. So that’s kind of fresh in everybody’s mind. Yeah.
+
+Daniel Kulp
+
+I wasn’t at the Det. yet, but bringing Butch and Suni home was, you know, pretty interesting. But I imagine during that period where it was, Are they coming down? Are they not? Was pretty interesting for you, for you guys,
+
+Dan Kirkbride
+
+Yeah, the shuffle of- Yeah, the different options as the timeline progressed. Very interesting to get that, that the behind the scenes discussions on, on how to, how to cover all the things that the ISS, you know, still has a standing mission while this test flight was going on. So how to kind of juggle all the resource management for everybody up on station, and also to kind of just see when the decision was, hey, we’re, we’re going to keep a couple people back from Crew-9 to leave seats for Butch and Suni to come home. And we’re just kind of recently completed the water survival pipeline. There’s, you know, the series of different events. And you know, oddly enough, it was Nick Hague, who Brian just mentioned was, you know, was on Crew-9. And so, you know, when you’re when you’re when you’re training folks that have lived through the contingency that you know, is like, oh, statistically, that’s never gonna that hardly ever. There’s someone who’s actually done this, yeah, so, you know, everyone here takes that stuff very seriously, and it’s, and again, that there’s so much thought and planning in an organization like NASA, because the consequences are very high doing something dangerous, and tons of smart people thinking through all the what ifs. It’s nice when you get to put players on the ground and actually run through those things in simulations, especially in the real world kind of situations.
+
+Dan Kirkbride
+
+It was great to get the Artemis II crew out, out to see the things we practice in the pool, and to do it for real and see what kind of adjustments we’d like to make operationally as close to reality as possible. And I think it was also very memorable for the Navy crews that had been out there doing these underweight recovery tests with a kind of an empty space craft mock up to actually get to see the real astronauts there. There’s a certain amount of celebrity involved in that to see that, hey, this really, this is real. This is a big deal. This is part of history. So I think that that reality sinking in for something that everyone prepares and rehearses so much for, practices and plans once it starts really coming together, and people can feel that it’s pretty inspiring.
+
+Leah Cheshier
+
+Well, we’re at the end of the time that we have together today. And I just want to say this has been fantastic. And informational, educational, really, really cool. So thank you guys all so much for coming on podcast, sharing your stories, looking forward to working with you all in the future.
+
+Brian Strack
+
+Thanks, Leah for having us. I really appreciate it.
+
+Daniel Kulp
+
+Yeah, thanks for the opportunity.
+
+Leah Cheshier
+
+Thanks for sticking around. I hope you learned something new today.
+
+You can check out the latest from the agency at nasa.gov. Our full collection of episodes and all of the other wonderful NASA Podcasts can be found at nasa.gov/podcasts.
+
+On social media we’re on the NASA Johnson Space Center pages of Facebook, X, and Instagram. If you have any questions for us or suggestions for future episodes, email us at nasa-houstonpodcast@mail.nasa.gov.
+
+This interview was recorded on February 19, 2026.
+
+Our producer is Dane Turner. Audio engineers are Will Flato and Daniel Tohill. And our social media is managed by Leah Cheshire and Kelcie Howren. Houston We Have a Podcast was created and is supervised by Gary Jordan. And of course, thanks again to Lieutenant Colonel Dan Kulp, Lieutenant Colonel Brian Strack, and retired Navy SEAL Master Chief Dan Kirkbride for taking the time to come on the show.
+
+Give us a rating and feedback on whatever platform you’re listening to us on, and tell us what you think of our podcast. We’ll be back next week.
+
+3… 2… 1… This is an official NASA podcast.

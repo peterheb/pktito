@@ -1,0 +1,454 @@
+# Reference transcript: EID podcast: Liquid Bread and Invisible Worlds, Beer, Fungi, and the Origins of Microbiology
+# Source: https://tools.cdc.gov/podcasts/media/pdf/367645_EID_Fungal_Diseases.pdf
+# Covers the whole recording (42 min), not just the clip(s); see manifest.json for clip offsets. Text as published, not aligned to audio.
+
+Liquid Bread and Invisible Worlds—Beer, Fungi, and
+the Origins of Microbial Control
+[Announcer] This program is presented by the Centers for Disease Control and Prevention.
+[Matt Kuehnert] Hello, I’m Dr. Matt Kuehnert, Editor in Chief of the journal Emerging
+Infectious Diseases. EID is an open access, high impact, peer reviewed scientific journal
+published by CDC. EID publishes articles on new and re-emerging infectious diseases that
+occur around the world, with the mission of improving the understanding of pathogen
+emergence, control, and prevention. We are pleased to present selected EID articles to
+you, brought to life in new and interesting ways through this podcast series.
+[Candice Hoffmann] Welcome the Emerging Infectious Diseases podcast. Today we're
+going to be talking about the September 2026 cover essay on “Liquid Bread and Invisible
+Worlds—Beer, Fungi, and the Origins of Microbial Control”.
+I'm joined today by Dr. Nic Hoffmann, a medical historian and author of this article, and Dr.
+Shawn Lockhart, a senior advisor for mycology with the Mycotic Diseases Branch at CDC.
+So first I'll have each of you introduce yourselves and then we'll get into the discussion. So,
+Dr. Hoffmann, can you introduce yourself? Tell me who you are, what you do, and how you
+got interested in medical history and the topic of this essay.
+[Nic Hoffmann] I'm Dr. Nic Hoffmann. I have a PhD in 19th century American history with a
+focus on science and technology, and I actually got involved in the subject through my
+studies of Civil War battlefields and food safety therein. I'm a competition homebrewer and
+started looking into the history of food. Throughout European history, the water was
+terrible, and so people used to drink beer all the time, so much so that alcohol was a
+condition of work in almost every major civilization. And why are there so many different
+styles? Why are there so many different genres? Well, because beer is flavored by
+essentially the grain, the hops, but most importantly the yeast. And local yeasts provide
+local flavors. And the idea that you'd pay extra to have yeast from Belgium trucked over to
+make your beer taste more like a Trappist Quad, fascinated me. That the first food laws
+were about beer in Germany. And it kind of all went from there. And so that's kind of how I
+got into the subject.
+[Candice Hoffmann] And Dr. Lockhart, can you introduce yourself? Tell me who you are,
+what you do at CDC, and how you got interested in fungal diseases.
+[Shawn Lockhart] Yeah, so I am a clinical microbiologist who studies mycology, which is
+fungi and molds, molds and yeasts. I've been working here at the CDC in the Mycotic
+Diseases Branch for eighteen years. I first got interested in infectious fungi in graduate
+school. I was getting a degree in genetics, working on yeast genetics, brewer's yeast,
+Saccharomyces cerevisiae we'll be talking about today. And right before I was graduating
+with my PhD and looking for somewhere to go, my mother-in-law got very sick, went into
+the hospital, got systemic candidiasis, a yeast infection, and passed away. And I decided at
+Liquid Bread and Invisible Worlds—Beer, Fungi, and the Origins of Microbial Control
+Page 1 of 10
+
+September 2026
+
+that point I didn't want to be a geneticist. I wanted to spend the rest of my career figuring
+out how to kill fungi. So that's how I got into it. And I've been doing infectious fungi now for
+33 years.
+[Candice Hoffmann] So for each of you I'm going to ask, what's one thing about fungi or
+fermentation that you want people to know? So, Nic, I'll have you go first.
+[Nic Hoffmann] Well, I think the neat thing about it is it kind of just happens on its own. The
+bacteria and the yeast in the air are what allows so many of the foods we take for granted to
+be created. Yogurts and cheeses from dairy, but also beer and wine. I know we might talk
+later about the concept of liquid bread or whatever, but even in Scandinavia and Russia,
+there's a kind of beer made from the crusts of black bread that are just tossed into a pot
+with water and allowed to naturally ferment because sourdough yeast can do that. Just as
+you said earlier, Saccharomyces cerevisiae has evolved to have a higher alcohol content
+than the kind of yeast that you use to make bread, for example, though that didn't stop
+during prohibition, them arresting a bunch of Atlanta bakers for having too much yeast, a
+suspicious amount of yeast. And so again, like what's neat is that this is like a natural
+repeating system that has existed for thousands of years that humans have lived among.
+We've just now become connoisseurs of it, which is kind of funny that there might be a
+medieval brewer that's somehow better than we are still, because they just understood
+that the magic stick made the fermentation happen.
+[Candice Hoffmann] So, Shawn, what's one thing you want people to know about fungi and
+fermentation?
+[Shawn Lockhart] Well, I'm going to go at it from the opposite end in the clinical
+microbiology end. And I'll say the vast majority of fungi, and we think there's somewhere
+around five million species of fungi in the world, the vast majority do nothing to humans.
+We only know of about 600 species that are actually infectious to humans. And most of
+those are not infectious to everyday, healthy humans. We breathe in up to a thousand
+fungal spores every day, and the macrophages in our lungs just eat them up and spit them
+out and do nothing. But we've become really, really good at keeping really, really sick
+people alive over the past hundred years or more. And in doing so, we've allowed these
+bugs that aren't very good pathogens to switch over from being just innocuous bugs that
+are all around us every day into bugs that can harm us. As soon as we become sick, we
+create an environment where a fungus that was doing nothing before all of a sudden can
+become pathogenic and make us sicker. So, most of the time, fungi do nothing. Most
+healthy people encounter fungi all day, every day, and it does nothing to them. But as
+people start to get sick, as they start to age, as they have encounters with a healthcare
+environment, all of a sudden, those fungi that were doing nothing, that were just living with
+us happily, can turn into pathogens and make us very sick or sicker.
+[Candice Hoffmann] And I think it's very interesting to see the parallels between most fungi.
+We're not aware of it within our bodies and most of the time it's not going to do anything,
+but then sometimes it'll harm us and then looking back to, back throughout history before
+people knew what yeast was and just knowing that there's something happening there. And
+so, I think, moving back to the history side of things, Nic, I would like to talk to you about the
+Liquid Bread and Invisible Worlds—Beer, Fungi, and the Origins of Microbial Control
+Page 2 of 10
+
+September 2026
+
+image, and can you just tell me about like the image of our cover story? Like who is this
+person, what's he doing, and what does the scene tell us about how people were managing
+brewing safety before the discovery of germ theory?
+[Nic Hoffmann] So what we actually have is a book whose title is so German, I'm not going
+to try to pronounce it because I'm going to get it wrong, but effectively these brothers in
+Nuremberg were illustrating their town and the jobs and the people and everything in it. And
+what we have here is kind of an iconic image of the practicality of what this man is doing.
+Back then you had this idea that you would start out as an apprentice and become a
+journeyman and then a master. And so, this is a master brewer. And his job is to keep the
+city fed with beer. Now, the town of Nuremberg itself was fairly advanced as a Middle Ages
+city, and you can tell by the fact that there's art and there's specialized fields, right? A few
+centuries earlier they were hand-to-mouth avoiding the bubonic plague. So, this is kind of
+almost a peaceful scene of a man at work. What is impressive about this is how
+unremarkable everything about this is. He's not bejeweled, he's not making it for the king,
+he's not a monk. He is wearing the uniform of a brewmaster and he is making beer.
+Now, the process has evolved over time, but effectively what you would do is you would
+take your grain, this part of the world it’s mostly barley, and you would get it a little bit damp
+so it would start to sprout. This releases the sugar, the maltose. And then you would roast it
+to stop that process, and then you would, what he's doing here, which is steeping the grain.
+Nowadays in modern technology, there is numbers that we throw at this thing. The
+cookedness of grain is measured in something called Lovibond, and that's how dark the
+roast is. The darker the roast, the more flavor is left behind. And then you measure the
+temperature, you're steeping it like tea, so you're aiming for about 150 to 125 degrees
+Fahrenheit. But the thing about a brewmaster is they know this by sight and by smell. And
+they get respect for it. And just like almost anything else, there's an artisanal quality to it.
+Now, what makes this specifically the beer that we are talking about is the natural
+environment. What they don't know is why beer is healthier than the water around them.
+The water is filled with runoff, human waste, etcetera. But beer has to be boiled. Once you
+get the grain out, and what he has next to them there is the grain, right? In the little barrels
+that he is scooping out so that you have what is called the wort, which will be fermented.
+But the grain is boiled, or at least the sugars from it is boiled. That kills all the little beasties
+that are in the air, the bacterias, the mold spores, the yeast. And then it is sealed up into
+wooden casks. But before it gets sealed up, it has to cool down. Getting into what medical,
+I guess, food safety experts would call the danger zone. But luckily, it's been imbued by that
+point by the natural yeasts of the environment. And so, the beer there will taste uniquely
+like the beer there.
+Now, depending on the year, they may or may not have hops. Hops were developed by the
+Dutch, and they had become common use by the fifteenth, sixteenth, and seventeenth
+century, and the Germans encouraged the use of hops by the 1560s. But for the most part,
+what makes it distinct here is the fact that it will be fermented by the yeast of Nuremberg.
+And he sanitizes in the way he sanitizes, which is not with soap or water, but generally with
+fire, and then leaving the top of the fermenter open for a specific amount of time before
+sealing it up and creating the beer that will let people survive for another cold season.
+Liquid Bread and Invisible Worlds—Beer, Fungi, and the Origins of Microbial Control
+Page 3 of 10
+
+September 2026
+
+[Candice Hoffmann] And Nic, can you talk briefly through the history of brewing as
+explained in your essay just from the early days through the German laws that limited
+ingredients, to pasteurization?
+[Nic Hoffmann] We don't know what comes first, bread or beer. And in fact, the Egyptian
+hieroglyphs sometimes even fudge that word, and it's sometimes hard to tell the difference
+what they're referring to. Which seems odd. Why would one of humanity's oldest advanced
+civilization confuse these two terms? Well, because they essentially provided the same
+service. When we think of beer, we think of something crystalline, often clear, if not fairly
+clear, fizzy, and bittered to hide the bitterness of the alcohol and the leftover sugars from
+fermentation. Don't think of that when you're thinking Egyptian beer. Essentially, what they
+would do is take grain, leave it in a jar with water and seal it up. What this is, is kind of like
+an alcoholic version of, like, oatmeal. It would be fizzy because it traps the carbon dioxide
+when you seal it. But it's important enough that it's listed on ledgers next to the laborers
+who were building the pyramids and the temples. And I say laborers here because there's a
+debate whether they were enslaved, whether they were carpenters, whether they were paid
+workers. But regardless, they were given a beer ration a day. And the better the work, the
+more beer they get, as to feed it to their families. The process of making alcohol around the
+Mediterranean is universal. Every society has something like it, and it just depends on
+where they grow. The Greeks and the Romans generally preferred their wines, but around
+the Mediterranean and elsewhere, it's beer. And beer as a concept can be made by pretty
+much anything. Throughout medieval Europe, as we see, the brewmaster is one of the most
+important things. The act of collecting grain and using it for both bread and beer is a matter
+of food safety, it's a matter of feeding the people, right? It’s a matter of pretty much every
+aspect of daily life. These are people who work in the field and they work hard. And so, to
+keep fed and hydrated is important. And these, kind of whole grain beers, these heavy
+beers, are important as well.
+The biggest change to this are twofold. First, we have the introduction of hops, which
+allows for lower alcohol beer, which I didn't really talk about in the piece, but it's worth
+mentioning because the British didn't have it, and the English ales averaged about 8%
+alcohol, and I can't imagine working a day drinking only 8% alcohol beer. But apparently
+King Henry VIII tried to grow hops, his goats ate them and died. So, he called it a vile and
+wicked weed and banned it. But the other is the German Reinheitsgebot, which are some of
+the oldest food laws in the world. I mean, let's talk about beer just for a second and what it
+is. Beer is essentially watered down alcohol, and in it is the alcohol part, but also a bunch
+of unfermented sugars. That's what gives beer its general flavor, right? You don't want to
+taste something that just tastes like bitter grass. So, you want that flavor left behind. The
+problem is, that's a really good vector for bacterial infection and makes the beer go bad. So,
+the Germans though noticed a problem. People were adding all sorts of stuff to their beer.
+And this includes different grains, wheat, bulgur. They would also add what they call
+adjuncts, things like sugars, things like mint, or instead of hops, spruce or pine needles.
+And they saw people getting sick from this. And part of it is a big problem with the grain rye.
+If rye is not properly kept, it can grow another fungus, leading to ergot poisoning, which is a
+hallucinogen and can cause people to get very sick. And you're not using your best grain for
+Liquid Bread and Invisible Worlds—Beer, Fungi, and the Origins of Microbial Control
+Page 4 of 10
+
+September 2026
+
+this stuff. So, they would see, oh we're going to miss our quota, they find some left behind
+rye and they would chuck it into the beer and then poison an entire town. So, the Germans
+passed a law requiring that the only things in beer could be water, grain, and hops. And they
+would even have people check the purity of the grain. And so, the German food purity laws,
+literally the first section of note is the German beer section. And the Germans literally get to
+the point where their grains and their hops are so specified that they become the gold
+standards. And so, in brewing circles, we still call them the noble hops, the ur-hops that
+everything comes from.
+[Candice Hoffmann] So you told us about the laws and how they limited the ingredients,
+and they found that this made beer safer, even though at the time they didn't know why, like
+what was happening at the microscopic level. And so, nowadays we know a lot about
+what's going on with fungi and the things that we can't see. And so, I think this is a really
+good segue into asking Shawn to tell us if you can tell us a little bit about fungi, because I
+think most people, they hear that word and they might think mushrooms, but there's much
+more to it than that. So, can you just kind of give us an overview of what it is?
+[Shawn Lockhart] Yeah, so fungi are eukaryotes like us. So that means they have a nucleus
+and a DNA. And most of the machinery in a fungus is very similar to the machinery in a
+human cell. In fact, when I was in graduate school, one of the experiments we did was to
+take a human gene and put it in a yeast that had lost that gene, and we showed that the
+human gene functions just fine because they are so similar to us that we can use the same
+molecular machinery. So, fungi are everywhere. They're all around us at all times. Mostly
+they're invisible, but we tend to run into them when we see them growing up in our yard or
+in a field or in the forest or on our pizza, or maybe the three-week old Chinese food in the
+back of the refrigerator that has this nice fuzzy coating on it. That tends to be when we
+encounter fungi. But actually, they're all around us, as I was saying. They're everywhere. So,
+our bodies are actually covered in beneficial fungi. Our skin has beneficial fungi, our gut
+has beneficial fungi, that just live with us symbiotically as long as we're healthy and play a
+role in how we function. It's also in every bit of soil that we see. When you see a compost
+pile in the fall and it seems to be steaming, that's the fungus doing its job. A lot of the role is
+to break down organic matter. And so, when you see that steamy pile, it's all the fungus
+heating up and eating all the leaves and sticks and things that are in there. That is a major
+role of fungus.
+Another really interesting role, they play a major role in plant health, in bringing nutrients to
+the roots of plants and in allowing plants to talk to each other. So fungi, especially
+mushroom type fungi, grow underground in these long, long threads that can go, for them,
+inches, sometimes longer, but what seems like, when you're talking at the microscopic
+level, these huge, huge, long cells. And they allow trees in a forest to talk to each other by
+sending signals and relaying signals back and forth. In fact, the largest fungus in the world
+is a mushroom that lives in Oregon. It's the species Armillaria. It stretches over 3.5 square
+miles, and it's estimated to weigh up to about 34,000, not pounds, tons. 34,000 tons of
+microscopic threads. Imagine that. So, we don't encounter fungi to our knowledge every
+day, but actually we do encounter fungi every day. And as I said, for the most part, they're
+innocuous until we start to get sick, and then they can become deadly.
+Liquid Bread and Invisible Worlds—Beer, Fungi, and the Origins of Microbial Control
+Page 5 of 10
+
+September 2026
+
+[Candice Hoffmann] So what makes some of them harmful versus beneficial?
+[Shawn Lockhart] So there are actually only a few of them that are harmful. One of the big
+reasons that there aren't a whole lot of harmful fungi is that, well, there's two reasons. One,
+they can't break down what we're providing. So they, you know, they're used to breaking
+down organic matter, but it is usually plant organic matter and they're not so good at using
+human-type matter. But the other is that the vast majority out of that five million, only a few
+thousand actually can grow above 37 degrees Celsius. That's body temperature. So if they
+can't grow at body temperature, they can’t cause infection. And so that's the real actual
+basic reason why most fungi aren't infectious. There are only a few actual fungi that are
+pathogenic to otherwise healthy people. The ones in the United States are histomycosis,
+Histoplasma capsulatum, Blastomyces dermatitidis, and then the one that causes Valley
+Fever, Coccidioides. That's a really interesting one. You hear about it all the time in
+construction projects, they've had outbreaks in festivals, people up dancing all night,
+sucking in fungal spores as they stomp on the soil and release them into the air. And
+actually, this issue has a really interesting paper about a Coccidioides case in Taiwan. You
+don't find Coccidioides in Taiwan, but there was a worker who was on a dock cleaning out a
+shipping container that had come from California, and he's sweeping out the dust, and as
+he's sweeping out the dust, he's causing those fungal spores to go airborne, he breathes
+them in, and he gets Valley Fever (coccidioidomycosis) thousands of miles away from
+where you can find it naturally.
+[Candice Hoffmann] Could fungal spores like that stick around when they’re introduced to
+a new place, like invasive plants or insects might?
+[Shawn Lockhart] So something like Coccidioides immitis, it comes from the desert. And
+so, coming out of a shipping container, it is not likely to go out and there aren't any deserts
+in Taiwan. And it’s probably not going to happen. But there's another bug called Aspergillus
+fumigatus. Aspergillus fumigatus is found worldwide, but there is a certain strain of
+Aspergillus fumigatus that has become drug-resistant because the fungicides that we use
+on our crops are very similar to the antifungal drugs that we use in our patients. And this
+resistant Aspergillus fumigatus, like those other two bugs, has started circulating the globe.
+Aspergillus fumigatus spores have been found in the jet stream. And so, imagine you get
+picked up behind the vacuum behind a jet and you get up to the jet stream, and you can
+literally be distributed anywhere in the world. And when we look at whole genome
+sequencing, what we see is these mutations that are associated with fungicide use
+probably only arose once, and then it has been spread around the world. We found it here
+in the soil in Georgia, in a peanut farm. And so that was about six years ago. Just two years
+ago, we found our first human patient that had azole-resistant Aspergillus fumigatus
+associated with agricultural use of fungicides. And there actually was a paper on the first
+patient in the U.S. to die of an azole-resistant Aspergillus fumigatus was published a few
+years ago in Emerging Infectious Diseases.
+[Candice Hoffmann] Can you give us some other examples, kind of maybe more from daily
+life, of how we might find beneficial or harmful fungi?
+Liquid Bread and Invisible Worlds—Beer, Fungi, and the Origins of Microbial Control
+Page 6 of 10
+
+September 2026
+
+[Shawn Lockhart] Yeah, so another really interesting case. So, everyone knows sake wine.
+It's the Japanese wine. It's made from a fungus called Aspergillus oryzae. And they use that
+to ferment the grain to get sake. The same organism, the same Aspergillus, it has got a
+slightly different name, but only because we didn't know they were the same thing, is
+Aspergillus flavus. And Aspergillus flavus is the Aspergillus that causes a toxin that can
+spoil our crops, spoil our grains, especially corn, get people very, very sick and also cause
+human infections in the lung. And the only difference between those two, between making
+really nice rice wine and causing horrible toxins in food production, is one little set of genes
+that's found in one and missing in the other. Some what we believe is that actually the
+Japanese when they cultivated this species of Aspergillus to use, they selectively got the
+isolates that no longer produce that toxin until they'd completely gotten rid of it. So that's
+one example.
+Another example that we don't think about very often, some of the roles of fungi in nature,
+I'll give you two very specific species and I don't expect anybody to ever know how to spell
+these, but there's one called Metarhizium and its job in life is to kill insects and destroy
+insects. We actually spray that on our crops to get rid of locusts and things and you can
+spread, you know, spray Metarhizium. It's thought to be safe. But every once in a while,
+somebody will get Metarhizium in their eyes, they'll get keratitis, and they can actually lose
+their eye. There's another one called Purpureocillium lilacinum. Farmers spray this on their
+crops for nematodes. It's job in nature is to go out and kill nematodes in the soil that would
+eat their plant roots. And that's another one that has a very beneficial role. In most cases, it
+doesn't do anything, but it can also cause keratitis or eye infections in healthy patients. And
+we're seeing that in farmers. We don't know that they got it from the crops they were
+spraying it on, but we see that fungal keratitis. And we're actually seeing Purpureocillium
+lilacinum in other patients, in transplant patients and cancer patients in their lungs. So it's
+one that we use, and it has a beneficial purpose, but then you can turn right around and
+cause infections. Even Saccharomyces cerevisiae, baker's yeast, it's great. We make beer,
+we make bread. But we also sometimes find it in the gut. It is a good gut bug, but it can
+cause bloodstream infections in sick patients and actually go on to kill us. We even use
+Saccharomyces as a probiotic in patients who take antibiotics, and their microbiome, the
+organisms that live in them, have become disrupted. So we think, we'll put a good yeast
+back in, we'll put in a Saccharomyces. And sometimes that goes on to make the patient
+sick, even though we were using it for what we thought would be beneficial to the patient.
+So, there are lots of examples of these things that, all of a sudden, they're doing great
+things and then they're not. Penicillium, one of the first fungus most people have ever heard
+of, gave us penicillin. So, they have good roles and they have some bad roles.
+[Candice Hoffmann] Shawn, can you tell us about some of the top fungal disease threats
+today and where we're seeing them? If it's more like healthcare settings or community or
+the environment or maybe all three?
+[Shawn Lockhart] Yeah, so for the most part, it's healthcare settings. That’s where we see
+most fungal infections and it's not necessarily just in hospitals, it's people who have
+encounters with healthcare, in other words, being treated for something. And probably the
+most prominent fungal infection that we see is Candida. And Candida is a yeast. It's very,
+Liquid Bread and Invisible Worlds—Beer, Fungi, and the Origins of Microbial Control
+Page 7 of 10
+
+September 2026
+
+very similar to Saccharomyces cerevisiae or baker's yeast, but it's in us and on us. We walk
+around with Candida in our gut, sometimes in our skin. But we're seeing right now the
+circulation globally of a brand-new species of Candida. Obviously, it didn't just drop off a
+comet, although there is a publication suggesting that that might be the case. Don't believe
+it. But it has only emerged from wherever it was hiding within the last about thirty years or
+so. And it was seen in four different places originally. And it has literally spread across the
+world. It's not emerging in new places. It's literally spreading as patients move from
+healthcare setting to healthcare setting. It's carried on their skin from one hospital to
+another. The first introductions in the U.S. were for patients who had sought healthcare
+abroad, had it colonizing on their skin, and then they came to the U.S. What makes this one
+so scary is that it tends to be drug-resistant. We only have very few drugs for treating fungi.
+And the reason is fungi are so similar to us that anything that we use to target fungi usually
+has side effects for us. So, we haven't been able to develop a whole lot of drugs against
+fungi the way we have against bacteria. Bacteria are very different from us. Fungi aren't,
+they're eukaryotes. They have the same machinery, as I said. And so, we've had a hard time
+developing new fungal drugs. We have three good classes, and we found this new bug can
+develop resistance to all three. It's really, really scary.
+This is also the first time we've ever had a human pathogenic fungus circulate, circle the
+globe. We've never had spread like this. And we've seen it in plant pathogens for sure. The
+chestnut trees…a billion chestnut trees in the U.S. were wiped out by a fungus that came
+over from Asia. But we've never seen it in humans. There's another one. There's a really nice
+article in this edition this month about a fungus called Trichophyton indotineae.
+Trichophyton indotineae is a dermatophyte, and what that means is it's a ringworm. We've
+heard of ringworm. Everybody…very, very common, especially kids, to get ringworm, and
+you get a little lesion about the size of a quarter, and you put a cream on it for a couple
+weeks and it goes away. This one doesn't. Number one, it's drug-resistant. And number
+two, instead of causing athlete's foot between a couple of toes or a little dime-size lesion
+on the skin, it will cover your whole trunk from your knees all the way up to your waist. And
+besides the itchiness and things like that, the stigma of walking around with this infection is
+terrible. So that one, again, is circulating the globe, carried on patients from place to place
+to place. That one's not actually associated with healthcare. It's just associated with
+human-to-human contact. It's very easily spread from person to person. It started
+somewhere in Southeast Asia and we're now tracking it all across the whole world. We've
+seen outbreaks in the United States in the last five or six years. And we know that it's going
+to get much worse before it gets better. And it's drug-resistant, again. So scary things. All of
+a sudden, we have multiple human pathogens circulating the globe when we've never seen
+any in the past thirty years that I've done this. Nothing like this. We've got two.
+[Candice Hoffmann] So, I was going to ask about like fictional scenarios, but it sounds like
+real life may sometimes be more scary, but I wanted to ask you about fictional scenarios
+where fungus causes like a zombie-like outbreak, like things like The Last of Us, and if
+you're concerned at all, if you're going to be preparing and stocking up your basement with
+essentials, maybe even with beer, to prepare for the next big outbreak?
+Liquid Bread and Invisible Worlds—Beer, Fungi, and the Origins of Microbial Control
+Page 8 of 10
+
+September 2026
+
+[Shawn Lockhart] I have answered so many questions in the past four or five years about
+the zombie apocalypse, and yeah. No, I love that TV series. I've never played the
+videogame, but the TV series is awesome. No, we're not going to see a fungal zombie
+apocalypse. That is a real fungus that they talk about, Cordyceps, and it does cause bugs to
+climb up to the highest point in a plant, clamp down, and let the fungus sprout out of their
+body. That will not be happening to us. But we do know that if we ever have a pandemic or a
+natural disaster, we will see fungi. They probably won't be causing the pandemic, but they
+definitely take advantage. As I said, they're advantageous. When people become sick, you
+see fungus. We saw this during COVID, COVID-19, when people's lungs were injured and
+they were taking steroids. On top of that, we saw all these horrible, horrible fungal
+infections in these same patients. Candidemia infections went through the roof. We saw
+something called the black fungus. It's not actually a black fungus, but they call it that
+because it turns the skin in the face black where it infects. The mortality was about 50%,
+but the morbidity was horrendous. People lost eyes, they lost their nose. The best way to
+fight this fungus is with a scalpel, so they'd have their cheek removed. We see it when we
+have floods, all of a sudden there's an increase in fungal infections. We saw it after
+tornadoes. So, after the tsunami. So, when there is some sort of apocalypse, but we'll just
+call it a pandemic, we can assume during the next pandemic, whether it's next week or it's
+30 years from now, there will probably be fungal infections associated with it. Probably not
+going to cause the pandemic, but I guarantee any time we have sick or injured or
+hospitalized patients, we see a huge rise in fungal infections because they're everywhere.
+[Candice Hoffmann] So, fungi have been around humanity throughout history. Even now it'll
+always be there with us, sometimes harming us, sometimes helping and creating foods
+and beer. I want to, I guess ask each of you as we wrap up, what's one thing you want us to
+take away from this conversation? So, I'll start with Nic.
+[Nic Hoffmann] Well, honestly, it's part and parcel to the fact that food science and food
+health have been linked to civilization for as long as there's been civilization. Once we
+started settling and planting and building, we needed to take care of ourselves and we
+adapt very well. Unfortunately, as my colleague on the other end of the microphone has
+pointed out, the little beasties can evolve as well. And so, we will always be in a constant
+battle to keep ourselves fed and keep us nutritious and I guess intoxicated, but also they
+will evolve alongside it. And that's part and parcel to humanity and civilization. Even the
+best we can do often falls apart. We just suffered an egg shortage because of bird flu.
+We've run out of so many breeds of bananas because only the Cavendish was immune to, I
+actually believe it was a fungal infection that killed off a lot of bananas. But as I go out the
+door, I want to add personally that one of the reasons I became so interested in medical
+history was because of my microbiology teacher who was also a fungal expert. His name
+was J.K. Bhattacharjee at Miami of Ohio. And his expertise was synthesizing lysine in the
+aminoadipate pathways. And so, he had patents to treat Candida albicans, among other
+things, and developed several tests for fungal infections. One of the best educators I had,
+and for someone who's not a science guy at heart, he made me really interested in science.
+So, I'll give credit to fungal experts everywhere for that.
+Liquid Bread and Invisible Worlds—Beer, Fungi, and the Origins of Microbial Control
+Page 9 of 10
+
+September 2026
+
+[Shawn Lockhart] So the third week of September is Fungal Disease Awareness Week. And
+we call it FDAW. And it is a time for us to talk to clinicians and talk to patients about
+thinking about fungi. A lot of times when a patient goes into the hospital, they will be
+treated for all the most common things first, and they keep getting sicker and sicker and
+sicker. Finally, somebody says, I wonder if it's a fungal infection. And they start treating
+them well into the disease. And so, we like both clinicians and patients to be thinking
+fungus. Patients can advocate for themselves. If they're not getting better, they can say to
+their doctor, hey, have you thought about a fungal disease? Is that maybe why I don't seem
+to be getting better on an antibiotic? Because antibiotics don't work against fungi. And so,
+patient advocacy and clinician knowledge is really, really important. This is our tenth year of
+FDAW. Tenth year of telling people, think fungus, whether you're a patient, whether you're a
+clinician, or whether you're just someone who's getting your Chinese food out of the back
+of your refrigerator three weeks too late, think fungus.
+[Candice Hoffmann] Thanks for listening to our conversation with Dr. Nic Hoffmann and Dr.
+Shawn Lockhart about beer, bread, fungus, and fungal diseases. Want to learn more about
+fungal infections? Check out the September 2026 issue of EID at cdc.gov/EID.
+[Outro] The conclusions, findings, and opinions expressed by authors contributing to this
+journal do not necessarily reflect the official position of the U.S. Department of Health and
+Human Services, the Public Health Service, the Centers for Disease Control and
+Prevention, or the authors' affiliated institutions.
+[Announcer] For the most accurate health information, visit cdc.gov or call 1-800-CDCINFO
+
+Liquid Bread and Invisible Worlds—Beer, Fungi, and the Origins of Microbial Control
+Page 10 of 10
+
+September 2026
+
+

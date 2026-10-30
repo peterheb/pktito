@@ -1,0 +1,83 @@
+# Reference transcript: MMWR weekly podcast: Week of March 17, 2025
+# Source: https://tools.cdc.gov/podcasts/media/pdf/358165_C_MMWR_250317.pdf
+# Covers the whole recording (6 min), not just the clip(s); see manifest.json for clip offsets. Text as published, not aligned to audio.
+
+MMWR Weekly Briefing for the Week of March 17th
+[Announcer] This program is presented by the Centers for Disease Control and Prevention.
+During the week of March 17th, MMWR published reports on TB management in Uganda, experiences of
+violence among adolescent girls and young women in Eswatini, and more.
+Let’s take a look at headlines from the week of March 17th.
+First, a pilot study in Uganda increases screening and treatment for members of households affected by
+tuberculosis, helping to reduce transmission. Second, adolescent girls and young women in Eswatini who
+have functional disabilities are more likely to experience sexual, physical, and emotional violence. Last, a
+U.S. traveler returning from Zimbabwe was hospitalized with a rare parasite infection that causes sleeping
+sickness.
+Welcome! I’m Mary Dott, science editor of CDC’s Morbidity and Mortality Weekly Report. Thanks for
+joining me for MMWR’s Weekly Briefing for reports published the week of March 17th.
+Tuberculosis, or TB, is a disease caused by germs spread from person to person through the air. People
+who live with someone who has TB are at increased risk for infection and disease. However, worldwide,
+only about 21% of those household members received TB preventive treatment in 2023.
+In our first report, Case Finding Among and Comprehensive Management of Household Contacts of
+Persons with Pulmonary Tuberculosis, CDC and partners in Uganda piloted a comprehensive approach to
+identify more household TB exposures and provide preventive treatment. The comprehensive approach
+included home visits for screening for TB symptoms, free chest X-rays, short-course preventive
+treatment, and follow-up counseling.
+Between November 2023 and September 2024, the program screened 91% of nearly 2,000 household
+members of known TB patients. Of those screened, 80 household contacts were diagnosed with TB. More
+than 1,200 people started tuberculosis preventive treatment, and about 95% completed it.
+This approach serves as a model for expanding household interventions in areas with high rates of TB.
+Other countries can use this example to increase screening and treatment efforts among households
+affected by TB. These efforts are needed to reduce the spread of disease and ultimately eliminate it.
+Eswatini, a country in southern Africa, has made substantial progress in responding to the HIV epidemic
+and reducing violence against children. However, adolescent girls and young women with disabilities may
+be at increased risk for violence and HIV.
+In our second report, Functional Disability, Violence, HIV Status, and Risk Factors for HIV Among
+Adolescent Girls and Young Women, CDC, the government of Eswatini, and partner organizations
+analyzed data from more than 6,300 adolescent girls and young women who participated in the 2022
+Eswatini Violence Against Children and Youth Survey. This was done to understand how common
+functional disabilities are and their relationship to HIV infection and experiencing violence.
+Data showed that about 1 in 7, or 14%, of adolescent girls and young women in Eswatini ages 13-24
+reported having a functional disability, such as difficulty seeing, walking, or communicating. Adolescent
+Page 1 of 2
+
+MMWR Weekly Briefing for the Week March 17, 2025
+
+girls and young women with functional disabilities were nearly twice as likely to experience sexual,
+physical, and emotional violence over their lifetimes compared to those who did not have a functional
+disability. HIV testing and infection status, HIV risk factors, sexual risk behaviors, and HIV treatment and
+prevention services did not differ by disability status.
+Many sectors of society, including government, health, education, and social services, can work together
+to better understand the risks and needs of people with disabilities and provide tailored, accessible
+services and prevention programs.
+Human African trypanosomiasis, also known as sleeping sickness, is a rare parasitic infection transmitted
+by the bite of the tsetse fly. It is found only in rural, sub-Saharan Africa. Since 2011, there have been only
+20 reported cases in travelers from countries where the disease does not occur who traveled to countries
+where the parasite is present. During the first stage, which is rapidly progressive over weeks, the parasite
+multiplies in the blood and lymphatic system, causing symptoms, including fever, hemolysis and anemia,
+thrombocytopenia, hepatosplenomegaly, and renal disease. In the second stage of the disease, the parasite
+crosses the blood-brain barrier, causing central nervous system dysfunction, followed by death within
+weeks to months. Treatment is available, and WHO recommends follow-up at 3, 6, and 12 months after
+treatment to assess for possible relapse.
+In our last report, Rhodesiense Human African Trypanosomiasis in a Traveler Returning from Zimbabwe,
+CDC was notified of a case of sleeping sickness in August 2024 in a U.S. traveler who had recently
+returned from safari in northern Zimbabwe.
+The patient was evaluated at a U.S. hospital with a 2-day history of fever and a well-demarcated,
+ulcerated lesion on the left thigh, about 2 weeks after likely exposure. A peripheral blood smear, obtained
+to rule out malaria, revealed the parasites. The patient experienced multisystem organ failure, was treated,
+and recovered.
+Clinicians should consider sleeping sickness in travelers with fever returning from a region where tsetse
+flies spread the infection, even if the area has not recently reported cases.
+There is no vaccine to prevent this disease. Travelers visiting countries where sleeping sickness is present
+should take steps to avoid bites from the tsetse fly. These include wearing thick, neutral colored clothing,
+inspecting vehicles for tsetse flies before entering, and avoiding bushes.
+That’s all for this week's briefing. Thank you for joining us.
+You can subscribe to this podcast on Apple Podcasts and Spotify. Subscribe to MMWR to stay up to date
+on the latest scientific information.
+Stay safe and stay well.
+[Announcer] For the most accurate health information, visit cdc.gov or call 1-800-CDC-INFO.
+
+Page 2 of 2
+
+MMWR Weekly Briefing for the Week March 17, 2025
+
+

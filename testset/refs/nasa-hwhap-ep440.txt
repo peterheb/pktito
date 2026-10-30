@@ -1,0 +1,577 @@
+# Reference transcript: Houston We Have a Podcast, Ep 440: To the Moon and Back Again
+# Source: https://www.nasa.gov/podcasts/houston-we-have-a-podcast/to-the-moon-and-back-again/
+# Covers the whole recording (58 min), not just the clip(s); see manifest.json for clip offsets. Text as published, not aligned to audio.
+
+Nilufar Ramji
+
+Houston We Have a Podcast. Welcome to the official podcast of the NASA Johnson Space Center, episode 440: To the Moon and Back Again. I’m Nilufar Ramji, and I’ll be your host today. On this podcast, we bring in the experts, scientists, engineers, and astronauts, all to let you know what’s going on in the world of human spaceflight and more.
+
+On April 1, 2026, Artemis II launched on a nearly 10-day voyage around the Moon, marking the first crewed flight of NASA’s Orion spacecraft. NASA astronauts Reid Wiseman, Victor Glover, and Christina Koch, along with Canadian Space Agency astronaut Jeremy Hansen, splashed down on April 10th in the Pacific Ocean off the coast of San Diego. At their farthest point, the crew traveled 252,756 miles from Earth, setting a record for the greatest distance humans have traveled in space and observing the lunar surface like never before.
+
+Since they’ve been back, the crew have been on a whirlwind tour, sharing their experiences with the world. And of course, we had to have them back on Houston We Have a Podcast. We heard from the crew when they were selected for Artemis II on episode 283, and then right before they flew on episode 417. Through these interviews we’ve had a chance to get to know them right here on the podcast. Coming back from their journey, we sat down with each of the crew individually to hear their reflections, and we laughed, we cried, and everything in between.
+
+I hope you enjoy these conversations after their historical mission.
+
+Let’s go for our crew, our teammates, and all humanity.
+
+[Music]
+
+Reid, welcome back. It’s been a little over three months since the Artemis II mission, and that mission took you around the Moon. So first off, tell us what that was like.
+
+Reid Wiseman
+
+It was the greatest adventure that four humans can ever go on.
+
+I, I mean, we know the crew well. I was with Victor, Christina, and Jeremy this morning. We’re still bonded, just like we were during the mission, and getting to see some of the sights- I guess the biggest, the biggest surprise to me, being a space station flyer on this, I knew the crew was going to be good. I knew mission control was going to be good. I was pretty sure the vehicle was going to be good. The thing that blew my mind was how quickly we left Earth. I mean, it was just gone, especially on the second, third day. It just was so small and getting smaller. It was this little crescent out the window, and I was, from my time in the space station, it was just shocking to me. I didn’t expect that. I didn’t expect us to just be gone so quickly.
+
+Nilufar Ramji
+
+Just disappears in the background, and you know, everyone will ask you about launch, but was there a quiet moment, maybe days later, the next day, when you suddenly thought, “I’m actually on my way to the Moon”?
+
+Reid Wiseman
+
+I think we’ve started to talk about this a little bit as a crew. And for me, I don’t know if it was a protectionary element in my brain, but I kind of thought at all times before every one of these major burns that, that if something didn’t go right, we were going to go home.
+
+So we launch off of the Cape, off of Pad 39B at the Cape, and we go out to our first apogee where we need to raise our perigee or we’re going to come straight home. And in my mind, it was like, “well, if this doesn’t go great, we’re going to be home in 45 minutes…” And then it went great. And then we did our our giant apogee raise burn, and we’re going out to 38,000 miles, 24 hour orbit. And I thought at that at the peak of that orbit, I was like, “All right, well, if it’s not going great, we’re just going to go home.” And then we did our perigee raise burn, and it went great, and we weren’t going home.
+
+And then our next step is trans lunar injection, and heading into that burn, Jeremy and Christina were at controls the vehicle. Victor and I were supporting, and we had a few we had a few things go a little bit wrong as we’re cruising through the Van Allen belts. Christina lost her computer, and so she had to go to backup procedures. And then we had a a cabin leak suspected warning come up, and that got us our adrenaline going. So we’re like 20 minutes from trans lunar injection, and we have a cabin leak suspected. And I’m just kind of sitting there, like maybe we are actually going to go home on this one. But everything was looking good, and Mission Control did a superb job of cleaning that up. And then we did trans lunar injection, and then it was kind of then that all of those thoughts of “we’re just going to go home,” they went into the background, and now we’re not going home, “we’re going to the Moon,” and from that point on, I never thought about anything else other than “we’re going to the Moon.”
+
+Nilufar Ramji
+
+See you and the crew. I keep going back to Christina’s words: planet Earth. You are our crew. That’s one of my favorite lines post flight, among many others. But your. Crew aboard Orion really stood out to the world for its camaraderie. Is trust like that something you can deliberately build as a crew, or is it something that you discover when things get hard?
+
+Reid Wiseman
+
+Wow, that is a that is a great question. As you were using the word trust, I was thinking in the back of my head, the word earned. I think you can set out with intentionality to build trust. That’s a great thing. It’s a noble cause. But I think at the end of the day, trust has to be earned.
+
+And I’m going to take a little bit of risk here with this this conversation, but this crew put in a tremendous amount of work leading up to this flight. And for those who are close to us, they know we weren’t always friends, and we we weren’t always aligned. We we definitely were not always in agreement. That made us stronger in the end, actually. But I never really knew how this crew was going to show up when when the rocket lit, when we were weightless, when we were on our way to the Moon, when we were doing real life or death high risk elements. And honestly, the first window I got into that was I had opened up an oatmeal and I hadn’t hydrated it enough, and so there was like there was so much oatmeal floating out of this bag, like 10,000 pieces of oatmeal is an underestimate. It’s a cloud of oatmeal floating away from me, and I was just looking at it, and I’m like, “I’ve I’ve spent six months at the International Space Station. I should not I should not be this bad at astronauting.”
+
+Nilufar Ramji
+
+“Astronauting.” New verb!
+
+Reid Wiseman
+
+And I’m looking at this cloud, and and my first instinct was I got to clean this up, and then it was just so much. I was like, all right, just let it float because there’s just no solving this. And and Victor turns around, he’s just like, “no problem,” and he just starts kind of gathering it up and eating some of it and pushing some of it over towards the HEPA filter and letting it, you know, get stuck to the filtration system, which is totally safe and completely reasonable. But I think for me personally, that was a moment for me when I knew we were all we had that trust and that and that went across the whole crew and that sort of grace towards each other on this mission in the end resulted in the ultimate trust between the four of us.
+
+Nilufar Ramji
+
+What a great answer! You may have done this a time or two.
+
+Reid Wiseman
+
+I did. You could tell. I turned my paper upside down. I don’t even want to know the questions. I just want to have a conversation.
+
+Nilufar Ramji
+
+I love that, and I’m using the questions as a guiding parameter. But more than anything, I want to talk a little bit now about your role as commander. So, as leaders in any kind of organization, we’re always looking to lead in certain areas and then have our team complete tasks in other areas, right? So, during a mission, when there are 1000s of decisions to be made, different procedures, you’re time lined up for the day, how do you know which of those decisions deserves your attention, and which ones do you intentionally leave to your team?
+
+Reid Wiseman
+
+What an unbelievably difficult question to answer. Maybe I shouldn’t have flipped my piece of paper over. It’s it’s a great question, and I first I think I would just love to talk about followership and teamwork, and and you said as the commander of the the mission that almost made me a little bit embarrassed because I really was just a member of this unbelievable crew. And at any time during this mission, every ship needs a captain, I get that. But I think if if we were sitting here with Victor, Christina, and Jeremy, I would hope they would say like we all were leading in that mission, and we all had a lot of responsibility at a lot of different times. And if you actually dissected the work in the mission, my hope would be that I was almost the fourth crew member, and Christina and Jeremy were running almost everything on orbit. Victor was running just about everything on ascent and entry. We worked really deliberately to build out this team and give everybody real meaningful work and meaningful responsibility.
+
+But back to your question of like, how do you know? You don’t know. I’ve spent a lot of my time in the cockpit of aircraft. I went through test pilot school. I think Navy test pilot school is probably the time when I started to most understand if you got 1000 things thrown at you at once, try to find the one thing that is life or death. Focus on that first, and then maybe the next like… 10 things that you got to get done soon, and then everything else can become… I wish Matt Dominick was here. It could become a “future Reid Wiseman problem.” He always says that. Like this is a “future Matt Dominick” problem. Like I’ll worry about that one tomorrow.
+
+But we developed a little saying in the crew. Victor brought it up the first time when we were trying to figure out. We’re the first humans to fly this. And our first action can be right, and it can save our lives, or it can be really wrong, and that could really hurt us. So we we develop like no fast hands in the cockpit, like go slow, let’s be cerebral and methodical about our decisions. But at the end of the day, if there is an emergency that needs an immediate action, something that must happen right now, we develop the mantra of “what is the first right thing you need to do?” And if you do that first right thing, you generally can get yourself out of most of those main issues. And so that was really what we went through every time we were faced with a challenge. What’s the first right thing? Let’s go slow and methodical. Let’s try to figure out what’s going on with the vehicle, what’s going on in Houston, and let’s talk through this. And we didn’t have a whole lot of of major emergencies on this on this mission, and everything that we did have pretty much turned out to be a false alarm. So maybe we weren’t challenged sufficiently, but that’s a long answer to a short question.
+
+Nilufar Ramji
+
+Oh, please. I think that you were challenged more than enough, and you executed well as a team. And one of the best parts about being a captain on a ship is actually having your shipmates work with you, and that’s the collaboration.
+
+Reid Wiseman
+
+I love my shipmates! Yeah, I love them!
+
+Nilufar Ramji
+
+That’s wonderful. So now everyone has talked about how successful the Artemis II mission was, how much we accomplished, how much we learned, how much we may have increased efficiencies. So tell us something about the Artemis II mission that the public may not know happened.
+
+Reid Wiseman
+
+Oh, it was so hard to get to our food. We we had this amazing food. We had like the best space food that any astronauts have ever eaten in space from our food lab here at Johnson Space Center. But it was just it was it was very hard for us to get to the food and the way you would want to eat. They’re just in these large bags, and breakfast is mashed in with lunch, which is mashed in with dinner, and so we had these great menus. But in the end of the day, you’re floating, and we had no way to store all this food that was coming out of this bag. Just like, like think if if you if you pack for a long trip and maybe you use one of those compression pockets where they take all the air out. So three days worth of clothes fits into like a baseball glove, you know, backpack. So think about that, and now think about removing gravity and your weightless. And you take scissors and you cut open that backpack, and now all that force is there, and everything that’s in that backpack now is expanding. Well, think if it’s 10 days worth of food, or in our case, three days worth of food, that’s a tremendous amount of packaging and food products that we just didn’t have anywhere to store. We didn’t have little ziplocks. We didn’t have ways to organize. We didn’t have ways to dig in and find all this food. So we were really behind timeline the first few days as these four humans are in this small vehicle living. It’s a magnificent vehicle, and once we hit our stride towards the end of the mission, it was very easy to work and live in there, and very comfortable. But those first few days, I think the thing that was just getting to me the most was was food, and then maybe a little bit of Outlook inefficiencies based on how we’re using the Deep Space Network with Outlook. Like I joked that with my kids, they would get my response to two days ago’s email today, because we would only get a sync once twice a day. So they would email me. I wouldn’t. I would get that on the next sync. I would reply on the next sync, and then they would get it on the next sync. So that’s like 48 hours from the time they email me until they get anything back. And so think about how out of sorts we were. Like I’m trying to answer questions from Monday, but it’s Wednesday, and then on Friday they’re reading my answers on Wednesday to their Monday email.
+
+Nilufar Ramji
+
+That’s like longer than a comm delay from here to Mars.
+
+Reid Wiseman
+
+By far! So anyway, that I mean that led to some humor, but it’s it was just an honor that we even had Outlook and that we could get email from our families. That’s cool.
+
+Nilufar Ramji
+
+That’s awesome. I keep thinking about the first couple of days of the mission when a hazelnut spread floated across.
+
+Reid Wiseman
+
+Are we not allowed to say Nutella? Yep, we took that. You know, NASA. I love them because they’ll take the labels off of water bottles in press conferences, but somehow no one took the label off that that bottle of Nutella.
+
+Nilufar Ramji
+
+I keep thinking about your food going everywhere, and that was one of the items of food that went somewhere!
+
+Reid Wiseman
+
+That was that was one of the first things we unpacked. It was in our flight day zero food kit, and I do love a good dessert.
+
+Nilufar Ramji
+
+I think we all have a sweet tooth.
+
+So tell us one thing that you may have worried about that the rest of the team it may not have been in the back of their minds. Was there some a particular thing that you maybe as commander as a as the fourth crew member…
+
+Reid Wiseman
+
+I love the way you just said that. I think people have asked me if I was scared on this mission, and and the short answer is yes, absolutely. There is you’re 250,000 miles away from home. There’s- if you don’t have a little bit of fear underneath the surface. I think something’s wrong with you, and I definitely felt that. I felt my heart rate go up a few times. I could tell I was… anxious isn’t the right word. I was comfortable, but I could tell it’s just the position that you’re in is it is one that is fear invoking. But I think the thing that maybe I was most worried about was, and it’s a false worry in hindsight, but just crew cohesion on this, and the stress of the situation. And I was not, I I was not adding to the crew cohesion. I mean, I’m a, I got all all the same faults that everybody else does, but I think that was the one thing. Like, I just want the four of us to stay on the rails, and keep this thing going through the mission. And I mean, goodness, we did.
+
+Like, oh, I mean, just couldn’t believe it. Even, even when we splashed down to the Pacific Ocean, the first thing that Victor said to me was, “Now I’m excited.” Because he had said the whole time, like, “I’m not going to be excited until we splash down.” And just the fact that we splashed out, we just gone from 39 times the speed of sound, we splashed out the Pacific Ocean, and he looks over at me and goes, “Now I’m excited.” I mean, all that stuff was just amazing. It was just gems, and Christina was doing it. Jeremy was doing it. I was doing it. Like we just all had these gems.
+
+A minute and a half into flight, Jeremy, we’re still on on powered flight, Jeremy just goes, “This is so cool.”
+
+Nilufar Ramji
+
+It is!
+
+Reid Wiseman
+
+And when we lifted off off the pad, the first thing that Christina said was “poyekhali” [поехали], which is what we say in Russia when we launch on a Soyuz. It’s like a long tradition, “we are going” kind of of thing. It just the the fact that the crew was on this elevated level of situational awareness and comradeship the whole time. It was just, it was just, it was truly surreal. It was. I just can’t believe how that all played out.
+
+Nilufar Ramji
+
+There’s so much job love that you’re, you’re exemplifying right now
+
+Reid Wiseman
+
+Moon Joy, job love, all of it!
+
+Nilufar Ramji
+
+All of it. Okay, so let’s go back in time. Let’s go back to 2009, and if today’s Reid could spend five minutes with the Reid who had just been selected as an astronaut, is there a particular piece of advice you would give him?
+
+Reid Wiseman
+
+Well, when we when we take this question all the way back to like teenage years and youth, I always say, “Dude, chill out.” That’s what I would tell me.
+
+I think this this might be an odd answer, but especially coming from the military, you move around a lot. You know, you’re always moving jobs. There’s, people are always coming and going, and you get super attached in the military because you’re just in this highly operational environment. You have to be attached to everybody. But those people that you go to attached to, they leave quick. In the astronaut office in 2009, I didn’t realize at that time, I should have, but I didn’t realize that I would grow old with my peers now. I would grow old with my fellow astronauts. I I just went to the wedding of a daughter of a fellow astronaut. I mean, our kids are getting married. I’ve watched us all get wrinkles and gray hair, and you know we press through life together. And I think if I could go back in ’09, I would just tell myself like it’s it’s more important to know the names of the kids of your classmates than it is to ace a test. I think that’s the advice I would give myself.
+
+Nilufar Ramji
+
+That’s really good advice. I like that. It’s very humble. So you talked about switching many jobs. You’ve had a couple of lives. You were a fighter pilot, a test pilot, an astronaut, Chief Astronaut, named commander. So, which of these roles, these titles, changed you the most as a person?
+
+Reid Wiseman
+
+Oh, I was going to totally bridge that question into my daughters Ellie and Katey, but I will honor your question for sure. Being the Chief Astronaut changed me the most. That was where Brené Brown came and talked to us. She’s I don’t know what you would call her, like a mentor, a self-help philosopher, and I’ve heard this phrase before, but it really hit home with her, which is “you got to be in the arena.”
+
+I was at a at a softball game for my kid, when they were really little, and there was a big metal sign on the backstop, and it said, “Have a complaint?” Question mark. “Have you volunteered?” Question mark. That’s kind of the same thing to me with being in the arena. Is, the chief astronaut, I have never served in a position that is more thankless than that job. Every decision you make, you’re leading 50 peers, accomplished humans. Many of them were older than me. They were more experienced than me. They were far smarter than me, and I’m just trying to do my best every day, just pedaling as hard as I can to make the right decision for the program and for the astronaut office. But even more importantly, for the astronaut. And sometimes the right decision for the astronaut, from their eyes is definitely wrong. But as the chief, you’re trying to look and go, “I know this is wrong for you from your eyes, but this is right for you from the umbrella.” And that’s a horrible thing to have to try to navigate. But that is how I tried to navigate that stuff. So I developed more when I was the chief in that in that two years than in in any other job, it is it is just a very challenging job.
+
+Nilufar Ramji
+
+Sounds like it stretched you in ways that you didn’t think you could be stretched.
+
+Reid Wiseman
+
+Yes.
+
+Nilufar Ramji
+
+And I did, just going back to my last question, as I said the question to you or asked it to you, I thought husband, father… So many titles. So I want to take a moment to acknowledge your family because as much as you contributed to this mission, your family did a lot to support you and be your champion. To give you to us to be able to make this happen.
+
+Reid Wiseman
+
+I want to tell one story on that. So thank you for that. I mean, my two daughters, they definitely showed up for this mission, which was which was almost, I would say surprising. But the one story I wanted to tell you is we were on the seventh day of the mission, and I was doing a video chat with them. And my older daughter really didn’t want me to fly this mission. My younger daughter did well, but it was intense for her while we were up there. I mean, watching your dad launch on an 8.8 million pound rocket, I I don’t know. I I think it’s it’s pretty much the hardest thing she’ll do in her whole life. But on the seventh day of the mission, my younger daughter said, “Dad, now I understand why you wanted to go on this mission. And when I realized that she had processed all of this, and that was the conclusion she came to. Honestly, victory for life. Like I’m good with everything.
+
+Nilufar Ramji
+
+You’re making me so emotional right now as a parent.
+
+Reid Wiseman
+
+It’s a powerful moment.
+
+Nilufar Ramji
+
+It really is. Wow. Okay, so just, uh, taking a breath for a moment…
+
+Reid Wiseman
+
+I know I’m exhausted. It’s exhausting.
+
+Nilufar Ramji
+
+You come up with the best sound bites. Wow!
+
+Reid Wiseman
+
+They do some good editing over there on this soundboard.
+
+Nilufar Ramji
+
+Amazing. So, tell me, what responsibility surprised you most as commander of this mission, fourth crew member? I’m gonna keep going back to both of those titles.
+
+Reid Wiseman
+
+Yeah, I really like it. I guess… it’s it is hard… It’s hard to go from being the Chief Astronaut where you got your fingers plugged in all across the agency, and I’ve got every agency leader is on my cell phone. I have their cell numbers. They’re just, they were so approachable, and that was how I solved problems. And then I become the commander of Artemis II. And and initially, my feeling was that I was there primarily because I did have all those connections, and I did just go through a couple years of building all of these contacts. And now we’re going to go do something for the first time and I can really get a lot done from this vantage point.
+
+But what I learned very very quickly is that that cuts the astronaut office out of the loop. It cuts flight operations out of the loop, and those are two really important elements. But the thing that caught me off guard was I was cutting my crew out of the loop, and I still do it too much to this day. Like sometimes I’ll just fire off a text or an email to somebody because something’s on my mind, and and now I forget the platform from which we speak. And you can create a lot of drama doing that.
+
+But it was there was one one moment in particular where I was in Building 5 and we were getting ready to launch Starliner Crew, and in the Boeing Starliner Simulator is in Building 5. It’s right next to our Orion simulator, and the Starliner crew when they would walk to their simulator, there’s a huge banner, and I mean, like NASA, huge of the Artemis II crew, and you could count the pores in our faces. This thing was like 30 feet tall.
+
+Nilufar Ramji
+
+Yes, I’ve seen it.
+
+Reid Wiseman
+
+And so, when the Starliner crew would walk out to their simulator, all they would see is us. And I didn’t like that, and they didn’t like that either. But that was not what we stand for. Myself, Victor, Christina, and Jeremy, we are astronauts with our brothers and sisters in the astronaut office. We work in mission control. We want we want to help families on launch and landing. Like that’s our core values. This this giant banner was not in our core values. And so I shot a text message off to the Orion program, and I’m like, I want that banner down tonight. I want it gone. I don’t like it. I want it removed.
+
+Well, that created a lot of drama in a lot of different avenues because it did get the banner down, but it was just not the right way to go out about the business. But then I was sitting with my crew, and I told them what I had done. I think it was Christina, and she’s like, “Hey, next time, no problem if you do that, but just tell us because we can help you and we can advocate for you and we can bring about a different way to maybe go about that. Like, it doesn’t have to just be you throwing down this gauntlet. Like, we’re all in this together.” Man, huge learning moment for me. Huge.
+
+Nilufar Ramji
+
+There’s lots of lessons in leadership that you’re imparting on us today, as we hear from you, so not only are we learning about what it was like firsthand during the mission, we’re also getting some really cool tidbits here. So appreciate that.
+
+Reid Wiseman
+
+You’re welcome.
+
+Nilufar Ramji
+
+Okay, so you’ve been on the podcast in the context of Artemis II a couple of times. You were on when you were first announced as a crew with your crewmates, you were on again just before flight. And when we’ve talked to you previously about Artemis II, you said that you’d like Artemis II to be seen as a stepping stone of exploration rather than its own milestone. Imagine someone writing the history of Artemis 50 years from now. We just passed the 57th anniversary of our Moon landing, so just thinking about that a little bit. What do you hope that they will say that your crew proved?
+
+Reid Wiseman
+
+There’s a lot of answers to that. First and foremost, NASA Artemis International Collaboration proved that the world is hungry for big, grand, bold things. There is still tremendous hunger out there. There’s a deep sense of need of cooperation. I don’t think we need alignment, like differences are powerful. It’s not a problem to have differences. It’s a problem when we have differences and we cannot talk to one another and pull each other up. Like I am vastly better three years later because Victor, Christina, and Jeremy didn’t stay silent. They spoke up, and we pulled ourselves together to a higher place. And we still have fundamental differences, but we talk about them and we honor each other where we are. So that, to me, that’s number one.
+
+What I would hope they would say about Artemis II is just potentially first step in the Artemis generation. Like we saw a crew who looked different, came from different backgrounds, do something together and do it well, with a giant team on the ground, and that team looked different, and they were together, all doing this thing together. And everyone was bringing, if you’ve got a strength, if you have a gift, bring it to this team. We will use it, period. And I hope that that is what this foundation of Artemis II just did. We actually let the world see that this team is together. Success- and I don’t mean the crew. I mean the team. We are together. We’re exceptional at what we do, and if you have a gift and a talent, bring it because this team needs it.
+
+Nilufar Ramji
+
+I love that. Okay, now let’s come back to the present, and let’s talk a little bit about your family.
+
+Reid Wiseman
+
+I can’t wait to answer a question, and you’re like, “Nope, that wasn’t a good one.”
+
+Nilufar Ramji
+
+Not yet, not yet, and I only have a few more questions for you. So, has anyone in your family described your career in a way that may have surprised you?
+
+Reid Wiseman
+
+Wow, I think you have found me speechless.
+
+Nilufar Ramji
+
+Yes, yes, goal accomplished.
+
+Reid Wiseman
+
+It is it is a very awkward thing to sit there before you’re getting ready to like stand up and give a talk and to hear your biography being read because I, I’m just I just try to be a good, a good person, try to have a good impact, and you hear all these accolades being thrown out. It’s like goodness, like from the outside that’s pretty impressive, but from me on the inside, having lived it, I just I just woke up every day and tried really hard, and where I had faults, I tried to find, I tried to find somebody or something that would help me fill in these problems. And I’m not good at everything, so I need people around me that are good at other things that make us all better.
+
+But maybe, maybe just a little bit of humor was when I first got assigned to this back in April 3, 2023. My younger daughter was looking on famous birthdays, and as long as my birthday was getting more famous, she was happy with the mission. But if I stagnated, she’d be like, “Dad, you got to get up there. You got to go give a talk or something because you’re slipping, and we need you up there.”
+
+Nilufar Ramji
+
+I love that.
+
+Reid Wiseman
+
+So, you know, getting to do this with my kids, it was fun because they keep you humble. They they bring some humor and they bring like there’s a lot of fear too, an you step back every now and- I watched Interstellar about a year and a half ago, and I get to the end of Interstellar, and I almost called Joe Acaba, who is the Chief Astronaut, and said, “I’m off the mission.” Like it was just it was so emotional. I was like, “Oh my gosh, I can’t put my kids through that! Like just get me out of this thing! I don’t want to go do this.” So there there’s a lot. This journey has been, it’s been awesome, but it it’s been intense too.
+
+Nilufar Ramji
+
+Good, good way to describe that. I can’t believe I left you speechless.
+
+Reid Wiseman
+
+Yeah, that was good. Here, high five on that one.
+
+Nilufar Ramji
+
+I’ll never forget that. Yes. Okay. Fun question. When you walk into Orion today, where is the first place your eyes go?
+
+Reid Wiseman
+
+Oh, first place my eyes go is, over to the port side there’s like a little medical kit area, but that is where our food warmer is. But when you’re entering the vehicle, if you look across, that’s kind of where you first go. But we were just at Kennedy Space Center. We got to see our spacecraft sitting in this building called the MPPF processing facility. And we had been in there. We, that was the first place we ever got inside of our spacecraft when it was on its way to the launch pad to do some testing on our environmental control life support system. And now we saw it in the corner, and it’s being dismantled. All of the exterior is removed. They let us go look inside. I’m going to get emotional here. They let us go look inside. I was the first one up, and I just peered in the hatch. We couldn’t get in, and my first thought was, “It’s gutted.” Like there’s just all the panels removed, the seats are gone, the displays have been pulled out, all the fabric that protected all the wiring is gone. You can see it’s innards exposed.
+
+But then I I look to the left, kind of by the windows, and there’s this 3D printed tan covering over some wiring, and there is still Velcro there. And I looked over at that, and I could think about where we were putting our computers on lunar flyby day, and just all the words that were coming from the crew and all the sights that we saw. That was emotional.
+
+And then the thing that made me back away-I couldn’t look at it. I couldn’t look at it anymore. Ah, this is amazingly emotional. I looked up right at the hatchway. I looked up, and there is a ventilation system with two little vents that come out, and they-they have these little 3d printed baffles on them, so you can reorient the airflow. And I looked at those, and I started crying. I had to back away from the vehicle, from one memory only, and that was where we all would line up when we were doing our public affairs events. And those vents would blow Christina’s hair up into my face, and I would have to sit there and move it out of the way. And I just thought about that. I thought about those vents and the four of us and what we went through on that 9.2 day journey. And it’s you know simple human emotions, the simplest things of of memories and recall and and love and joy, and they just they were hitting me overwhelmingly. They’re hitting me now! And I just I didn’t want to look at it anymore. What that vehicle gave to us was really special. What this team let us go do was incredible.
+
+Nilufar Ramji
+
+I think, I think that you made it special for all of us on the ground here too. So we are extremely thankful for you as a crew. What you did for this mission, for the agency, for the world was- you knocked it out of the park.
+
+Reid Wiseman
+
+We were honored to get the chance.
+
+Nilufar Ramji
+
+Congratulations! That was that was fabulous.
+
+So now, on the record, what’s something the public consistently misunderstands about astronauts that you’ve never really had a chance to correct?
+
+Reid Wiseman
+
+Oh, I try to correct it all the time. We’re normal people! We are normal people that that through a few fortunate strokes of luck, we got into this very unique position, and we get to go do something that, as you can tell, is it is very special.
+
+I, the thing I most see is people expect to introduce themselves to introduce themselves to me once, and I’ll remember them forever because I’m an astronaut. I’m perfect. I mean, I I struggle to remember what I ate for breakfast in the afternoon or the morning of the day it happened. You know, I just we we are all very different people in the astronaut office, and it is a very rich tapestry of of human lives and of way we approach problems. But when you put us together, we we are a very cool group of people. We have a very special way of thinking about problems and solving them because we’re put in these really unique positions. And I think sometimes you got to go do these really unique, crazy things to get to the place that we get to.
+
+It’s not because… We get asked to talk a lot, and I think we have a great message to share. But the reason we have a great message to share is because we just did something that was so unique that we have a slightly novel way of thinking about situations and problems, and way of solving them, and how to treat people, and how to how to look at machinery and hardware and large teams because we just were immersed in that. And you see it in a bunch of other places too, like championship athletics. You see that all the time. Like they they’ve been there, they’ve done it, they’ve been in the arena to bring that one back in. They’ve just gone and done these things, and so they do have something really cool to tell. Sully Sullenberger, who landed a commercial airliner in the Hudson and saved all those lives. I could, I’ve heard his exact same talk three times. I could go hear it 300 more times because I pulled different things out. But that was a guy who was there, did it, and he’s got a story to tell. And so, I just think people put us on this pedestal that is unrealistic. The pedestal to put us on is we got lucky and we went and did something very special, and now we should share that. And we should people should listen if they if they care to try to learn from us.
+
+Nilufar Ramji
+
+You also worked incredibly hard to train for this mission and to demonstrate the capabilities of the vehicle. You human rated the vehicle thanks to all the contributions you made. So, really appreciate everything, and thank you so much for being on the podcast today, Reid.
+
+Reid Wiseman
+
+Love it. These are always fun. Thank you.
+
+Nilufar Ramji
+
+Christina. Welcome back. It’s always a pleasure to have you here, but it’s been four months since your historic mission, and we have a bunch of questions we want to ask you.. So tell us first off what it was like.
+
+Christina Koch
+
+Wow. Well, I’ll first start by saying it’s great to be back with you, and it’s just a pleasure to always chat and share the mission, especially in a Johnson Space Center podcast about everything we do here.
+
+It was exquisite. Honestly, I said a long time during our training that the mission had already started because working with the teams through the really tough problems and trying to figure out how to solve them together was an amazing experience, and for me that was the start of the mission. But even though that was the time of my life, the mission itself was even more exquisite, and just so much better than any of us could have imagined on every single front. The things that we saw, the teamwork that we got to have with the ground teams, with everyone on planet Earth, and between ourselves and our crew was just phenomenal. The absolute honor and privilege of a lifetime, and hopefully, the rest of my life will be spent trying to bring back what we saw and felt.
+
+Nilufar Ramji
+
+That is incredibly inspiring. And you said that you know the mission started when you began training here on Earth, but was there a particular moment that you felt like, okay, this is this is real, or it feels even more real now.
+
+Christina Koch
+
+Well, I’m guessing my crewmates would also say this. It was when the solid rocket motors lit and we started moving. Because no one could have thought that on our very first time climbing into the rocket to attempt a launch that we would launch about 10 minutes into the window. What an amazing testament to the teams and how much we had learned in our previous wet dress rehearsals and all of the training that we had done.
+
+But as I mentioned, I really would try to impress upon my crewmates, myself, and the trainers that we had that the mission had already started, because when you are doing something for the first time that’s never been done before, and you’re figuring the things out that there’s no answer key for, there’s never going to be a moment that you feel like we’re 100 percent right. We’ve definitely done enough and not too much. We were just writing that as we went, and that privilege of the uncertainty that we had to work through was just that was the mission. And it especially because it was only nine days in space, it makes it all the more meaningful that for two years prior to those nine days, we got to figure it out with the most dedicated and talented and excellent team on planet Earth.
+
+Nilufar Ramji
+
+You had a wonderful team on the ground. Nine days, yes. Teeth clenching nine days for a lot of us on the ground, sitting on console, being like, “Are they okay? Is everything going to go good this day?” I think I was personally most nervous on splashdown day, so that was just really, really proud of you guys and all of the teamwork you exhibited over the course of the mission, but then you were, you’re so humble in how you recognize the broader team that took you to where you went.
+
+You have many titles: astronaut, engineer, human that’s traveled farthest away from Earth. I don’t know there- record breaker, historic mission, astronaut. There’s so many different titles that you have: wife, you have aunt, you have friend, colleague. So with all of these titles that you have, I want to talk a little bit about your engineering title. So when you’re learning a new spacecraft like Orion, what’s the first thing that you get curious about from an engineering perspective, not as an astronaut, but particularly as an engineer.
+
+Christina Koch
+
+I actually was curious as an engineer from the time of Artemis I. I loved learning about Orion. I had a little familiarization session about the displays and how we interacted with the telemetry and the controls way in the Artemis I days, so I was interested then.
+
+The coolest thing about spaceflight is how many different problems you have to solve that feel so new to a Earth-bound species that’s used to problem problem-solving on planet Earth in 1g with a you know radiation environment that we have here, with the not having to have everything be very weight limited, and to take all of those normal problems about how to stay alive and translate them into the microgravity and vacuum of space environment is just so fascinating. How how do we solve going, hitting the atmosphere at Mach 39 and making it down to the ground? How do we solve not only providing us breathing air, but getting rid of our CO2? And how much of that, you know, as an electrical engineer, we have control systems. We talk about closed loop control and just you know whether systems are passively controlled or actively controlled, and how do we implement redundancy in flight software? Those kinds of things were so fascinating to me.
+
+One of them, another one that came out during our training was controlling our entry interface point. Even though we have things like the spacecraft is venting our CO2, it’s venting our other waste, it’s changing its trajectory for all these different reasons because of the gravity of the Moon isn’t perfect. And how do we correct for that and still enter the atmosphere at exactly the right point, exactly the right angle, so that our heat shield can work perfectly? It there’s really just not something. There’s nothing I wasn’t fascinated with. I had to actually hold back my questions in all of our classes because I wanted to deep dive everything, and luckily, my my crewmates were very patient with me. And when I wanted to deep dive, sometimes we had to just zoom out a little bit to the operationally relevant. But yeah, it was it was just it was the time of my life for an electrical engineer.
+
+Nilufar Ramji
+
+Teamwork, the engineering pieces. There’s another title that you’ve given yourself infamously as well, which is the space plumber title.
+
+Christina Koch
+
+Yes.
+
+Nilufar Ramji
+
+So there were some issues with the toilet in the first days of the flight, and you famously became the crew’s plumber over the course of the mission. So we all know working, a working toilet is incredibly important, especially when you’re flying for multiple days. So, was there a lot of pressure in getting the system working again, or was this just part of the journey for you?
+
+Christina Koch
+
+Well, it was a little bit of both. I think when you’re an astronaut, there’s always a sense of pressure on you because you never know when you’re going to be called upon to perform in the highest stakes situations, so that thought is always in the back of your mind. But then there’s also the planned times when you have to perform, and knowing that literally seconds after main engine cutoff, I was going to get out of my seat and go activate the toilet system was definitely something I paid a lot of attention to. I did a lot of deep dives on what I was supposed to do, I had the procedure practically memorized. And I had gone through, it was kind of one of the very last things that I did that I requested extra training to do the toilet activation procedure in my suit, which I in our mockups, and all that was just to become accustomed to every single thing in a flight-like way. So actually, setting it up was the part I knew to be nervous about. Having to fix it was the part I didn’t know I should be nervous about.
+
+Obviously, when it you know when it didn’t start up initially, we let the ground teams know. And truth be told, though, I didn’t do a lot of actual mechanical fixing. There were no wrenches involved. All I did was really, yeah. All I did exactly. I love tinkering. I tried to get more tools on Orion, but in the end, I just did what the ground teams told me to do and started it up in a little more gentle way, and it worked great. So, though I would have loved to, you know, go elbow deep with some wrenches in there, it was, I have to give all credit to the ground teams for sure. But I did want to own the fact that I was toilet girl as soon as managing cutoff happened because you know you got to be proud of the of the roles that you’re given. Exactly.
+
+Nilufar Ramji
+
+When you’re describing the ground team troubleshooting with you, I’m just thinking of an IT support desk saying-
+
+Christina Koch
+
+One hundred percent.
+
+Nilufar Ramji
+
+-is it plugged in? Try plugging it like unplugging it and plugging it back in.
+
+Christina Koch
+
+We we often do start there when we call the ground. That is 100% true.
+
+Nilufar Ramji
+
+So people often describe exploration as exciting. It is exciting. Were there moments during the mission that felt surprisingly ordinary to you?
+
+Christina Koch
+
+All of them.
+
+Nilufar Ramji
+
+All of them? Okay. Good.
+
+Christina Koch
+
+You know, human spaceflight is just the most fascinating mix of the mundane and the majestic, the sublime with the everyday, and I think that’s why it’s so important that we have humans in spaceflight because we bring that humanness to these magical places that we can’t imagine are even out there. So yes, what did we do on the far side of the Moon first? We had a cookie. And I love it because that’s what you do when you’re trying to commemorate a special moment. Yes, it felt right to us, and you know all the funny moments. I joke that the most common phrase uttered inside the Orion capsule was “Don’t move your foot.” And the reason is that it was so small that we were constantly keeping ourselves in place by like sticking a toe under a handrail or sometimes even between two stowage bags in the quote floor, but that’s where all of our stuff was held too. So if I needed to go grab a hairbrush or you know a piece of medical equipment. I usually had to tell one of my crewmates, “Hey, don’t- you’re going to feel me grabbing something under your foot, but don’t move your foot. You’re fine.” And I mean, that’s so- Just goes to tell you, imagine doing a nine day road trip in a minivan, you know, with your three best friends. There’s going to be a lot of human going on there.
+
+Nilufar Ramji
+
+A lot of human.
+
+Christina Koch
+
+Meanwhile, out the window is planet Earth hanging like-
+
+Nilufar Ramji
+
+Stunning views.
+
+Christina Koch
+
+Just, exactly, electric blue, a lifeboat in the universe, undisturbingly just calling out as the home of everything you’ve ever known, and then you’re also staring down phenomenal shadow and light craters on the far side of the Moon. A scene that looks exactly like the Moon you know, but also totally different. And those things are always happening side by side.
+
+Nilufar Ramji
+
+So we are talking about the far side, and that begs a question: What was it like to see some of those features that humans have never seen before? Tell, take us on that journey.
+
+Christina Koch
+
+Well, it was more amazing conceptually than I expected. And that happened actually really early in the mission. At one point on the way out, because we kind of took a long arc, we didn’t just drive straight to the Moon. So the view of it changed very early when we were kind of seeing it from farther than what we would call like the west limb of our view of it from Earth. And when you looked at the Moon, and it looked about 20% different, but it was so different. It was just you knew you were viewing it from a different part of our solar system, our Earth-Moon system, because it just wasn’t the moon we knew. But what we were seeing was always there. And something about that. The only way I can explain it is by saying the Moon didn’t need us to see it. It was always there. It was always as beautiful, just like the eclipse that we saw. That would have happened even if we, our eyes, weren’t there to witness it. And yet, it was the most phenomenal thing that I have ever witnessed in my entire life, and that I probably ever will witness. And just this-it just opened up this proof of concept that the whole universe is truly out there. That if we could be at the same spot as those amazing images from the Hubble or the James Webb Space Telescope, we would also see them. It’s all out there. And that concept was actually the most striking to me. The beauty of the Moon, also striking in just its sheer gorgeousness. The the just desolateness, the black and white, the fact that it looked totally different than looking at planet Earth, the fact that along the limb you could actually see the relief of the mountains and the crater rims against the blackness of the universe.
+
+Nilufar Ramji
+
+Wow!
+
+Christina Koch
+
+Because it doesn’t have an atmosphere.
+
+Nilufar Ramji
+
+Right!
+
+Christina Koch
+
+So it was. It also called our name. It was just begging to come explore. It was begging to walk in those canyons, and it was just absolutely phenomenal. It was, it was hard to concentrate on anything else.
+
+Nilufar Ramji
+
+You said that all of these magnificent views, these features, these places in our solar system are there, but it really takes somebody, especially a person, going out there to bring back and tell that story, which is very inspirational. We’ve always been in awe of the universe. We always look up at the night sky. So you going there and then bringing those stories back is incredibly- it’s incredibly inspiring. And also, I think you need to add poet to one of your other other titles.
+
+Christina Koch
+
+Well, I’m not sure about that, but definitely what we saw inspires poetry. Whether it’s something you can turn into words or not, it’s poetry. Even if it’s just in your mind. It’s absolutely beautiful. And I agree, sending people out, even if you compare the composite images of our lunar orbiters with a photo taken by a camera held in one of our hands, it is different. It’s different because the lighting is real when it’s not a composite. And you don’t have to correct for things like the polar regions, and that alone kind of proves the point that when we see it with our own eyes, it’s seen in the same way that we see everything else on Earth, and somehow that allows us to just compare the two and see the two as two parts of the same universe.
+
+Nilufar Ramji
+
+So there were. I want to switch gears and talk a little bit about pictures. There were several iconic, memorable photos that the crew took, that the world got to see over the course of the mission. But there is one in particular that’s now an iconic photo that was taken by Navy photographer August Clawson, and you posted it on your Instagram. You’re in your orange OCSS suit. The light is golden. You had just gotten onto the recovery ship just after splashdown, and then you had sat down. What was that moment like? Do you remember? Can you recall that?
+
+Christina Koch
+
+You know, Nilufar, I have seen that photo so many times, and I have wondered what I was thinking. But as you were asking that question, I finally remembered.
+
+Nilufar Ramji
+
+Yay! Great timing.
+
+Christina Koch
+
+I was, I think it was maybe I’m not even sure, I think I might have been alone in sitting in the side of the helicopter. Maybe they walked Victor to the med bay first. I’m not sure. Maybe he was just a couple feet away from me. I don’t know. But in that time, I had already started to become afraid that the mission would slip away, and my memories of it because it was so amazing, and to be in a new environment back on Earth that was so different than inside Orion. I think I knew it was a place I could never quite ever get back to, and I just wanted to stay in those memories and not let them slip away. But I knew that as happy as I was to get back, which believe me I was very happy, I was also reflecting that things that that are you know in your past, no matter how amazing and memorable they are, they do become memories.
+
+Nilufar Ramji
+
+You’re making me cry. That was, that was beautiful.
+
+People always ask you about your records, but we’ve talked a lot across several interviews about the records you hold. But is there an achievement you’re personally more proud of that the public almost never asks you about.
+
+Christina Koch
+
+Hmmm… Gosh. Well, you’re right, I don’t highlight records because even though I’ve been I’ve been schooled, rightfully so, that they are important for people to understand, to be inspired by, to understand what the state of the art is, to see themselves reflected. But yeah, there are. I mean, I think the struggle. There’s so many struggles that aren’t necessarily a part of the public record. One of them that comes to mind on this day, where as we record this, my crewmate Jessica is doing a spacewalk, and so is Anil Menon, her, our, our other colleague. And doing several spacewalks after having been in space for over 300 days-that was probably one of the hardest professional things that I’ve ever done. But I’ve never, I’ve never talked about it, or I’ve never been asked about it.
+
+Nilufar Ramji
+
+Tell us a little bit more about it.
+
+Christina Koch
+
+Well, I think that after having been on board the space station for that long, you start to feel, although it feels like home, and you have to kind of maintain this vigilance to remind yourself that you’re in this austere environment. You start, or I started to realize, wow, I’ve been really lucky in my 300 days here that nothing has gone wrong. And you start to wonder, and I’ve talked to like you know we have these performance psychologists, and they said this is a very common feeling for people that are doing like their last combat run in a deployment, where you start to think, oh no, I’ve got this one more thing to do. Is my luck going to run out on this? And to, you know, have gone through both the deconditioning of zero gravity, despite all the exercising that we do every day on station, and then coming up against literally only two weeks left to my mission and having to kind of ramp back up to maximum concentration, performance, mental and physical fortitude to do a series of spacewalks. That was that was something I had to dig deep for, for sure.
+
+Nilufar Ramji
+
+That’s definitely something that you want to grow into, and I’m glad that you had the time to do that. And you spent you talked about the number of days you spent in space, and you’ve also been so far away from Earth. Has that changed your definition of home?
+
+Christina Koch
+
+I have done a lot of adventures and experiences away from home, and I think that the important thing that it’s taught me is that home is really your loved ones.
+
+Nilufar Ramji
+
+Yes.
+
+Christina Koch
+
+And it’s just as simple as that. I have definitely been someone that could have been described as like an experience chaser, but what I’ve learned very early on is that you should be a relationships chaser, and that the relationships you have both with your loved ones and new people that you meet are far more important than any experiences that you’re getting under your belt just to see a new place.
+
+Nilufar Ramji
+
+I completely agree with you on that. I want you to take us home when you think about all of the young people who watched you on this historic flight around the Moon, and they thought maybe one day I could do that too. What’s your hope for them, and what would you like to say to them?
+
+Christina Koch
+
+Well, my hope for them is that they get to do everything that gives them fulfillment. I used to say find your passion, and more recently, I have changed kind of how I view that into find your fulfillment. And find something you can actually do the slowest for the longest and still truly love it. And so I think that’s what I would hope for people chasing their dreams, maybe at the beginning of their career, or maybe just in the very end and wanting to chase a new dream. The thing that gives you satisfaction and meaning, not necessarily because it’s what everyone else says is an achievement or success, but because it truly makes you feel wonderful, and it’s not a flash in the pan passion that you’re going to achieve and then drop. It’s something that you would literally do forever if you could. That’s what I hope for them.
+
+And how do you get there? You do the things that scare you, you don’t go away from the direction of things that you think you might not be able to do. You go toward that direction because, in the end, that’s how you contribute most to the world, and that’s how you get the most satisfaction out of achieving things. Is when you’ve done something you didn’t even think that you could.
+
+And the last thing I would leave them with is supporting the people around them. When we think about lifting up everyone, that’s when I have found that, as a collateral, collateral thing from focusing on that, you also are lifted up. But again, the most good for the whole world is achieved. And you also can have some pretty great insights about your own fulfillment when you stop thinking about it so hard and you start trying to make sure that everyone around you is also fulfilled.
+
+Nilufar Ramji
+
+That is beautifully put
+
+very well said. And I have two little kids, a four and a six year old, so I would like to let them hear this because you said this in a way that my heart was was just really it was really feeling what you said right now.
+
+Christina Koch
+
+Those are great ages.
+
+Nilufar Ramji
+
+It’s it’s a beautiful age.
+
+Christina Koch
+
+That’s phenomenal.
+
+Nilufar Ramji
+
+So Christina, we unfortunately have run out of time with you, but thank you so much for being here on the podcast. We can’t wait to see what you do next.
+
+Christina Koch
+
+Thank you.
+
+Nilufar Ramji
+
+And always appreciate having you on.
+
+Christina Koch
+
+Thank you for having me and for this great conversation.
+
+Nilufar Ramji
+
+Thanks for sticking around. I hope you learned something new today.
+
+You can check out the latest from around the agency at NASA.gov. And you can find out more about the Artemis program at nasa.gov/artemis.
+
+Our full collection of episodes and all of the other wonderful NASA podcasts can be found at nasa.gov/podcasts.
+
+On social media we are on the NASA Johnson Space Center pages of Facebook, X, and Instagram. If you have any questions for us or suggestions for future episodes, email us at nasa-houstonpodcast@mail.nasa.gov.
+
+These interviews were recorded in July and August 2026.
+
+Our producer is Dane Turner. Audio engineers are Will Flato and Daniel Tohill. And our social media is managed by Leah Cheshier and Kelcie Howren. Houston We Have a Podcast was created and is supervised by Gary Jordan. Special thanks to Brandi Dean and Shaneequa Vereen for helping us plan and set up these interviews. And of course, thanks again to Reid Wiseman and Christina Koch for taking the time to come on the show.
+
+Give us a rating and feedback on whatever platform you’re listening to us on, and tell us what you think of our podcast.
+
+We’ll be back next week.
+
+3… 2… 1… This is an official NASA podcast.
