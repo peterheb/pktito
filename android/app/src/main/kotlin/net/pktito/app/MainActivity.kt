@@ -457,8 +457,12 @@ class MainActivity : ComponentActivity() {
             // FE has it on its side, 1205 by 753 less its bars, and not
             // upright, 753 wide
             val sided = maxWidth >= 840.dp && maxHeight >= 480.dp
-            // the keyboard's room, inside the side's decision
-            Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.ime)) {
+            // the keyboard's room, inside the side's decision: what is left
+            // of safeDrawing once the root's bars are taken, so that the two
+            // come to the bars or the keyboard, the more, as the keyboard
+            // slides (ime alone would pad nothing while it is under the
+            // navigation bar, the root's bottom then the bar less it)
+            Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
                 if (about)
                     About(version, onBack = { about = false }, onLink = ::link)
                 else if (t.step.isEmpty() && setup)
