@@ -40,6 +40,8 @@ fn main() {
     if !decode::binder_pool() {
         eprintln!("pktito-cli: no binder thread pool, which Android's decoder answers through");
     }
+    // its downloads say they are pktito-cli's, not the window's
+    model::set_client("pktito-cli");
     let args: Vec<String> = std::env::args().skip(1).collect();
     std::process::exit(match run(&args) {
         Ok(code) => code,

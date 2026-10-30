@@ -12,6 +12,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::OnceLock;
 use std::time::Duration;
 
 pub const DEFAULT_BASE: &str = "https://models.pktito.net/";
@@ -214,6 +215,35 @@ pub fn download_url(e: &Entry) -> String {
     format!("{base}{}/{}.pkf", &e.sha256[..12], e.name)
 }
 
+/// The program user_agent names: the window's "pktito" (Android's too)
+/// unless another of the app's programs says it is the one (pktito-cli).
+static CLIENT: OnceLock<&'static str> = OnceLock::new();
+
+/// This program's name in its downloads from now on.
+pub fn set_client(name: &'static str) {
+    let _ = CLIENT.set(name);
+}
+
+/// What a download says it is (User-Agent), "pktito/0.9.4 (Windows; arm64)":
+/// the program, its version and the system, for the CDN's logs to count the
+/// app's downloads by, where ureq's own ("ureq/2.12.1") said only that some
+/// client asked. Nothing in it tells one computer or person from another.
+pub fn user_agent() -> String {
+    let os = match std::env::consts::OS {
+        "macos" => "macOS",
+        "windows" => "Windows",
+        "linux" => "Linux",
+        "android" => "Android",
+        other => other,
+    };
+    let arch = match std::env::consts::ARCH {
+        "aarch64" => "arm64",
+        other => other,
+    };
+    let client = CLIENT.get().copied().unwrap_or("pktito");
+    format!("{client}/{} ({os}; {arch})", env!("CARGO_PKG_VERSION"))
+}
+
 /// The server's name in an address, for saying which one cannot be reached.
 pub fn host(url: &str) -> &str {
     let rest = url.split_once("://").map(|(_, r)| r).unwrap_or(url);
@@ -377,6 +407,7 @@ fn fetch(
     // a connection that goes quiet is a connection lost: without a read
     // timeout, a network that goes away mid-download leaves it waiting
     let mut agent = ureq::AgentBuilder::new()
+        .user_agent(&user_agent())
         .timeout_connect(Duration::from_secs(15))
         .timeout_read(Duration::from_secs(30));
     if let Some(p) = proxy_for(&url) {
@@ -565,6 +596,21 @@ mod tests {
         choose_file(&data, &own).unwrap();
         assert_eq!(load_settings(&data).model_file, Some(own));
         let _ = fs::remove_dir_all(&data);
+    }
+
+    #[test]
+    fn a_download_says_its_program_version_and_system() {
+        // the shape the CDN's logs are read by: "pktito/0.9.4 (Windows; arm64)"
+        let ua = user_agent();
+        let (program, system) = ua.split_once(' ').unwrap();
+        assert_eq!(program, format!("pktito/{}", env!("CARGO_PKG_VERSION")));
+        let system = system.strip_prefix('(').and_then(|s| s.strip_suffix(')'));
+        let (os, arch) = system.and_then(|s| s.split_once("; ")).unwrap();
+        assert!(
+            ["macOS", "Windows", "Linux", "Android"].contains(&os),
+            "{ua}"
+        );
+        assert!(["arm64", "x86_64"].contains(&arch), "{ua}");
     }
 
     #[test]
