@@ -66,7 +66,7 @@ private struct Intro: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title).pk(PkType.lead).foregroundStyle(Pk.ink).accessibilityAddTraits(.isHeader)
             if let text {
-                Text(text).font(.custom(PkType.body.face, fixedSize: 15)).foregroundStyle(Pk.ink)
+                Text(text).font(PkType.body.font(15)).foregroundStyle(Pk.ink)
             }
         }
     }
@@ -155,50 +155,87 @@ private struct Card: View {
     let choose: () -> Void
     @State private var open = false
 
+    /// the languages' words as a link, which opens their list, not a page
+    private static let languages = URL(string: "pktito-ui:languages")!
+
     var body: some View {
         let many = o.entry.languages.count > 1
-        let among = many && o.entry.languages.contains(ownLanguage) ? L("models_among", languageName(ownLanguage)) : ""
-        Button(action: choose) {
-            VStack(alignment: .leading, spacing: 2) {
+        let size = Text(o.have ? L("setup_on_device") : L("setup_size", mb(o.bytes)))
+            .font(PkType.stamp.font(13))
+            .foregroundStyle(Pk.inkMuted)
+            .lineLimit(1)
+        VStack(alignment: .leading, spacing: 2) {
+            // the size under the name where there is no room beside it
+            ViewThatFits(in: .horizontal) {
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    Radio(on: on).frame(width: 18).alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
-                    Text(label(o.key))
-                        .font(.custom(PkType.figure.face, fixedSize: 16))
-                        .tracking(-0.16)
-                        .foregroundStyle(Pk.ink)
+                    radio
+                    title.fixedSize()
                     Spacer()
-                    Text(o.have ? L("setup_on_device") : L("setup_size", mb(o.bytes)))
-                        .font(.custom(PkType.stamp.face, fixedSize: 13))
-                        .foregroundStyle(Pk.inkMuted)
-                        .lineLimit(1)
+                    size
                 }
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack(spacing: 0) {
-                        Text(o.name + " · ")
-                        if many {
-                            Button { open.toggle() } label: { Text(about(o.key)).underline() }
-                                .buttonStyle(.plain)
-                        } else {
-                            Text(about(o.key))
-                        }
-                        Text(among)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        radio
+                        title
                     }
+                    size.padding(.leading, 30)
+                }
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                // one paragraph, which wraps as a sentence does
+                Text(line(many))
                     .pk(PkType.small)
                     .foregroundStyle(Pk.inkMuted)
-                    if many && open { Languages(o: o) }
-                }
-                .padding(.leading, 30)
+                    .tint(Pk.inkMuted)
+                    .environment(\.openURL, OpenURLAction { url in
+                        guard url == Card.languages else { return .systemAction }
+                        open.toggle()
+                        return .handled
+                    })
+                if many && open { Languages(o: o) }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(on ? Pk.ground : Pk.surface, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
-            .overlay {
-                if on { RoundedRectangle(cornerRadius: Radius.radiusUi).stroke(Pk.ink, lineWidth: 2) }
-            }
-            .contentShape(Rectangle())
+            .padding(.leading, 30)
         }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(on ? [.isSelected] : [])
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(on ? Pk.ground : Pk.surface, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
+        .overlay {
+            if on { RoundedRectangle(cornerRadius: Radius.radiusUi).stroke(Pk.ink, lineWidth: 2) }
+        }
+        .contentShape(Rectangle())
+        // a tap anywhere but the languages' link chooses it
+        .onTapGesture(perform: choose)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(on ? [.isButton, .isSelected] : [.isButton])
+        .accessibilityAction { choose() }
+    }
+
+    private var radio: some View {
+        Radio(on: on).frame(width: 18).alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
+    }
+
+    private var title: some View {
+        Text(label(o.key))
+            .font(PkType.figure.font(16))
+            .tracking(-0.16)
+            .foregroundStyle(Pk.ink)
+    }
+
+    /// Its file's name, what it is for, the languages a link where it has
+    /// several, and the system's own among them.
+    private func line(_ many: Bool) -> AttributedString {
+        var out = AttributedString(o.name + " · ")
+        var what = AttributedString(about(o.key))
+        if many {
+            what.link = Card.languages
+            what.underlineStyle = .single
+        }
+        out += what
+        if many && o.entry.languages.contains(ownLanguage) {
+            out += AttributedString(L("models_among", languageName(ownLanguage)))
+        }
+        return out
     }
 }
 
@@ -230,7 +267,7 @@ private struct Languages: View {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(Array(names.dropFirst(c * rows).prefix(rows)), id: \.0) { code, name in
                             Text(name)
-                                .font(.custom(code == ownLanguage ? PkType.ui.face : PkType.small.face, fixedSize: 13))
+                                .font((code == ownLanguage ? PkType.ui : PkType.small).font(13))
                                 .foregroundStyle(code == ownLanguage ? Pk.ink : Pk.inkMuted)
                                 .lineSpacing(13 * 0.6 - 2)
                         }
@@ -252,16 +289,18 @@ private struct Languages: View {
     }
 }
 
-/// How far, as the desktop's figure is set (.pk-figure, 700 64/0.9).
+/// How far, as the desktop's figure is set (.pk-figure, 700 64/0.9), at
+/// the person's text size.
 private struct Figure: View {
     let percent: Int
+    @Environment(\.dynamicTypeSize) private var type
 
     var body: some View {
         Text(verbatim: "\(percent)%")
-            .font(.custom(PkType.figure.face, fixedSize: 64))
+            .font(PkType.figure.font(64))
             .monospacedDigit()
             .foregroundStyle(Pk.ink)
-            .frame(height: 64 * 0.9)
+            .frame(height: PkType.figure.scaled(type, 64) * 0.9)
     }
 }
 
@@ -330,7 +369,7 @@ private struct Downloading: View {
                     Figure(percent: percent(d.step == .checking ? 1 : done))
                 } b: {
                     Text(progressLine(d))
-                        .font(.custom(PkType.stamp.face, fixedSize: 13))
+                        .font(PkType.stamp.font(13))
                         .foregroundStyle(Pk.inkMuted)
                         .padding(.bottom, 4)
                 }
@@ -408,7 +447,7 @@ private struct Failed: View {
                     .buttonStyle(.plain)
                     if open {
                         Text(detail)
-                            .font(.custom(PkType.stamp.face, fixedSize: 13))
+                            .font(PkType.stamp.font(13))
                             .foregroundStyle(Pk.ink)
                             .textSelection(.enabled)
                     }
@@ -451,7 +490,7 @@ private struct Copying: View {
                 } b: {
                     Text(c.checking ? L("download_checking")
                          : c.total > 0 ? L("download_progress", mb(c.got), mb(c.total)) : L("setup_size", mb(c.got)))
-                        .font(.custom(PkType.stamp.face, fixedSize: 13))
+                        .font(PkType.stamp.font(13))
                         .foregroundStyle(Pk.inkMuted)
                         .padding(.bottom, 4)
                 }
@@ -518,7 +557,7 @@ struct ModelMenu: View {
             Button(L("models_manage")) { AppState.shared.managing = true }
         } label: {
             HStack(spacing: 6) {
-                Text(title).font(.custom(PkType.ui.face, fixedSize: 14)).lineLimit(1)
+                Text(title).font(PkType.ui.font(14)).lineLimit(2)
                 PkIcon.down.frame(width: 16, height: 16)
             }
             .foregroundStyle(Pk.ink)

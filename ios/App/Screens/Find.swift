@@ -141,7 +141,7 @@ struct FindField: View {
         HStack(spacing: 8) {
             PkIcon.search.frame(width: 16, height: 16).foregroundStyle(Pk.inkMuted)
             TextField(L("find_placeholder"), text: $finder.query)
-                .font(.custom(PkType.ui.face, fixedSize: 14))
+                .font(PkType.ui.font(14))
                 .foregroundStyle(Pk.ink)
                 .focused($typing)
                 .submitLabel(.search)
@@ -150,7 +150,7 @@ struct FindField: View {
                 .textInputAutocapitalization(.never)
             if !finder.query.trimmingCharacters(in: .whitespaces).isEmpty {
                 Text(hits.isEmpty ? "0/0" : "\(finder.at + 1)/\(hits.count)")
-                    .font(.custom(PkType.stamp.face, fixedSize: 12))
+                    .font(PkType.stamp.font(12))
                     .monospacedDigit()
                     .foregroundStyle(Pk.inkMuted)
                 Group {
@@ -170,7 +170,7 @@ struct FindField: View {
         }
         .padding(.leading, 14)
         .padding(.trailing, 4)
-        .frame(height: 40)
+        .frame(minHeight: 40)
         .background(Pk.sunk, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
         .overlay {
             if typing { RoundedRectangle(cornerRadius: Radius.radiusUi).stroke(Pk.focus, lineWidth: 2) }

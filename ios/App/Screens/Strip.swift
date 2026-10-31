@@ -6,7 +6,7 @@ func rateWord(_ s: Double) -> String {
 }
 
 /// The strip's text, all of it term-ink (app.css, .pk-tstamp).
-private let tstamp = Font.custom(PkType.stamp.face, fixedSize: 13)
+private let tstamp = PkType.stamp.font(13)
 
 /// The file's strip, on term in both themes (app.css, .pk-strip; Android's
 /// Strip.kt): play, the speed under it on the times' line, or at work the
@@ -89,19 +89,31 @@ struct Strip: View {
                     .font(tstamp)
                     .foregroundStyle(Pk.termInk)
                 } else {
-                    HStack {
+                    // the length under the time where a large text size
+                    // leaves no room for the two on a line
+                    let time = Group {
                         if review {
                             TimeMenu(text: AppState.shared.base.with(duration: duration, video: t.fps)
                                 .at(scrub.map { $0 * duration } ?? player.position))
                         } else {
                             Text(left).font(tstamp).foregroundStyle(Pk.termInk).lineLimit(1)
                         }
-                        Spacer(minLength: 12)
-                        Text(duration > 0 ? AppState.shared.base.with(duration: duration, video: t.fps).length() : "")
-                            .font(tstamp)
-                            .monospacedDigit()
-                            .foregroundStyle(Pk.termInk)
-                            .lineLimit(1)
+                    }
+                    let length = Text(duration > 0 ? AppState.shared.base.with(duration: duration, video: t.fps).length() : "")
+                        .font(tstamp)
+                        .monospacedDigit()
+                        .foregroundStyle(Pk.termInk)
+                        .lineLimit(1)
+                    ViewThatFits(in: .horizontal) {
+                        HStack {
+                            time
+                            Spacer(minLength: 12)
+                            length
+                        }
+                        VStack(alignment: .leading, spacing: 4) {
+                            time
+                            length
+                        }
                     }
                 }
             }
@@ -217,6 +229,8 @@ private struct Ring: View {
                                               .init(color: .clear, location: d), .init(color: .clear, location: 1)],
                                       center: .center, startAngle: .degrees(-90), endAngle: .degrees(270)))
             RoundedRectangle(cornerRadius: Radius.radiusUi - 3).fill(Pk.term).padding(3)
+            // the ring's own label, its size the ring's, which a larger
+            // text size would overflow
             Text(verbatim: "\(percent(d))%")
                 .font(.custom(PkType.figure.face, fixedSize: 11))
                 .monospacedDigit()

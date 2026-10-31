@@ -53,7 +53,7 @@ struct Work: View {
             if let msg = message(rows) {
                 HStack(spacing: 6) {
                     if t.error != nil { PkIcon.alert.frame(width: 16, height: 16).foregroundStyle(Pk.err) }
-                    Text(msg).font(.custom(PkType.body.face, fixedSize: 15)).foregroundStyle(t.error != nil ? Pk.err : Pk.inkMuted)
+                    Text(msg).font(PkType.body.font(15)).foregroundStyle(t.error != nil ? Pk.err : Pk.inkMuted)
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, 16)
@@ -111,32 +111,62 @@ private struct Header: View {
     let review: Bool
     /// whether there are rows to copy and share
     let shown: Bool
+    @Environment(\.dynamicTypeSize) private var type
 
     var body: some View {
         let t = Transcriber.shared
-        let s = AppState.shared
-        HStack(spacing: 8) {
-            if !t.running {
-                IconButton(icon: .back, label: L("back"), kind: .ghost) { s.back() }
+        // the buttons on a line of their own under the name where a large
+        // text size leaves the name too little of one line, under 160
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                back
+                name.frame(minWidth: 160, idealWidth: 160, maxWidth: .infinity, alignment: .leading)
+                buttons
             }
-            HStack(spacing: 10) {
-                Text(t.name).pk(PkType.ui).foregroundStyle(Pk.ink).lineLimit(1)
-                // until the ring has progress: reading, the model loading, the first chunk
-                if t.running && !(t.step == .transcribing && t.done > 0) { Spinner() }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            if t.running {
-                PkButton(text: L("stop"), kind: .ghost) { t.stop() }
-            }
-            if review && shown {
-                IconButton(icon: .copy, label: L(s.captions ? "copy_captions" : "copy_text")) { s.copy() }
-                ShareAs()
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    back
+                    name
+                }
+                HStack(spacing: 8) {
+                    Spacer(minLength: 0)
+                    buttons
+                }
             }
         }
         .padding(.leading, t.running ? 16 : 2)
         .padding(.trailing, 16)
         .padding(.vertical, 11)
         .frame(minHeight: 62)
+    }
+
+    @ViewBuilder private var back: some View {
+        if !Transcriber.shared.running {
+            IconButton(icon: .back, label: L("back"), kind: .ghost) { AppState.shared.back() }
+        }
+    }
+
+    private var name: some View {
+        let t = Transcriber.shared
+        return HStack(spacing: 10) {
+            Text(t.name).pk(PkType.ui).foregroundStyle(Pk.ink).lineLimit(type.isAccessibilitySize ? 3 : 1)
+            // until the ring has progress: reading, the model loading, the first chunk
+            if t.running && !(t.step == .transcribing && t.done > 0) { Spinner() }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Stop, or Copy and Share, each its words' whole width
+    @ViewBuilder private var buttons: some View {
+        let t = Transcriber.shared
+        let s = AppState.shared
+        if t.running {
+            PkButton(text: L("stop"), kind: .ghost) { t.stop() }.fixedSize()
+        }
+        if review && shown {
+            IconButton(icon: .copy, label: L(s.captions ? "copy_captions" : "copy_text")) { s.copy() }
+            ShareAs().fixedSize()
+        }
     }
 }
 
@@ -168,7 +198,7 @@ private struct ShareAs: View {
                 .menuActionDismissBehavior(.disabled)
         } label: {
             HStack(spacing: 6) {
-                Text(L("share")).font(.custom(PkType.ui.face, fixedSize: 14)).lineLimit(1)
+                Text(L("share")).font(PkType.ui.font(14)).lineLimit(1)
                 PkIcon.down.frame(width: 16, height: 16)
             }
             .foregroundStyle(Pk.onPlume)
@@ -273,6 +303,9 @@ private struct Rows: View {
     let seek: (Double, Bool) -> Void
     @State private var seen: [Int] = []
     @State private var width: CGFloat = 0
+    /// the time's column, which grows with the stamps in it at a larger
+    /// text size, and the row's text with it, 508 at the least
+    @ScaledMetric(relativeTo: .footnote) private var column: CGFloat = 112
 
     var body: some View {
         let t = Transcriber.shared
@@ -282,7 +315,7 @@ private struct Rows: View {
         let position = p.position
         let base = s.base.with(duration: t.duration, video: t.fps)
         let current = review && (p.playing || position > 0) ? rows.lastIndex { $0.start <= position + 1e-3 } ?? -1 : -1
-        let wide = width >= 620
+        let wide = width >= 508 + column
         ScrollViewReader { list in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
@@ -293,16 +326,16 @@ private struct Rows: View {
                             s: rows[i], now: now,
                             word: now ? rows[i].words.lastIndex { $0.start <= position + 1e-3 } ?? -1 : -1,
                             marks: mine, at: mine.contains { $0.k == f.at } ? f.at : -1,
-                            wide: wide, cue: s.captions && review, review: review, base: base
+                            wide: wide, column: column, cue: s.captions && review, review: review, base: base
                         ) { seek(rows[i].start, true) }
                             .equatable()
                     }
                     if let stats {
                         Text(stats)
-                            .font(.custom(PkType.small.face, fixedSize: 12))
+                            .font(PkType.small.font(12))
                             .monospacedDigit()
                             .foregroundStyle(Pk.inkMuted)
-                            .padding(.leading, wide ? 140 : 16)
+                            .padding(.leading, wide ? 28 + column : 16)
                             .padding(.top, 16)
                     }
                 }
@@ -350,6 +383,7 @@ private struct SegRow: View, Equatable {
     let marks: [Marked]
     let at: Int
     let wide: Bool
+    let column: CGFloat
     let cue: Bool
     let review: Bool
     let base: Timebase
@@ -358,14 +392,14 @@ private struct SegRow: View, Equatable {
     // the action aside, which is a new closure each frame and does the same
     static func == (a: SegRow, b: SegRow) -> Bool {
         a.s == b.s && a.now == b.now && a.word == b.word && a.marks == b.marks && a.at == b.at
-            && a.wide == b.wide && a.cue == b.cue && a.review == b.review && a.base == b.base
+            && a.wide == b.wide && a.column == b.column && a.cue == b.cue && a.review == b.review && a.base == b.base
     }
 
     var body: some View {
         Group {
             if wide {
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    time.frame(width: 112, alignment: .leading)
+                    time.frame(width: column, alignment: .leading)
                     Sentence(s: s, word: word, marks: marks, at: at).frame(maxWidth: .infinity, alignment: .leading)
                 }
             } else {
@@ -387,7 +421,7 @@ private struct SegRow: View, Equatable {
         .accessibilityAction(named: L("play_from", base.at(s.start))) { if review { onTime() } }
     }
 
-    private var stamp: Font { .custom(PkType.stamp.face, fixedSize: 13) }
+    private var stamp: Font { PkType.stamp.font(13) }
 
     /// The row playing: the beak's square after its time, its foot on the
     /// time's baseline.
@@ -449,12 +483,13 @@ private struct Sentence: View {
     let word: Int
     let marks: [Marked]
     let at: Int
+    @Environment(\.dynamicTypeSize) private var type
 
     var body: some View {
         marked
             .pk(PkType.transcript)
             .foregroundStyle(Pk.ink)
-            .textRenderer(Marks(em: PkType.transcript.size))
+            .textRenderer(Marks(em: PkType.transcript.scaled(type)))
             .fixedSize(horizontal: false, vertical: true)
     }
 

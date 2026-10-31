@@ -4,10 +4,18 @@ import SwiftUI
 /// model in use, its menu.
 private struct TopRow: View {
     var body: some View {
-        HStack {
-            WordmarkButton()
-            Spacer()
-            ModelMenu()
+        // the model under the wordmark where a large text size leaves no
+        // room for the two on a line
+        ViewThatFits(in: .horizontal) {
+            HStack {
+                WordmarkButton()
+                Spacer()
+                ModelMenu()
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                WordmarkButton()
+                ModelMenu().padding(.leading, -12)
+            }
         }
     }
 }
@@ -18,9 +26,11 @@ struct Drop: View {
     var body: some View {
         VStack(spacing: 16) {
             Text(L("ready_lead"))
-                .font(.custom(PkType.lead.face, fixedSize: 22))
+                .font(PkType.lead.font(22))
                 .foregroundStyle(Pk.ink)
                 .multilineTextAlignment(.center)
+                // all its lines, the list under it giving way
+                .fixedSize(horizontal: false, vertical: true)
             PkButton(text: L("choose"), kind: .primary, large: true) { AppState.shared.pick = .media }
         }
         .padding(.horizontal, 24)
@@ -39,10 +49,14 @@ struct Drop: View {
 /// transcripts on the recent list the list under it; without, the column
 /// in the middle.
 struct Ready: View {
+    @Environment(\.dynamicTypeSize) private var type
+
     var body: some View {
         let listed = !Recents.shared.items.isEmpty
         GeometryReader { g in
-            let short = g.size.height < 480
+            // a short window, or text at an accessibility size, scrolls the
+            // column whole, the list in it, not squeezed into what is left
+            let short = g.size.height < 480 || type.isAccessibilitySize
             let column = VStack(spacing: 22) {
                 TopRow()
                 Drop()
@@ -120,7 +134,7 @@ private struct RecentList: View {
                 Spacer()
                 if !items.isEmpty {
                     Button(L("recent_clear")) { asking = true }
-                        .font(.custom(PkType.ui.face, fixedSize: 13))
+                        .font(PkType.ui.font(13))
                         .foregroundStyle(Pk.inkMuted)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 11)
@@ -184,17 +198,17 @@ private struct RecentRow: View {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 10) {
                     PkIcon.file.frame(width: 16, height: 16)
-                    Text(r.name).font(.custom(PkType.ui.face, fixedSize: 14)).lineLimit(1).truncationMode(.middle)
+                    Text(r.name).font(PkType.ui.font(14)).lineLimit(1).truncationMode(.middle)
                         .frame(minWidth: 180, maxWidth: .infinity, alignment: .leading)
-                    Text(length).font(.custom(PkType.stamp.face, fixedSize: 13)).monospacedDigit().foregroundStyle(Pk.inkMuted)
+                    Text(length).font(PkType.stamp.font(13)).monospacedDigit().foregroundStyle(Pk.inkMuted)
                     Text(date).pk(PkType.small).foregroundStyle(Pk.inkMuted).frame(minWidth: 72, alignment: .trailing)
                 }
                 HStack(spacing: 10) {
                     PkIcon.file.frame(width: 16, height: 16)
                     VStack(alignment: .leading, spacing: 0) {
-                        Text(r.name).font(.custom(PkType.ui.face, fixedSize: 14)).lineLimit(1).truncationMode(.middle)
+                        Text(r.name).font(PkType.ui.font(14)).lineLimit(1).truncationMode(.middle)
                         HStack(spacing: 0) {
-                            Text(length).font(.custom(PkType.stamp.face, fixedSize: 13)).monospacedDigit()
+                            Text(length).font(PkType.stamp.font(13)).monospacedDigit()
                             Text(" · " + date).pk(PkType.small)
                         }
                         .foregroundStyle(Pk.inkMuted)
@@ -245,7 +259,7 @@ private struct LiveRow: View {
         HStack(spacing: 10) {
             PkIcon.file.frame(width: 16, height: 16).foregroundStyle(Pk.ink)
             VStack(alignment: .leading, spacing: 0) {
-                Text(t.name).font(.custom(PkType.ui.face, fixedSize: 14)).foregroundStyle(Pk.ink).lineLimit(1)
+                Text(t.name).font(PkType.ui.font(14)).foregroundStyle(Pk.ink).lineLimit(1)
                 HStack(spacing: 4) {
                     if t.step == .done { PkIcon.check.frame(width: 14, height: 14) }
                     Text(status).pk(PkType.small).lineLimit(1)

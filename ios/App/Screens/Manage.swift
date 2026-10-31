@@ -34,6 +34,7 @@ struct Manage: View {
     @State private var asking: String?
     /// what the rows take, for the sheet to be as tall as they are
     @State private var tall: CGFloat = 320
+    @Environment(\.dynamicTypeSize) private var type
 
     var body: some View {
         let s = AppState.shared
@@ -59,7 +60,7 @@ struct Manage: View {
                     }
                     ForEach(rows) { r in
                         Line()
-                        HStack(spacing: 16) {
+                        line {
                             VStack(alignment: .leading, spacing: 0) {
                                 Text(r.title).pk(PkType.ui).foregroundStyle(Pk.ink).lineLimit(1)
                                 note(r).pk(PkType.small).foregroundStyle(Pk.inkMuted)
@@ -75,7 +76,7 @@ struct Manage: View {
                     Line()
                 }
                 .padding(.top, 12)
-                HStack(spacing: 16) {
+                line {
                     Text(used(total, Models.shared.free()))
                         .pk(PkType.small)
                         .foregroundStyle(Pk.inkMuted)
@@ -105,6 +106,12 @@ struct Manage: View {
         } message: { k in
             Text(k.ask?.text ?? "")
         }
+    }
+
+    /// A row's words and its button side by side, or at an accessibility
+    /// text size the button under them, where the words keep the width.
+    private var line: AnyLayout {
+        type.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 16))
     }
 
     /// A row's second line, and In use after it in green where it is the

@@ -17,14 +17,16 @@ struct About: View {
 
     @State private var sheet: Sheet?
     @State private var tall: CGFloat = 0
+    @Environment(\.dynamicTypeSize) private var type
 
     var body: some View {
         GeometryReader { g in
             let narrow = g.size.width < 600
             let stacked = narrow || g.size.height >= g.size.width
             let wide = g.size.width >= 880
-            // the credits beside their names while there is room for both
-            let words = Credits(twoColumns: stacked || wide) { sheet = $0 }
+            // the credits beside their names while there is room for both,
+            // under them at an accessibility text size
+            let words = Credits(twoColumns: (stacked || wide) && !type.isAccessibilitySize) { sheet = $0 }
             ZStack(alignment: .topLeading) {
                 if stacked {
                     // a phone scrolls the two together where the words fill it
@@ -95,13 +97,14 @@ private struct Stage: View {
 private struct Credits: View {
     let twoColumns: Bool
     let open: (About.Sheet) -> Void
+    @Environment(\.dynamicTypeSize) private var type
 
     var body: some View {
         let small = PkType.small
         VStack(alignment: .leading, spacing: 12) {
             Wordmark(size: 56).padding(.bottom, 8)
             let tagline = PkStyle(face: PkType.body.face, size: 15, lineHeight: 1.5, tracking: 0)
-            linked(markdown: L("about_tagline"), style: tagline)
+            linked(markdown: L("about_tagline"), style: tagline, size: tagline.scaled(type))
                 .pk(tagline)
                 .foregroundStyle(Pk.ink)
             VStack(alignment: .leading, spacing: 0) {
@@ -185,12 +188,14 @@ private struct Credit<What: View>: View {
 /// its last word (app.js). Its italics in style's face slanted, as the
 /// desktop's browser and Android slant a face with no italic of its own:
 /// the apps carry none (Android's skew, 0.25).
-@MainActor func linked(markdown: String, style: PkStyle? = nil) -> Text {
+@MainActor func linked(markdown: String, style: PkStyle? = nil, size: CGFloat = 0) -> Text {
     let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
     guard var a = try? AttributedString(markdown: markdown, options: options) else { return Text(markdown) }
     if let style {
         let slant = CGAffineTransform(a: 1, b: 0, c: 0.25, d: 1, tx: 0, ty: 0)
-        let slanted = Font(UIFont(descriptor: style.uiFont.fontDescriptor.withMatrix(slant), size: style.size))
+        // at the size the text around it is (size), the person's text size's
+        let s = size > 0 ? size : style.size
+        let slanted = Font(UIFont(descriptor: style.uiFont(s).fontDescriptor.withMatrix(slant), size: s))
         let runs = a.runs[\.inlinePresentationIntent].filter { $0.0?.contains(.emphasized) == true }.map(\.1)
         for r in runs { a[r].font = slanted }
     }

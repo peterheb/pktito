@@ -65,9 +65,11 @@ struct PkButton: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 if let leading { leading.frame(width: 16, height: 16) }
+                // two lines and more at a large text size, not cut short
                 Text(text)
-                    .font(.custom(PkType.ui.face, fixedSize: large ? 15 : 14))
-                    .lineLimit(1)
+                    .font(PkType.ui.font(large ? 15 : 14))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
                 if let trailing { trailing.frame(width: 16, height: 16) }
             }
         }
@@ -109,7 +111,8 @@ struct IconButton: View {
     }
 }
 
-/// pktito in Archivo 700, and the beak's square after it on the line.
+/// pktito in Archivo 700, and the beak's square after it on the line: a
+/// mark, its size its own, not the person's text size.
 struct Wordmark: View {
     var size: CGFloat = 20
 
@@ -152,16 +155,23 @@ struct Spinner: View {
 }
 
 /// Two choices in a sunk track, the one chosen raised to the ground with an
-/// ink-muted edge (app.css, .pk-views).
+/// ink-muted edge (app.css, .pk-views); the second under the first where a
+/// large text size leaves no room for both on a line, each word whole.
 struct Switch2: View {
     let first: String
     let second: String
     @Binding var onSecond: Bool
 
     var body: some View {
-        HStack(spacing: 2) {
-            choice(first, second: false)
-            choice(second, second: true)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 2) {
+                choice(first, second: false)
+                choice(second, second: true)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                choice(first, second: false)
+                choice(second, second: true)
+            }
         }
         .padding(2)
         .background(Pk.sunk, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
@@ -171,7 +181,8 @@ struct Switch2: View {
         let on = onSecond == second
         return Button { onSecond = second } label: {
             Text(text)
-                .font(.custom(PkType.ui.face, fixedSize: 13))
+                .font(PkType.ui.font(13))
+                .fixedSize()
                 .foregroundStyle(on ? Pk.ink : Pk.inkMuted)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
@@ -194,7 +205,7 @@ struct LinkButton: View {
     var body: some View {
         Button(action: action) {
             Text(text)
-                .font(.custom(PkType.ui.face, fixedSize: 14))
+                .font(PkType.ui.font(14))
                 .underline()
                 .foregroundStyle(Pk.ink)
                 .padding(.horizontal, 4)

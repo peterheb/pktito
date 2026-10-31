@@ -13,23 +13,51 @@ extension Color {
     }
 }
 
+/// Text follows the person's text size (Settings, Display & Brightness, Text
+/// Size; Dynamic Type), as Android's follows its font size (sp): each size
+/// on the curve of the system's text style nearest it, so that the figures
+/// grow least and reading text most, as Android 14's curve has it.
 extension PkStyle {
-    var font: Font { .custom(face, fixedSize: size) }
-    var uiFont: UIFont { UIFont(name: face, size: size) ?? .systemFont(ofSize: size) }
+    /// face at size, or the style's own, scaled with the person's text size
+    func font(_ size: CGFloat? = nil) -> Font {
+        let s = size ?? self.size
+        return .custom(face, size: s, relativeTo: PkStyle.curve(s))
+    }
+
+    var font: Font { font() }
+
+    /// the size a size becomes at a text size, on the same curve
+    func scaled(_ type: DynamicTypeSize, _ size: CGFloat? = nil) -> CGFloat {
+        let s = size ?? self.size
+        return UIFontMetrics(forTextStyle: PkStyle.uiCurve(s))
+            .scaledValue(for: s, compatibleWith: UITraitCollection(preferredContentSizeCategory: UIContentSizeCategory(type)))
+    }
+
+    func uiFont(_ size: CGFloat) -> UIFont { UIFont(name: face, size: size) ?? .systemFont(ofSize: size) }
+
+    private static func curve(_ s: CGFloat) -> Font.TextStyle {
+        s >= 34 ? .largeTitle : s >= 20 ? .title2 : s >= 16 ? .body : s >= 14 ? .subheadline : .footnote
+    }
+
+    private static func uiCurve(_ s: CGFloat) -> UIFont.TextStyle {
+        s >= 34 ? .largeTitle : s >= 20 ? .title2 : s >= 16 ? .body : s >= 14 ? .subheadline : .footnote
+    }
 }
 
 /// Text in a type style as CSS sets it, as the desktop's and Android's text
 /// have it: the line its style's height, the leading beyond the font's own
 /// split evenly above and below the letters, first and last line too, and
-/// the style's letter spacing.
+/// the style's letter spacing; all at the person's text size.
 private struct Styled: ViewModifier {
     let style: PkStyle
+    @Environment(\.dynamicTypeSize) private var type
 
     func body(content: Content) -> some View {
-        let leading = style.lineHeight * style.size - style.uiFont.lineHeight
+        let size = style.scaled(type)
+        let leading = style.lineHeight * size - style.uiFont(size).lineHeight
         content
             .font(style.font)
-            .tracking(style.tracking * style.size)
+            .tracking(style.tracking * size)
             .lineSpacing(max(leading, 0))
             .padding(.vertical, leading / 2)
     }
