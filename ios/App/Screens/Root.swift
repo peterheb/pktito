@@ -1,0 +1,182 @@
+import SwiftUI
+import UniformTypeIdentifiers
+
+/// The app's window (Android's MainActivity, App): About; the setup screen
+/// while there is no model, one is coming, or Core ML compiles the one in
+/// use; the start screen; or a file at work and then its transcript; where
+/// a list and what it opens fit side by side, the start screen's list
+/// beside them (Side). Over it the toast, Manage models, and the picker of
+/// a recording, a model file, or a recording found again (Locate…).
+struct Root: View {
+    @Environment(\.scenePhase) private var phase
+    /// what the picker was opened for, kept for when it answers
+    @State private var picked = AppState.Pick.media
+
+    /// What the player loads anew for.
+    private struct Playing: Equatable {
+        let step: Transcriber.Step
+        let id: String
+        let url: URL?
+    }
+
+    var body: some View {
+        let s = AppState.shared
+        let t = Transcriber.shared
+        GeometryReader { g in
+            // the side where a list and what it opens fit side by side:
+            // 840 wide, which leaves the work 540, where its rows stack
+            // (Rows, under 620) and Find keeps the views line (Views, from
+            // 480); and 480 tall, which keeps a phone on its side one column
+            let sided = g.size.width >= 840 && g.size.height >= 480
+            ZStack(alignment: .bottom) {
+                Group {
+                    if s.about {
+                        About()
+                    } else if t.step == .none && s.setup {
+                        Setup(waiting: s.waiting != nil ? 1 : 0)
+                    } else if sided && (t.step != .none || !Recents.shared.items.isEmpty) {
+                        Side()
+                    } else if t.step == .none {
+                        Ready()
+                    } else {
+                        Work()
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // over Manage models while it is up, which has it too
+                if !s.managing, let toast = s.toast {
+                    Toast(text: toast)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 24)
+                        .allowsHitTesting(false)
+                }
+            }
+        }
+        .background(Pk.ground)
+        .tint(Pk.ink)
+        .fileImporter(isPresented: Binding(get: { s.pick != nil }, set: { if !$0 { s.pick = nil } }),
+                      // a .pkf has no type of its own to ask for
+                      allowedContentTypes: s.pick == .model ? [.item] : [.audio, .movie]) { r in
+            if case .success(let url) = r { opened(url) }
+        }
+        .onChange(of: s.pick) { if let p = s.pick { picked = p } }
+        .sheet(isPresented: Binding(get: { s.managing }, set: { s.managing = $0 })) {
+            Manage().presentationBackground(Pk.ground)
+        }
+        // the finished transcript's recording, ready to play; another's let
+        // go. Where it can't be played, the strip says why in its times'
+        // place, and Locate… finds it again
+        .onChange(of: Playing(step: t.step, id: t.id, url: t.url), initial: true) { load() }
+        // a model downloaded, said so
+        .onChange(of: Models.shared.news, initial: true) {
+            if let n = Models.shared.news {
+                s.say(n)
+                Models.shared.news = nil
+            }
+        }
+        // the recording that waited for a model, once there is one
+        .onChange(of: s.setup, initial: true) { startWaiting() }
+        .onChange(of: s.waiting) { startWaiting() }
+        // the transcript's audio stops with the screen; the transcription goes on
+        .onChange(of: phase) { if phase == .background { Player.shared.pause() } }
+        // Core ML compiles a Neural Engine edition's encoder the first time
+        // after an install or an update, which the setup screen says
+        .task {
+            Models.shared.refresh()
+            if let m = Models.shared.model, let e = Models.shared.entry(m), Models.shared.own == nil,
+               Models.usable(e) == .neuralEngine, !Editions.compiled(e) {
+                Transcriber.shared.prepare()
+            }
+            #if DEBUG
+            debugArguments()
+            #endif
+        }
+    }
+
+    #if DEBUG
+    /// For a device or a Simulator with no one tapping, through devicectl
+    /// or simctl: -open NAME transcribes Application Support/bench/NAME;
+    /// -recent opens the newest transcript of the list; -play SECONDS plays
+    /// it from there; -find WORDS searches it; -show about or manage opens
+    /// that. (A default's own -key value,
+    /// as -captions YES, sets it for the run.)
+    private func debugArguments() {
+        let args = CommandLine.arguments
+        let s = AppState.shared
+        func value(_ flag: String) -> String? {
+            guard let i = args.firstIndex(of: flag), i + 1 < args.count else { return nil }
+            return args[i + 1]
+        }
+        if let name = value("-open") {
+            let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            s.start(base.appendingPathComponent("bench").appendingPathComponent(name))
+        }
+        if args.contains("-recent"), let first = Recents.shared.items.first { s.openRecent(first.id) }
+        if let t = value("-play").flatMap(Double.init) {
+            Task {
+                while !Player.shared.ready { try? await Task.sleep(for: .milliseconds(100)) }
+                Player.shared.seek(t, play: true)
+            }
+        }
+        if let q = value("-find") {
+            s.finder.open = true
+            s.finder.query = q
+        }
+        switch value("-show") {
+        case "about": s.about = true
+        case "manage": s.managing = true
+        default: break
+        }
+    }
+    #endif
+
+    /// A file the picker gave, for what it was opened for.
+    private func opened(_ url: URL) {
+        let s = AppState.shared
+        let t = Transcriber.shared
+        switch picked {
+        case .media:
+            s.start(url)
+        case .model:
+            Models.shared.open(url) { said, _ in s.say(said) }
+        case .locate:
+            // the transcript's recording, picked again where it is now, if it
+            // is the one transcribed (Recents.relink); the player then loads it
+            if Recents.shared.relink(t.id, url) {
+                t.relocated(url)
+            } else {
+                s.say(L("play_not_it"))
+            }
+        }
+    }
+
+    private func load() {
+        let t = Transcriber.shared
+        guard t.step == .done || t.step == .stopped else {
+            Player.shared.release()
+            return
+        }
+        var url = t.url
+        if t.reopened, let item = Recents.shared.items.first(where: { $0.id == t.id }) {
+            let src = Recents.shared.source(item)
+            t.why = src.why
+            t.locate = src.locate
+            url = src.url
+        }
+        guard let url else { return }
+        let key = "\(t.id) \(url.path)"
+        if Player.shared.loaded == key { return }
+        Player.shared.load(key, url) {
+            t.why = L("play_cant_ios")
+            t.locate = false
+        }
+    }
+
+    private func startWaiting() {
+        let s = AppState.shared
+        if !s.setup, let w = s.waiting, Transcriber.shared.step == .none {
+            s.waiting = nil
+            s.start(w)
+        }
+    }
+}

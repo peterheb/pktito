@@ -20,6 +20,14 @@
 	</array>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<false/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>archivo_400.ttf</string>
+		<string>archivo_500.ttf</string>
+		<string>archivo_700.ttf</string>
+		<string>commit_mono_400.ttf</string>
+		<string>commit_mono_700.ttf</string>
+	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>

@@ -27,6 +27,14 @@ enum Editions {
             + (Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "")
     }
 
+    /// Whether Core ML has compiled e's encoder on this system for this
+    /// build: a load of it that worked here, remembered. The first load
+    /// after an install or an update compiles it, which the setup screen
+    /// says while it lasts.
+    static func compiled(_ e: CatalogEntry) -> Bool {
+        UserDefaults.standard.string(forKey: "neuralEngineReady." + e.name) == here + " " + e.coreml.encoder.sha256
+    }
+
     /// The Neural Engine edition of e can't run here.
     struct NeedsCPUEdition: LocalizedError {
         let why: String
@@ -51,6 +59,7 @@ enum Editions {
                 do {
                     let engine = try Engine(file: Store.file(e.coreml.slim))
                     try engine.useNeuralEngine(Store.encoder(e))
+                    UserDefaults.standard.set(here + " " + e.coreml.encoder.sha256, forKey: "neuralEngineReady." + e.name)
                     return (engine, .neuralEngine)
                 } catch {
                     why = error.localizedDescription

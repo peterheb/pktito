@@ -114,10 +114,19 @@ final class Engine: @unchecked Sendable {
     }
 
     /// What a transcription hears from the core as it goes, on its thread.
-    final class Progress {
+    final class Progress: @unchecked Sendable {
         /// once the recording is read: its length, a video's frame rate (or
         /// 0) and its loudness, audio::PEAKS slices of it
         var audio: (Double, Double, [UInt8]) -> Void = { _, _, _ in }
+        /// the frame rate and the loudness audio was given, kept
+        private(set) var fps = 0.0
+        private(set) var peaks: [UInt8] = []
+
+        fileprivate func heard(_ seconds: Double, _ fps: Double, _ peaks: [UInt8]) {
+            self.fps = fps
+            self.peaks = peaks
+            audio(seconds, fps, peaks)
+        }
         /// after each chunk: the fraction done, and the segments just done
         var update: (Double, [Segment]) -> Void = { _, _ in }
     }
@@ -130,7 +139,7 @@ final class Engine: @unchecked Sendable {
         let answer = file.withUnsafeFileSystemRepresentation { path in
             pkapp_transcribe(handle, path, name, ctx.toOpaque(), { ctx, seconds, fps, peaks, n in
                 let p = Unmanaged<Progress>.fromOpaque(ctx!).takeUnretainedValue()
-                p.audio(seconds, fps, peaks.map { Array(UnsafeBufferPointer(start: $0, count: n)) } ?? [])
+                p.heard(seconds, fps, peaks.map { Array(UnsafeBufferPointer(start: $0, count: n)) } ?? [])
             }, { ctx, done, segments in
                 let p = Unmanaged<Progress>.fromOpaque(ctx!).takeUnretainedValue()
                 let segs = segments.flatMap { try? JSONDecoder().decode([Segment].self, from: Data(bytes: $0, count: strlen($0))) }
