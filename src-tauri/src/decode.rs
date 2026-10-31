@@ -80,7 +80,7 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
         // the OS's, where it has one, else ffmpeg, if it is there; asked
         // only then, since asking Windows loads Media Foundation
         let other = || {
-            if cfg!(any(target_os = "macos", target_os = "windows")) {
+            if cfg!(any(target_os = "macos", target_os = "ios", target_os = "windows")) {
                 os_decoder()
             } else {
                 ffmpeg().is_some()
@@ -90,7 +90,7 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
             return read;
         }
     }
-    if forced == "ffmpeg" || !cfg!(any(target_os = "macos", target_os = "windows")) {
+    if forced == "ffmpeg" || !cfg!(any(target_os = "macos", target_os = "ios", target_os = "windows")) {
         return match ffmpeg() {
             Some(ff) => decode_ffmpeg(&ff, path),
             None => Err(DecodeError::Unreadable(
@@ -822,7 +822,7 @@ fn rate_ffmpeg(ffmpeg: &Path, path: &Path) -> Option<f64> {
     line[..at].rsplit([' ', ',']).next()?.parse().ok()
 }
 
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "windows"))]
 fn rate_os(path: &Path) -> f64 {
     use std::ffi::{c_char, CString};
     extern "C" {
@@ -834,12 +834,12 @@ fn rate_os(path: &Path) -> f64 {
     }
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "windows")))]
 fn rate_os(_path: &Path) -> f64 {
     0.0
 }
 
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "windows"))]
 fn decode_os(path: &Path) -> Result<Vec<f32>, DecodeError> {
     use std::ffi::{c_char, CStr, CString};
     extern "C" {
@@ -902,10 +902,10 @@ fn os_decoder() -> bool {
 
 #[cfg(not(target_os = "windows"))]
 fn os_decoder() -> bool {
-    cfg!(target_os = "macos")
+    cfg!(any(target_os = "macos", target_os = "ios"))
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "windows")))]
 fn decode_os(_path: &Path) -> Result<Vec<f32>, DecodeError> {
     Err(DecodeError::Unreadable(
         UNREADABLE,

@@ -116,6 +116,15 @@ extern "C" {
     ) -> c_long;
 }
 
+// the ane fork's (vendor/pktito-ane), which iOS builds: the encoder on the
+// Neural Engine, and the slim model file whose only encoder it is
+#[cfg(target_os = "ios")]
+extern "C" {
+    fn pk_model_has_encoder(m: *const RawModel) -> c_int;
+    fn pk_asr_use_ane(a: *mut RawAsr, path: *const c_char, err: *mut c_char, errlen: usize) -> c_int;
+    fn pk_asr_ane_warm(a: *mut RawAsr, err: *mut c_char, errlen: usize) -> c_int;
+}
+
 /// The cues of a subtitle track for words and their times in milliseconds,
 /// as the CLI's --srt has them (core/captions.c): English's rules for
 /// english 1, punctuation and pauses alone for 0, and for -1 English's if
@@ -244,6 +253,13 @@ impl Model {
     pub fn raw(&self) -> *const RawModel {
         self.raw
     }
+
+    /// Whether the file holds the encoder: not a slim one (model.rs,
+    /// Coreml), which transcribes only with a Core ML encoder (Asr::use_ane).
+    #[cfg(target_os = "ios")]
+    pub fn has_encoder(&self) -> bool {
+        unsafe { pk_model_has_encoder(self.raw) != 0 }
+    }
 }
 
 impl Drop for Model {
@@ -335,6 +351,33 @@ impl Asr {
 
     /// The threads its passes run on: one a core, or on a chip of two kinds
     /// the fast kind alone once a recording has timed it faster.
+    /// The encoder on the Neural Engine: the compiled Core ML model at path,
+    /// made from the model's own checkpoint, loaded and run once on silence,
+    /// so that a device that can't run it says so here, with Core ML's
+    /// reason; None for the model's own encoder again.
+    #[cfg(target_os = "ios")]
+    pub fn use_ane(&mut self, path: Option<&Path>) -> Result<(), String> {
+        let c = match path {
+            Some(p) => Some(CString::new(p.to_string_lossy().as_bytes()).map_err(|_| "bad path".to_string())?),
+            None => None,
+        };
+        let mut err = [0 as c_char; 1024];
+        let rc = unsafe {
+            let p = c.as_ref().map_or(std::ptr::null(), |c| c.as_ptr());
+            if pk_asr_use_ane(self.raw, p, err.as_mut_ptr(), err.len()) != 0 {
+                -1
+            } else if c.is_some() {
+                pk_asr_ane_warm(self.raw, err.as_mut_ptr(), err.len())
+            } else {
+                0
+            }
+        };
+        if rc != 0 {
+            return Err(unsafe { CStr::from_ptr(err.as_ptr()) }.to_string_lossy().into_owned());
+        }
+        Ok(())
+    }
+
     pub fn threads(&self) -> i32 {
         unsafe { pk_asr_threads(self.raw) }
     }

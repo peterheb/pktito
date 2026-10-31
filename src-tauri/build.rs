@@ -3,8 +3,10 @@
 //! and each SIMD backend of the target's family with its own instruction
 //! set, so one binary runs on every CPU of the family and picks the fastest
 //! backend it can (pktito's backend/kernels.c). Then the platform's decoder
-//! (AVFoundation on macOS, Media Foundation on Windows) and the mix that
-//! every decoder hands its samples to (native/mix.h).
+//! (AVFoundation on macOS and iOS, Media Foundation on Windows) and the mix
+//! that every decoder hands its samples to (native/mix.h). On iOS pktito is
+//! its ane fork (vendor/pktito-ane), whose encoder runs on the Neural
+//! Engine through Core ML (core/ane.m).
 //!
 //! Everything goes into one archive, and the system's libraries come after
 //! it. GNU ld reads each archive once, left to right, taking only what
@@ -51,6 +53,9 @@ fn base(os: &str, root: &PathBuf) -> cc::Build {
         "macos" => {
             b.define("_DARWIN_C_SOURCE", None);
         }
+        "ios" => {
+            b.define("_DARWIN_C_SOURCE", None).define("PK_ANE", None);
+        }
         "windows" => {
             b.define("_WIN32_WINNT", "0x0A00")
                 .define("__USE_MINGW_ANSI_STDIO", "1");
@@ -65,10 +70,11 @@ fn base(os: &str, root: &PathBuf) -> cc::Build {
 
 fn main() {
     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let root = manifest.join("../vendor/pktito");
     let os = env::var("CARGO_CFG_TARGET_OS").unwrap();
     let arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap();
+    let root = manifest.join(if os == "ios" { "../vendor/pktito-ane" } else { "../vendor/pktito" });
     println!("cargo:rerun-if-changed=../vendor/pktito");
+    println!("cargo:rerun-if-changed=../vendor/pktito-ane");
     println!("cargo:rerun-if-changed=native");
 
     let family: Vec<(&str, Vec<&str>)> = match arch.as_str() {
@@ -140,6 +146,23 @@ fn main() {
                 .opt_level(2)
                 .compile_intermediates(),
         ),
+        // the Mac's decoder, which iOS's AVFoundation runs as it is, and the
+        // ane fork's encoder on the Neural Engine
+        "ios" => {
+            objects.extend(
+                cc::Build::new()
+                    .file(manifest.join("native/decode_macos.m"))
+                    .flag("-fobjc-arc")
+                    .opt_level(2)
+                    .compile_intermediates(),
+            );
+            objects.extend(
+                base(&os, &root)
+                    .file(root.join("core/ane.m"))
+                    .flag("-fobjc-arc")
+                    .compile_intermediates(),
+            );
+        }
         "windows" => objects.extend(
             base(&os, &root)
                 .file(manifest.join("native/decode_windows.c"))
@@ -175,6 +198,13 @@ fn main() {
             "framework=CoreMedia",
             "framework=Foundation",
         ],
+        "ios" => &[
+            "framework=AVFoundation",
+            "framework=AudioToolbox",
+            "framework=CoreMedia",
+            "framework=CoreML",
+            "framework=Foundation",
+        ],
         // Media Foundation's DLLs are loaded when a file needs them
         // (native/decode_windows.c), so the exe starts on a Windows without
         // them; mfuuid is its GUIDs, a static library
@@ -201,8 +231,8 @@ fn main() {
     // 1903 and later): the engine opens the model, and its reader a WAV,
     // with CreateFileA and fopen on the UTF-8 path Rust hands it, which in
     // the old code page names another file, or none, past ASCII - a
-    // %APPDATA% under C:\Users\José. Android has no Tauri (Cargo.toml)
-    if os == "android" {
+    // %APPDATA% under C:\Users\José. Android and iOS have no Tauri (Cargo.toml)
+    if os == "android" || os == "ios" {
         return;
     }
     let windows =
