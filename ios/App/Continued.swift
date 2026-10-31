@@ -29,7 +29,11 @@ enum Continued {
         // now or not at all: the transcription runs anyway while the app is on the screen
         r.strategy = .fail
         // the Simulator has no scheduler, and says so here
-        try? BGTaskScheduler.shared.submit(r)
+        do {
+            try BGTaskScheduler.shared.submit(r)
+        } catch {
+            trace("continued: not submitted: \(error.localizedDescription)")
+        }
     }
 
     @available(iOS 26, *)
@@ -38,9 +42,13 @@ enum Continued {
             // the transcription ended before iOS ran its task
             return t.setTaskCompleted(success: true)
         }
+        trace("continued: \(t.identifier) running")
         t.progress.totalUnitCount = 1000
         // the person stopped it in the system's UI, or iOS needs its time
-        t.expirationHandler = { Engine.stop() }
+        t.expirationHandler = {
+            trace("continued: expired")
+            Engine.stop()
+        }
         task = t
         update()
     }
@@ -62,6 +70,7 @@ enum Continued {
     /// The transcription ended: done, or stopped or failed.
     static func end(done: Bool) {
         guard let t = task else { return }
+        trace("continued: ended, done \(done)")
         task = nil
         if #available(iOS 26, *), done, let c = t as? BGContinuedProcessingTask {
             c.progress.completedUnitCount = c.progress.totalUnitCount

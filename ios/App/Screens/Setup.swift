@@ -257,7 +257,7 @@ private struct Figure: View {
     let percent: Int
 
     var body: some View {
-        Text("\(percent)%")
+        Text(verbatim: "\(percent)%")
             .font(.custom(PkType.figure.face, fixedSize: 64))
             .monospacedDigit()
             .foregroundStyle(Pk.ink)

@@ -1,6 +1,15 @@
 import Foundation
 import UIKit
 
+/// A line on the console in a debug build, its time first: what a device
+/// run is followed by (devicectl --console).
+func trace(_ s: @autoclosure () -> String) {
+    #if DEBUG
+    print(String(format: "%.3f ", Date().timeIntervalSince1970.truncatingRemainder(dividingBy: 1000)) + s())
+    fflush(stdout)
+    #endif
+}
+
 /// Megabytes as the desktop counts them, a million bytes, whole (app.js, mb).
 func mb(_ bytes: Int64) -> String { String(Int64((Double(bytes) / 1e6).rounded())) }
 

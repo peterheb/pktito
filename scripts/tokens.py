@@ -205,3 +205,18 @@ out = os.path.join(ios, "UI", "Tokens.swift")
 os.makedirs(os.path.dirname(out), exist_ok=True)
 open(out, "w").write("\n".join(sw))
 print("ios/App/UI/Tokens.swift:", len(toks), "colors, fonts", sorted(set(face.values())))
+
+# the ground as a color of the asset catalog, for the launch screen
+# (Info.plist, UILaunchScreen), which iOS draws before any of the app's code
+def components(hex6):
+    return {"alpha": "1.000", "red": "0x" + hex6[2:4], "green": "0x" + hex6[4:6], "blue": "0x" + hex6[6:8]}
+(gl, _), (gd, _) = rgb(toks["ground"], "light", toks), rgb(toks["ground"], "dark", toks)
+ground = {"colors": [
+    {"color": {"color-space": "srgb", "components": components(gl)}, "idiom": "universal"},
+    {"appearances": [{"appearance": "luminosity", "value": "dark"}],
+     "color": {"color-space": "srgb", "components": components(gd)}, "idiom": "universal"}],
+    "info": {"author": "xcode", "version": 1}}
+cs = os.path.join(ios, "Assets.xcassets", "Ground.colorset")
+os.makedirs(cs, exist_ok=True)
+open(os.path.join(cs, "Contents.json"), "w").write(json.dumps(ground, indent=2) + "\n")
+print("ios/App/Assets.xcassets/Ground.colorset:", gl, gd)

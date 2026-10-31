@@ -217,7 +217,7 @@ private struct Ring: View {
                                               .init(color: .clear, location: d), .init(color: .clear, location: 1)],
                                       center: .center, startAngle: .degrees(-90), endAngle: .degrees(270)))
             RoundedRectangle(cornerRadius: Radius.radiusUi - 3).fill(Pk.term).padding(3)
-            Text("\(percent(d))%")
+            Text(verbatim: "\(percent(d))%")
                 .font(.custom(PkType.figure.face, fixedSize: 11))
                 .monospacedDigit()
                 .foregroundStyle(Pk.termInk)

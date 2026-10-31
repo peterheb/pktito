@@ -188,8 +188,10 @@ final class Transcriber {
         let name = self.name
         UIApplication.shared.isIdleTimerDisabled = true
         Continued.begin(id: id, name: name)
+        trace("transcribe: \(name)")
         Task {
             defer {
+                trace("transcribe: \(step), \(String(format: "%.1f", transcribed)) s for \(String(format: "%.1f", duration)) s of audio")
                 UIApplication.shared.isIdleTimerDisabled = false
                 Continued.end(done: step == .done)
             }
