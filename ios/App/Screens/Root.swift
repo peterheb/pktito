@@ -79,16 +79,20 @@ struct Root: View {
         // the recording that waited for a model, once there is one
         .onChange(of: s.setup, initial: true) { startWaiting() }
         .onChange(of: s.waiting) { startWaiting() }
-        // the transcript's audio stops with the screen; the transcription goes on
-        .onChange(of: phase) { if phase == .background { Player.shared.pause() } }
-        // Core ML compiles a Neural Engine edition's encoder the first time
-        // after an install or an update, which the setup screen says
+        // the transcript's audio stops with the screen; the transcription
+        // goes on. Back on the screen, a model a download brought while the
+        // app was away is prepared
+        .onChange(of: phase) {
+            if phase == .background { Player.shared.pause() }
+            if phase == .active { Transcriber.shared.prepareIfNew() }
+        }
+        // a download a run before began goes on; Core ML compiles a Neural
+        // Engine edition's encoder the first time after an install or an
+        // update, which the setup screen says
         .task {
             Models.shared.refresh()
-            if let m = Models.shared.model, let e = Models.shared.entry(m), Models.shared.own == nil,
-               Models.usable(e) == .neuralEngine, !Editions.compiled(e) {
-                Transcriber.shared.prepare()
-            }
+            Downloads.shared.resumeAfterLaunch()
+            Transcriber.shared.prepareIfNew()
             #if DEBUG
             debugArguments()
             #endif
@@ -101,7 +105,11 @@ struct Root: View {
     /// and -receive NAME a copy of it as iOS sends one (Open in);
     /// -recent opens the newest transcript of the list; -play SECONDS plays
     /// it from there; -find WORDS searches it; -show about or manage opens
-    /// that, and with about, -sheet privacy or notices one of its sheets. (A default's own -key value,
+    /// that, and with about, -sheet privacy or notices one of its sheets;
+    /// -download english or multilingual downloads that model (its server
+    /// PKTITO_MODEL_BASE, where the environment gives one), and with it
+    /// -pauseAfter S pauses it S seconds on, and -resumeAfter S goes on S
+    /// seconds after that. (A default's own -key value,
     /// as -captions YES, sets it for the run.)
     private func debugArguments() {
         let args = CommandLine.arguments
@@ -133,6 +141,20 @@ struct Root: View {
         if let q = value("-find") {
             s.finder.open = true
             s.finder.query = q
+        }
+        if let key = value("-download"), let o = Models.shared.offers.first(where: { $0.key == key }) {
+            Downloads.shared.start(o)
+            let pause = value("-pauseAfter").flatMap(Double.init), resume = value("-resumeAfter").flatMap(Double.init)
+            Task {
+                if let pause {
+                    try? await Task.sleep(for: .seconds(pause))
+                    Downloads.shared.pause()
+                }
+                if let resume {
+                    try? await Task.sleep(for: .seconds(resume))
+                    Downloads.shared.start(o)
+                }
+            }
         }
         switch value("-show") {
         case "about": s.about = true

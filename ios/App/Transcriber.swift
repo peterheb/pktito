@@ -118,6 +118,15 @@ final class Transcriber {
         Task { _ = try? await model() }
     }
 
+    /// The model in use prepared now where Core ML has yet to compile its
+    /// encoder here: at launch, after an install or an update, and back on
+    /// the screen after a download ended while the app was away.
+    func prepareIfNew() {
+        guard case .catalog(let name)? = Models.shared.usable(), let e = Models.shared.entry(name),
+              Models.usable(e) == .neuralEngine, !Editions.compiled(e) else { return }
+        prepare()
+    }
+
     /// The model in use, loaded once, and again once another is chosen: its
     /// Neural Engine edition where this device runs it, else its CPU's
     /// (Editions). Where the Neural Engine edition fails and the CPU's isn't

@@ -45,7 +45,8 @@ final class BenchState {
         var before: Int64 = 0
         for p in parts where !(p.file.hasSuffix(".aar") && Store.haveEncoder(e)) {
             let base = before
-            let url = try await Downloader.shared.fetch(p) { got, _ in
+            await Downloader.shared.begin([p])
+            let url = try await Downloader.shared.fetch(p) { got in
                 Task { @MainActor in
                     self.line[e.name] = "Downloading \(self.mb(base + got)) of \(self.mb(total)) MB"
                 }

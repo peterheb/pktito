@@ -96,7 +96,7 @@ final class Models {
             let parts = edition == .cpu ? [e.pkf] : [e.coreml.slim, e.coreml.encoder]
             let bytes = parts.reduce(0) { $0 + $1.bytes }
             return Offer(entry: e, edition: edition, usable: Models.usable(e), bytes: bytes,
-                         partial: Downloads.shared.kept(e.name))
+                         partial: Downloads.shared.kept(e))
         }
         let d = UserDefaults.standard
         model = d.string(forKey: "model")
