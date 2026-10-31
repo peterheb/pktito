@@ -60,6 +60,8 @@ struct Root: View {
             if case .success(let url) = r { opened(url) }
         }
         .onChange(of: s.pick) { if let p = s.pick { picked = p } }
+        // a recording sent to pktito from another app
+        .onOpenURL { s.received($0) }
         .sheet(isPresented: Binding(get: { s.managing }, set: { s.managing = $0 })) {
             Manage().presentationBackground(Pk.ground)
         }
@@ -95,10 +97,11 @@ struct Root: View {
 
     #if DEBUG
     /// For a device or a Simulator with no one tapping, through devicectl
-    /// or simctl: -open NAME transcribes Application Support/bench/NAME;
+    /// or simctl: -open NAME transcribes Application Support/bench/NAME,
+    /// and -receive NAME a copy of it as iOS sends one (Open in);
     /// -recent opens the newest transcript of the list; -play SECONDS plays
     /// it from there; -find WORDS searches it; -show about or manage opens
-    /// that. (A default's own -key value,
+    /// that, and with about, -sheet privacy or notices one of its sheets. (A default's own -key value,
     /// as -captions YES, sets it for the run.)
     private func debugArguments() {
         let args = CommandLine.arguments
@@ -107,9 +110,18 @@ struct Root: View {
             guard let i = args.firstIndex(of: flag), i + 1 < args.count else { return nil }
             return args[i + 1]
         }
-        if let name = value("-open") {
-            let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            s.start(base.appendingPathComponent("bench").appendingPathComponent(name))
+        let bench = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("bench")
+        if let name = value("-open") { s.start(bench.appendingPathComponent(name)) }
+        // as iOS sends a file: a copy in Documents/Inbox
+        if let name = value("-receive") {
+            let inbox = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("Inbox", isDirectory: true)
+            try? FileManager.default.createDirectory(at: inbox, withIntermediateDirectories: true)
+            let copy = inbox.appendingPathComponent(name)
+            try? FileManager.default.removeItem(at: copy)
+            try? FileManager.default.copyItem(at: bench.appendingPathComponent(name), to: copy)
+            s.received(copy)
         }
         if args.contains("-recent"), let first = Recents.shared.items.first { s.openRecent(first.id) }
         if let t = value("-play").flatMap(Double.init) {

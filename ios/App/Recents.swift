@@ -43,8 +43,10 @@ private struct Listed: Decodable { let items: [RecentItem] }
 /// the 50 latest finished transcripts, newest first, kept in Application
 /// Support, out of backups, so that the start screen opens each again and
 /// plays it from its recording. A file picked in Files is found again by a
-/// bookmark of it, kept while its transcript is on the list; one shared to
-/// pktito is copied in as it arrives, as Android keeps one (Recents.kt).
+/// bookmark of it, kept while its transcript is on the list; one sent to
+/// pktito from another app comes as a copy, which is held in incoming/
+/// while it is transcribed and then kept in copies/ with its transcript,
+/// as Android keeps one (Recents.kt).
 @MainActor @Observable
 final class Recents {
     static let shared = Recents()
@@ -63,9 +65,54 @@ final class Recents {
     }()
 
     nonisolated static var bookmarks: URL { data.appendingPathComponent("bookmarks", isDirectory: true) }
+    /// a transcript's recording sent to pktito: copies/ID/its name
     nonisolated static var copies: URL { data.appendingPathComponent("copies", isDirectory: true) }
+    /// a recording sent to pktito, until its transcript is kept: incoming/a new name/its name
+    nonisolated static var incoming: URL { data.appendingPathComponent("incoming", isDirectory: true) }
 
-    private init() { refresh() }
+    private init() {
+        refresh()
+        // what a run before held and never transcribed
+        let fm = FileManager.default
+        let old = Date().addingTimeInterval(-3600)
+        for d in (try? fm.contentsOfDirectory(at: Recents.incoming, includingPropertiesForKeys: [.creationDateKey])) ?? []
+            where ((try? d.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast) < old {
+            try? fm.removeItem(at: d)
+        }
+    }
+
+    /// A recording sent to pktito from another app, which iOS gives as a
+    /// copy in Documents/Inbox, moved out of the backups into incoming/ to
+    /// be transcribed; nil where it can't be.
+    nonisolated static func hold(_ url: URL) -> URL? {
+        let fm = FileManager.default
+        let dir = incoming.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let dst = dir.appendingPathComponent(url.lastPathComponent)
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        do {
+            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+            // one iOS lent rather than gave can only be copied
+            if (try? fm.moveItem(at: url, to: dst)) == nil { try fm.copyItem(at: url, to: dst) }
+            return dst
+        } catch {
+            try? fm.removeItem(at: dir)
+            return nil
+        }
+    }
+
+    nonisolated static func held(_ url: URL) -> Bool {
+        url.standardizedFileURL.path.hasPrefix(incoming.standardizedFileURL.path + "/")
+    }
+
+    /// The recordings held in incoming/ that nothing on the screen has.
+    func letGoHeld(except: [URL?]) {
+        let keep = Set(except.compactMap { $0 }.filter(Recents.held).map { $0.deletingLastPathComponent().lastPathComponent })
+        for d in (try? FileManager.default.contentsOfDirectory(at: Recents.incoming, includingPropertiesForKeys: nil)) ?? []
+            where !keep.contains(d.lastPathComponent) {
+            try? FileManager.default.removeItem(at: d)
+        }
+    }
 
     func refresh() {
         items = Recents.list(Recents.call { pkapp_recent($0) })
@@ -83,12 +130,23 @@ final class Recents {
     }
 
     /// A finished transcript at the top of the list, in place of an earlier
-    /// one of the same file; its file's bookmark kept with it. Off the main
-    /// thread, where the transcription ends.
-    nonisolated static func keep(_ item: RecentItem, transcript: Transcript, peaks: [UInt8], bookmark: Data?) {
-        guard let itemJSON = try? JSONEncoder().encode(item), let tJSON = try? JSONEncoder().encode(transcript) else { return }
-        if let bookmark {
-            try? FileManager.default.createDirectory(at: bookmarks, withIntermediateDirectories: true)
+    /// one of the same file; its recording kept with it: one sent to pktito
+    /// moved from incoming/ to copies/, else its bookmark. Off the main
+    /// thread, where the transcription ends; where the recording is now, if
+    /// it moved.
+    nonisolated static func keep(_ item: RecentItem, transcript: Transcript, peaks: [UInt8], recording: URL,
+                                 bookmark: Data?) -> URL? {
+        guard let itemJSON = try? JSONEncoder().encode(item), let tJSON = try? JSONEncoder().encode(transcript) else { return nil }
+        let fm = FileManager.default
+        var moved: URL?
+        if held(recording) {
+            let dst = copies.appendingPathComponent(item.id, isDirectory: true)
+            try? fm.createDirectory(at: copies, withIntermediateDirectories: true)
+            if (try? fm.moveItem(at: recording.deletingLastPathComponent(), to: dst)) != nil {
+                moved = dst.appendingPathComponent(recording.lastPathComponent)
+            }
+        } else if let bookmark {
+            try? fm.createDirectory(at: bookmarks, withIntermediateDirectories: true)
             try? bookmark.write(to: bookmarks.appendingPathComponent(item.id))
         }
         let out = data.path.withCString { d in
@@ -103,6 +161,7 @@ final class Recents {
             Recents.shared.refresh()
             Recents.shared.prune()
         }
+        return moved
     }
 
     /// A transcript of the list, as recent.rs keeps it.
@@ -196,11 +255,13 @@ final class Recents {
         return true
     }
 
-    /// Where a transcript's recording is now: its copy, if it was shared to
+    /// Where a transcript's recording is now: its copy, if it was sent to
     /// pktito, else its bookmark resolved; nil where it is gone.
     func recording(_ item: RecentItem) -> URL? {
-        let copy = Recents.copies.appendingPathComponent(item.id)
-        if FileManager.default.fileExists(atPath: copy.path) { return copy }
+        let copy = Recents.copies.appendingPathComponent(item.id, isDirectory: true)
+        if let f = (try? FileManager.default.contentsOfDirectory(at: copy, includingPropertiesForKeys: nil))?.first {
+            return f
+        }
         guard let b = try? Data(contentsOf: Recents.bookmarks.appendingPathComponent(item.id)) else { return nil }
         var stale = false
         return try? URL(resolvingBookmarkData: b, bookmarkDataIsStale: &stale)

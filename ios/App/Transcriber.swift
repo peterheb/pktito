@@ -203,11 +203,12 @@ final class Transcriber {
                         self.transcribed = spent
                     }
                 }
-                let t = try await Task.detached(priority: .userInitiated) { () throws -> Transcript in
+                let (t, moved) = try await Task.detached(priority: .userInitiated) { () throws -> (Transcript, URL?) in
                     let scoped = url.startAccessingSecurityScopedResource()
                     defer { if scoped { url.stopAccessingSecurityScopedResource() } }
                     let v = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
-                    let bookmark = try? url.bookmarkData()
+                    // a copy sent to pktito is kept itself (Recents.keep)
+                    let bookmark = Recents.held(url) ? nil : try? url.bookmarkData()
                     let t = try engine.transcribe(url, name: name, progress: progress)
                     if t.complete {
                         let item = RecentItem(
@@ -216,10 +217,12 @@ final class Transcriber {
                             transcribed: box.since(), model: t.model, fps: progress.fps,
                             size: UInt64(v?.fileSize ?? 0),
                             modified: UInt64(v?.contentModificationDate?.timeIntervalSince1970 ?? 0))
-                        Recents.keep(item, transcript: t, peaks: progress.peaks, bookmark: bookmark)
+                        let moved = Recents.keep(item, transcript: t, peaks: progress.peaks, recording: url, bookmark: bookmark)
+                        return (t, moved)
                     }
-                    return t
+                    return (t, nil)
                 }.value
+                if let moved { self.url = moved }
                 transcript = t
                 done = t.complete ? 1 : done
                 step = t.complete ? .done : .stopped

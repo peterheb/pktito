@@ -77,17 +77,35 @@ final class AppState {
         }
     }
 
-    /// A recording to transcribe: now, or once there is a model.
+    /// A recording to transcribe: now, or once there is a model; shown at
+    /// work, About put away.
     func start(_ url: URL) {
         let t = Transcriber.shared
         guard !t.running else { return }
+        about = false
         if setup {
             waiting = url
-            about = false
             return
         }
-        leave()
+        leave(keeping: url)
         t.start(url)
+    }
+
+    /// A recording sent to pktito from another app: Open in, or the share
+    /// sheet's pktito, which iOS gives as a copy. Held out of the backups
+    /// (Recents.hold) and transcribed; not while a transcription runs, when
+    /// the copy is let go, as Android lets a share go then (onNewIntent).
+    func received(_ url: URL) {
+        guard url.isFileURL else { return }
+        if Transcriber.shared.running {
+            try? FileManager.default.removeItem(at: url)
+            return
+        }
+        guard let held = Recents.hold(url) else {
+            say(L("problem_unexpected"))
+            return
+        }
+        start(held)
     }
 
     /// A transcript of the recent list on the screen again.
@@ -101,10 +119,12 @@ final class AppState {
     }
 
     /// The transcript let go, its search and its player with it.
-    func leave() {
+    func leave(keeping url: URL? = nil) {
         Player.shared.release()
         finder.clear()
         Transcriber.shared.clear()
+        // a recording sent to pktito that no transcript kept
+        Recents.shared.letGoHeld(except: [url, waiting])
     }
 
     /// A delete of Manage models' done, and what it said, if anything: the

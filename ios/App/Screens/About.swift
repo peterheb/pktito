@@ -60,10 +60,19 @@ struct About: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L("about_open"))
+        #if DEBUG
+        // -sheet privacy or notices, with -show about (Root.debugArguments)
+        .onAppear {
+            let args = CommandLine.arguments
+            if let i = args.firstIndex(of: "-sheet"), i + 1 < args.count { sheet = Sheet(rawValue: args[i + 1]) }
+        }
+        #endif
         .sheet(item: $sheet) { s in
+            // on an iPad, Privacy a form's size and the licenses a page's
+            // (app.css, .pk-notices: 600 wide, and 760 by 760)
             switch s {
-            case .privacy: SheetFrame(title: L("privacy_title")) { Privacy() }
-            case .notices: SheetFrame(title: L("notices_title")) { Licenses() }
+            case .privacy: SheetFrame(title: L("privacy_title")) { Privacy() }.presentationSizing(.form)
+            case .notices: SheetFrame(title: L("notices_title")) { Licenses() }.presentationSizing(.page)
             }
         }
     }
