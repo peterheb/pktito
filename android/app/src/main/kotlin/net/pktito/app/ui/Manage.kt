@@ -194,16 +194,19 @@ fun Manage(
     // keyed on the rows alone, so a question put away (Cancel, Esc) leaves
     // the keys on the Delete that asked, as the desktop's ask() gives them
     // back to its from (on the Googlebook, 2026-10-30, while a question also
-    // held this off, Esc took them to the first Delete)
+    // held this off, Esc took them to the first Delete); rows that change
+    // under a question leave them there too
     if (keys)
         LaunchedEffect(rows.map { it.title to it.enabled }) {
             withFrameNanos { }
-            runCatching { start.requestFocus() }
+            if (asking == null) runCatching { start.requestFocus() }
         }
     val k = rows.find { it.key == asking }
-    // a row gone while its question was up (a download that ended) takes it with it
-    if (asking != null && k?.ask == null) SideEffect { asking = null }
-    k?.ask?.let { (title, text) ->
+    // a row gone while its question was up (a download that ended) takes it
+    // with it, and so does one whose Delete a transcription begun since has
+    // greyed: that model is in the transcription's hands (Models.delete)
+    if (asking != null && (k?.ask == null || !k.enabled)) SideEffect { asking = null }
+    k?.takeIf { it.enabled }?.ask?.let { (title, text) ->
         Confirm(title, text, delete, onYes = {
             asking = null
             k.onAct()

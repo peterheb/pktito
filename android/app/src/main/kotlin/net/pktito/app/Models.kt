@@ -124,9 +124,14 @@ object Models {
     }
 
     /**
-     * Manage models' deletes, each on the main thread with no transcription
-     * running, the one other user of a model file (Transcriber.running), and
-     * each saying what its toast says, if anything: the model now in use,
+     * Manage models' deletes, each on the main thread and none of a model a
+     * transcription has in its hands, the one other user of a model file
+     * (Transcriber.running: the model in use, or the one loaded), whose
+     * engine freed under Engine.transcribe frees what it is reading. Manage
+     * greys those Deletes and puts away a question asked before the
+     * transcription began; these refuse one all the same, for a file opened
+     * with pktito in the frame before Manage is drawn again. Each says what
+     * its toast says, if anything: the model now in use,
      * where the one in use gave way to it, or that the delete failed, the
      * system's words for why in the log. A model goes with the
      * transcriber's copy where that is the one loaded (Transcriber.letGo):
@@ -141,6 +146,7 @@ object Models {
      */
     fun delete(context: Context, o: Offer): String? {
         val inUse = own == null && model == o.name
+        if (Transcriber.running && (inUse || Transcriber.loadedPath == o.file.path)) return context.getString(R.string.manage_cant_delete)
         Transcriber.letGo(o.file.path)
         if (!gone(o.file)) return context.getString(R.string.manage_cant_delete)
         return taken(context, if (inUse) next(offers, model, o.name) else null)
@@ -149,6 +155,7 @@ object Models {
     /** The person's own file deleted, the copy of it the app kept: the file they opened is theirs, and stays where it is. */
     fun deleteOwn(context: Context): String? {
         val f = own ?: return null
+        if (Transcriber.running) return context.getString(R.string.manage_cant_delete)
         Transcriber.letGo(f.path)
         if (!gone(f)) return context.getString(R.string.manage_cant_delete)
         prefs(context).edit().remove("model_file").apply()
