@@ -179,20 +179,29 @@ final class Transcriber {
 
     /// The recording at url transcribed, as pktito transcribes one on every
     /// platform; finished, it goes on the recent list. The screen stays on
-    /// while it runs: iOS pauses an app it can't see.
+    /// while it runs, and it goes on when the person leaves the app, where
+    /// the system lets it (Continued).
     func start(_ url: URL) {
         guard !running else { return }
         begin(url.lastPathComponent, url)
         let id = self.id
         let name = self.name
         UIApplication.shared.isIdleTimerDisabled = true
+        Continued.begin(id: id, name: name)
         Task {
-            defer { UIApplication.shared.isIdleTimerDisabled = false }
+            defer {
+                UIApplication.shared.isIdleTimerDisabled = false
+                Continued.end(done: step == .done)
+            }
             let began = Date()
             do {
-                if engine == nil || loadedName == nil { step = .loading }
+                if engine == nil || loadedName == nil {
+                    step = .loading
+                    Continued.update()
+                }
                 let engine = try await model()
                 step = .reading
+                Continued.update()
                 let progress = Engine.Progress()
                 let box = TimeBox()
                 progress.audio = { duration, fps, peaks in
@@ -202,6 +211,7 @@ final class Transcriber {
                         self.fps = fps
                         self.peaks = peaks
                         self.step = .transcribing
+                        Continued.update()
                     }
                 }
                 progress.update = { done, segs in
@@ -210,6 +220,7 @@ final class Transcriber {
                         self.done = done
                         self.segments += segs
                         self.transcribed = spent
+                        Continued.update()
                     }
                 }
                 let (t, moved) = try await Task.detached(priority: .userInitiated) { () throws -> (Transcript, URL?) in
