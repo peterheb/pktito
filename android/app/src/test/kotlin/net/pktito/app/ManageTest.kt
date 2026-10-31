@@ -8,6 +8,8 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.requestFocus
 import java.io.File
 import net.pktito.app.ui.Manage
 import net.pktito.app.ui.ManageActions
@@ -21,7 +23,8 @@ import org.robolectric.annotation.Config
 /**
  * Where the keys start in Manage models, as the desktop's (manage.*): on
  * the first Delete that can be pressed, past the model in use while a
- * transcription runs, or on Close where nothing can be deleted.
+ * transcription runs, or on Close where nothing can be deleted; and that a
+ * question put away gives them back to the Delete that asked.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w840dp-h900dp-xhdpi")
@@ -63,5 +66,13 @@ class ManageTest {
             download = Download("v3", "downloading", 262_144_000, 647_552_644, 11.8e6, "models.pktito.net", null, retry = false, trying = false),
         )
         compose.onNodeWithText("Close").assertIsFocused()
+    }
+
+    @Test fun aQuestionPutAwayGivesThemBackToItsDelete() {
+        show(both)
+        compose.onAllNodesWithText("Delete")[1].requestFocus().performClick()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.waitForIdle()
+        compose.onAllNodesWithText("Delete")[1].assertIsFocused()
     }
 }

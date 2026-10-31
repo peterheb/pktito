@@ -191,7 +191,11 @@ fun Manage(
             Box(Modifier.widthIn(max = 440.dp).fillMaxWidth().floating()) { panel(24.dp) }
             toast?.let { Toast(it, Modifier.align(Alignment.BottomCenter)) }
         }
-    if (keys && asking == null)
+    // keyed on the rows alone, so a question put away (Cancel, Esc) leaves
+    // the keys on the Delete that asked, as the desktop's ask() gives them
+    // back to its from (on the Googlebook, 2026-10-30, while a question also
+    // held this off, Esc took them to the first Delete)
+    if (keys)
         LaunchedEffect(rows.map { it.title to it.enabled }) {
             withFrameNanos { }
             runCatching { start.requestFocus() }
