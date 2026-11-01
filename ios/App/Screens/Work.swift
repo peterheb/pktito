@@ -248,36 +248,42 @@ func share(_ url: URL, from view: UIView?) {
     top.present(vc, animated: true)
 }
 
-/// The views line: Sentences or Captions, and the search's field at its end
-/// (app.css, .pk-views and .pk-find), the desktop's 200 wide and 280 with a
-/// search in it, where the line has room for both, 480; on a phone the
-/// glass in the field's place, which opens the field over the line until
-/// the search is let go, as a phone's find in page does.
+/// The views line: Sentences or Captions, and Find beside them, the one
+/// group of the transcript's controls (app.css, .pk-views-line): a field
+/// that says "Find", 200 wide and 280 with a search in it, where it fits
+/// beside the views, else the glass, which opens the field across the line
+/// until the search is let go, as a phone's find in page does. Not at the
+/// line's far end, nearly alone, where a reader might not see that the
+/// transcript can be searched (Peter, 2026-10-31).
 private struct Views: View {
     let hits: [Hit]
     let seek: ((Double) -> Void)?
+    /// the line's width, and the views' as they are drawn
     @State private var width: CGFloat = 0
+    @State private var viewsWidth: CGFloat = 0
 
     var body: some View {
         let s = AppState.shared
         let f = s.finder
-        let room = width >= 480
-        HStack(spacing: 0) {
-            if room || !f.open {
+        let wide: CGFloat = f.query.trimmingCharacters(in: .whitespaces).isEmpty ? 200 : 280
+        let room = { (w: CGFloat) in viewsWidth > 0 && viewsWidth + 12 + w <= width }
+        let field: CGFloat? = room(wide) ? wide : room(200) ? 200 : nil
+        HStack(spacing: 12) {
+            if field != nil || !f.open {
                 Switch2(first: L("sentences"), second: L("captions"),
                         onSecond: Binding(get: { s.captions }, set: { s.captions = $0 }))
-                Spacer(minLength: 12)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { viewsWidth = $0 }
             }
-            if room {
-                FindField(finder: f, hits: hits, seek: seek)
-                    .frame(width: f.query.trimmingCharacters(in: .whitespaces).isEmpty ? 200 : 280)
+            if let field {
+                FindField(finder: f, hits: hits, seek: seek).frame(width: field)
             } else if f.open {
-                FindField(finder: f, hits: hits, seek: seek).frame(maxWidth: .infinity)
+                FindField(finder: f, hits: hits, seek: seek, opened: true).frame(maxWidth: .infinity)
             } else {
                 IconButton(icon: .search, label: L("find_label"), kind: .ghost) { f.open = true }
             }
+            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
     }
 }

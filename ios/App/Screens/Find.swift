@@ -135,6 +135,10 @@ struct FindField: View {
     @Bindable var finder: Finder
     let hits: [Hit]
     let seek: ((Double) -> Void)?
+    /// opened across the line from the glass, which its × closes again; a
+    /// field that stays beside the views shows its × only with a search in
+    /// it, to let the search go, as the desktop's field does
+    var opened = false
     @FocusState private var typing: Bool
 
     var body: some View {
@@ -159,14 +163,16 @@ struct FindField: View {
                 }
                 .disabled(hits.count < 2)
             }
-            Button {
-                finder.clear()
-                typing = false
-            } label: {
-                PkIcon.x.frame(width: 16, height: 16).foregroundStyle(Pk.inkMuted).frame(width: 32, height: 32)
+            if opened || !finder.query.isEmpty {
+                Button {
+                    finder.clear()
+                    typing = false
+                } label: {
+                    PkIcon.x.frame(width: 16, height: 16).foregroundStyle(Pk.inkMuted).frame(width: 32, height: 32)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L("find_close"))
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(L("find_close"))
         }
         .padding(.leading, 14)
         .padding(.trailing, 4)
