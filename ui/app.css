@@ -2150,13 +2150,16 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   }
 }
 /* a narrow window, down to the 480 it allows: the edges closer in */
+/* a narrow window's screens on one edge, 16 px in, the work's and the
+   phones' apps': at 20 the start screen's edge stood 4 px off the
+   transcript's it opens (the layout audit, 2026-11-01) */
 @media (max-width: 599px) {
   .pk-screen {
-    padding-left: 20px;
-    padding-right: 20px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
   .pk-about-text {
-    padding: 24px 20px 28px;
+    padding: 24px 16px 28px;
   }
   .pk-about > .pk-back {
     left: 5px;
