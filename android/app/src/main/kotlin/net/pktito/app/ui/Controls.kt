@@ -167,6 +167,22 @@ fun Modifier.bleed(horizontal: Dp = 0.dp, vertical: Dp = 0.dp) = layout { measur
 }
 
 /**
+ * The room a control hangs past the edge it is laid out on, at its start
+ * and its end, as type hangs punctuation past the measure: laid out that
+ * much narrower, drawn and touched whole. An icon button on an edge hangs
+ * its icon's inset (inkInset), so that its ink stands there at any text
+ * size: from about 1.7 times it the inset is more than a phone's 16 dp
+ * edge, where a padding of the edge less the inset would be under 0, which
+ * Compose refuses (the layout audit, 2026-11-01).
+ */
+fun Modifier.hang(start: Dp = 0.dp, end: Dp = 0.dp) = layout { measurable, constraints ->
+    val s = start.roundToPx()
+    val e = end.roundToPx()
+    val p = measurable.measure(constraints.offset(s + e, 0))
+    layout(p.width - s - e, p.height) { p.place(-s, 0) }
+}
+
+/**
  * A line of text as tall as CSS makes it where that is shorter than its
  * font, as the desktop's figure (64 px at 0.9) and wordmark (20 at 1) are:
  * Compose keeps a line at least as tall as its font's ascent and descent
@@ -241,6 +257,21 @@ fun PkButton(
     }
 }
 
+/** An IconBtn's side (IconBtn): 40 dp, or more at a larger text size. */
+@Composable
+fun iconSide(): Dp = maxOf(40.dp, with(LocalDensity.current) { 14.sp.toDp() } * 1.4f + 12.dp)
+
+/**
+ * How far an IconBtn's icon's ink is from the button's side, for an icon
+ * whose ink starts units into Feather's 24 grid on that side (the arrow
+ * back 4, the close cross 5, each with its stroke): the 18 dp icon is in
+ * the middle of the button, 18 / 24 dp a unit. An icon on an edge hangs
+ * that past it (hang), so that its ink stands there, not its box
+ * (design/README.md, On an edge).
+ */
+@Composable
+fun inkInset(units: Float): Dp = (iconSide() - 18.dp) / 2 + 18.dp * units / 24
+
 /**
  * A button of an icon alone, its words for a reader and a long press: 40 dp
  * square, and as big as a PkButton's words make it beside it at a larger
@@ -257,7 +288,7 @@ fun IconBtn(
     enabled: Boolean = true,
 ) {
     val p = pk
-    val side = maxOf(40.dp, with(LocalDensity.current) { 14.sp.toDp() } * 1.4f + 12.dp)
+    val side = iconSide()
     Box(
         modifier
             .alpha(if (enabled) 1f else 0.45f)

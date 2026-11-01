@@ -129,7 +129,9 @@ private val Text15 = Type.body.copy(fontSize = 15.sp)
  * wide at most, 16 dp in from a narrow window's sides, as every screen on a
  * phone (it was 20; the layout audit, 2026-11-01), and 40 from a wider
  * one's, at least 520 tall where the window has that, in the middle of the
- * window; what it says at its top, 20 apart, and its foot at its bottom.
+ * window; what it says at its top, 24 apart, and its foot at its bottom,
+ * 24 under them at the least: the scale's step, as the start screen's (it
+ * was 20; the layout audit, 2026-11-01).
  * Taller than the window, it scrolls.
  */
 @Composable
@@ -146,8 +148,8 @@ private fun Screen(top: @Composable ColumnScope.() -> Unit, foot: @Composable Co
                     .padding(start = side, end = side, top = 28.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(20.dp), content = top)
-                Column(Modifier.padding(top = 20.dp), content = foot)
+                Column(verticalArrangement = Arrangement.spacedBy(24.dp), content = top)
+                Column(Modifier.padding(top = 24.dp), content = foot)
             }
         }
     }
@@ -214,7 +216,9 @@ private fun Choose(offers: List<Offer>, model: String?, waiting: Int, a: SetupAc
             Intro(stringResource(R.string.setup_title))
             Column(
                 Modifier.selectableGroup().semantics { contentDescription = legend },
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                // 12 apart, the scale's (.pk-choices; it was 10, the layout
+                // audit, 2026-11-01)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 for (o in offers) Card(o, o.name == chosen.name, own, { choice = o.name }, a.link)
             }
@@ -226,7 +230,9 @@ private fun Choose(offers: List<Offer>, model: String?, waiting: Int, a: SetupAc
                 chosen.partial > 0 -> stringResource(R.string.setup_download_rest, label, mb(chosen.bytes - chosen.partial))
                 else -> stringResource(R.string.setup_download, label, mb(chosen.bytes))
             }
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            // the button and the way to a file of one's own 16 apart, the
+            // scale's (.pk-foot-col; it was 14, the layout audit, 2026-11-01)
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 PkButton(
                     go, { if (chosen.have) a.use(chosen) else a.download(chosen) }, Modifier.fillMaxWidth(),
                     kind = Kind.Primary, large = true, leading = if (chosen.have) Icons.check else Icons.download,
@@ -580,8 +586,12 @@ fun ModelButton(offers: List<Offer>, model: String?, own: String?, onPick: (Offe
     val label = own ?: offers.find { it.name == model }?.let { stringResource(R.string.models_named, Models.label(res, it.key)) } ?: ""
     val check = @Composable { Icon(Icons.check, null, tint = p.ink, modifier = Modifier.size(16.dp)) }
     Box {
-        // its words to the column's edge, as the desktop's (#ready-model)
-        PkButton(label, { open = true }, Modifier.offset(x = 12.dp), kind = Kind.Ghost, trailing = Icons.down, file = own != null, held = open)
+        // its chevron's ink on the column's edge, as the desktop's
+        // (#ready-model): its padding, 12, outside it, and the 3.3 dp the
+        // ink stands in the chevron's 16 dp box (Feather's down, from 5 of
+        // 24 with its stroke); at 12 the ink stood 3.2 in (the layout audit,
+        // 2026-11-01)
+        PkButton(label, { open = true }, Modifier.offset(x = 12.dp + 16.dp * 5 / 24), kind = Kind.Ghost, trailing = Icons.down, file = own != null, held = open)
         Menu(open, { open = false }) {
             for (o in offers) {
                 val on = own == null && o.name == model
