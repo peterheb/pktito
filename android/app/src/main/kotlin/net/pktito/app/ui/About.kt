@@ -121,7 +121,9 @@ fun About(version: String, onBack: () -> Unit, onLink: (String) -> Unit) {
                 {
                     stage(Modifier)
                     words(
-                        if (narrow) Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 28.dp)
+                        // 16 from a phone's sides, as every screen there
+                        // (it was 20; the layout audit, 2026-11-01)
+                        if (narrow) Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 28.dp)
                         else Modifier.padding(start = 40.dp, end = 40.dp, top = 28.dp, bottom = 32.dp),
                     )
                 },

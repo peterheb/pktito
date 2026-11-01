@@ -52,8 +52,10 @@ class TranscribeService : Service() {
             try {
                 transcribe(uri)
             } catch (e: Exception) {
+                // a recording that can't be read in the app's words, what
+                // said so only here in the log (Engine.problem)
                 Log.w(TAG, "transcribing ${Transcriber.name}", e)
-                val why = e.message ?: e.toString()
+                val why = Engine.problem(e)?.let { words(resources, it) } ?: e.message ?: e.toString()
                 Transcriber.post {
                     error = why
                     step = "error"

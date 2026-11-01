@@ -126,7 +126,8 @@ private val Text15 = Type.body.copy(fontSize = 15.sp)
 
 /**
  * The screen's frame (app.css, .pk-center > .pk-screen): a column 640 dp
- * wide at most, 20 dp in from a narrow window's sides and 40 from a wider
+ * wide at most, 16 dp in from a narrow window's sides, as every screen on a
+ * phone (it was 20; the layout audit, 2026-11-01), and 40 from a wider
  * one's, at least 520 tall where the window has that, in the middle of the
  * window; what it says at its top, 20 apart, and its foot at its bottom.
  * Taller than the window, it scrolls.
@@ -134,7 +135,7 @@ private val Text15 = Type.body.copy(fontSize = 15.sp)
 @Composable
 private fun Screen(top: @Composable ColumnScope.() -> Unit, foot: @Composable ColumnScope.() -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val side = if (maxWidth < 600.dp) 20.dp else 40.dp
+        val side = if (maxWidth < 600.dp) 16.dp else 40.dp
         val least = minOf(maxHeight, 520.dp)
         Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), contentAlignment = Alignment.Center) {
             Column(

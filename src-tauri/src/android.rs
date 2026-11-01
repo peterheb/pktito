@@ -119,7 +119,11 @@ pub extern "system" fn Java_net_pktito_app_Engine_about<'a>(
 /// frame rate or 0, the loudness in audio::PEAKS slices) draws the strip;
 /// progress.update(fraction, the segments just done, in JSON) after each
 /// chunk. All on this thread. The screen plays the recording itself (the
-/// app's Player.kt, view.rs), so nothing of its samples is kept.
+/// app's Player.kt, view.rs), so nothing of its samples is kept. A
+/// recording that can't be read throws its problem as JSON, the catalog's
+/// key and what said so: the app words the key from its own catalog and
+/// keeps the particulars to its log (Engine.problem), as iOS's does
+/// (ios.rs).
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
     mut unowned: EnvUnowned<'a>,
@@ -137,7 +141,11 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
             let fps = decode::frame_rate_fd(fd).unwrap_or(0.0);
             let x = match decode::decode_fd(fd, &name) {
                 Ok(x) => x,
-                Err(e) => return throw(env, &e.message()).map(|_| JObject::null()),
+                Err(e) => {
+                    let p = e.problem();
+                    let why = serde_json::json!({ "key": p.key, "detail": p.detail });
+                    return throw(env, &why.to_string()).map(|_| JObject::null());
+                }
             };
             let duration = x.len() as f64 / decode::RATE as f64;
             let peaks = audio::peaks(&x, audio::PEAKS);

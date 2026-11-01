@@ -92,7 +92,12 @@
          *_html are, for AnnotatedString.fromHtml -->
     <string name="about_open">About pktito</string>
     <string name="about_mascot">pktito\'s mascot, a budgie beside a speech bubble and a transcript</string>
-    <string name="about_tagline"><![CDATA[A compact Parakeet implementation <i>(pronounced “pick-a-tito”)</i><br>Speech to text on this device.]]></string>
+    <!-- the name's sound in one piece, a word joiner (&#8288;) after each of
+         its hyphens: the desktop's broke "pick-a-" from "tito" at one width
+         (the layout audit, 2026-11-01). Its space can still break: at twice
+         the text size the whole of it is 310 dp (Archivo's advances, 15 sp
+         at 27 dp), and a folded phone's cover has 305 for the words -->
+    <string name="about_tagline"><![CDATA[A compact Parakeet implementation <i>(pronounced “pick-&#8288;a-&#8288;tito”)</i><br>Speech to text on this device.]]></string>
     <string name="about_version">Version %1$s&#160;· %2$s</string>
     <string name="about_copyright"><![CDATA[Copyright (c) 2026 Peter Hebert, under the <a href="https://github.com/peterheb/pktito/blob/main/LICENSE">MIT license</a>]]></string>
     <string name="about_docs">Documentation</string>
@@ -219,6 +224,14 @@
     <string name="model_file_not_model">Not a pktito model</string>
     <string name="model_file_cant_open">Can\'t open the model file</string>
     <string name="model_file_damaged">Model file incomplete or damaged</string>
+    <!-- a recording that can't be read, the desktop's decode.* (the core's
+         keys: words, in Models.kt; Words.swift); a phone has no ffmpeg to
+         suggest -->
+    <string name="decode_unreadable">Can\'t read this file</string>
+    <string name="decode_not_media">Not audio or video</string>
+    <string name="decode_no_audio">No audio track</string>
+    <string name="decode_not_found">File not found</string>
+    <string name="decode_cant_convert">Can\'t convert this audio</string>
     <string name="problem_unexpected">Something went wrong</string>
     <string name="problem_memory">Not enough memory. Close other apps and try again.</string>
     <string name="time_left_seconds">about&#160;%1$d&#160;s&#160;left</string>

@@ -169,8 +169,8 @@ fun Manage(
     val first = rows.indexOfFirst { it.ask != null && it.enabled }
     val start = remember { FocusRequester() }
     val keys = hasKeys()
-    val panel = @Composable { top: Dp ->
-        Panel(rows, rows.sumOf { it.bytes }, free, top, start, first, onAct = { if (it.ask != null) asking = it.key else it.onAct() }, a.close)
+    val panel = @Composable { top: Dp, edge: Dp ->
+        Panel(rows, rows.sumOf { it.bytes }, free, top, edge, start, first, onAct = { if (it.ask != null) asking = it.key else it.onAct() }, a.close)
     }
     if (compact)
         ModalBottomSheet(
@@ -182,13 +182,13 @@ fun Manage(
             dragHandle = { BottomSheetDefaults.DragHandle(color = p.inkMuted) },
         ) {
             Box(Modifier.fillMaxWidth()) {
-                panel(0.dp)
+                panel(0.dp, 16.dp)
                 toast?.let { Toast(it, Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp)) }
             }
         }
     else
         Modal(a.close) {
-            Box(Modifier.widthIn(max = 440.dp.withText()).fillMaxWidth().floating()) { panel(24.dp) }
+            Box(Modifier.widthIn(max = 440.dp.withText()).fillMaxWidth().floating()) { panel(24.dp, 24.dp) }
             toast?.let { Toast(it, Modifier.align(Alignment.BottomCenter)) }
         }
     // keyed on the rows alone, so a question put away (Cancel, Esc) leaves
@@ -239,16 +239,19 @@ private fun used(res: Resources, total: Long, free: Long): String {
 /**
  * The rows between lines of sunk, what they take and the room left under
  * them, and Close, each button beside its words or under them (Beside);
- * start is the focus of the row first, or of Close where first is -1.
+ * start is the focus of the row first, or of Close where first is -1. In
+ * from its sides by edge: the dialog's 24, and the sheet's 16, which spans
+ * a phone's width, as every screen's edge there (it was 24; the layout
+ * audit, 2026-11-01).
  */
 @Composable
 private fun Panel(
-    rows: List<Kept>, total: Long, free: Long, top: Dp, start: FocusRequester, first: Int,
+    rows: List<Kept>, total: Long, free: Long, top: Dp, edge: Dp, start: FocusRequester, first: Int,
     onAct: (Kept) -> Unit, onClose: () -> Unit,
 ) {
     val p = pk
     val res = LocalResources.current
-    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 24.dp, end = 24.dp, top = top, bottom = 20.dp)) {
+    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = edge, end = edge, top = top, bottom = 20.dp)) {
         Text(stringResource(R.string.manage_title), style = Type.ui, color = p.ink, modifier = Modifier.semantics { heading() })
         Column(Modifier.padding(top = 12.dp)) {
             if (rows.isEmpty())

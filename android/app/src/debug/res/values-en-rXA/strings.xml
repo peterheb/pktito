@@ -78,7 +78,7 @@
     <string name="play_not_it">[Țhąț\'ș ńőț țhę fįłę țřąńșčřįbęď: įțș șįżę įș ďįffęřęńț ····· ····· ·]</string>
     <string name="about_open">[Ąbőűț pkțįțő ·····]</string>
     <string name="about_mascot">[pkțįțő\'ș mąșčőț, ą bűďgįę bęșįďę ą șpęęčh bűbbłę ąńď ą țřąńșčřįpț ····· ····· ·····]</string>
-    <string name="about_tagline"><![CDATA[[Ą čőmpąčț Pąřąkęęț įmpłęmęńțąțįőń <i>(přőńőűńčęď “pįčk-ą-țįțő”)</i><br>Șpęęčh țő țęxț őń țhįș ďęvįčę. ····· ····· ····· ······]]]></string>
+    <string name="about_tagline"><![CDATA[[Ą čőmpąčț Pąřąkęęț įmpłęmęńțąțįőń <i>(přőńőűńčęď “pįčk-&#8288;ą-&#8288;țįțő”)</i><br>Șpęęčh țő țęxț őń țhįș ďęvįčę. ····· ····· ····· ······]]]></string>
     <string name="about_version">[Vęřșįőń %1$s&#160;· %2$s ····· ·]</string>
     <string name="about_copyright"><![CDATA[[Čőpýřįghț (č) 2026 Pęțęř Hębęřț, űńďęř țhę <a href="https://github.com/peterheb/pktito/blob/main/LICENSE">MĮȚ łįčęńșę</a> ····· ····· ··]]]></string>
     <string name="about_docs">[Ďőčűmęńțąțįőń ·····]</string>
@@ -190,6 +190,11 @@
     <string name="model_file_not_model">[Ńőț ą pkțįțő mőďęł ····· ··]</string>
     <string name="model_file_cant_open">[Čąń\'ț őpęń țhę mőďęł fįłę ····· ·]</string>
     <string name="model_file_damaged">[Mőďęł fįłę įńčőmpłęțę őř ďąmągęď ····· ····]</string>
+    <string name="decode_unreadable">[Čąń\'ț řęąď țhįș fįłę ····· ···]</string>
+    <string name="decode_not_media">[Ńőț ąűďįő őř vįďęő ····· ··]</string>
+    <string name="decode_no_audio">[Ńő ąűďįő țřąčk ······]</string>
+    <string name="decode_not_found">[Fįłę ńőț főűńď ······]</string>
+    <string name="decode_cant_convert">[Čąń\'ț čőńvęřț țhįș ąűďįő ····· ·]</string>
     <string name="problem_unexpected">[Șőmęțhįńg węńț wřőńg ····· ···]</string>
     <string name="problem_memory">[Ńőț ęńőűgh męmőřý. Čłőșę őțhęř ąppș ąńď țřý ągąįń. ····· ····· ·····]</string>
     <string name="time_left_seconds">[ąbőűț&#160;%1$d&#160;ș&#160;łęfț ····· ·]</string>

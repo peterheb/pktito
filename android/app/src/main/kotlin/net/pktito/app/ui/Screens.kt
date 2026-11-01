@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -130,9 +131,9 @@ class ReadyActions(
  * them, leave the list under 160 dp, the screen scrolls as a whole, the
  * list with it: the desktop's window is never that short, but a split
  * screen is, and a phone on its side at any text size. The emulator's
- * Pixel 5 on its side has 345 dp, which leave the list 57 at the default
- * text size and 29 at twice it; upright at twice it they leave 418
- * (2026-10-31).
+ * Pixel 5 on its side has 345 dp, which leave the list 53 at the default
+ * text size and 25 at twice it; upright at twice it they leave 414
+ * (2026-11-01).
  */
 @Composable
 fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> Unit) {
@@ -143,8 +144,8 @@ fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> 
     var zone by remember { mutableIntStateOf(0) }
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = if (listed) Alignment.TopCenter else Alignment.Center) {
         // what they leave the list, less the column's 20 dp above and below
-        // and its two gaps of 22
-        val left = maxHeight - 84.dp - with(LocalDensity.current) { (top + zone).toDp() }
+        // and its two gaps of 24
+        val left = maxHeight - 88.dp - with(LocalDensity.current) { (top + zone).toDp() }
         val short = left < 160.dp
         Column(
             Modifier
@@ -157,8 +158,13 @@ fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> 
                         else -> Modifier
                     },
                 )
-                .padding(horizontal = 20.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(22.dp),
+                // 16 from a phone's sides, as every screen there, and 40 in
+                // the 640 dp column of a wider one (design/README.md, Edges);
+                // its steps the scale's 24, and 32 over the list with the
+                // list's own 8 (app.css, .pk-ready): they were 20 in, and
+                // steps of 22 (the layout audit, 2026-11-01)
+                .padding(horizontal = if (maxWidth < 600.dp) 16.dp else 40.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             TopRow(a, model, Modifier.onSizeChanged { top = it.height })
             Drop(a, Modifier.fillMaxWidth().onSizeChanged { zone = it.height })
@@ -253,17 +259,19 @@ fun Side(recent: List<Recents.Item>, a: ReadyActions, open: Opened?, model: @Com
                 .drawBehind { drawRect(p.sunk, Offset(size.width - 1.dp.toPx(), 0f), Size(1.dp.toPx(), size.height)) }
                 // its top row on the work's header's line, the model menu's
                 // 40 in the middle of the header's 62, and Choose with the
-                // strip's top, 2 more under the row (the header's 11 and the
-                // strip's 5): at 20 the row sat 9 lower than the header's
-                // and Choose 7 lower than the strip (Peter, on the iPad's,
-                // 2026-11-01; app.css, the side)
+                // strip's top, 16 under the row as the strip is under the
+                // header's buttons (their 11 and its 5): at 20 the row sat 9
+                // lower than the header's and Choose 7 lower than the strip
+                // (Peter, on the iPad's, 2026-11-01; app.css, the side). Its
+                // steps the scale's 16, as the desktop's: they were 14, and
+                // 18 over the list (the layout audit, 2026-11-01)
                 .padding(start = 20.dp, top = 11.dp, end = 16.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            TopRow(a, model, Modifier.padding(bottom = 2.dp))
+            TopRow(a, model)
             if (open != null) PkButton(stringResource(R.string.choose), a.choose, Modifier.fillMaxWidth(), enabled = !running)
             if (recent.isNotEmpty() || live != null)
-                Recent(recent, a, onClear = { asking = true }, scrolls = true, Modifier.weight(1f), top = 4.dp, open = open?.id, live = live, enabled = !running)
+                Recent(recent, a, onClear = { asking = true }, scrolls = true, Modifier.weight(1f), top = 0.dp, open = open?.id, live = live, enabled = !running)
         }
         Box(Modifier.weight(1f).fillMaxHeight()) {
             // the zone in the middle, 560 wide, 40 from either edge at the least
@@ -291,10 +299,11 @@ fun Side(recent: List<Recents.Item>, a: ReadyActions, open: Opened?, model: @Com
  * less its margins), leaves it, grown with the text (withText),
  * beside the list's widest length and date; on a phone, narrower, its
  * length and date go under its name, which keeps the width. On an open
- * fold, 673 dp, a row keeps its line through 1.5 times the text size, the
- * name 399 dp to the 390 asked there, and at twice it would have 383 to
- * 464, so the two go under (2026-10-31). scrolls: the list scrolls under
- * its heading, else it is all there, for a screen that scrolls (Ready). In
+ * fold, 673 dp, whose start screen has 560 inside its column, a row keeps
+ * its line through 1.3 times the text size, the name 367 dp, and at 1.5
+ * would have 359 to the 390 asked there, so the two go under (2026-11-01).
+ * scrolls: the list scrolls under its heading, else it is all there, for a
+ * screen that scrolls (Ready). In
  * the side, the row of the transcript open is marked (open), one the list
  * does not have heads it (live), and while one is under way the rows and
  * Clear wait (enabled); Clear goes with the last of the list's own.
@@ -980,7 +989,10 @@ private fun SegRow(
             else Modifier
         )
     if (column != null)
-        Row(box.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        // a row of one line 48 dp tall at the least, Android's least for a
+        // finger, its line in the middle: it was 44, iOS's 44 pt (the layout
+        // audit, 2026-11-01). With its time over it, a row has two lines.
+        Row(box.heightIn(min = 48.dp).wrapContentHeight().padding(horizontal = 16.dp, vertical = 8.dp)) {
             time(Modifier.width(column).alignByBaseline())
             Spacer(Modifier.width(12.dp))
             Sentence(s, word, marks, at, shown, Modifier.weight(1f).alignByBaseline())
