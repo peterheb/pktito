@@ -439,12 +439,14 @@ const langNames = (() => {
 })();
 const langName = (c) => (langNames && langNames.of(c)) || c;
 const ownLang = () => (navigator.language || "en").slice(0, 2).toLowerCase();
-/* After a model of several's count, the system's language where it is one
-   of them: whether theirs is there is what most who look want to know */
-const amongThem = (m) =>
+/* A model of several's languages, about (HTML: in Setup's card, the link
+   that opens their list), and the system's language where it is one of
+   them, as one sentence a translator can order: whether theirs is there is
+   what most who look want to know */
+const withOwn = (m, about) =>
   m.languages.length > 1 && m.languages.includes(ownLang())
-    ? t("models.among", { lang: langName(ownLang()) })
-    : "";
+    ? esc(t("models.languages_among", { languages: "\u0001", lang: langName(ownLang()) })).replace("\u0001", about)
+    : about;
 const langsOf = (m) =>
   m.languages
     .map((c) => ({ c, n: langName(c) }))
@@ -468,7 +470,7 @@ function modelMenu(anchor, keys) {
         : m.name;
     return (
       `<button class="pk-mi" type="button" role="menuitemradio" aria-checked="${on}" data-model="${m.name}" title="${esc(title)}">` +
-      `<span>${esc(labelOf(m))}</span><small class="pk-sub">${esc(aboutOf(m) + amongThem(m))} · ${state}</small>${on ? ICON.check : ""}</button>`
+      `<span>${esc(labelOf(m))}</span><small class="pk-sub">${withOwn(m, esc(aboutOf(m)))} · ${state}</small>${on ? ICON.check : ""}</button>`
     );
   });
   if (st.model_file) {
@@ -744,7 +746,7 @@ function chooseHtml() {
       const many = m.languages.length > 1;
       const about = !many
         ? esc(aboutOf(m))
-        : `<button class="pk-linkbtn pk-linkbtn-sm" type="button" data-langs aria-expanded="false">${esc(aboutOf(m))}</button>${esc(amongThem(m))}`;
+        : withOwn(m, `<button class="pk-linkbtn pk-linkbtn-sm" type="button" data-langs aria-expanded="false">${esc(aboutOf(m))}</button>`);
       const list = !many
         ? ""
         : `<div class="pk-langs-box" hidden>` +

@@ -71,7 +71,7 @@
   "models.named": "{label} model",
   "models.downloaded": "Downloaded",
   "models.download_size": "{mb} MB download",
-  "models.among": ", {lang} among them",
+  "models.languages_among": "{languages}, {lang} among them",
   "models.open_file": "Open a model file…",
   "models.using": "Using the {label} model",
   "models.using_file": "Using {name}",

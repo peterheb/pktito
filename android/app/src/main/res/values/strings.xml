@@ -139,6 +139,8 @@
     <string name="models_downloaded">Downloaded</string>
     <string name="models_download_size">%1$s MB download</string>
     <string name="models_among">, %1$s among them</string>
+    <!-- a model of several's languages, %1$s ("25 European languages"), and the system's language among them, %2$s, as one sentence (models.languages_among); models_among goes once Android uses this -->
+    <string name="models_languages_among">%1$s, %2$s among them</string>
     <string name="models_open_file">Open a model file…</string>
     <string name="models_using">Using the %1$s model</string>
     <string name="models_using_file">Using %1$s</string>
