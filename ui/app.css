@@ -678,8 +678,11 @@ html[data-chrome="win"] .pk-head {
 }
 
 /* ready */
+/* with nothing on the recent list, its top row and zone together in the
+   window's middle, as iOS's start screen: held 600 tall from its top, their
+   middle sat 235 px down an 800 px window (Peter, 2026-11-01) */
 .pk-ready {
-  height: min(100%, 600px);
+  height: auto;
   min-height: 0;
   /* its steps on the scale, 24, and 32 over the recent list (8 more);
      they were 22 and 30 (the layout audit, 2026-11-01) */
@@ -2456,7 +2459,9 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   border-radius: var(--radius-ui);
   background: var(--term);
   color: var(--term-ink);
-  box-shadow: var(--shadow-float);
+  /* and in dark its 1 px edge (toast-edge): term one step above the ground
+     left it all but unseen (Peter, 2026-11-01) */
+  box-shadow: var(--shadow-float), inset 0 0 0 1px var(--toast-edge);
   font: 500 14px/1.3 var(--font-sans);
 }
 /* two lines at most, so that a long file's name shows whole in a narrow window */
