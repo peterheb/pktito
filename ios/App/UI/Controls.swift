@@ -29,7 +29,8 @@ struct PkButtonStyle: ButtonStyle {
             .overlay(configuration.isPressed ? (onTerm ? Pk.tintTermPress : Pk.tintPress) : Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: Radius.radiusUi))
             .opacity(enabled ? 1 : 0.45)
-            .contentShape(RoundedRectangle(cornerRadius: Radius.radiusUi))
+            // 44 tall to a finger where it is drawn 40 (HIG's least)
+            .contentShape(Rectangle().inset(by: -2))
     }
 
     private var fill: Color {
@@ -106,7 +107,8 @@ struct IconButton: View {
                 .overlay(configuration.isPressed ? (onTerm ? Pk.tintTermPress : Pk.tintPress) : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: Radius.radiusUi))
                 .opacity(enabled ? 1 : 0.45)
-                .contentShape(Rectangle())
+                // drawn 40, 44 to a finger (HIG's least), into the gap round it
+                .contentShape(Rectangle().inset(by: -2))
         }
     }
 }

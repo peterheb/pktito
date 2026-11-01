@@ -271,6 +271,8 @@ private struct SpeedMenu: View {
                 .foregroundStyle(Pk.termInk)
                 .padding(6)
                 .background(p.speed != 1 ? Pk.termLine : .clear, in: RoundedRectangle(cornerRadius: Radius.radiusSm))
+                // 44 to a finger round its 16 of words (HIG's least; it was 28)
+                .contentShape(Rectangle().inset(by: -8))
         }
         .padding(-6)
         .accessibilityLabel(L("speed_label", rateWord(p.speed).dropLast()))
@@ -325,6 +327,8 @@ private struct TimeMenu: View {
                 .foregroundStyle(Pk.termInk)
                 .lineLimit(1)
                 .padding(6)
+                // 44 tall to a finger (it was 28)
+                .contentShape(Rectangle().inset(by: -8))
         }
         .padding(-6)
         .accessibilityLabel(L("times_tip"))
