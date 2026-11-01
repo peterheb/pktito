@@ -212,6 +212,12 @@ private func whenDone(_ secs: UInt64) -> String {
 private struct RecentRow: View {
     let r: RecentItem
     let current: Bool
+    /// what the name keeps beside its length and date before they go under
+    /// it: 250 at the default text size, scaled as the text is, as Android's
+    /// (Dp.withText); a phone's list then puts them under, as Files and Voice
+    /// Memos do, where a 180 kept one line on the iPhone 17 and two on a
+    /// Pixel 5 of nearly its width (the layout audit, 2026-11-01)
+    @ScaledMetric(relativeTo: .subheadline) private var nameFloor: CGFloat = 250
 
     var body: some View {
         let length = hms(r.duration, r.duration)
@@ -223,7 +229,7 @@ private struct RecentRow: View {
                 HStack(spacing: 10) {
                     PkIcon.file.frame(width: 16, height: 16)
                     Text(r.name).font(PkType.ui.font(14)).lineLimit(1).truncationMode(.middle)
-                        .frame(minWidth: 180, maxWidth: .infinity, alignment: .leading)
+                        .frame(minWidth: nameFloor, maxWidth: .infinity, alignment: .leading)
                     Text(length).font(PkType.stamp.font(13)).monospacedDigit().foregroundStyle(Pk.inkMuted)
                     Text(date).pk(PkType.small).foregroundStyle(Pk.inkMuted).frame(minWidth: 72, alignment: .trailing)
                 }

@@ -127,11 +127,12 @@
     },
     "about_tagline": {
       "extractionState": "manual",
+      "comment": "the name's sound in one piece, a word joiner (&#8288;) after each of its hyphens: the desktop's broke \"pick-a-\" from \"tito\" at one width (the layout audit, 2026-11-01). Its space can still break: at twice the text size the whole of it is 310 dp (Archivo's advances, 15 sp at 27 dp), and a folded phone's cover has 305 for the words",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "A compact Parakeet implementation *(pronounced “pick-a-tito”)*\nSpeech to text on this device."
+            "value": "A compact Parakeet implementation *(pronounced “pick-⁠a-⁠tito”)*\nSpeech to text on this device."
           }
         }
       }
@@ -433,7 +434,7 @@
     },
     "decode_unreadable": {
       "extractionState": "manual",
-      "comment": "a recording that can't be read, the desktop's decode.* (the core's keys, Words.swift); iOS has no ffmpeg to suggest",
+      "comment": "a recording that can't be read, the desktop's decode.* (the core's keys: words, in Models.kt; Words.swift); a phone has no ffmpeg to suggest",
       "localizations": {
         "en": {
           "stringUnit": {

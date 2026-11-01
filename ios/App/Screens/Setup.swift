@@ -62,7 +62,8 @@ private struct Screen<Top: View, Foot: View>: View {
                 // the window's height, its foot where a thumb is.
                 AtLeast(height: narrow ? g.size.height : min(g.size.height, 520)) {
                     VStack(alignment: .leading, spacing: 0) {
-                        VStack(alignment: .leading, spacing: 20) { top }
+                        // 24, as the start screen's (20 before; the desktop's .pk-screen)
+                        VStack(alignment: .leading, spacing: 24) { top }
                         Spacer(minLength: 20)
                         VStack(alignment: .leading, spacing: 0) { foot }
                     }
@@ -141,7 +142,7 @@ private struct Choose: View {
         Screen {
             WordmarkButton()
             Intro(title: L("setup_title"))
-            VStack(spacing: 10) {
+            VStack(spacing: 12) {
                 ForEach(m.offers) { o in
                     Card(o: o, on: o.name == chosen?.name) { choice = o.name }
                 }
@@ -154,7 +155,7 @@ private struct Choose: View {
                 let go = chosen.have ? L("setup_use", name)
                     : chosen.partial > 0 ? L("setup_download_rest", name, mb(chosen.bytes - chosen.partial))
                     : L("setup_download", name, mb(chosen.bytes))
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 16) {
                     PkButton(text: go, kind: .primary, large: true, stretch: true, leading: chosen.have ? .check : .download) {
                         if chosen.have {
                             Models.shared.use(chosen.name)
@@ -620,6 +621,9 @@ struct ModelMenu: View {
             .padding(.horizontal, 12)
             .frame(minHeight: 40)
         }
-        .padding(.trailing, -12)
+        // its padding outside it, and the chevron's own 3.5 of its 16 (its stroke's
+        // cap in): the chevron's ink on the column's edge, as the desktop's (the
+        // layout audit: at -12 it stood 3.5 in)
+        .padding(.trailing, -15.5)
     }
 }

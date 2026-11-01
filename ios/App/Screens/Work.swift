@@ -28,6 +28,9 @@ struct Work: View {
     /// keyboard up: 160 at the default text size, scaled as the text is
     /// (Android's 160 dp, Dp.withText)
     @ScaledMetric(relativeTo: .body) private var least: CGFloat = 160
+    /// its own width 600 or more: its edges 24, as the desktop's wide work
+    /// and Material's; 16 under that, a phone's (the layout audit, 2026-11-01)
+    @State private var roomy = false
 
     /// What the matches are found anew for.
     private struct Sought: Equatable {
@@ -44,9 +47,10 @@ struct Work: View {
         let review = t.step == .done || t.step == .stopped
         let rows = s.rows
         let room = makesRoom(review: review, rows: rows)
+        let edge: CGFloat = roomy ? 24 : 16
         VStack(spacing: 0) {
             VStack(spacing: 0) {
-                if !room { Header(review: review, shown: !rows.isEmpty) }
+                if !room { Header(review: review, edge: edge, shown: !rows.isEmpty) }
                 if t.step != .error && !room {
                     Strip(
                         review: review, left: left, why: t.why,
@@ -61,13 +65,13 @@ struct Work: View {
                         },
                         seek: { seek($0 * t.duration) })
                         // 16 under the header's buttons: their 11 and 5
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, edge)
                         .padding(.top, 5)
                 }
                 if review && !rows.isEmpty {
                     // a step while it plays takes the playhead to its match (Finder.step)
                     Views(hits: hits, seek: Player.shared.playing ? { seek($0) } : nil, alone: room)
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, edge)
                         // alone, the search where the header's buttons were
                         .padding(.top, room ? 11 : 16)
                 }
@@ -77,17 +81,18 @@ struct Work: View {
                         Text(msg).font(PkType.body.font(15)).foregroundStyle(t.error != nil ? Pk.err : Pk.inkMuted)
                         Spacer(minLength: 0)
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, edge)
                     .padding(.top, 16)
                 }
             }
             // what the rows' room is reckoned from while the rest makes room
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { if !room { above = $0 } }
-            Rows(rows: rows, review: review, marks: marks, hits: hits, stats: stats(review)) { time, play in
+            Rows(rows: rows, review: review, marks: marks, hits: hits, stats: stats(review), edge: edge) { time, play in
                 seek(time, play: play)
             }
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+        .onGeometryChange(for: Bool.self) { $0.size.width >= 600 } action: { roomy = $0 }
         // the height as if the keyboard weren't up, which it makes room in
         .background {
             GeometryReader { g in
@@ -151,6 +156,8 @@ struct Work: View {
 /// at 2.
 private struct Header: View {
     let review: Bool
+    /// the screen's edge, 16 or 24 (Work)
+    let edge: CGFloat
     /// whether there are rows to copy and share
     let shown: Bool
     /// what the name keeps beside the buttons before it goes under them:
@@ -182,12 +189,12 @@ private struct Header: View {
                     buttons
                 }
                 .padding(.leading, clear.leading)
-                // on the cards' edge, 16 in
+                // on the cards' edge
                 name.padding(.leading, Transcriber.shared.running ? 0 : 14)
             }
         }
-        .padding(.leading, t.running ? 16 : 2)
-        .padding(.trailing, 16)
+        .padding(.leading, t.running ? edge : edge - 14)
+        .padding(.trailing, edge)
         .padding(.vertical, 11)
         .frame(minHeight: 62)
         .windowControls($clear)
@@ -383,6 +390,8 @@ private struct Rows: View {
     let marks: [Int: [Marked]]
     let hits: [Hit]
     let stats: String?
+    /// the screen's edge, 16 or 24 (Work)
+    let edge: CGFloat
     let seek: (Double, Bool) -> Void
     /// the id of the current match's view in its row (Sentence)
     static let match = "match"
@@ -427,7 +436,7 @@ private struct Rows: View {
                     }
                 }
                 .scrollTargetLayout()
-                .padding(.horizontal, 16)
+                .padding(.horizontal, edge)
                 .padding(.bottom, 16)
             }
             .onScrollTargetVisibilityChange(idType: Int.self) { seen = $0.sorted() }
