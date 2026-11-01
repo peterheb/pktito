@@ -1731,8 +1731,9 @@ function cutName(name) {
     : `<span>${esc(name.slice(0, at))}</span><span>${esc(name.slice(at))}</span>`;
 }
 
-/* Find in the header, beside the name, or on the views line where the
-   header hasn't the room for it beside its buttons and 160 of the name:
+/* Find in the header, beside the name, or on the views line, beside the
+   views, where the header hasn't the room for it beside its buttons and
+   160 of the name:
    the floor the phones' apps keep their name's (the out-of-space rules,
    2026-10-31). Measured by the buttons alone, which stay where they are,
    so that where Find is doesn't change where it goes. */

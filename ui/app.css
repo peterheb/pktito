@@ -1858,9 +1858,10 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
 /* two buttons in a sunk track, the one chosen raised to the ground */
 /* 16 px above, and the transcript's 16 px margin below: the same space
    either side when its first row is the current one, drawn as a block */
-/* the views and, where the header hasn't the room for it, Find at the
-   line's end, as the phones' apps have them (app.js, placeFind); nothing
-   at all while neither shows */
+/* the views and, where the header hasn't the room for it, Find beside
+   them, a field that says what it is, not an icon alone at the line's far
+   end, where it went unnoticed (Peter, 2026-10-31; app.js, placeFind);
+   nothing at all while neither shows */
 .pk-views-line {
   display: flex;
   align-items: center;
@@ -1869,9 +1870,6 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
 }
 .pk-views-line:not(:has(> :not([hidden]))) {
   display: none;
-}
-.pk-views-line > .pk-find {
-  margin-left: auto;
 }
 .pk-views {
   display: flex;
@@ -2194,15 +2192,16 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
   min-width: 190px;
 }
 /* folded to its icon where the header has no room for it, under 860 px of
-   the work, and opened by a click or the shortcut */
+   the work, and opened by a click or the shortcut; on the views line, a
+   field */
 @container (max-width: 859px) {
-  .pk-find:not(:focus-within):not(.has-query) {
+  .pk-head .pk-find:not(:focus-within):not(.has-query) {
     flex: none;
     width: 32px;
     min-width: 32px;
     padding: 0 8px;
   }
-  .pk-find:not(:focus-within):not(.has-query) :is(input, .pk-kbd) {
+  .pk-head .pk-find:not(:focus-within):not(.has-query) :is(input, .pk-kbd) {
     width: 0;
     opacity: 0;
   }
