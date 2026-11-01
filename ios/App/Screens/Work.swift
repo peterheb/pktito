@@ -5,11 +5,29 @@ import UIKit
 /// Work): the header with the way back, the name, and what can be done with
 /// it (at work only Stop; Copy and Share once it is done), the strip, the
 /// choice of sentences or captions, a line for what went wrong, and the rows.
+///
+/// Where the keyboard leaves the rows under `least` below the header, the
+/// strip and the views line, as on a phone on its side, those make room
+/// while it is up: the search takes the top line, its words, count and
+/// steps, and the rows the rest, the match in sight. The keyboard put away
+/// brings them back with the search kept; the field's × closes the search
+/// as it always does. Peter asked for what is most usable (2026-11-01);
+/// the same in Android's app.
 struct Work: View {
     /// a search's matches in the rows shown, a finished transcript's only,
     /// and each row's of them
     @State private var hits: [Hit] = []
     @State private var marks: [Int: [Marked]] = [:]
+    /// the screen's height above the keyboard, and as if there were none
+    @State private var height: CGFloat = 0
+    @State private var whole: CGFloat = 0
+    /// the header's, strip's, views line's and message's height as last
+    /// shown, which the rows' room is reckoned from while they make room
+    @State private var above: CGFloat = 0
+    /// the least of the rows worth the header and the strip with the
+    /// keyboard up: 160 at the default text size, scaled as the text is
+    /// (Android's 160 dp, Dp.withText)
+    @ScaledMetric(relativeTo: .body) private var least: CGFloat = 160
 
     /// What the matches are found anew for.
     private struct Sought: Equatable {
@@ -25,50 +43,74 @@ struct Work: View {
         let s = AppState.shared
         let review = t.step == .done || t.step == .stopped
         let rows = s.rows
+        let room = makesRoom(review: review, rows: rows)
         VStack(spacing: 0) {
-            Header(review: review, shown: !rows.isEmpty)
-            if t.step != .error {
-                Strip(
-                    review: review, left: left, why: t.why,
-                    locate: t.locate ? { s.pick = .locate } : nil,
-                    hits: hits, tickAt: s.finder.at,
-                    // a tick: its match, and the playhead there (app.js,
-                    // #ticks); after the seek, which puts the reader on the
-                    // match it last passed, a tick's own, where two share its time
-                    onTick: { k in
-                        seek(hits[k].time)
-                        s.finder.go(hits, k)
-                    },
-                    seek: { seek($0 * t.duration) })
-                    // 16 under the header's buttons: their 11 and 5
-                    .padding(.horizontal, 16)
-                    .padding(.top, 5)
-            }
-            if review && !rows.isEmpty {
-                // a step while it plays takes the playhead to its match (Finder.step)
-                Views(hits: hits, seek: Player.shared.playing ? { seek($0) } : nil)
+            VStack(spacing: 0) {
+                if !room { Header(review: review, shown: !rows.isEmpty) }
+                if t.step != .error && !room {
+                    Strip(
+                        review: review, left: left, why: t.why,
+                        locate: t.locate ? { s.pick = .locate } : nil,
+                        hits: hits, tickAt: s.finder.at,
+                        // a tick: its match, and the playhead there (app.js,
+                        // #ticks); after the seek, which puts the reader on the
+                        // match it last passed, a tick's own, where two share its time
+                        onTick: { k in
+                            seek(hits[k].time)
+                            s.finder.go(hits, k)
+                        },
+                        seek: { seek($0 * t.duration) })
+                        // 16 under the header's buttons: their 11 and 5
+                        .padding(.horizontal, 16)
+                        .padding(.top, 5)
+                }
+                if review && !rows.isEmpty {
+                    // a step while it plays takes the playhead to its match (Finder.step)
+                    Views(hits: hits, seek: Player.shared.playing ? { seek($0) } : nil, alone: room)
+                        .padding(.horizontal, 16)
+                        // alone, the search where the header's buttons were
+                        .padding(.top, room ? 11 : 16)
+                }
+                if let msg = message(rows), !room {
+                    HStack(spacing: 6) {
+                        if t.error != nil { PkIcon.alert.frame(width: 16, height: 16).foregroundStyle(Pk.err) }
+                        Text(msg).font(PkType.body.font(15)).foregroundStyle(t.error != nil ? Pk.err : Pk.inkMuted)
+                        Spacer(minLength: 0)
+                    }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
-            }
-            if let msg = message(rows) {
-                HStack(spacing: 6) {
-                    if t.error != nil { PkIcon.alert.frame(width: 16, height: 16).foregroundStyle(Pk.err) }
-                    Text(msg).font(PkType.body.font(15)).foregroundStyle(t.error != nil ? Pk.err : Pk.inkMuted)
-                    Spacer(minLength: 0)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
             }
+            // what the rows' room is reckoned from while the rest makes room
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { if !room { above = $0 } }
             Rows(rows: rows, review: review, marks: marks, hits: hits, stats: stats(review)) { time, play in
                 seek(time, play: play)
             }
         }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+        // the height as if the keyboard weren't up, which it makes room in
+        .background {
+            GeometryReader { g in
+                Color.clear.onChange(of: g.size.height, initial: true) { _, h in whole = h }
+            }
+            .ignoresSafeArea(.keyboard)
+        }
+        .onChange(of: room) { trace("room for the keyboard: \(room); \(height) of \(whole), \(above) above the rows") }
         .onChange(of: Sought(query: s.finder.query, captions: s.captions, review: review, id: t.id, count: rows.count),
                   initial: true) {
             hits = review ? findIn(rows, s.finder.query) : []
             marks = Dictionary(grouping: hits.indices.map { Marked(k: $0, hit: hits[$0]) }, by: \.hit.row)
             s.finder.settle(hits, position: Player.shared.position)
         }
+    }
+
+    /// Whether the header and the strip make room for the keyboard: it is
+    /// up, a transcript is searched, and under them and the views line, 16
+    /// over the rows, the rows would keep less than `least`. Reckoned from
+    /// their height as last shown, so that making room doesn't undo itself;
+    /// a hardware keyboard's bar leaves the room it finds.
+    private func makesRoom(review: Bool, rows: [Segment]) -> Bool {
+        review && !rows.isEmpty && whole > height && height - above - 16 < least
     }
 
     /// The playhead at time, and the reader on the match it last passed.
@@ -260,7 +302,13 @@ func share(_ url: URL, from view: UIView?) {
 private struct Views: View {
     let hits: [Hit]
     let seek: ((Double) -> Void)?
-    /// the line's width, and the views' as they are drawn
+    /// the search alone on the line, while the rest makes room for the
+    /// keyboard (Work)
+    let alone: Bool
+    /// the line's width, and the views' at their own, from a hidden copy,
+    /// so that it is known where they are not shown: a line drawn anew with
+    /// the search open across it, as an iPad turned or its window resized
+    /// past the side's 840 makes it, kept them away until the search closed
     @State private var width: CGFloat = 0
     @State private var viewsWidth: CGFloat = 0
     /// the field's 200 and 280, scaled as its text is: Android's app at
@@ -274,22 +322,32 @@ private struct Views: View {
         let wide = f.query.trimmingCharacters(in: .whitespaces).isEmpty ? narrow : searching
         let room = { (w: CGFloat) in viewsWidth > 0 && viewsWidth + 12 + w <= width }
         let field: CGFloat? = room(wide) ? wide : room(narrow) ? narrow : nil
+        let across = alone || (field == nil && f.open)
         HStack(spacing: 12) {
-            if field != nil || !f.open {
+            if !across {
                 Switch2(first: L("sentences"), second: L("captions"),
                         onSecond: Binding(get: { s.captions }, set: { s.captions = $0 }))
-                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { viewsWidth = $0 }
             }
-            if let field {
-                FindField(finder: f, hits: hits, seek: seek).frame(width: field)
-            } else if f.open {
-                FindField(finder: f, hits: hits, seek: seek, opened: true).frame(maxWidth: .infinity)
+            // one field, beside the views or across the line, so that it
+            // keeps the keyboard from one to the other
+            if field != nil || across {
+                FindField(finder: f, hits: hits, seek: seek, opened: across)
+                    .frame(width: across ? nil : field)
+                    .frame(maxWidth: across ? .infinity : nil)
             } else {
                 IconButton(icon: .search, label: L("find_label"), kind: .ghost) { f.open = true }
             }
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .leading) {
+            Switch2(first: L("sentences"), second: L("captions"), onSecond: .constant(s.captions))
+                .fixedSize()
+                .hidden()
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { viewsWidth = $0 }
+        }
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
     }
 }
@@ -309,8 +367,11 @@ struct Marked: Equatable {
 ///
 /// The list follows: the transcript's end as it comes, for a reader who is
 /// there; finished, it starts at its top; the row playing is kept in sight,
-/// and each move to a match is brought into sight, its row a third of the
-/// way down (app.js, goHit).
+/// and each move to a match brings the match's own line into sight, by the
+/// least scroll that shows it: a long row's match can be in a line the
+/// list under the keyboard doesn't show (Android's app as well,
+/// 2026-11-01). A row out of sight comes a third of the way down first
+/// (app.js, goHit), which draws its match.
 private struct Rows: View {
     let rows: [Segment]
     let review: Bool
@@ -318,7 +379,11 @@ private struct Rows: View {
     let hits: [Hit]
     let stats: String?
     let seek: (Double, Bool) -> Void
+    /// the id of the current match's view in its row (Sentence)
+    static let match = "match"
     @State private var seen: [Int] = []
+    /// a move to a match not yet brought into sight
+    @State private var revealing = false
     @State private var width: CGFloat = 0
     /// the time's column, which grows with the stamps in it at a larger
     /// text size, and the row's text with it, 508 at the least
@@ -378,17 +443,33 @@ private struct Rows: View {
                 if !id.isEmpty { list.scrollTo(0, anchor: .top) }
             }
             .onChange(of: f.moved) {
-                guard f.at >= 0 && f.at < hits.count else { return }
-                let row = hits[f.at].row
-                if !seen.dropFirst().dropLast().contains(row) {
-                    withAnimation { list.scrollTo(row, anchor: UnitPoint(x: 0, y: 1.0 / 3)) }
-                }
+                revealing = true
+                reveal(list)
             }
+            // the match drawn where it is
+            .onChange(of: f.spot) { if revealing { reveal(list) } }
             // the match playback passes, the reader with it (Finder.follow)
             .onChange(of: position) { f.follow(hits, position: position, jump: false) }
         }
         .padding(.top, 16)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+    }
+
+    /// The current match into sight: once its row has drawn it, its line,
+    /// by the least scroll (none where it shows); until then, its row out
+    /// of sight a third of the way down.
+    private func reveal(_ list: ScrollViewProxy) {
+        let f = AppState.shared.finder
+        guard f.at >= 0 && f.at < hits.count else {
+            revealing = false
+            return
+        }
+        if f.spot?.k == f.at {
+            revealing = false
+            withAnimation { list.scrollTo(Rows.match) }
+        } else if !seen.contains(hits[f.at].row) {
+            withAnimation { list.scrollTo(hits[f.at].row, anchor: UnitPoint(x: 0, y: 1.0 / 3)) }
+        }
     }
 }
 
@@ -504,9 +585,23 @@ private struct Sentence: View {
 
     var body: some View {
         marked
+            // the current match where its renderer drew it, a view of its
+            // own for the rows to scroll to (Rows.reveal)
+            .overlay(alignment: .topLeading) {
+                if at >= 0, let spot = AppState.shared.finder.spot, spot.k == at {
+                    Color.clear
+                        .frame(width: max(spot.rect.width, 1), height: spot.rect.height)
+                        .id(Rows.match)
+                        .padding(.leading, max(spot.rect.minX, 0))
+                        .padding(.top, max(spot.rect.minY, 0))
+                        .accessibilityHidden(true)
+                }
+            }
             .pk(PkType.transcript)
             .foregroundStyle(Pk.ink)
-            .textRenderer(Marks(em: PkType.transcript.scaled(type)))
+            .textRenderer(Marks(em: PkType.transcript.scaled(type), spotted: at < 0 ? nil : { k, r in
+                Task { @MainActor in AppState.shared.finder.spotted(k, r) }
+            }))
             .fixedSize(horizontal: false, vertical: true)
     }
 
@@ -564,12 +659,16 @@ private func firstIndex(of q: [Character], in s: [Character], from: Int) -> Int?
 /// playing's line: a match's mark is its letters' height, from Archivo's
 /// ascent to its descent (0.878 and 0.21 em, its hhea), and 2 round them,
 /// as an inline mark's box is drawn on the desktop; a match's stretches on
-/// a line drawn as one.
+/// a line drawn as one. The row with the current match is told where it
+/// drew it, both lines' where it breaks across two.
 private struct Marks: TextRenderer {
     let em: CGFloat
+    var spotted: ((Int, CGRect) -> Void)? = nil
 
     func draw(layout: Text.Layout, in ctx: inout GraphicsContext) {
         let hl = Pk.matchFill
+        var spot: (k: Int, rect: CGRect)?
+        defer { if let spot, let spotted { spotted(spot.k, spot.rect) } }
         for line in layout {
             var spans: [(k: Int, current: Bool, x0: CGFloat, x1: CGFloat, y: CGFloat)] = []
             for run in line {
@@ -588,6 +687,9 @@ private struct Marks: TextRenderer {
                 ctx.fill(Path(roundedRect: r, cornerRadius: 3), with: .color(sp.current ? Pk.plume : hl))
                 if sp.current {
                     ctx.fill(Path(CGRect(x: sp.x0, y: bottom, width: sp.x1 - sp.x0, height: 2)), with: .color(Pk.ink))
+                    // with its underline, and 4 clear of it either side
+                    let seen = CGRect(x: r.minX, y: r.minY - 4, width: r.width, height: r.height + 10)
+                    spot = (sp.k, spot.map { $0.rect.union(seen) } ?? seen)
                 }
             }
         }

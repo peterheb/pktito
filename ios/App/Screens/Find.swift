@@ -74,8 +74,22 @@ final class Finder {
     private(set) var moved = 0
     private var time = -1.0
     private var passed = -1
+    /// where the current match is drawn in its row, which its renderer
+    /// tells as it draws it (Marks), for the rows to bring that line into
+    /// sight: a long row's match can be in a line a short list doesn't show
+    private(set) var spot: Spot?
+
+    struct Spot: Equatable {
+        let k: Int
+        let rect: CGRect
+    }
 
     var searching: Bool { open || !query.isEmpty }
+
+    func spotted(_ k: Int, _ rect: CGRect) {
+        let s = Spot(k: k, rect: rect)
+        if spot != s { spot = s }
+    }
 
     /// Once the matches have changed: on the same match, where it still is
     /// one; else on the one the playhead last passed (app.js, runFind).
@@ -124,6 +138,7 @@ final class Finder {
         at = -1
         time = -1
         passed = -1
+        spot = nil
     }
 }
 

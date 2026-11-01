@@ -11,6 +11,8 @@ struct Root: View {
     @Environment(\.scenePhase) private var phase
     /// what the picker was opened for, kept for when it answers
     @State private var picked = AppState.Pick.media
+    /// the window's height as if the keyboard weren't up
+    @State private var tall: CGFloat = 0
 
     /// What the player loads anew for.
     private struct Playing: Equatable {
@@ -26,8 +28,12 @@ struct Root: View {
             // the side where a list and what it opens fit side by side:
             // 840 wide, which leaves the work 540, where its rows stack
             // (Rows, under 620) and Find keeps the views line (Views, from
-            // 480); and 480 tall, which keeps a phone on its side one column
-            let sided = g.size.width >= 840 && g.size.height >= 480
+            // 480); and 480 tall, which keeps a phone on its side one column.
+            // The window's height, not what the keyboard leaves of it, which
+            // on an 11-inch iPad on its side (834 tall) can be under 480 and
+            // would change the layout under the field being typed in (as in
+            // Android's app, b5cfeda)
+            let sided = g.size.width >= 840 && max(g.size.height, tall) >= 480
             ZStack(alignment: .bottom) {
                 Group {
                     if s.about {
@@ -51,6 +57,12 @@ struct Root: View {
                         .allowsHitTesting(false)
                 }
             }
+        }
+        .background {
+            GeometryReader { w in
+                Color.clear.onChange(of: w.size.height, initial: true) { _, h in tall = h }
+            }
+            .ignoresSafeArea(.keyboard)
         }
         .background(Pk.ground)
         .tint(Pk.ink)
