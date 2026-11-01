@@ -428,7 +428,16 @@ html[data-chrome="win"] .pk-head {
   overflow: auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  place-items: center;
+  justify-items: center;
+}
+/* in the middle while it fits, and from its top, all of it in reach,
+   where it is taller than the window: centred as the grid's item instead,
+   a setup screen with its languages open in a 480 px window lost its top
+   58 px, wordmark and title, where scrolling can't go, and at 600 px its
+   wordmark sat under the traffic lights (the layout audit, 2026-11-01) */
+.pk-center > .pk-screen {
+  margin-top: auto;
+  margin-bottom: auto;
 }
 .pk-screen {
   width: min(640px, 100%);
