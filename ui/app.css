@@ -687,9 +687,9 @@ html[data-chrome="win"] .pk-head {
   /* its steps on the scale, 24, and 32 over the recent list (8 more);
      they were 22 and 30 (the layout audit, 2026-11-01) */
   gap: 24px;
-  /* its top row on the work header's line, 15 down round its 32, as the
-     side's; 16 under the list (they were 20 and 20) */
-  padding-top: 15px;
+  /* 16 above and below, so that alone in the window's middle it is in its
+     middle (they were 20 and 20) */
+  padding-top: 16px;
   padding-bottom: 16px;
 }
 /* the model's button with its chevron on the strip's right edge, as the
@@ -741,6 +741,9 @@ html[data-chrome="win"] .pk-head {
    what is left below the button: a tall window shows more of it */
 .has-recent .pk-ready {
   height: 100%;
+  /* its top row on the work header's line, 15 down round its 32, as the
+     side's */
+  padding-top: 15px;
 }
 .has-recent .pk-recent {
   margin-top: 8px;

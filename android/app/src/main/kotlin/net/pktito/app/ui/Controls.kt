@@ -542,7 +542,12 @@ fun Confirm(title: String, text: String, yes: String, onYes: () -> Unit, onCance
         }
 }
 
-/** A word that comes and goes at the screen's foot, on term, as the desktop's toast. */
+/**
+ * A word that comes and goes at the screen's foot, on term, as the
+ * desktop's toast, and in dark its 1 dp edge inside it (toastEdge, app.css
+ * .pk-toast): term there is one step above the ground, which left it all
+ * but unseen (Peter, 2026-11-01).
+ */
 @Composable
 fun Toast(text: String, modifier: Modifier = Modifier) {
     val p = pk
@@ -553,6 +558,7 @@ fun Toast(text: String, modifier: Modifier = Modifier) {
         modifier = modifier
             .widthIn(max = 420.dp)
             .background(p.term, Corner)
+            .border(1.dp, p.toastEdge, Corner)
             .padding(horizontal = 16.dp, vertical = 10.dp),
     )
 }
