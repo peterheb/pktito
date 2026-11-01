@@ -1535,7 +1535,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "pktito keeps its settings, its models and its recent transcripts out of Android's backups; uninstalling it deletes them."
+            "value": "Uninstalling pktito deletes its settings, its models and its recent transcripts from this device."
           }
         }
       }
@@ -1642,7 +1642,7 @@
     },
     "privacy_title": {
       "extractionState": "manual",
-      "comment": "Privacy (privacy.*), as Android has it: a device, the system's pickers, the app's data deleted with it; site/build.py's policy says the same",
+      "comment": "Privacy (privacy.*), as Android has it: a device, the system's pickers, the app's data deleted from it with the app, and nothing promised about Android's own backup, which takes the settings and the recent list (AndroidManifest.xml); pktito-site's policy (pktito.net/privacy) says the same",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -1658,7 +1658,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Last updated October 26, 2026"
+            "value": "Last updated November 1, 2026"
           }
         }
       }

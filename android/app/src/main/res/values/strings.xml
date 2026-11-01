@@ -110,8 +110,10 @@
     <string name="about_licenses">Open source licenses</string>
     <string name="sheet_close">Close</string>
     <!-- Privacy (privacy.*), as Android has it: a device, the system's
-         pickers, the app's data deleted with it; site/build.py's policy
-         says the same -->
+         pickers, the app's data deleted from it with the app, and nothing
+         promised about Android's own backup, which takes the settings and
+         the recent list (AndroidManifest.xml); pktito-site's policy
+         (pktito.net/privacy) says the same -->
     <string name="privacy_title">Privacy</string>
     <string name="privacy_intro">pktito is local transcription software — it turns speech into text on this device. Your media files are not uploaded to cloud servers, and pktito has no accounts, ads or tracking.</string>
     <string name="privacy_internet">What reaches the internet</string>
@@ -121,10 +123,10 @@
     <string name="privacy_files_text">pktito opens only the recordings you choose, open with it or share to it, and saves only where you choose. It asks for no access to your storage. A transcript you share goes to the app you pick.</string>
     <string name="privacy_choices">Your choices</string>
     <string name="privacy_choice_file">To skip the download, use a model file you already have: choose “Open a model file…”.</string>
-    <string name="privacy_choice_uninstall">pktito keeps its settings, its models and its recent transcripts out of Android\'s backups; uninstalling it deletes them.</string>
+    <string name="privacy_choice_uninstall">Uninstalling pktito deletes its settings, its models and its recent transcripts from this device.</string>
     <string name="privacy_questions">Questions</string>
     <string name="privacy_ask"><![CDATA[Ask by email, at <a href="mailto:peter.hebert@pktito.net">peter.hebert@pktito.net</a>, or on <a href="https://github.com/peterheb/pktito/issues">GitHub</a>. The full policy is at <a href="https://pktito.net/privacy">pktito.net/privacy</a>.]]></string>
-    <string name="privacy_updated">Last updated October 26, 2026</string>
+    <string name="privacy_updated">Last updated November 1, 2026</string>
     <!-- the licenses (notices.*), from assets/notices.json (android/notices.py) -->
     <string name="notices_title">Open source licenses</string>
     <string name="notices_intro">This build of pktito includes the following open-source software and libraries:</string>
