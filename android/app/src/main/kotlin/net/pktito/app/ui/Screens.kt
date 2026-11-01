@@ -823,7 +823,7 @@ private fun ShareAs(name: String, times: Boolean, a: WorkActions) {
     var open by remember { mutableStateOf(false) }
     val stem = name.substringBeforeLast('.').ifEmpty { name }
     Box {
-        PkButton(stringResource(R.string.share), { open = true }, kind = Kind.Primary, trailing = Icons.down)
+        PkButton(stringResource(R.string.share), { open = true }, kind = Kind.Primary, trailing = Icons.down, held = open)
         Menu(open, { open = false }) {
             for (f in FORMATS)
                 Item(stringResource(if (times) f.withTimes else f.label), "$stem.${f.ext}") {

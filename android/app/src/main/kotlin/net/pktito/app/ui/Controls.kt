@@ -109,9 +109,11 @@ const val DOT = " · "
  * ink in light and plume in dark. No ripple: the desktop has none. A long
  * press, where a control has one, is Android's way to a row's other
  * actions, which the desktop keeps under the pointer. Held, while the menu
- * it opened is up, it keeps its press: a recent row's menu lies under the
- * row and over the next, and once the finger was off, which of the two
- * the menu would delete was unclear (Peter, 2026-11-01).
+ * it opened is up, it keeps its press, as every menu's opener does
+ * (design/README.md, Hover and press), and as macOS's and Windows's menu
+ * titles and pop-up buttons do: a recent row's menu lies under the row and
+ * over the next, and once the finger was off, which of the two the menu
+ * would delete was unclear (Peter, 2026-11-01).
  */
 @Composable
 fun Modifier.control(
@@ -188,7 +190,8 @@ enum class Kind { Default, Primary, Ghost, Del }
  * foot: kept to one line, their end was cut, the setup's Download the
  * English model · 624 MB at 1.3 times the text size on a phone. A file's
  * name (file) keeps to its line and gives up its middle instead, which
- * keeps its extension, as file names do everywhere in the app.
+ * keeps its extension, as file names do everywhere in the app. Held while
+ * the menu it opened is up (control).
  */
 @Composable
 fun PkButton(
@@ -201,6 +204,7 @@ fun PkButton(
     trailing: ImageVector? = null,
     leading: ImageVector? = null,
     file: Boolean = false,
+    held: Boolean = false,
 ) {
     val p = pk
     val fill = when (kind) {
@@ -216,7 +220,7 @@ fun PkButton(
     Row(
         modifier
             .alpha(if (enabled) 1f else 0.45f)
-            .control(Corner, fill, enabled = enabled, onClick = onClick)
+            .control(Corner, fill, enabled = enabled, held = held, onClick = onClick)
             .heightIn(min = if (large) 48.dp else 40.dp)
             .padding(horizontal = if (large) 18.dp else 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -509,7 +513,8 @@ fun Toast(text: String, modifier: Modifier = Modifier) {
  * and the shadow of what floats, its items 6 dp in from its sides and 2
  * apart (app.css, .pk-menu), and Material's 8 above and below them; at
  * most 420 dp wide, or 480 for the time menu's rates (.pk-menu.is-wide).
- * Items are Item and Check below.
+ * Items are Item and Check below. What opened it keeps its press while it
+ * is up (control, held).
  */
 @Composable
 fun Menu(expanded: Boolean, onDismiss: () -> Unit, gap: Dp = 6.dp, wide: Boolean = false, content: @Composable () -> Unit) {

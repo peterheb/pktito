@@ -309,7 +309,7 @@ private fun Speed(sound: Sound, enabled: Boolean) {
                 .alpha(if (enabled) 1f else 0.45f)
                 .control(
                     CornerSm, if (sound.speed != 1.0) p.termLine else Color.Transparent, onTerm = true, enabled = enabled,
-                    label = stringResource(R.string.speed_label, rate(sound.speed).dropLast(1)),
+                    label = stringResource(R.string.speed_label, rate(sound.speed).dropLast(1)), held = open,
                 ) { open = true }
                 .padding(6.dp),
         )
@@ -349,7 +349,7 @@ private fun Time(text: String, base: Timebase, now: Double, onBase: (Timebase) -
             maxLines = 1,
             modifier = Modifier
                 .bleed(6.dp, 6.dp)
-                .control(CornerSm, onTerm = true, label = stringResource(R.string.times_tip)) { open = true }
+                .control(CornerSm, onTerm = true, label = stringResource(R.string.times_tip), held = open) { open = true }
                 .padding(6.dp),
         )
         Menu(open, { open = false }, gap = 12.dp, wide = true) {

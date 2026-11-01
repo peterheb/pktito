@@ -575,7 +575,7 @@ fun ModelButton(offers: List<Offer>, model: String?, own: String?, onPick: (Offe
     val check = @Composable { Icon(Icons.check, null, tint = p.ink, modifier = Modifier.size(16.dp)) }
     Box {
         // its words to the column's edge, as the desktop's (#ready-model)
-        PkButton(label, { open = true }, Modifier.offset(x = 12.dp), kind = Kind.Ghost, trailing = Icons.down, file = own != null)
+        PkButton(label, { open = true }, Modifier.offset(x = 12.dp), kind = Kind.Ghost, trailing = Icons.down, file = own != null, held = open)
         Menu(open, { open = false }) {
             for (o in offers) {
                 val on = own == null && o.name == model
