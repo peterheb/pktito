@@ -96,7 +96,10 @@ struct Strip: View {
                             TimeMenu(text: AppState.shared.base.with(duration: duration, video: t.fps)
                                 .at(scrub.map { $0 * duration } ?? player.position))
                         } else {
-                            Text(left).font(tstamp).foregroundStyle(Pk.termInk).lineLimit(1)
+                            // whole, on two lines where one won't hold it: at AX2 on
+                            // the iPhone SE it read "Loading the mod…" (the layout audit)
+                            Text(left).font(tstamp).foregroundStyle(Pk.termInk)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                     let length = Text(duration > 0 ? AppState.shared.base.with(duration: duration, video: t.fps).length() : "")

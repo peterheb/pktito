@@ -105,6 +105,17 @@ private struct Credits: View {
     let open: (About.Sheet) -> Void
     @Environment(\.dynamicTypeSize) private var type
 
+    /// Documentation, Privacy and GitHub
+    @ViewBuilder private var links: some View {
+        let small = PkType.small
+        linked(L("about_docs"), "https://pktito.net/docs").pk(small)
+        Button { open(.privacy) } label: {
+            Text(L("about_privacy")).pk(small).underline().foregroundStyle(Pk.link)
+        }
+        .buttonStyle(.plain)
+        linked("GitHub", "https://github.com/peterheb/pktito").pk(small)
+    }
+
     var body: some View {
         let small = PkType.small
         VStack(alignment: .leading, spacing: 12) {
@@ -119,13 +130,12 @@ private struct Credits: View {
                     .pk(small)
                     .foregroundStyle(Pk.inkMuted)
                 linked(markdown: L("about_copyright")).pk(small).foregroundStyle(Pk.inkMuted)
-                HStack(spacing: 20) {
-                    linked(L("about_docs"), "https://pktito.net/docs").pk(small)
-                    Button { open(.privacy) } label: {
-                        Text(L("about_privacy")).pk(small).underline().foregroundStyle(Pk.link)
-                    }
-                    .buttonStyle(.plain)
-                    linked("GitHub", "https://github.com/peterheb/pktito").pk(small)
+                // on a line, or one over the next where they don't fit, each
+                // word whole: at AX2 on the iPhone SE the line broke
+                // "Documentat" / "ion" (the layout audit, 2026-11-01)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 20) { links }
+                    VStack(alignment: .leading, spacing: 8) { links }
                 }
                 .padding(.top, 6)
             }
