@@ -12,6 +12,6 @@
     <string name="about_else_list_ios">SwiftUI, Rust crates, typefaces, icons, etc.</string>
     <!-- the licenses' heading over the libraries (Android's notices_libraries says Android) -->
     <string name="notices_libraries_ios">Libraries</string>
-    <!-- Privacy, Your choices (Android's privacy_choice_uninstall names Android's backups): iOS backs up the settings, so only the models and the recent transcripts are kept out -->
-    <string name="privacy_choice_uninstall_ios">pktito keeps its models and its recent transcripts out of iCloud and computer backups; deleting the app deletes them.</string>
+    <!-- Privacy, Your choices (Android's privacy_choice_uninstall says uninstalling): what deleting the app deletes from the iPhone or iPad; what iOS keeps in its own backups is iOS's to say -->
+    <string name="privacy_choice_uninstall_ios">Deleting pktito deletes its settings, its models and its recent transcripts from this device.</string>
 </resources>

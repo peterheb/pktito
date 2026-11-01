@@ -1542,12 +1542,12 @@
     },
     "privacy_choice_uninstall_ios": {
       "extractionState": "manual",
-      "comment": "Privacy, Your choices (Android's privacy_choice_uninstall names Android's backups): iOS backs up the settings, so only the models and the recent transcripts are kept out",
+      "comment": "Privacy, Your choices (Android's privacy_choice_uninstall says uninstalling): what deleting the app deletes from the iPhone or iPad; what iOS keeps in its own backups is iOS's to say",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "pktito keeps its models and its recent transcripts out of iCloud and computer backups; deleting the app deletes them."
+            "value": "Deleting pktito deletes its settings, its models and its recent transcripts from this device."
           }
         }
       }

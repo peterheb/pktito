@@ -41,12 +41,16 @@ private struct Listed: Decodable { let items: [RecentItem] }
 
 /// The recent list, the desktop's (recent.rs) through the core (ios.rs):
 /// the 50 latest finished transcripts, newest first, kept in Application
-/// Support, out of backups, so that the start screen opens each again and
-/// plays it from its recording. A file picked in Files is found again by a
+/// Support, so that the start screen opens each again and plays it from
+/// its recording; in the backups, as the settings are (a transcript is
+/// about 0.7 MB an hour of its recording, as recent.rs writes it, on the
+/// desktop's list of 16). A file picked in Files is found again by a
 /// bookmark of it, kept while its transcript is on the list; one sent to
 /// pktito from another app comes as a copy, which is held in incoming/
 /// while it is transcribed and then kept in copies/ with its transcript,
-/// as Android keeps one (Recents.kt).
+/// as Android keeps one (Recents.kt). The copies stay out of the backups:
+/// a recording can be hundreds of MB, and the app it came from has it; a
+/// transcript back from a backup without its copy asks for it (Locate…).
 @MainActor @Observable
 final class Recents {
     static let shared = Recents()
@@ -56,11 +60,9 @@ final class Recents {
     nonisolated static let data: URL = {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         let dir = base.appendingPathComponent("recent-data", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        var v = URLResourceValues()
-        v.isExcludedFromBackup = true
-        var d = dir
-        try? d.setResourceValues(v)
+        make(dir, backedUp: true)
+        make(dir.appendingPathComponent("copies", isDirectory: true), backedUp: false)
+        make(dir.appendingPathComponent("incoming", isDirectory: true), backedUp: false)
         return dir
     }()
 
@@ -69,6 +71,15 @@ final class Recents {
     nonisolated static var copies: URL { data.appendingPathComponent("copies", isDirectory: true) }
     /// a recording sent to pktito, until its transcript is kept: incoming/a new name/its name
     nonisolated static var incoming: URL { data.appendingPathComponent("incoming", isDirectory: true) }
+
+    /// folder, made where it isn't, in the backups or kept out of them
+    nonisolated private static func make(_ folder: URL, backedUp: Bool) {
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        var v = URLResourceValues()
+        v.isExcludedFromBackup = !backedUp
+        var f = folder
+        try? f.setResourceValues(v)
+    }
 
     private init() {
         refresh()
@@ -141,7 +152,8 @@ final class Recents {
         var moved: URL?
         if held(recording) {
             let dst = copies.appendingPathComponent(item.id, isDirectory: true)
-            try? fm.createDirectory(at: copies, withIntermediateDirectories: true)
+            // made again where the list was cleared (clear), out of the backups
+            make(copies, backedUp: false)
             if (try? fm.moveItem(at: recording.deletingLastPathComponent(), to: dst)) != nil {
                 moved = dst.appendingPathComponent(recording.lastPathComponent)
             }

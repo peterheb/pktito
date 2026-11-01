@@ -251,7 +251,8 @@ fn listed(data: &Path) -> serde_json::Value {
 }
 
 /// The recent list (recent.rs), newest first: {"items"}. data is the app's
-/// folder for it, which Swift keeps out of backups, as Android's no_backup.
+/// folder for it (Recents.data), which iOS backs up, as it does the
+/// settings.
 #[unsafe(no_mangle)]
 pub extern "C" fn pkapp_recent(data: *const c_char) -> *mut c_char {
     let data = PathBuf::from(arg(data));
