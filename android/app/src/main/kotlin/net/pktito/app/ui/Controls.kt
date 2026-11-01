@@ -108,7 +108,10 @@ const val DOT = " · "
  * lighter in dark, term's own on the strip. Keyboard focus is a 2 dp ring,
  * ink in light and plume in dark. No ripple: the desktop has none. A long
  * press, where a control has one, is Android's way to a row's other
- * actions, which the desktop keeps under the pointer.
+ * actions, which the desktop keeps under the pointer. Held, while the menu
+ * it opened is up, it keeps its press: a recent row's menu lies under the
+ * row and over the next, and once the finger was off, which of the two
+ * the menu would delete was unclear (Peter, 2026-11-01).
  */
 @Composable
 fun Modifier.control(
@@ -118,6 +121,7 @@ fun Modifier.control(
     enabled: Boolean = true,
     role: Role = Role.Button,
     label: String? = null,
+    held: Boolean = false,
     onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ): Modifier {
@@ -128,7 +132,7 @@ fun Modifier.control(
     val p = pk
     val tint = when {
         !enabled -> Color.Transparent
-        pressed -> if (onTerm) p.tintTermPress else p.tintPress
+        pressed || held -> if (onTerm) p.tintTermPress else p.tintPress
         hovered -> if (onTerm) p.tintTerm else p.tint
         else -> Color.Transparent
     }

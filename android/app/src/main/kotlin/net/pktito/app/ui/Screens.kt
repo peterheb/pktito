@@ -403,7 +403,7 @@ private fun RecentRow(
             Modifier
                 .focusRequester(focus)
                 .control(
-                    Corner, if (current) p.surface else Color.Transparent, enabled = enabled,
+                    Corner, if (current) p.surface else Color.Transparent, enabled = enabled, held = menu,
                     onLongClick = { menu = true }, onClick = { if (!current) onOpen() },
                 )
                 .then(if (current) Modifier.semantics { selected = true } else Modifier)
