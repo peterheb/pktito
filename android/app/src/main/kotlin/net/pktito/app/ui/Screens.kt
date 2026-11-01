@@ -131,8 +131,8 @@ class ReadyActions(
  * them, leave the list under 160 dp, the screen scrolls as a whole, the
  * list with it: the desktop's window is never that short, but a split
  * screen is, and a phone on its side at any text size. The emulator's
- * Pixel 5 on its side has 345 dp, which leave the list 53 at the default
- * text size and 25 at twice it; upright at twice it they leave 414
+ * Pixel 5 on its side has 345 dp, which leave the list 66 at the default
+ * text size and 38 at twice it; upright at twice it they leave 427
  * (2026-11-01).
  */
 @Composable
@@ -143,10 +143,11 @@ fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> 
     var top by remember { mutableIntStateOf(0) }
     var zone by remember { mutableIntStateOf(0) }
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = if (listed) Alignment.TopCenter else Alignment.Center) {
-        // what they leave the list, less the column's 20 dp above and below
-        // and its two gaps of 24
-        val left = maxHeight - 88.dp - with(LocalDensity.current) { (top + zone).toDp() }
+        // what they leave the list, less the column's 11 dp above and 16
+        // below and its two gaps of 24
+        val left = maxHeight - 75.dp - with(LocalDensity.current) { (top + zone).toDp() }
         val short = left < 160.dp
+        val edge = if (maxWidth < 600.dp) 16.dp else 40.dp
         Column(
             Modifier
                 .widthIn(max = 640.dp)
@@ -161,9 +162,11 @@ fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> 
                 // 16 from a phone's sides, as every screen there, and 40 in
                 // the 640 dp column of a wider one (design/README.md, Edges);
                 // its steps the scale's 24, and 32 over the list with the
-                // list's own 8 (app.css, .pk-ready): they were 20 in, and
-                // steps of 22 (the layout audit, 2026-11-01)
-                .padding(horizontal = if (maxWidth < 600.dp) 16.dp else 40.dp, vertical = 20.dp),
+                // list's own 8; its top row on the work header's line, 11
+                // down round its 40 as the side's, and 16 under the list
+                // (app.css, .pk-ready): they were 20 in, steps of 22, and
+                // 20 above and below (the layout audit, 2026-11-01)
+                .padding(start = edge, end = edge, top = 11.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             TopRow(a, model, Modifier.onSizeChanged { top = it.height })
@@ -299,9 +302,10 @@ fun Side(recent: List<Recents.Item>, a: ReadyActions, open: Opened?, model: @Com
  * less its margins), leaves it, grown with the text (withText),
  * beside the list's widest length and date; on a phone, narrower, its
  * length and date go under its name, which keeps the width. On an open
- * fold, 673 dp, whose start screen has 560 inside its column, a row keeps
- * its line through 1.3 times the text size, the name 367 dp, and at 1.5
- * would have 359 to the 390 asked there, so the two go under (2026-11-01).
+ * fold, 673 dp, whose start screen has 560 inside its column and the list
+ * 12 past either side of that, a row keeps its line through 1.3 times the
+ * text size, the name 393 dp, and at 1.5 would have 385 to the 390 asked
+ * there, so the two go under (2026-11-01).
  * scrolls: the list scrolls under its heading, else it is all there, for a
  * screen that scrolls (Ready). In
  * the side, the row of the transcript open is marked (open), one the list
@@ -338,7 +342,12 @@ private fun Recent(
         now.getOrNull(minOf(i, now.size - 1))?.let { runCatching { rows[it.id]?.requestFocus() } }
         refocus = null
     }
-    Column(modifier.padding(top = top), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    // 12 dp past the edges the screen keeps on either side, so that the
+    // heading's words, Clear's and the rows' icons stand on those edges and
+    // the rows' boxes go round them, as the desktop's rows' hover does, 4 px
+    // from a narrow window's edge (design/README.md, On an edge): they were
+    // 12 inside them (the layout audit, 2026-11-01)
+    Column(modifier.bleed(12.dp).padding(top = top), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
             Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -360,8 +369,8 @@ private fun Recent(
                 )
         }
         BoxWithConstraints(if (scrolls) Modifier.weight(1f) else Modifier) {
-            // the row's 12 dp either side, its icon's 16 and three gaps of 10
-            val oneLine = maxWidth - 70.dp - beside >= least
+            // the row's 10 and 12 dp, its icon's 16 and three gaps of 10
+            val oneLine = maxWidth - 68.dp - beside >= least
             val row = @Composable { i: Int, r: Recents.Item ->
                 val focus = remember { FocusRequester() }
                 DisposableEffect(r.id) {
@@ -393,6 +402,14 @@ private fun Recent(
 
 /** A recent row's name (app.css, .pk-row .pk-name). */
 private val rowName = Type.ui.copy(lineHeight = 1.3.em)
+
+/**
+ * A recent row's room before its icon: 12, the heading's, less the 2 dp
+ * that the file icon's ink stands in its 16 dp box (Feather's file, from 3
+ * of 24 with its stroke), so that the ink is on the screen's edge, under the
+ * heading's first letter (design/README.md, On an edge).
+ */
+private val rowStart = 10.dp
 
 /** A time or a length, in the stamp's type with figures of one width. */
 private val figures = Type.stamp.copy(fontFeatureSettings = "tnum")
@@ -433,7 +450,7 @@ private fun RecentRow(
                 .semantics { customActions = listOf(CustomAccessibilityAction(remove) { onForget(false); true }) }
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .padding(start = rowStart, end = 12.dp, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -499,7 +516,7 @@ private fun LiveRow(o: Opened) {
             .heightIn(min = 48.dp)
             .background(p.surface, Corner)
             .semantics(mergeDescendants = true) { selected = true }
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(start = rowStart, end = 12.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -636,93 +653,101 @@ fun Work(
     // what the three leave the rows, less the rows' 16 dp above them
     val makeRoom = WindowInsets.isImeVisible && find.typing && review && rows.isNotEmpty() && tall > 0 &&
         with(LocalDensity.current) { (tall - head - strip - line).toDp() } - 16.dp < floor
-    Column(Modifier.fillMaxSize().onSizeChanged { tall = it.height }) {
-        // the header's buttons in the middle of its 62 dp (app.css, .pk-head),
-        // the way back's arrow on the cards' line, 16 dp from the screen's
-        // edge, its button's padding outside it: the arrow's ink is 14 dp into
-        // its 40 (11 to the 18 dp icon, and 3 in that), so the button is at 2
-        if (!makeRoom) Head(
-            back = if (running) null else ({ IconBtn(Icons.back, stringResource(R.string.back), a.back, kind = Kind.Ghost) }),
-            name = {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(name, style = Type.ui, color = p.ink, maxLines = 1, overflow = TextOverflow.MiddleEllipsis, modifier = Modifier.weight(1f, fill = false))
-                    // until the ring has progress: reading, the model loading, the first chunk (Spinner)
-                    if (running && !(step == "transcribing" && done > 0)) Spinner()
-                }
-            },
-            modifier = Modifier
-                .onSizeChanged { head = it.height }
-                .fillMaxWidth()
-                .heightIn(min = 62.dp)
-                .padding(start = if (running) 16.dp else 2.dp, end = 16.dp, top = 11.dp, bottom = 11.dp),
-        ) {
-            if (running)
-                PkButton(stringResource(R.string.stop), a.stop, kind = Kind.Ghost)
-            if (review && rows.isNotEmpty()) {
-                IconBtn(Icons.copy, stringResource(if (captions) R.string.copy_captions else R.string.copy_text), a.copy)
-                ShareAs(name, times, a)
-            }
-        }
-        if (step != "error" && !makeRoom)
-            Strip(
-                peaks = peaks,
-                review = review,
-                done = if (step == "transcribing") done else 0.0,
-                playing = playing,
-                playable = playable,
-                position = position,
-                duration = duration,
-                left = when {
-                    review -> base.at(position)
-                    step == "loading" -> stringResource(R.string.status_loading)
-                    step == "reading" -> stringResource(R.string.status_reading)
-                    else -> pace ?: ""
+    // 16 dp from the sides of a work under 600 dp wide, a phone's, and 24
+    // from a wider one's, by its own width, beside the side or not
+    // (design/README.md, Edges; Material's margin at medium and expanded
+    // widths): it was 16 at every width (the layout audit, 2026-11-01)
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val edge = if (maxWidth < 600.dp) 16.dp else 24.dp
+        Column(Modifier.fillMaxSize().onSizeChanged { tall = it.height }) {
+            // the header's buttons in the middle of its 62 dp (app.css, .pk-head),
+            // the way back's arrow on the cards' line, the screen's edge, its
+            // button hung past it: the arrow's ink is 14 dp into its 40 (11 to
+            // the 18 dp icon, and 3 in that), more in a larger button at a
+            // larger text size (inkInset)
+            if (!makeRoom) Head(
+                back = if (running) null else ({ IconBtn(Icons.back, stringResource(R.string.back), a.back, Modifier.hang(start = inkInset(4f)), kind = Kind.Ghost) }),
+                name = {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(name, style = Type.ui, color = p.ink, maxLines = 1, overflow = TextOverflow.MiddleEllipsis, modifier = Modifier.weight(1f, fill = false))
+                        // until the ring has progress: reading, the model loading, the first chunk (Spinner)
+                        if (running && !(step == "transcribing" && done > 0)) Spinner()
+                    }
                 },
-                right = if (duration > 0) base.length() else "",
-                playLabel = stringResource(if (playing) R.string.pause else R.string.play),
-                onPlay = a.play,
-                onSeek = { a.seek(it * duration, false) },
-                sound = sound,
-                base = base,
-                onBase = a.setBase,
-                ticks = if (review && duration > 0) hits.map { it.time / duration } else emptyList(),
-                tickAt = find.at,
-                // a tick: its match, and the playhead there (app.js, #ticks)
-                onTick = { k ->
-                    a.seek(hits[k].time, false)
-                    // after the seek, which puts the reader on the match it
-                    // last passed: a tick's own, where two share its time
-                    find.go(hits, k)
-                },
-                // 16 under the header's buttons, the one gap between the
-                // screen's blocks (Peter, 2026-10-27): their 11 and 5
-                modifier = Modifier.onSizeChanged { strip = it.height }.padding(start = 16.dp, end = 16.dp, top = 5.dp),
-                why = why,
-                locate = locate,
-            )
-        if (review && rows.isNotEmpty())
-            // a step while it plays takes the playhead to its match (Finder.step)
-            Views(
-                captions, a.setCaptions, find, hits, if (playing) ({ t: Double -> a.seek(t, false) }) else null, makeRoom,
-                Modifier.onSizeChanged { if (!makeRoom) line = it.height }.padding(start = 16.dp, end = 16.dp, top = 16.dp),
-            )
-        val msg = when {
-            error != null -> error
-            step == "stopped" -> stringResource(R.string.status_stopped_at, (done * 100).toInt())
-            step == "done" && rows.isEmpty() -> stringResource(R.string.no_speech)
-            else -> null
-        }
-        if (msg != null && !makeRoom)
-            Row(
-                Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier
+                    .onSizeChanged { head = it.height }
+                    .fillMaxWidth()
+                    .heightIn(min = 62.dp)
+                    .padding(start = edge, end = edge, top = 11.dp, bottom = 11.dp),
             ) {
-                val bad = error != null
-                if (bad) Icon(Icons.alert, null, tint = p.err, modifier = Modifier.size(16.dp))
-                Text(msg, style = Type.body.copy(fontSize = 15.sp), color = if (bad) p.err else p.inkMuted)
+                if (running)
+                    PkButton(stringResource(R.string.stop), a.stop, kind = Kind.Ghost)
+                if (review && rows.isNotEmpty()) {
+                    IconBtn(Icons.copy, stringResource(if (captions) R.string.copy_captions else R.string.copy_text), a.copy)
+                    ShareAs(name, times, a)
+                }
             }
-        Rows(rows, review, captions, playing, position, stats, base, hits, find.at, find.shown, list, a, Modifier.weight(1f))
+            if (step != "error" && !makeRoom)
+                Strip(
+                    peaks = peaks,
+                    review = review,
+                    done = if (step == "transcribing") done else 0.0,
+                    playing = playing,
+                    playable = playable,
+                    position = position,
+                    duration = duration,
+                    left = when {
+                        review -> base.at(position)
+                        step == "loading" -> stringResource(R.string.status_loading)
+                        step == "reading" -> stringResource(R.string.status_reading)
+                        else -> pace ?: ""
+                    },
+                    right = if (duration > 0) base.length() else "",
+                    playLabel = stringResource(if (playing) R.string.pause else R.string.play),
+                    onPlay = a.play,
+                    onSeek = { a.seek(it * duration, false) },
+                    sound = sound,
+                    base = base,
+                    onBase = a.setBase,
+                    ticks = if (review && duration > 0) hits.map { it.time / duration } else emptyList(),
+                    tickAt = find.at,
+                    // a tick: its match, and the playhead there (app.js, #ticks)
+                    onTick = { k ->
+                        a.seek(hits[k].time, false)
+                        // after the seek, which puts the reader on the match it
+                        // last passed: a tick's own, where two share its time
+                        find.go(hits, k)
+                    },
+                    // 16 under the header's buttons, the one gap between the
+                    // screen's blocks (Peter, 2026-10-27): their 11 and 5
+                    modifier = Modifier.onSizeChanged { strip = it.height }.padding(start = edge, end = edge, top = 5.dp),
+                    why = why,
+                    locate = locate,
+                )
+            if (review && rows.isNotEmpty())
+                // a step while it plays takes the playhead to its match (Finder.step)
+                Views(
+                    captions, a.setCaptions, find, hits, if (playing) ({ t: Double -> a.seek(t, false) }) else null, makeRoom,
+                    Modifier.onSizeChanged { if (!makeRoom) line = it.height }.padding(start = edge, end = edge, top = 16.dp),
+                )
+            val msg = when {
+                error != null -> error
+                step == "stopped" -> stringResource(R.string.status_stopped_at, (done * 100).toInt())
+                step == "done" && rows.isEmpty() -> stringResource(R.string.no_speech)
+                else -> null
+            }
+            if (msg != null && !makeRoom)
+                Row(
+                    Modifier.padding(start = edge, end = edge, top = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    val bad = error != null
+                    if (bad) Icon(Icons.alert, null, tint = p.err, modifier = Modifier.size(16.dp))
+                    Text(msg, style = Type.body.copy(fontSize = 15.sp), color = if (bad) p.err else p.inkMuted)
+                }
+            Rows(rows, review, captions, playing, position, stats, base, hits, find.at, find.shown, list, a, edge, Modifier.weight(1f))
+        }
     }
 }
 
@@ -764,9 +789,9 @@ private fun Head(back: (@Composable () -> Unit)?, name: @Composable () -> Unit, 
                 kp.place(c.maxWidth - kp.width, (h - kp.height) / 2)
             }
         } else {
-            // the arrow's ink is 14 dp into its button
-            val indent = if (bp.width > 0) 14.dp.roundToPx() else 0
-            val np = n.measure(loose.copy(maxWidth = c.maxWidth - indent))
+            // at the line's start, under the arrow's ink, which its button
+            // hangs there (Work)
+            val np = n.measure(loose.copy(maxWidth = c.maxWidth))
             val bar = maxOf(bp.height, kp.height, c.minHeight)
             // the screen's one step between its blocks (Work): flush under
             // the buttons, the name's line sat on Share's edge at 1.3 times
@@ -775,7 +800,7 @@ private fun Head(back: (@Composable () -> Unit)?, name: @Composable () -> Unit, 
             layout(c.maxWidth, bar + step + np.height) {
                 bp.place(0, (bar - bp.height) / 2)
                 kp.place(c.maxWidth - kp.width, (bar - kp.height) / 2)
-                np.place(indent, bar + step)
+                np.place(0, bar + step)
             }
         }
     }
@@ -857,10 +882,10 @@ private fun ShareAs(name: String, times: Boolean, a: WorkActions) {
 /**
  * The transcript's rows (app.css, .pk-seg): each sentence's time, or a cue's
  * start and end, then its text, at most 560 dp wide; the time above the
- * text where the text would keep under 432 dp beside the time's column, 112
- * dp or what the file's longest time needs at a larger text size: under 620
- * dp at the default, as the desktop's window has it (app.css, max-width:
- * 619px), and a cue's two times a range. The row playing on the surface, the beak's square after
+ * text under 620 dp, as the desktop's window has it (app.css, max-width:
+ * 619px), where the time's column is its 112 dp, and wider by as much as
+ * the file's longest time needs more at a larger text size; a cue's two
+ * times a range there. The row playing on the surface, the beak's square after
  * its time and the word playing underlined in it; a row, tapped anywhere,
  * plays from its time.
  */
@@ -878,6 +903,8 @@ private fun Rows(
     shown: Int,
     list: LazyListState,
     a: WorkActions,
+    /** the work's edge (Work): the rows' boxes stand on it */
+    edge: Dp,
     modifier: Modifier,
 ) {
     val p = pk
@@ -897,11 +924,13 @@ private fun Rows(
         with(density) { measurer.measure(base.at(base.duration), figures).size.width.toDp() } + 10.dp
     }
     BoxWithConstraints(modifier.fillMaxWidth().padding(top = 16.dp)) {
-        // a column while the text keeps 432 dp beside it, as at 620 beside
-        // 112: the list's 16 dp and the row's 16 either side, and the gap's 12
+        // a column from 620 dp at the default text size, the desktop's
+        // (app.css, max-width: 619px), where the text keeps 416 beside 112:
+        // the list's 24 dp and the row's 16 either side, and the gap's 12;
+        // further out as the time's column grows with the text
         val column = maxOf(112.dp, times).takeIf { maxWidth >= 508.dp + it }
         SelectionContainer(selection) {
-            LazyColumn(state = list, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+            LazyColumn(state = list, contentPadding = PaddingValues(start = edge, end = edge, bottom = 16.dp)) {
                 itemsIndexed(rows) { i, s ->
                     val now = i == current
                     val word = if (now) s.words.indexOfLast { it.start <= position + 1e-3 } else -1

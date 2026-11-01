@@ -149,8 +149,14 @@ fun About(version: String, onBack: () -> Unit, onLink: (String) -> Unit) {
                     verticalArrangement = Arrangement.Center,
                 ) { words(Modifier) }
             }
-        // where the work screen's way back is
-        IconBtn(Icons.back, stringResource(R.string.back), onBack, Modifier.padding(start = 8.dp, top = 11.dp), kind = Kind.Ghost)
+        // where the work screen's way back is, its arrow's ink on the work's
+        // edge, 16 dp in or 24 from 600 wide, its button hung past it (Work):
+        // at 8 the ink stood 22 in, past the words' 16 (the layout audit,
+        // 2026-11-01)
+        IconBtn(
+            Icons.back, stringResource(R.string.back), onBack,
+            Modifier.padding(start = if (narrow) 16.dp else 24.dp, top = 11.dp).hang(start = inkInset(4f)), kind = Kind.Ghost,
+        )
         when (sheet) {
             "privacy" -> Sheet(stringResource(R.string.privacy_title), narrow = true, onClose = { sheet = "" }) { Privacy(onLink, it) }
             "notices" -> Sheet(stringResource(R.string.notices_title), narrow = false, onClose = { sheet = "" }) { Licenses(it) }
@@ -301,15 +307,18 @@ private fun Sheet(title: String, narrow: Boolean, onClose: () -> Unit, body: @Co
                 .testTag("sheet")
                 .floating(),
         ) {
+            // the close cross's ink on the words' edge, 24 in, as the title
+            // is on the left, its button hung past it: at 6 it stood 20.7 in
+            // (the layout audit, 2026-11-01)
             Row(
                 Modifier
                     .fillMaxWidth()
                     .background(p.surface)
-                    .padding(start = 24.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                    .padding(start = 24.dp, end = 24.dp, top = 6.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(title, style = Type.ui, color = p.ink, modifier = Modifier.weight(1f))
-                IconBtn(Icons.x, stringResource(R.string.sheet_close), onClose, kind = Kind.Ghost)
+                IconBtn(Icons.x, stringResource(R.string.sheet_close), onClose, Modifier.hang(end = inkInset(5f)), kind = Kind.Ghost)
             }
             body(Modifier.weight(1f, fill = !narrow))
         }
