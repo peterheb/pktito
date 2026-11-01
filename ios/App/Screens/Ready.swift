@@ -94,7 +94,11 @@ struct Side: View {
         let open = t.step != .none
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 14) {
-                TopRow()
+                // on the work's header's line, its 40 in the middle of the
+                // header's 62, and Choose with the strip's top, 5 under it
+                // (Header, Strip): the side's first row 9 lower read as out
+                // of line with the header (Peter, the M1 iPad, 2026-11-01)
+                TopRow().padding(.bottom, 2)
                 if open {
                     PkButton(text: L("choose"), stretch: true) { AppState.shared.pick = .media }
                         .disabled(t.running)
@@ -106,7 +110,7 @@ struct Side: View {
             }
             .padding(.leading, 20)
             .padding(.trailing, 16)
-            .padding(.top, 20)
+            .padding(.top, 11)
             .padding(.bottom, 16)
             .frame(width: 300)
             .overlay(alignment: .trailing) { Rectangle().fill(Pk.sunk).frame(width: 1) }
