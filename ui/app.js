@@ -270,6 +270,10 @@ const baseName = (p) => p.split(/[\\/]/).pop();
 const stemOf = (p) => baseName(p).replace(/\.[^.]+$/, "");
 const extOf = (p) =>
   (baseName(p).match(/\.([^.]+)$/) || ["", ""])[1].toLowerCase();
+/* the dot between two things on a line, a no-break space before it, so
+   that a line breaking there ends with the dot rather than the next one
+   starting with it (the catalog's strings have the same) */
+const DOT = "\u00a0· ";
 const esc = (s) =>
   String(s).replace(
     /[&<>"]/g,
@@ -388,7 +392,7 @@ function modelLabel(long) {
   const m = inUse();
   if (!m) return t("models.choose");
   return long
-    ? `${labelOf(m)} · ${m.name}`
+    ? `${labelOf(m)}${DOT}${m.name}`
     : t("models.named", { label: labelOf(m) });
 }
 
@@ -470,7 +474,7 @@ function modelMenu(anchor, keys) {
         : m.name;
     return (
       `<button class="pk-mi" type="button" role="menuitemradio" aria-checked="${on}" data-model="${m.name}" title="${esc(title)}">` +
-      `<span>${esc(labelOf(m))}</span><small class="pk-sub">${withOwn(m, esc(aboutOf(m)))} · ${state}</small>${on ? ICON.check : ""}</button>`
+      `<span>${esc(labelOf(m))}</span><small class="pk-sub">${withOwn(m, esc(aboutOf(m)))}${DOT}${state}</small>${on ? ICON.check : ""}</button>`
     );
   });
   if (st.model_file) {
@@ -573,7 +577,7 @@ function renderManage() {
       const tag = on
         ? ` · <span class="pk-have">${esc(t("manage.in_use"))}</span>`
         : "";
-      rows.push(row(m, `${esc(`${m.name} · ${size}`)}${tag}`, false));
+      rows.push(row(m, `${esc(`${m.name}${DOT}${size}`)}${tag}`, false));
     }
     if (m.partial) {
       used += m.partial;
@@ -766,7 +770,7 @@ function chooseHtml() {
       return (
         `<label class="pk-choice"><input type="radio" name="model" value="${m.name}"${m.name === choice ? " checked" : ""}>` +
         `<span class="pk-name">${esc(labelOf(m))}</span><span class="pk-stamp">${esc(m.have ? t("setup.on_computer") : t("setup.size", { mb: mb(m.bytes) }))}</span>` +
-        `<span class="pk-desc">${esc(m.name)} · ${about}</span>${list}</label>`
+        `<span class="pk-desc">${esc(m.name)}${DOT}${about}</span>${list}</label>`
       );
     })
     .join("");
@@ -1272,7 +1276,7 @@ async function addPaths(paths) {
     other.length && t("files.not_media", { names: other.join(", ") }),
   ];
   if (gone.length || other.length)
-    toast(say.filter(Boolean).join(" · "), { err: true });
+    toast(say.filter(Boolean).join(DOT), { err: true });
   render();
   pump();
 }
@@ -1484,7 +1488,7 @@ function rowBody(f) {
   else if (f.step === "transcribing") {
     status =
       `<span class="pk-bar pk-mini"><i style="width:${(f.done * 100).toFixed(1)}%"></i></span>` +
-      `<span class="pk-status pk-num">${esc(t("status.transcribing", { pct: percent(f.done) }))}${f.eta > 0 ? ` · ${esc(timeLeft(f.eta))}` : ""}</span>`;
+      `<span class="pk-status pk-num">${esc(t("status.transcribing", { pct: percent(f.done) }))}${f.eta > 0 ? `${DOT}${esc(timeLeft(f.eta))}` : ""}</span>`;
   } else if (f.step === "done")
     status = `<span class="pk-status pk-ok">${ICON.check}${esc(t("status.done"))}</span>`;
   else if (f.step === "stopped")
@@ -1545,7 +1549,7 @@ function batchHead() {
     p = going && batchSave;
   const saving = !p
     ? ""
-    : ` · ${p.kind === "folder" ? t("batch.saving_folder", { folder: baseName(p.dir) }) : t("batch.saving_beside", { ext: p.kind })}`;
+    : `${DOT}${p.kind === "folder" ? t("batch.saving_folder", { folder: baseName(p.dir) }) : t("batch.saving_beside", { ext: p.kind })}`;
   $("tally").textContent =
     t("batch.done_of", {
       done: files.filter((f) => f.step === "done").length,
