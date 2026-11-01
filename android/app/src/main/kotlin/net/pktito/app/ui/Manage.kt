@@ -2,10 +2,8 @@ package net.pktito.app.ui
 
 import android.content.res.Resources
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -132,7 +130,7 @@ fun Manage(
                     }
                     add(
                         Kept(
-                            "have:${o.name}", label, note(res, "${o.name} · ${res.getString(R.string.manage_size, mb(o.bytes))}", inUse, p.ok), o.bytes, delete,
+                            "have:${o.name}", label, note(res, "${o.name}$DOT${res.getString(R.string.manage_size, mb(o.bytes))}", inUse, p.ok), o.bytes, delete,
                             !(running && (inUse || o.file.path == loaded)),
                             res.getString(R.string.manage_ask_title, label) to text,
                         ) { a.delete(o) },
@@ -222,7 +220,7 @@ fun Manage(
 private fun note(res: Resources, text: String, inUse: Boolean, ok: Color) = buildAnnotatedString {
     append(text)
     if (inUse) {
-        append(" · ")
+        append(DOT)
         withStyle(SpanStyle(color = ok)) { append(res.getString(R.string.manage_in_use).replace(' ', '\u00A0')) }
     }
 }
@@ -233,13 +231,13 @@ private fun used(res: Resources, total: Long, free: Long): String {
     else res.getString(R.string.manage_used_gb, String.format(Locale.getDefault(), "%.2f", total / 1e9))
     val left = if (free < 1_000_000_000) res.getString(R.string.manage_free_mb, mb(free))
     else res.getString(R.string.manage_free_gb, String.format(Locale.getDefault(), "%.1f", free / 1e9))
-    return "$used · $left"
+    return "$used$DOT$left"
 }
 
 /**
  * The rows between lines of sunk, what they take and the room left under
- * them, and Close; start is the focus of the row first, or of Close where
- * first is -1.
+ * them, and Close, each button beside its words or under them (Beside);
+ * start is the focus of the row first, or of Close where first is -1.
  */
 @Composable
 private fun Panel(
@@ -255,15 +253,15 @@ private fun Panel(
                 Text(stringResource(R.string.manage_none), style = Type.small, color = p.inkMuted, modifier = Modifier.padding(vertical = 12.dp))
             for ((i, r) in rows.withIndex()) {
                 Line()
-                Row(
+                Beside(
                     Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    words = {
+                        Column {
+                            Text(r.title, style = Type.ui, color = p.ink, maxLines = 1, overflow = TextOverflow.MiddleEllipsis)
+                            Text(r.note, style = Type.small, color = p.inkMuted)
+                        }
+                    },
                 ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(r.title, style = Type.ui, color = p.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(r.note, style = Type.small, color = p.inkMuted)
-                    }
                     PkButton(
                         r.act, { onAct(r) },
                         Modifier.widthIn(min = 80.dp).then(if (i == first) Modifier.focusRequester(start) else Modifier),
@@ -273,12 +271,7 @@ private fun Panel(
             }
             Line()
         }
-        Row(
-            Modifier.fillMaxWidth().padding(top = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Text(used(res, total, free), style = Type.small, color = p.inkMuted, modifier = Modifier.weight(1f))
+        Beside(Modifier.fillMaxWidth().padding(top = 16.dp), words = { Text(used(res, total, free), style = Type.small, color = p.inkMuted) }) {
             PkButton(
                 stringResource(R.string.sheet_close), onClose,
                 Modifier.widthIn(min = 80.dp).then(if (first < 0) Modifier.focusRequester(start) else Modifier),

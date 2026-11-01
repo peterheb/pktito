@@ -211,7 +211,9 @@ class Finder {
  * The search's field on the views line (app.css, .pk-find), sunk, 40 dp
  * tall for a finger to the desktop's 32: the glass, what is sought, and
  * while there is something, its count and the previous and next match,
- * dimmed with fewer than two, then the way to close it. Enter is the next
+ * dimmed with fewer than two, then the way to close it, where it closes
+ * something: a search, or the field the glass opened (Views); one resting
+ * beside the views has none, as the desktop's hasn't. Enter is the next
  * match and Shift+Enter the one before, as is the keyboard's search key;
  * Esc closes it from the screen's keys (MainActivity), as Back does. While
  * the recording plays, a step takes the playhead with it (seek: Finder.step).

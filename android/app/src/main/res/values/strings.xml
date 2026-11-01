@@ -50,7 +50,7 @@
     <string name="times_frames_at">%1$s at %2$s fps</string><!-- times.frames_at -->
     <string name="times_frames_at_video">%1$s at %2$s fps, the video\'s</string><!-- times.frames_at_video -->
     <string name="times_rates">Frames a second</string><!-- times.rates -->
-    <string name="times_video_rate">Video · %1$s</string><!-- times.video_rate -->
+    <string name="times_video_rate">Video&#160;· %1$s</string><!-- times.video_rate -->
     <string name="status_loading">Loading the model</string>
     <string name="status_reading">Reading the audio</string>
     <string name="status_transcribing">Transcribing %1$d%%</string>
@@ -64,10 +64,12 @@
     <string name="recent_title">Recent</string>
     <string name="recent_clear">Clear</string>
     <string name="recent_clear_label">Clear the recent list</string>
-    <string name="recent_remove">Remove %1$s from Recent</string>
-    <!-- recent.remove_tip, as a long press's menu has it -->
-    <string name="recent_remove_item">Remove from Recent</string>
-    <string name="recent_remove_note">The file stays where it is</string>
+    <string name="recent_remove">Delete the transcript of %1$s</string>
+    <!-- recent.remove_tip, as a long press's menu has it: the saved
+         transcript goes for good, and pktito's copy of a shared recording
+         with it, but never the original (Peter, 2026-10-31) -->
+    <string name="recent_remove_item">Delete transcript</string>
+    <string name="recent_remove_note">Your original file isn\'t deleted</string>
     <string name="recent_unreadable">Can\'t read this transcript</string>
     <string name="ask_clear_title">Clear the recent list?</string>
     <string name="ask_clear_text">All recent transcripts will be permanently deleted. Your original audio and video files, and any transcripts you saved, are not affected.</string>
@@ -91,7 +93,7 @@
     <string name="about_open">About pktito</string>
     <string name="about_mascot">pktito\'s mascot, a budgie beside a speech bubble and a transcript</string>
     <string name="about_tagline"><![CDATA[A compact Parakeet implementation <i>(pronounced “pick-a-tito”)</i><br>Speech to text on this device.]]></string>
-    <string name="about_version">Version %1$s · %2$s</string>
+    <string name="about_version">Version %1$s&#160;· %2$s</string>
     <string name="about_copyright"><![CDATA[Copyright (c) 2026 Peter Hebert, under the <a href="https://github.com/peterheb/pktito/blob/main/LICENSE">MIT license</a>]]></string>
     <string name="about_docs">Documentation</string>
     <string name="about_privacy">Privacy</string>
@@ -137,9 +139,8 @@
     <string name="catalog_multilingual_about">25 European languages</string>
     <string name="models_named">%1$s model</string>
     <string name="models_downloaded">Downloaded</string>
-    <string name="models_download_size">%1$s MB download</string>
-    <string name="models_among">, %1$s among them</string>
-    <!-- a model of several's languages, %1$s ("25 European languages"), and the system's language among them, %2$s, as one sentence (models.languages_among); models_among goes once Android uses this -->
+    <string name="models_download_size">%1$s&#160;MB download</string>
+    <!-- a model of several's languages, %1$s ("25 European languages"), and the system's language among them, %2$s, as one sentence (models.languages_among) -->
     <string name="models_languages_among">%1$s, %2$s among them</string>
     <string name="models_open_file">Open a model file…</string>
     <string name="models_using">Using the %1$s model</string>
@@ -149,31 +150,31 @@
     <!-- Manage models (manage.*), which the desktop's Store edition has
          where the others show the folder; the Android-only ones say so -->
     <string name="manage_title">Manage models</string>
-    <string name="manage_size">%1$s MB</string>
+    <string name="manage_size">%1$s&#160;MB</string>
     <string name="manage_in_use">In use</string>
     <string name="manage_delete">Delete</string>
-    <string name="manage_paused">Paused download · %1$s of %2$s MB</string>
-    <string name="manage_used_mb">%1$s MB used</string>
-    <string name="manage_used_gb">%1$s GB used</string>
+    <string name="manage_paused">Paused download&#160;· %1$s of %2$s&#160;MB</string>
+    <string name="manage_used_mb">%1$s&#160;MB used</string>
+    <string name="manage_used_gb">%1$s&#160;GB used</string>
     <string name="manage_none">No models downloaded</string>
     <string name="manage_ask_title">Delete the %1$s model?</string>
-    <string name="manage_ask_text">This frees %1$s MB. You can download it again.</string>
-    <string name="manage_ask_text_switch">This frees %1$s MB, and pktito switches to the %2$s model. You can download it again.</string>
-    <string name="manage_ask_text_last">This frees %1$s MB. It\'s the only model downloaded, so you\'ll choose a model again before transcribing.</string>
+    <string name="manage_ask_text">This frees %1$s&#160;MB. You can download it again.</string>
+    <string name="manage_ask_text_switch">This frees %1$s&#160;MB, and pktito switches to the %2$s model. You can download it again.</string>
+    <string name="manage_ask_text_last">This frees %1$s&#160;MB. It\'s the only model downloaded, so you\'ll choose a model again before transcribing.</string>
     <string name="manage_ask_part_title">Delete the paused download?</string>
-    <string name="manage_ask_part_text">This frees %1$s MB. Downloading the %2$s model again starts over.</string>
+    <string name="manage_ask_part_text">This frees %1$s&#160;MB. Downloading the %2$s model again starts over.</string>
     <string name="manage_cant_delete">Couldn\'t delete the model</string>
     <!-- Android's own: the room left, a download under way, the copy of a model file opened -->
-    <string name="manage_free_mb">%1$s MB free</string>
-    <string name="manage_free_gb">%1$s GB free</string>
-    <string name="manage_downloading">Downloading · %1$s of %2$s MB</string>
+    <string name="manage_free_mb">%1$s&#160;MB free</string>
+    <string name="manage_free_gb">%1$s&#160;GB free</string>
+    <string name="manage_downloading">Downloading&#160;· %1$s of %2$s&#160;MB</string>
     <string name="manage_ask_own_title">Delete the copy of %1$s?</string>
-    <string name="manage_ask_own_switch">This frees %1$s MB, and pktito switches to the %2$s model. The file you opened is not affected.</string>
-    <string name="manage_ask_own_last">This frees %1$s MB. It\'s the only model here, so you\'ll choose a model again before transcribing. The file you opened is not affected.</string>
+    <string name="manage_ask_own_switch">This frees %1$s&#160;MB, and pktito switches to the %2$s model. The file you opened is not affected.</string>
+    <string name="manage_ask_own_last">This frees %1$s&#160;MB. It\'s the only model here, so you\'ll choose a model again before transcribing. The file you opened is not affected.</string>
     <string name="setup_title">Choose a speech model</string>
     <string name="setup_legend">Speech model</string>
     <string name="setup_on_device">on this device</string><!-- setup.on_computer -->
-    <string name="setup_size">%1$s MB</string>
+    <string name="setup_size">%1$s&#160;MB</string>
     <string name="setup_accuracy">Accuracy varies by language.</string>
     <string name="setup_details">Details</string>
     <string name="setup_have_file">I already have a model file…</string>
@@ -182,8 +183,8 @@
         <item quantity="other">%d files waiting</item>
     </plurals>
     <string name="setup_use">Use the %1$s model</string>
-    <string name="setup_download">Download the %1$s model · %2$s MB</string>
-    <string name="setup_download_rest">Download the %1$s model · %2$s MB to go</string>
+    <string name="setup_download">Download the %1$s model&#160;· %2$s&#160;MB</string>
+    <string name="setup_download_rest">Download the %1$s model&#160;· %2$s&#160;MB to go</string>
     <string name="download_title">Downloading the %1$s model</string>
     <string name="download_from">%1$s from %2$s</string><!-- download.from_html -->
     <string name="download_bar">Model download</string>
@@ -191,11 +192,11 @@
     <string name="download_pause">Pause</string>
     <string name="download_resume">Resume</string>
     <string name="download_cancel">Cancel</string>
-    <string name="download_progress">%1$s of %2$s MB</string>
-    <string name="download_progress_paused">%1$s of %2$s MB · paused</string>
-    <string name="download_progress_speed">%1$s of %2$s MB · %3$s MB/s · %4$s</string>
+    <string name="download_progress">%1$s of %2$s&#160;MB</string>
+    <string name="download_progress_paused">%1$s of %2$s&#160;MB&#160;· paused</string>
+    <string name="download_progress_speed">%1$s of %2$s&#160;MB&#160;· %3$s&#160;MB/s&#160;· %4$s</string>
     <string name="download_checking">Checking</string>
-    <string name="download_stopped_at">Stopped at %1$s of %2$s MB</string>
+    <string name="download_stopped_at">Stopped at %1$s of %2$s&#160;MB</string>
     <string name="download_nothing_yet">Nothing downloaded yet</string>
     <string name="download_details">Details</string>
     <string name="download_try_again">Try again</string>
@@ -220,6 +221,6 @@
     <string name="model_file_damaged">Model file incomplete or damaged</string>
     <string name="problem_unexpected">Something went wrong</string>
     <string name="problem_memory">Not enough memory. Close other apps and try again.</string>
-    <string name="time_left_seconds">about %1$d s left</string>
-    <string name="time_left_minutes">about %1$d min left</string>
+    <string name="time_left_seconds">about %1$d&#160;s left</string>
+    <string name="time_left_minutes">about %1$d&#160;min left</string>
 </resources>

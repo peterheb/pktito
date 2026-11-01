@@ -98,7 +98,7 @@
             type="button"
             data-t-aria-label="nav.back"
           ></button>
-          <h1 class="pk-ui" id="title"></h1>
+          <h1 class="pk-ui pk-cut" id="title"></h1>
           <span class="pk-spin" id="spin" hidden aria-hidden="true"></span>
           <span class="pk-grow"></span>
           <label class="pk-find" id="find-box">
@@ -197,7 +197,9 @@
             </div>
           </div>
         </div>
-        <!-- a finished transcript as its sentences or as its subtitle track's cues -->
+        <!-- a finished transcript as its sentences or as its subtitle track's
+             cues; and Find, where the header hasn't the room for it (placeFind) -->
+        <div class="pk-views-line" id="views-line">
         <div
           class="pk-views"
           id="views"
@@ -219,6 +221,7 @@
             data-view="captions"
             data-t="work.captions"
           ></button>
+        </div>
         </div>
         <p class="pk-msg" id="msg" role="status"></p>
         <details class="pk-details pk-msg-details" id="msg-details" hidden>
