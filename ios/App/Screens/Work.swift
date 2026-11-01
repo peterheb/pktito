@@ -111,7 +111,6 @@ private struct Header: View {
     let review: Bool
     /// whether there are rows to copy and share
     let shown: Bool
-    @Environment(\.dynamicTypeSize) private var type
 
     var body: some View {
         let t = Transcriber.shared
@@ -149,7 +148,8 @@ private struct Header: View {
     private var name: some View {
         let t = Transcriber.shared
         return HStack(spacing: 10) {
-            Text(t.name).pk(PkType.ui).foregroundStyle(Pk.ink).lineLimit(type.isAccessibilitySize ? 3 : 1)
+            // a file's name: one line, cut in the middle, which keeps its extension
+            Text(t.name).pk(PkType.ui).foregroundStyle(Pk.ink).lineLimit(1).truncationMode(.middle)
             // until the ring has progress: reading, the model loading, the first chunk
             if t.running && !(t.step == .transcribing && t.done > 0) { Spinner() }
         }

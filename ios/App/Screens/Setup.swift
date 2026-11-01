@@ -8,6 +8,17 @@ private func languageName(_ code: String) -> String {
     Locale(identifier: "en").localizedString(forLanguageCode: code) ?? code
 }
 
+/// A model of several's languages, about, and the system's language where
+/// it is one of them, as the one sentence models_languages_among makes of
+/// them, about where the sentence puts it (ui/app.js, withOwn).
+private func withOwn(_ e: CatalogEntry, _ about: AttributedString) -> AttributedString {
+    guard e.languages.count > 1, e.languages.contains(ownLanguage) else { return about }
+    let mark = "\u{1}"
+    let parts = L("models_languages_among", mark, languageName(ownLanguage)).components(separatedBy: mark)
+    guard parts.count == 2 else { return about }
+    return AttributedString(parts[0]) + about + AttributedString(parts[1])
+}
+
 /// The setup screen (ui/app.js, renderSetup; Android's Setup.kt): choose a
 /// speech model and download it, or use a model file of one's own; a
 /// download under way or paused, one that failed; a model file being copied
@@ -225,17 +236,12 @@ private struct Card: View {
     /// Its file's name, what it is for, the languages a link where it has
     /// several, and the system's own among them.
     private func line(_ many: Bool) -> AttributedString {
-        var out = AttributedString(o.name + " · ")
         var what = AttributedString(about(o.key))
         if many {
             what.link = Card.languages
             what.underlineStyle = .single
         }
-        out += what
-        if many && o.entry.languages.contains(ownLanguage) {
-            out += AttributedString(L("models_among", languageName(ownLanguage)))
-        }
-        return out
+        return AttributedString(o.name + " · ") + withOwn(o.entry, what)
     }
 }
 
@@ -260,32 +266,48 @@ private struct Languages: View {
 
     var body: some View {
         let names = o.entry.languages.map { ($0, languageName($0)) }.sorted { $0.1 < $1.1 }
-        let rows = (names.count + 2) / 3
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 12) {
-                ForEach(0..<3, id: \.self) { c in
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(names.dropFirst(c * rows).prefix(rows)), id: \.0) { code, name in
-                            Text(name)
-                                .font((code == ownLanguage ? PkType.ui : PkType.small).font(13))
-                                .foregroundStyle(code == ownLanguage ? Pk.ink : Pk.inkMuted)
-                                .lineSpacing(13 * 0.6 - 2)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
+            // two columns, then one, before a name breaks
+            ViewThatFits(in: .horizontal) {
+                columns(3, names)
+                columns(2, names)
+                columns(1, names)
             }
             if let url = URL(string: o.entry.accuracy), !o.entry.accuracy.isEmpty {
-                HStack(spacing: 4) {
-                    Text(L("setup_accuracy"))
-                    Link(destination: url) { Text(L("setup_details")).underline() }
-                }
-                .pk(PkType.small)
-                .foregroundStyle(Pk.inkMuted)
-                .tint(Pk.inkMuted)
+                Text(accuracy(url))
+                    .pk(PkType.small)
+                    .foregroundStyle(Pk.inkMuted)
+                    .tint(Pk.inkMuted)
             }
         }
         .padding(.top, 8)
+    }
+
+    /// The names in n columns, down each, each whole.
+    private func columns(_ n: Int, _ names: [(String, String)]) -> some View {
+        let rows = (names.count + n - 1) / n
+        return HStack(alignment: .top, spacing: 12) {
+            ForEach(0..<n, id: \.self) { c in
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(names.dropFirst(c * rows).prefix(rows)), id: \.0) { code, name in
+                        Text(name)
+                            .font((code == ownLanguage ? PkType.ui : PkType.small).font(13))
+                            .foregroundStyle(code == ownLanguage ? Pk.ink : Pk.inkMuted)
+                            .lineSpacing(13 * 0.6 - 2)
+                            .fixedSize()
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    /// That accuracy varies, and the way to its table, as one paragraph.
+    private func accuracy(_ url: URL) -> AttributedString {
+        var details = AttributedString(L("setup_details"))
+        details.link = url
+        details.underlineStyle = .single
+        return AttributedString(L("setup_accuracy") + " ") + details
     }
 }
 
@@ -546,7 +568,8 @@ struct ModelMenu: View {
                     } else {
                         Text(label(o.key))
                     }
-                    Text(about(o.key) + " · " + (o.have ? L("models_downloaded") : L("models_download_size", mb(o.bytes))))
+                    Text(String(withOwn(o.entry, AttributedString(about(o.key))).characters) + " · "
+                         + (o.have ? L("models_downloaded") : L("models_download_size", mb(o.bytes))))
                 }
             }
             if let own = m.own {

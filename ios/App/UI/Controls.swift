@@ -234,13 +234,39 @@ struct Toast: View {
 }
 
 /// A string of the catalog (Localizable.xcstrings, from Android's
-/// strings.xml by scripts/strings-ios.py) by its key, with its arguments.
+/// strings.xml by scripts/strings-ios.py) by its key, with its arguments;
+/// in a debug build launched with -pseudo, the pseudo-language's (Pseudo).
 func L(_ key: String, _ args: CVarArg...) -> String {
-    let format = Bundle.main.localizedString(forKey: key, value: nil, table: nil)
+    let format = Pseudo.word(key) ?? Bundle.main.localizedString(forKey: key, value: nil, table: nil)
     return args.isEmpty ? format : String(format: format, locale: Locale.current, arguments: args)
 }
 
 /// The same, for a plural: the catalog's form for n.
 func L(_ key: String, count n: Int) -> String {
-    String.localizedStringWithFormat(Bundle.main.localizedString(forKey: key, value: nil, table: nil), n)
+    if let forms = Pseudo.forms(key) {
+        return String(format: forms[n == 1 ? "one" : "other"] ?? forms["other"] ?? key, locale: Locale.current, n)
+    }
+    return String.localizedStringWithFormat(Bundle.main.localizedString(forKey: key, value: nil, table: nil), n)
+}
+
+/// The words in scripts/pseudo.py's pseudo-language, longer, accented and
+/// bracketed, for a debug build launched with -pseudo: whether the screens
+/// hold a language less compact than English, and which text is cut short,
+/// hard-coded or put together from pieces (Pseudo/en-XA.json, which a
+/// release build hasn't: EXCLUDED_SOURCE_FILE_NAMES).
+enum Pseudo {
+    #if DEBUG
+    private static let table: [String: Any]? = {
+        guard CommandLine.arguments.contains("-pseudo"),
+              let url = Bundle.main.url(forResource: "en-XA", withExtension: "json"),
+              let d = try? Data(contentsOf: url) else { return nil }
+        return try? JSONSerialization.jsonObject(with: d) as? [String: Any]
+    }()
+    #else
+    private static let table: [String: Any]? = nil
+    #endif
+
+    static func word(_ key: String) -> String? { table?[key] as? String }
+
+    static func forms(_ key: String) -> [String: String]? { table?[key] as? [String: String] }
 }

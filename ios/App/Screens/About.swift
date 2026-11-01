@@ -25,8 +25,8 @@ struct About: View {
             let stacked = narrow || g.size.height >= g.size.width
             let wide = g.size.width >= 880
             // the credits beside their names while there is room for both,
-            // under them at an accessibility text size
-            let words = Credits(twoColumns: (stacked || wide) && !type.isAccessibilitySize) { sheet = $0 }
+            // under them where the widest name doesn't fit its column
+            let words = Credits(twoColumns: (stacked || wide) && Credit<EmptyView>.namesFit(type)) { sheet = $0 }
             ZStack(alignment: .topLeading) {
                 if stacked {
                     // a phone scrolls the two together where the words fill it
@@ -151,14 +151,25 @@ private struct Credits: View {
 }
 
 /// A credit, its name before it 105 wide, or above it where the words are
-/// narrow (.pk-credits).
+/// narrow (.pk-credits), or the widest name doesn't fit the 105 at the
+/// person's text size.
 private struct Credit<What: View>: View {
     let name: String
     let twoColumns: Bool
     @ViewBuilder let what: () -> What
 
+    static var style: PkStyle { PkStyle(face: PkType.ui.face, size: 14, lineHeight: 1.45, tracking: 0) }
+
+    /// whether each credit's name fits its column on one line
+    @MainActor static func namesFit(_ type: DynamicTypeSize) -> Bool {
+        let font = style.uiFont(style.scaled(type))
+        return ["Parakeet-TDT", "Silero VAD", L("about_else")].allSatisfy {
+            ($0 as NSString).size(withAttributes: [.font: font]).width <= 105
+        }
+    }
+
     var body: some View {
-        let style = PkStyle(face: PkType.ui.face, size: 14, lineHeight: 1.45, tracking: 0)
+        let style = Credit.style
         if twoColumns {
             HStack(alignment: .top, spacing: 16) {
                 Text(name).pk(style).foregroundStyle(Pk.ink).frame(width: 105, alignment: .leading)

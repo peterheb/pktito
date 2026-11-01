@@ -259,7 +259,7 @@ private struct LiveRow: View {
         HStack(spacing: 10) {
             PkIcon.file.frame(width: 16, height: 16).foregroundStyle(Pk.ink)
             VStack(alignment: .leading, spacing: 0) {
-                Text(t.name).font(PkType.ui.font(14)).foregroundStyle(Pk.ink).lineLimit(1)
+                Text(t.name).font(PkType.ui.font(14)).foregroundStyle(Pk.ink).lineLimit(1).truncationMode(.middle)
                 HStack(spacing: 4) {
                     if t.step == .done { PkIcon.check.frame(width: 14, height: 14) }
                     Text(status).pk(PkType.small).lineLimit(1)

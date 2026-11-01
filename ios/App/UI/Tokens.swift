@@ -43,14 +43,14 @@ struct PkStyle {
 
 /// The type styles, by their names: transcript is the transcript's, ui the app's working size.
 enum PkType {
-    static let figure = PkStyle(face: "ArchivoSemiBold-Bold", size: 64, lineHeight: 0.9, tracking: -0.04)
-    static let display = PkStyle(face: "ArchivoSemiBold-Bold", size: 80, lineHeight: 0.92, tracking: -0.02)
-    static let lead = PkStyle(face: "ArchivoSemiBold-Medium", size: 26, lineHeight: 1.25, tracking: -0.01)
-    static let body = PkStyle(face: "ArchivoSemiBold-Regular", size: 18, lineHeight: 1.5, tracking: 0)
-    static let transcript = PkStyle(face: "ArchivoSemiBold-Regular", size: 17, lineHeight: 1.6, tracking: 0)
-    static let bodyStrong = PkStyle(face: "ArchivoSemiBold-Medium", size: 18, lineHeight: 1.5, tracking: 0)
-    static let ui = PkStyle(face: "ArchivoSemiBold-Medium", size: 14, lineHeight: 1.4, tracking: 0)
-    static let small = PkStyle(face: "ArchivoSemiBold-Regular", size: 13, lineHeight: 1.45, tracking: 0)
+    static let figure = PkStyle(face: "ArchivoRoman-Bold", size: 64, lineHeight: 0.9, tracking: -0.04)
+    static let display = PkStyle(face: "ArchivoRoman-Bold", size: 80, lineHeight: 0.92, tracking: -0.02)
+    static let lead = PkStyle(face: "ArchivoRoman-Medium", size: 26, lineHeight: 1.25, tracking: -0.01)
+    static let body = PkStyle(face: "ArchivoRoman-Regular", size: 18, lineHeight: 1.5, tracking: 0)
+    static let transcript = PkStyle(face: "ArchivoRoman-Regular", size: 17, lineHeight: 1.6, tracking: 0)
+    static let bodyStrong = PkStyle(face: "ArchivoRoman-Medium", size: 18, lineHeight: 1.5, tracking: 0)
+    static let ui = PkStyle(face: "ArchivoRoman-Medium", size: 14, lineHeight: 1.4, tracking: 0)
+    static let small = PkStyle(face: "ArchivoRoman-Regular", size: 13, lineHeight: 1.45, tracking: 0)
     static let code = PkStyle(face: "CommitMono-400Regular", size: 15, lineHeight: 1.6, tracking: 0)
     static let codeStrong = PkStyle(face: "CommitMono-700Regular", size: 15, lineHeight: 1.6, tracking: 0)
     static let stamp = PkStyle(face: "CommitMono-400Regular", size: 13, lineHeight: 1.5, tracking: 0)

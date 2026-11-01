@@ -1143,6 +1143,18 @@
         }
       }
     },
+    "models_languages_among": {
+      "extractionState": "manual",
+      "comment": "a model of several's languages, %1$s (\"25 European languages\"), and the system's language among them, %2$s, as one sentence (models.languages_among); models_among goes once Android uses this",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@ among them"
+          }
+        }
+      }
+    },
     "models_manage": {
       "extractionState": "manual",
       "localizations": {
