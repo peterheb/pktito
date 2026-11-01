@@ -1,5 +1,7 @@
 package net.pktito.app
 
+import org.json.JSONObject
+
 /**
  * The engine and the desktop app's Rust core, in libpktito_app.so
  * (native.sh builds it; src-tauri/src/android.rs is this object's other
@@ -42,8 +44,17 @@ object Engine {
     /**
      * The recording open at fd, read and transcribed on this thread: the
      * transcript. fd stays the caller's; name is what an error calls it.
+     * One that can't be read throws its problem (problem).
      */
     @JvmStatic external fun transcribe(handle: Long, fd: Int, name: String, progress: Progress): String
+
+    /**
+     * The catalog's key (strings.rs, Problem; words) for a recording
+     * transcribe could not read, which it throws as JSON with what said so;
+     * that goes to the log alone, as on iOS (the layout audit, 2026-11-01).
+     * Null for any other failure.
+     */
+    fun problem(e: Throwable): String? = runCatching { JSONObject(e.message ?: "").getString("key") }.getOrNull()
 
     /** The transcription running stops before its next chunk. */
     @JvmStatic external fun stop()

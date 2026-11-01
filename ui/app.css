@@ -452,7 +452,9 @@ html[data-chrome="win"] .pk-head {
   min-height: min(100%, 520px);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  /* steps on the scale, as the start screen's: 24 (it was 20; the layout
+     audit, with Android's, 2026-11-01) */
+  gap: 24px;
   padding: 28px 40px 24px;
 }
 .pk-intro {
@@ -474,7 +476,7 @@ html[data-chrome="win"] .pk-head {
   margin-top: auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 .pk-wide {
   width: 100%;
@@ -497,7 +499,7 @@ html[data-chrome="win"] .pk-head {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
 }
 .pk-choices legend {
@@ -682,8 +684,10 @@ html[data-chrome="win"] .pk-head {
   /* its steps on the scale, 24, and 32 over the recent list (8 more);
      they were 22 and 30 (the layout audit, 2026-11-01) */
   gap: 24px;
-  padding-top: 20px;
-  padding-bottom: 20px;
+  /* its top row on the work header's line, 15 down round its 32, as the
+     side's; 16 under the list (they were 20 and 20) */
+  padding-top: 15px;
+  padding-bottom: 16px;
 }
 /* the model's button with its chevron on the strip's right edge, as the
    wordmark is on its left: its padding outside it (Peter's screenshot,
@@ -702,7 +706,8 @@ html[data-chrome="win"] .pk-head {
 .pk-ready-drop {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  /* the lead to its button 16, as the phones' zone (it was 22) */
+  gap: 16px;
   padding: 36px 24px;
   border: 2px dashed var(--ink-muted);
   border-radius: var(--radius-ui);

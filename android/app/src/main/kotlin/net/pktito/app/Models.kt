@@ -347,8 +347,9 @@ object Models {
 
 /**
  * A problem's words, the desktop's for its key (strings.rs, Problem; ui/
- * locales/en.json): a download's, a model file's, and anything else as
- * something gone wrong. host is the server's name, for the words that say it.
+ * locales/en.json): a download's, a model file's, a recording's that can't
+ * be read (Engine.problem), and anything else as something gone wrong. host
+ * is the server's name, for the words that say it.
  */
 fun words(res: Resources, key: String?, host: String = ""): String = when (key) {
     "download.damaged" -> res.getString(R.string.download_damaged)
@@ -364,6 +365,11 @@ fun words(res: Resources, key: String?, host: String = ""): String = when (key) 
     "model_file.not_model" -> res.getString(R.string.model_file_not_model)
     "model_file.cant_open" -> res.getString(R.string.model_file_cant_open)
     "model_file.damaged" -> res.getString(R.string.model_file_damaged)
+    "decode.unreadable" -> res.getString(R.string.decode_unreadable)
+    "decode.not_media" -> res.getString(R.string.decode_not_media)
+    "decode.no_audio" -> res.getString(R.string.decode_no_audio)
+    "decode.not_found" -> res.getString(R.string.decode_not_found)
+    "decode.cant_convert" -> res.getString(R.string.decode_cant_convert)
     "problem.memory" -> res.getString(R.string.problem_memory)
     else -> res.getString(R.string.problem_unexpected)
 }
