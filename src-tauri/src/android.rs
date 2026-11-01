@@ -301,9 +301,10 @@ fn listed<'a>(env: &mut Env<'a>, data: &Path) -> jni::errors::Result<JObject<'a>
 /// Engine.recent(data): the recent list (recent.rs), newest first, as JSON:
 /// each transcript's id, the content URI it was read from (its path), its
 /// name, length, when it finished, what it took, the model that made it
-/// and a video's frame rate. data is the app's no_backup folder, which
-/// Android leaves out of backups and transfers to a new phone, as it does
-/// the models there.
+/// and a video's frame rate. data is the app's files folder, which
+/// Android's backup and its move to a new phone take (Recents.data); the
+/// models and the recordings' copies stay in no_backup, which they leave
+/// out.
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_net_pktito_app_Engine_recent<'a>(
     mut unowned: EnvUnowned<'a>,

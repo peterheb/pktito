@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What Android's backup takes before Android 12 (data_extraction_rules.xml
+     from 12): the recent list with its transcripts (files/recent, Recents)
+     and the settings (pktito.xml), nothing else. The models, a model file
+     of one's own and the recordings' copies stay in no_backup, which a
+     backup leaves out in any case: a restored phone downloads its model
+     again (setup), and a restored transcript's recording is found again
+     with Locate…. A backup to the cloud holds 25 MB an app, and past that
+     Android saves none of it there until it is under again: a transcript
+     is about 0.76 MB an hour of recording (chapter 1 of Alice, 10:40, 135
+     KB on the emulator, 2026-11-01), so a list of 50 passes it past some
+     33 hours. -->
+<full-backup-content>
+    <include domain="file" path="recent/" />
+    <include domain="sharedpref" path="pktito.xml" />
+</full-backup-content>

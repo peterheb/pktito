@@ -20,16 +20,19 @@ import org.json.JSONObject
 
 /**
  * The recent list, the desktop's (src-tauri/src/recent.rs): the 50 latest
- * finished transcripts, newest first, kept in the app's no_backup folder,
- * which Android leaves out of backups and transfers, so that the start
- * screen opens each again, and plays it from its recording (Player). The
- * recording is the file it was read from, by the access the system's
- * picker gave, which is kept while the transcript is on the list; one
- * shared to pktito, or opened with it, Android takes the access to back
- * once the task ends, so it is copied as it arrives, its bytes as they
- * are, as a phone's apps keep what is shared to them, and the copy goes
- * with its transcript. On the main thread, where the screen reads it, but
- * for keep and copy, which the transcription's thread calls, and open.
+ * finished transcripts, newest first, kept in the app's files, which
+ * Android's backup and its move to a new phone take (data), so that the
+ * start screen opens each again, on this phone or one it is restored to,
+ * and plays it from its recording (Player). The recording is the file it
+ * was read from, by the access the system's picker gave, which is kept
+ * while the transcript is on the list; one shared to pktito, or opened
+ * with it, Android takes the access to back once the task ends, so it is
+ * copied as it arrives, its bytes as they are, as a phone's apps keep what
+ * is shared to them, and the copy goes with its transcript. Neither comes
+ * back with a backup, the copy in no_backup and the access this phone's,
+ * so a transcript restored plays once Locate… finds its recording (open).
+ * On the main thread, where the screen reads it, but for keep and copy,
+ * which the transcription's thread calls, and open.
  */
 object Recents {
     /** A transcript on the list, as the start screen shows it: finished, in seconds since 1970; its file's size and last change as transcribed, 0 where not known. */
@@ -49,9 +52,31 @@ object Recents {
     private val main = Handler(Looper.getMainLooper())
     private var pruned = false
 
-    private fun data(context: Context) = context.noBackupFilesDir.path
+    @Volatile private var moved = false
 
-    /** The copies of recordings shared to pktito, each by its transcript's id. */
+    /**
+     * Where recent.rs keeps the list, its recent/: the app's files, which
+     * Android's backup takes (backup_rules.xml). A list from before, in
+     * no_backup, moves here the first time (moveList).
+     */
+    private fun data(context: Context): String {
+        if (!moved) synchronized(this) {
+            if (!moved) moveList(File(context.noBackupFilesDir, "recent"), File(context.filesDir, "recent"))
+            moved = true
+        }
+        return context.filesDir.path
+    }
+
+    /**
+     * The list from before it was backed up, its folder old, moved to new
+     * with its index and its transcripts: a rename, on one volume. Where
+     * new is there already it stays, and so does old.
+     */
+    internal fun moveList(old: File, new: File) {
+        if (old.isDirectory && !new.exists() && !old.renameTo(new)) Log.w(TAG, "the recent list stays in $old")
+    }
+
+    /** The copies of recordings shared to pktito, each by its transcript's id, in no_backup: a backup leaves them out, as it does the recordings they stand for. */
     private fun copies(context: Context) = File(context.noBackupFilesDir, "copies")
 
     /** A transcript's copy of its recording, there if it was shared to pktito. */

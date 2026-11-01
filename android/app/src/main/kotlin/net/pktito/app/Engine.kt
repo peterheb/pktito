@@ -70,7 +70,7 @@ object Engine {
     @JvmStatic external fun captions(transcript: String): String
 
     /**
-     * The recent list in data, the app's no_backup folder, newest first, as
+     * The recent list in data, the app's files (Recents.data), newest first, as
      * JSON: each transcript's id, the URI it was read from (path), its name,
      * length (duration), when it finished in seconds since 1970, what it
      * took, the model, a video's frame rate, and the file's size and last

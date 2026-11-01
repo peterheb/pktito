@@ -23,8 +23,13 @@
     <!-- no permission to read files: each recording is one the person picked,
          or opened with pktito or shared to it from another app, and each of
          those grants that one -->
+    <!-- Android's backup and its move to a new phone take the recent list
+         and the settings, not the models or the recordings' copies
+         (backup_rules.xml, and data_extraction_rules.xml from Android 12) -->
     <application
-        android:allowBackup="false"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/Theme.Pktito">
