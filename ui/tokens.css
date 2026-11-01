@@ -21,6 +21,7 @@
   --term-ink: #e4ebf6;
   --term-dim: #8fa0bd;
   --term-line: #2a3a5a;
+  --toast-edge: rgba(229, 235, 244, 0);
   --wave: #4f77b0;
   --wave-played: var(--plume);
   --ok: #17673f;
@@ -64,6 +65,7 @@
     --beak: #f39a5c;
     --term: #141e33;
     --term-line: #2c3d5f;
+    --toast-edge: rgba(229, 235, 244, 0.18);
     --ok: #6fd39b;
     --err: #ff8f80;
     --tint: rgba(229, 235, 244, 0.09);
