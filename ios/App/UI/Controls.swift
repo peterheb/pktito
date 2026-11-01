@@ -237,8 +237,9 @@ struct Toast: View {
             Text(text).pk(PkType.ui)
         }
         .foregroundStyle(Pk.termInk)
-        .padding(.leading, 12)
-        .padding(.trailing, 14)
+        // the check's ink 12.7 in (it starts 2.7 into its 16), the words' end 12
+        .padding(.leading, 10)
+        .padding(.trailing, 12)
         .padding(.vertical, 8)
         .frame(minHeight: 40)
         .background(Pk.term, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
