@@ -5,16 +5,22 @@ import UIKit
 struct PktitoApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate
 
+    /// The largest text size the app follows: the second of the
+    /// accessibility sizes, body text 33 against the default's 17, about
+    /// Android's largest (200%), so that both apps go as far and no further
+    /// (Peter, 2026-10-31); a larger one in Settings shows as this.
+    static let largest = DynamicTypeSize.accessibility2
+
     var body: some Scene {
         WindowGroup {
             #if DEBUG
             if CommandLine.arguments.contains("-bench") {
                 Bench()
             } else {
-                Root()
+                Root().dynamicTypeSize(...PktitoApp.largest)
             }
             #else
-            Root()
+            Root().dynamicTypeSize(...PktitoApp.largest)
             #endif
         }
     }
