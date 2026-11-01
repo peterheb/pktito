@@ -232,7 +232,8 @@ struct Toast: View {
         // desktop's hugs them; the check before them, as the desktop's
         // (app.js, toast), its ink 12 from the end as the words' are from the
         // other; 40 tall at least (the layout audit, 2026-11-01)
-        HStack(spacing: 8) {
+        // the icon 12 from the words, as the desktop's (.pk-toast's gap)
+        HStack(spacing: 12) {
             (err ? PkIcon.alert : PkIcon.check).frame(width: 16, height: 16).accessibilityHidden(true)
             Text(text).pk(PkType.ui)
         }
@@ -243,6 +244,9 @@ struct Toast: View {
         .padding(.vertical, 8)
         .frame(minHeight: 40)
         .background(Pk.term, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
+        // and in dark its 1 pt edge (toast-edge), term one step above the
+        // ground leaving it all but unseen (Peter, 2026-11-01)
+        .overlay(RoundedRectangle(cornerRadius: Radius.radiusUi).strokeBorder(Pk.toastEdge, lineWidth: 1))
         .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
         .frame(maxWidth: 420)
     }
