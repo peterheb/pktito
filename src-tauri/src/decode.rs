@@ -104,10 +104,10 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
         Err(DecodeError::NoAudio) => Err(DecodeError::NoAudio),
         Err(DecodeError::Unreadable(why, detail)) => match (forced.as_str(), ffmpeg()) {
             ("os", _) => Err(DecodeError::Unreadable(why, detail)),
-            (_, None) if why == UNREADABLE => Err(DecodeError::Unreadable(
-                "decode.unreadable_try_ffmpeg",
-                detail,
-            )),
+            // where ffmpeg can be had: an iPhone or an iPad has none to install
+            (_, None) if why == UNREADABLE && !cfg!(target_os = "ios") => Err(
+                DecodeError::Unreadable("decode.unreadable_try_ffmpeg", detail),
+            ),
             (_, None) => Err(DecodeError::Unreadable(why, detail)),
             (_, Some(ff)) => decode_ffmpeg(&ff, path),
         },
