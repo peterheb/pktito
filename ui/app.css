@@ -1173,6 +1173,13 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 .pk-row .pk-status.pk-ok {
   color: var(--ok);
 }
+/* an icon that heads a column of words with its ink on theirs, not its
+   box: the file's 1 px and Done's check 1.5 px inside the words above
+   them, measured from the drawn pixels (the layout audit, 2026-11-01) */
+.pk-recent .pk-row[data-recent] > svg:first-child,
+.pk-row .pk-status > svg:first-child {
+  margin-left: -1px;
+}
 .pk-row .pk-status.pk-err {
   color: var(--err);
   display: -webkit-box;
@@ -1750,12 +1757,16 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   background: var(--ground);
   box-shadow: var(--shadow-float);
 }
+/* the title on the body's left edge and the close's cross on its right,
+   24 in: the cross is 12 into its button, so the button is 12 from the
+   sheet's edge; at 10 the cross stood 2 px past the text under it (the
+   layout audit, 2026-11-01) */
 .pk-notices-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 10px 10px 24px;
+  padding: 10px 12px 10px 24px;
   background: var(--surface);
 }
 .pk-notices-body {
@@ -2277,6 +2288,12 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   cursor: pointer;
   font: 500 14px/1.35 var(--font-sans);
 }
+/* the chosen one's check as far in from the separator's end as the words
+   are from its start, 1 px: it stood 2 px in (the layout audit,
+   2026-11-01) */
+.pk-mi > svg:last-child {
+  margin-right: -1px;
+}
 .pk-mi small {
   grid-column: 1;
   font: 400 13px/1.4 var(--font-mono);
@@ -2385,7 +2402,12 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   gap: 12px;
   width: max-content;
   max-width: calc(100vw - 48px);
-  padding: 10px 12px 10px 14px;
+  /* 40 tall with its link or without: without, it was 38.2 */
+  min-height: 40px;
+  /* its icon's ink 12 in, as the words or the link are at its right end
+     and the words from its top and foot: at 14 the check stood 16.7 in
+     (the layout audit, 2026-11-01) */
+  padding: 10px 12px 10px 10px;
   border-radius: var(--radius-ui);
   background: var(--term);
   color: var(--term-ink);
