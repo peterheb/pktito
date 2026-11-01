@@ -299,6 +299,12 @@ final class Downloads {
 
     var running: Bool { work != nil }
 
+    #if DEBUG
+    /// A download's state as it would be, for the simulator's screenshots
+    /// (Root, -pretend): no bytes move.
+    func pretend(_ s: DownloadState) { state = s }
+    #endif
+
     /// The bytes a stopped download of e kept: its files here, and what the
     /// others' transfers kept.
     func kept(_ e: CatalogEntry) -> Int64 {

@@ -185,7 +185,10 @@ struct Switch2: View {
                 .fixedSize()
                 .foregroundStyle(on ? Pk.ink : Pk.inkMuted)
                 .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.vertical, 6)
+                // 36 and the switch's 2 round it: 40, as Find's field and the
+                // buttons on its line, which it was 3 short of (the layout audit)
+                .frame(minHeight: 36)
                 .background(on ? Pk.ground : Color.clear, in: RoundedRectangle(cornerRadius: Radius.radiusSm))
                 .overlay {
                     if on { RoundedRectangle(cornerRadius: Radius.radiusSm).stroke(Pk.inkMuted, lineWidth: 1) }
@@ -220,16 +223,25 @@ struct LinkButton: View {
 /// desktop's toast.
 struct Toast: View {
     let text: String
+    var err = false
 
     var body: some View {
-        Text(text)
-            .pk(PkType.ui)
-            .foregroundStyle(Pk.termInk)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .frame(maxWidth: 420)
-            .background(Pk.term, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
-            .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+        // as wide as its words, 420 at most: it filled a phone's width, the
+        // desktop's hugs them; the check before them, as the desktop's
+        // (app.js, toast), its ink 12 from the end as the words' are from the
+        // other; 40 tall at least (the layout audit, 2026-11-01)
+        HStack(spacing: 8) {
+            (err ? PkIcon.alert : PkIcon.check).frame(width: 16, height: 16).accessibilityHidden(true)
+            Text(text).pk(PkType.ui)
+        }
+        .foregroundStyle(Pk.termInk)
+        .padding(.leading, 12)
+        .padding(.trailing, 14)
+        .padding(.vertical, 8)
+        .frame(minHeight: 40)
+        .background(Pk.term, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
+        .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+        .frame(maxWidth: 420)
     }
 }
 

@@ -3,6 +3,10 @@ import SwiftUI
 /// The start screen's top row: the wordmark, which opens About, and the
 /// model in use, its menu.
 private struct TopRow: View {
+    /// under the window's controls, where they are over it, so that the
+    /// wordmark keeps the column's edge (Clearance)
+    @State private var clear = Clearance()
+
     var body: some View {
         // the model menu under the wordmark, at the end, where the two
         // don't fit on a line
@@ -17,6 +21,8 @@ private struct TopRow: View {
                 ModelMenu()
             }
         }
+        .padding(.top, clear.top)
+        .windowControls($clear)
     }
 }
 
@@ -60,10 +66,10 @@ struct Ready: View {
             // the list in it, rather than being squeezed into what is left
             // (Android's Ready: the zone's 330 and 150 under it)
             let short = g.size.height < zone + 40 + 150
-            let column = VStack(spacing: 22) {
+            let column = VStack(spacing: 32) {
                 // its whole height always, so that it is measured true and the
                 // list is what gives way
-                VStack(spacing: 22) {
+                VStack(spacing: 24) {
                     TopRow()
                     Drop()
                 }
@@ -72,7 +78,12 @@ struct Ready: View {
                 if listed { RecentList(scrolls: !short) }
             }
             .frame(maxWidth: 640)
-            .padding(20)
+            // a phone's 16, as every screen's, and its top row on the line the
+            // work's header has, 11 down round its 40 (Header): at 20 the row
+            // moved 9 between the two (the layout audit, 2026-11-01)
+            .padding(.horizontal, g.size.width < 600 ? 16 : 40)
+            .padding(.top, 11)
+            .padding(.bottom, 16)
             if short {
                 ScrollView { column.frame(maxWidth: .infinity) }
             } else if listed {
@@ -93,12 +104,12 @@ struct Side: View {
         let t = Transcriber.shared
         let open = t.step != .none
         HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 16) {
                 // on the work's header's line, its 40 in the middle of the
                 // header's 62, and Choose with the strip's top, 5 under it
                 // (Header, Strip): the side's first row 9 lower read as out
                 // of line with the header (Peter, the M1 iPad, 2026-11-01)
-                TopRow().padding(.bottom, 2)
+                TopRow()
                 if open {
                     PkButton(text: L("choose"), stretch: true) { AppState.shared.pick = .media }
                         .disabled(t.running)

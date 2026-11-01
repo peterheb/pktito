@@ -16,6 +16,8 @@ struct About: View {
     }
 
     @State private var sheet: Sheet?
+    /// the way back past the window's controls, where they are (Clearance)
+    @State private var clear = Clearance()
     @State private var tall: CGFloat = 0
     @Environment(\.dynamicTypeSize) private var type
 
@@ -34,7 +36,8 @@ struct About: View {
                         VStack(spacing: 0) {
                             Stage().frame(height: max(g.size.height - tall, 160))
                             words
-                                .padding(narrow ? EdgeInsets(top: 24, leading: 20, bottom: 28, trailing: 20)
+                                // a phone's 16, as every screen's (the layout audit, 2026-11-01)
+                                .padding(narrow ? EdgeInsets(top: 24, leading: 16, bottom: 28, trailing: 16)
                                          : EdgeInsets(top: 28, leading: 40, bottom: 32, trailing: 40))
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { tall = $0 }
@@ -48,16 +51,19 @@ struct About: View {
                         ScrollView {
                             words
                                 .padding(wide ? EdgeInsets(top: 32, leading: 40, bottom: 32, trailing: 40)
-                                         : EdgeInsets(top: 28, leading: 24, bottom: 28, trailing: 24))
+                                         : EdgeInsets(top: 28, leading: 16, bottom: 28, trailing: 16))
                                 .frame(maxWidth: .infinity, minHeight: g.size.height, alignment: .leading)
                         }
                         .scrollBounceBehavior(.basedOnSize)
                     }
                 }
-                // where the work screen's way back is
+                // where the work screen's way back is, past the window's
+                // controls where they are (Clearance)
                 IconButton(icon: .back, label: L("back"), kind: .ghost) { AppState.shared.about = false }
-                    .padding(.leading, 8)
+                    .padding(.leading, 2 + clear.leading)
                     .padding(.top, 11)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .windowControls($clear)
             }
         }
         .accessibilityElement(children: .contain)
@@ -104,7 +110,7 @@ private struct Credits: View {
         VStack(alignment: .leading, spacing: 12) {
             Wordmark(size: 56).padding(.bottom, 8)
             let tagline = PkStyle(face: PkType.body.face, size: 15, lineHeight: 1.5, tracking: 0)
-            linked(markdown: L("about_tagline"), style: tagline, size: tagline.scaled(type))
+            linked(markdown: L("about_tagline"), style: tagline, size: tagline.scaled(type), whole: true)
                 .pk(tagline)
                 .foregroundStyle(Pk.ink)
             VStack(alignment: .leading, spacing: 0) {
@@ -199,7 +205,7 @@ private struct Credit<What: View>: View {
 /// its last word (app.js). Its italics in style's face slanted, as the
 /// desktop's browser and Android slant a face with no italic of its own:
 /// the apps carry none (Android's skew, 0.25).
-@MainActor func linked(markdown: String, style: PkStyle? = nil, size: CGFloat = 0) -> Text {
+@MainActor func linked(markdown: String, style: PkStyle? = nil, size: CGFloat = 0, whole: Bool = false) -> Text {
     let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
     guard var a = try? AttributedString(markdown: markdown, options: options) else { return Text(markdown) }
     if let style {
@@ -208,7 +214,17 @@ private struct Credit<What: View>: View {
         let s = size > 0 ? size : style.size
         let slanted = Font(UIFont(descriptor: style.uiFont(s).fontDescriptor.withMatrix(slant), size: s))
         let runs = a.runs[\.inlinePresentationIntent].filter { $0.0?.contains(.emphasized) == true }.map(\.1)
-        for r in runs { a[r].font = slanted }
+        for r in runs.reversed() {
+            a[r].font = slanted
+            // the italics one piece, which a line breaks before or after: the
+            // tagline's (pronounced "pick-a-tito") broke at its space or its
+            // hyphens (the desktop's layout audit, 2026-11-01)
+            if whole {
+                let kept = String(a[r].characters).replacingOccurrences(of: " ", with: "\u{00A0}")
+                    .replacingOccurrences(of: "-", with: "\u{2011}")
+                a.replaceSubrange(r, with: AttributedString(kept, attributes: a[r].runs.first?.attributes ?? AttributeContainer()))
+            }
+        }
     }
     return linked(a)
 }
@@ -244,6 +260,7 @@ private struct SheetFrame<Content: View>: View {
     let title: String
     @ViewBuilder let content: () -> Content
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var size
 
     var body: some View {
         VStack(spacing: 0) {
@@ -252,8 +269,9 @@ private struct SheetFrame<Content: View>: View {
                 Spacer()
                 IconButton(icon: .x, label: L("sheet_close"), kind: .ghost) { dismiss() }
             }
-            .padding(.leading, 24)
-            .padding(.trailing, 6)
+            // the text's edge, and the cross's ink on it, 12 into its 40
+            .padding(.leading, sheetEdge(size))
+            .padding(.trailing, sheetEdge(size) - 12)
             .padding(.vertical, 6)
             .background(Pk.surface)
             content()
@@ -265,8 +283,13 @@ private struct SheetFrame<Content: View>: View {
 
 private let sheetText = PkStyle(face: PkType.body.face, size: 14, lineHeight: 1.4, tracking: 0)
 
+/// A sheet's edge: a phone's 16, as every screen's, and 24 on an iPad's
+/// form sheet, as the desktop's sheets (the layout audit, 2026-11-01).
+func sheetEdge(_ size: UserInterfaceSizeClass?) -> CGFloat { size == .compact ? 16 : 24 }
+
 /// Privacy's words (ui/index.html, #privacy), as the apps have them.
 private struct Privacy: View {
+    @Environment(\.horizontalSizeClass) private var size
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -287,7 +310,7 @@ private struct Privacy: View {
                 Text(L("privacy_updated")).pk(PkType.small).foregroundStyle(Pk.inkMuted)
             }
             .textSelection(.enabled)
-            .padding(.horizontal, 24)
+            .padding(.horizontal, sheetEdge(size))
             .padding(.top, 16)
             .padding(.bottom, 28)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -359,6 +382,7 @@ private struct Notices {
 /// libraries, and the texts they are under, each once, in the order the
 /// list first names them.
 private struct Licenses: View {
+    @Environment(\.horizontalSizeClass) private var size
     @State private var n = Notices.read()
 
     var body: some View {
@@ -392,7 +416,7 @@ private struct Licenses: View {
                     }
                 }
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, sheetEdge(size))
             .padding(.top, 16)
             .padding(.bottom, 28)
         }

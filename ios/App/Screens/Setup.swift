@@ -48,23 +48,53 @@ struct Setup: View {
 private struct Screen<Top: View, Foot: View>: View {
     @ViewBuilder let top: Top
     @ViewBuilder let foot: Foot
+    /// under the window's controls, where the column's top is under them
+    @State private var clear = Clearance()
 
     var body: some View {
         GeometryReader { g in
+            let narrow = g.size.width < 600
             ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    VStack(alignment: .leading, spacing: 20) { top }
-                    Spacer(minLength: 20)
-                    VStack(alignment: .leading, spacing: 0) { foot }
+                // its foot at the bottom of a box at least 520 tall, the box in
+                // the window's middle while it fits and from its top where it
+                // doesn't (app.css, .pk-screen): on the iPad Pro 13 the foot sat
+                // at the window's bottom, 450 under the words. A phone's box is
+                // the window's height, its foot where a thumb is.
+                AtLeast(height: narrow ? g.size.height : min(g.size.height, 520)) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        VStack(alignment: .leading, spacing: 20) { top }
+                        Spacer(minLength: 20)
+                        VStack(alignment: .leading, spacing: 0) { foot }
+                    }
+                    .frame(maxWidth: 640, alignment: .leading)
+                    .padding(.top, clear.top)
+                    .windowControls($clear)
+                    // a phone's 16, as every screen's (the layout audit, 2026-11-01)
+                    .padding(.horizontal, narrow ? 16 : 40)
+                    .padding(.top, 28)
+                    .padding(.bottom, 24)
                 }
-                .frame(maxWidth: 640, alignment: .leading)
-                .padding(.horizontal, g.size.width < 600 ? 20 : 40)
-                .padding(.top, 28)
-                .padding(.bottom, 24)
-                .frame(minHeight: min(g.size.height, 520))
                 .frame(maxWidth: .infinity, minHeight: g.size.height)
             }
         }
+    }
+}
+
+/// Its one view at its own height, or at `height` where that is more, which
+/// a Spacer in it fills: a box that grows with its words but never shrinks
+/// under its least, whatever is offered round it.
+private struct AtLeast: SwiftUI.Layout {
+    let height: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) -> CGSize {
+        guard let v = subviews.first else { return .zero }
+        let own = v.sizeThatFits(ProposedViewSize(width: proposal.width, height: nil))
+        // its own width, which the frame round it centres
+        return CGSize(width: own.width, height: max(own.height, height))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
     }
 }
 
@@ -368,6 +398,9 @@ private struct Spread<A: View, B: View>: View {
                 a
                 b
             }
+            // the column's width, the figure on its edge: narrower, the stack
+            // was centred, 15 in from the words above (the layout audit)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }

@@ -34,6 +34,7 @@ struct Manage: View {
     @State private var asking: String?
     /// what the rows take, for the sheet to be as tall as they are
     @State private var tall: CGFloat = 320
+    @Environment(\.horizontalSizeClass) private var size
     /// what a row's words keep beside its button before it goes under them
     /// (the header's floor): 160 at the default text size, about twenty
     /// characters, and as many at any other
@@ -88,7 +89,7 @@ struct Manage: View {
                 }
                 .padding(.top, 16)
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, sheetEdge(size))
             .padding(.top, 24)
             .padding(.bottom, 20)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { tall = $0 }
@@ -97,7 +98,7 @@ struct Manage: View {
         .presentationDetents([.height(tall)])
         .background(Pk.ground)
         .overlay(alignment: .bottom) {
-            if let toast = s.toast { Toast(text: toast).padding(.bottom, 24) }
+            if let toast = s.toast { Toast(text: toast, err: s.toastErr).padding(.bottom, 24) }
         }
         .alert(k?.ask?.title ?? "", isPresented: Binding(get: { k != nil }, set: { if !$0 { asking = nil } }),
                presenting: k) { k in

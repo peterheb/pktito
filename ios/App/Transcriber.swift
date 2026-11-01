@@ -73,6 +73,20 @@ final class Transcriber {
         locate = false
     }
 
+    #if DEBUG
+    /// A state as it would be, for the simulator's screenshots, which no
+    /// one taps to (Root, -pretend): nothing is read or transcribed.
+    func pretend(preparing p: Bool) { preparing = p }
+
+    func pretend(_ step: Step, name: String, done: Double, duration: Double = 0, error: String? = nil) {
+        begin(name, nil)
+        self.step = step
+        self.done = done
+        self.duration = duration
+        self.error = error
+    }
+    #endif
+
     /// The recording found again where it is now (Locate…), to play.
     func relocated(_ url: URL) {
         self.url = url

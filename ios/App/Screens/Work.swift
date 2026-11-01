@@ -157,6 +157,8 @@ private struct Header: View {
     /// 160 at the default text size, about twenty characters, and as many
     /// at any other
     @ScaledMetric(relativeTo: .subheadline) private var floor: CGFloat = 160
+    /// past the window's controls, where they are in its corner (Clearance)
+    @State private var clear = Clearance()
 
     var body: some View {
         let t = Transcriber.shared
@@ -170,6 +172,7 @@ private struct Header: View {
                 name.frame(minWidth: floor, idealWidth: floor, maxWidth: .infinity, alignment: .leading)
                 buttons
             }
+            .padding(.leading, clear.leading)
             // the name 16 under the buttons, the screen's one step, as in
             // Android's app (2026-10-31)
             VStack(alignment: .leading, spacing: 16) {
@@ -178,6 +181,7 @@ private struct Header: View {
                     Spacer(minLength: 0)
                     buttons
                 }
+                .padding(.leading, clear.leading)
                 // on the cards' edge, 16 in
                 name.padding(.leading, Transcriber.shared.running ? 0 : 14)
             }
@@ -186,6 +190,7 @@ private struct Header: View {
         .padding(.trailing, 16)
         .padding(.vertical, 11)
         .frame(minHeight: 62)
+        .windowControls($clear)
     }
 
     @ViewBuilder private var back: some View {

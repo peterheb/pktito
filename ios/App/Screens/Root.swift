@@ -51,7 +51,7 @@ struct Root: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 // over Manage models while it is up, which has it too
                 if !s.managing, let toast = s.toast {
-                    Toast(text: toast)
+                    Toast(text: toast, err: s.toastErr)
                         .padding(.horizontal, 16)
                         .padding(.bottom, 24)
                         .allowsHitTesting(false)
@@ -64,7 +64,9 @@ struct Root: View {
             }
             .ignoresSafeArea(.keyboard)
         }
-        .background(Pk.ground)
+        // the ground to the window's every edge, its safe areas too: a window
+        // on the iPad showed the system's grey under the rows (2026-11-01)
+        .background { Pk.ground.ignoresSafeArea() }
         .tint(Pk.ink)
         .fileImporter(isPresented: Binding(get: { s.pick != nil }, set: { if !$0 { s.pick = nil } }),
                       // a .pkf has no type of its own to ask for
@@ -123,8 +125,10 @@ struct Root: View {
     /// -download english or multilingual downloads that model (its server
     /// PKTITO_MODEL_BASE, where the environment gives one), and with it
     /// -pauseAfter S pauses it S seconds on, and -resumeAfter S goes on S
-    /// seconds after that. (A default's own -key value,
-    /// as -captions YES, sets it for the run.)
+    /// seconds after that; -pretend setup, download, checking, paused,
+    /// failed, preparing, loading, transcribing, error or toast shows that
+    /// state, with nothing downloaded or transcribed. (A default's own -key
+    /// value, as -captions YES, sets it for the run.)
     private func debugArguments() {
         let args = CommandLine.arguments
         let s = AppState.shared
@@ -187,6 +191,24 @@ struct Root: View {
         case "manage": s.managing = true
         default: break
         }
+        // a state as it would be, which no one taps to, for the screenshots
+        let english = "parakeet-tdt-0.6b-v2", size: Int64 = 624_480_196
+        switch value("-pretend") {
+        case "setup": s.pretendSetup = true
+        case "download":
+            Downloads.shared.pretend(DownloadState(name: english, step: .downloading, got: 262_000_000, total: size, speed: 14_200_000))
+        case "checking": Downloads.shared.pretend(DownloadState(name: english, step: .checking, got: size, total: size))
+        case "paused": Downloads.shared.pretend(DownloadState(name: english, step: .paused, got: 262_000_000, total: size))
+        case "failed":
+            Downloads.shared.pretend(DownloadState(name: english, step: .failed, got: 262_000_000, total: size,
+                                                   problem: DownloadProblem(key: "download.not_answering")))
+        case "preparing": Transcriber.shared.pretend(preparing: true)
+        case "loading": Transcriber.shared.pretend(.loading, name: "Interview with the author.m4a", done: 0)
+        case "transcribing": Transcriber.shared.pretend(.transcribing, name: "Interview with the author.m4a", done: 0.37, duration: 2712)
+        case "error": Transcriber.shared.pretend(.error, name: "Interview with the author.m4a", done: 0, error: L("problem_unexpected"))
+        case "toast": s.toast = L("models_using", L("catalog_english"))
+        default: break
+        }
     }
     #endif
 
@@ -198,14 +220,14 @@ struct Root: View {
         case .media:
             s.start(url)
         case .model:
-            Models.shared.open(url) { said, _ in s.say(said) }
+            Models.shared.open(url) { said, ok in s.say(said, err: !ok) }
         case .locate:
             // the transcript's recording, picked again where it is now, if it
             // is the one transcribed (Recents.relink); the player then loads it
             if Recents.shared.relink(t.id, url) {
                 t.relocated(url)
             } else {
-                s.say(L("play_not_it"))
+                s.say(L("play_not_it"), err: true)
             }
         }
     }

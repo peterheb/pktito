@@ -40,6 +40,8 @@ final class AppState {
         }
     }
     var toast: String?
+    /// the toast says something went wrong: its alert in the check's place
+    var toastErr = false
     var about = false
     var managing = false
     /// a file to pick: a recording, a model file, or the recording of the
@@ -65,12 +67,22 @@ final class AppState {
     /// Whether the screen is the setup screen's: no model yet, or one
     /// coming, or Core ML compiling the one in use for this device.
     var setup: Bool {
-        !Models.shared.ready || Downloads.shared.state != nil || Models.shared.copying != nil
+        #if DEBUG
+        if pretendSetup { return true }
+        #endif
+        return !Models.shared.ready || Downloads.shared.state != nil || Models.shared.copying != nil
             || Transcriber.shared.preparing
     }
 
-    func say(_ s: String) {
+    #if DEBUG
+    /// the setup screen's choice with a model at hand, for the simulator's
+    /// screenshots (Root, -pretend setup)
+    var pretendSetup = false
+    #endif
+
+    func say(_ s: String, err: Bool = false) {
         toast = s
+        toastErr = err
         Task {
             try? await Task.sleep(for: .seconds(2))
             if toast == s { toast = nil }
@@ -102,7 +114,7 @@ final class AppState {
             return
         }
         guard let held = Recents.hold(url) else {
-            say(L("problem_unexpected"))
+            say(L("problem_unexpected"), err: true)
             return
         }
         start(held)
@@ -112,7 +124,7 @@ final class AppState {
     func openRecent(_ id: String) {
         if Transcriber.shared.step != .none { leave() }
         guard let r = Recents.shared.open(id) else {
-            say(L("recent_unreadable"))
+            say(L("recent_unreadable"), err: true)
             return
         }
         Transcriber.shared.reopen(r)
@@ -133,7 +145,7 @@ final class AppState {
     /// download, a transcript open let go first: it needs no model to be
     /// read, but would to be transcribed again (manage.ask_text_last).
     func deleted(_ said: String?) {
-        if let said { say(said) }
+        if let said { say(said, err: said == L("manage_cant_delete")) }
         if Models.shared.ready { return }
         managing = false
         if Transcriber.shared.step != .none && !Transcriber.shared.running { leave() }
@@ -206,7 +218,7 @@ final class AppState {
             try Data(text.utf8).write(to: url)
             return url
         } catch {
-            say(L("share_failed", url.lastPathComponent))
+            say(L("share_failed", url.lastPathComponent), err: true)
             return nil
         }
     }
