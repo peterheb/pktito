@@ -43,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -61,6 +62,7 @@ import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
@@ -233,6 +235,9 @@ private fun Choose(offers: List<Offer>, model: String?, waiting: Int, a: SetupAc
     )
 }
 
+/** Where a link goes in a sentence formatted around it: a private-use character, which no translation has. */
+private const val SLOT = ""
+
 /**
  * A model's card (.pk-choice): its radio, its name, its size or that it is
  * here; under them its file's name and what it transcribes, a model of
@@ -247,16 +252,19 @@ private fun Card(o: Offer, on: Boolean, own: String, onChoose: () -> Unit, onLin
     var open by rememberSaveable(o.name) { mutableStateOf(false) }
     val many = o.languages.size > 1
     val about = Models.about(res, o.key)
-    val among = if (many && own in o.languages) stringResource(R.string.models_among, languageName(own)) else ""
+    // the sentence with the system's language among the model's, the count
+    // in it where a translation puts it: a slot there, filled with the link
+    val among = if (many && own in o.languages) stringResource(R.string.models_languages_among, SLOT, languageName(own)) else SLOT
     // the count as a button that reads as a link, in the card's colour (.pk-linkbtn-sm)
     val count = TextLinkStyles(SpanStyle(textDecoration = TextDecoration.Underline))
     val desc = remember(o.name, about, among, count) {
         buildAnnotatedString {
             append(o.name)
-            append(" · ")
+            append(DOT)
+            append(among.substringBefore(SLOT))
             if (many) withLink(LinkAnnotation.Clickable("languages", count) { open = !open }) { append(about) }
             else append(about)
-            append(among)
+            append(among.substringAfter(SLOT, ""))
         }
     }
     Column(
@@ -268,19 +276,27 @@ private fun Card(o: Offer, on: Boolean, own: String, onChoose: () -> Unit, onLin
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Row {
-            Box(Modifier.width(18.dp).align(Alignment.CenterVertically)) { Radio(on) }
-            Spacer(Modifier.width(12.dp))
-            Text(
-                Models.label(res, o.key),
-                style = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W700, fontSize = 16.sp, lineHeight = 1.3.em, lineHeightStyle = CssLine, letterSpacing = (-0.01).em),
-                color = p.ink,
-                modifier = Modifier.weight(1f).alignByBaseline(),
-            )
-            Text(
-                if (o.have) stringResource(R.string.setup_on_device) else stringResource(R.string.setup_size, mb(o.bytes)),
-                style = Type.stamp, color = p.inkMuted, maxLines = 1, modifier = Modifier.alignByBaseline(),
-            )
+        val label = Models.label(res, o.key)
+        val size = if (o.have) stringResource(R.string.setup_on_device) else stringResource(R.string.setup_size, mb(o.bytes))
+        val measurer = rememberTextMeasurer()
+        BoxWithConstraints {
+            // the size at the line's end while it and the name fit there whole,
+            // 16 dp apart, else under the name, from its start: at twice the
+            // text size a 393 dp phone's card has 290 dp for them, where
+            // English's 624 MB, 89 dp, stays beside its name and en-XA's
+            // [624 MB], 119, goes under (2026-10-31)
+            val fits = with(LocalDensity.current) {
+                (measurer.measure(label, CardName).size.width + measurer.measure(size, Type.stamp).size.width).toDp()
+            } + 16.dp <= maxWidth - 30.dp
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row {
+                    Box(Modifier.width(18.dp).align(Alignment.CenterVertically)) { Radio(on) }
+                    Spacer(Modifier.width(12.dp))
+                    Text(label, style = CardName, color = p.ink, modifier = Modifier.weight(1f).alignByBaseline())
+                    if (fits) Text(size, style = Type.stamp, color = p.inkMuted, maxLines = 1, modifier = Modifier.alignByBaseline())
+                }
+                if (!fits) Text(size, style = Type.stamp, color = p.inkMuted, modifier = Modifier.padding(start = 30.dp))
+            }
         }
         Column(Modifier.padding(start = 30.dp)) {
             Text(desc, style = Type.small, color = p.inkMuted)
@@ -288,6 +304,12 @@ private fun Card(o: Offer, on: Boolean, own: String, onChoose: () -> Unit, onLin
         }
     }
 }
+
+/** A model's name on its card (.pk-choice .pk-name). */
+private val CardName = TextStyle(
+    fontFamily = Fonts.sans, fontWeight = FontWeight.W700, fontSize = 16.sp, lineHeight = 1.3.em,
+    lineHeightStyle = CssLine, letterSpacing = (-0.01).em,
+)
 
 /** A radio button in ink, as the desktop's takes the accent colour (.pk-choice input), 16 dp. */
 @Composable
@@ -304,24 +326,35 @@ private fun Radio(on: Boolean) {
  * A model of several's languages (.pk-langs), by their English names in
  * three columns, down each, the system's own in ink; and under them, where
  * its card links to it, that accuracy varies, and the way to its table.
+ * Fewer columns where three would break a name: at 1.5 times the text size
+ * a phone's three broke Hungarian and Lithuanian, at 2.0 nearly every name.
  */
 @Composable
 private fun Languages(o: Offer, own: String, onLink: (String) -> Unit) {
     val p = pk
     val names = o.languages.map { it to languageName(it) }.sortedBy { it.second }
-    val rows = (names.size + 2) / 3
     val style = Type.small.copy(lineHeight = 1.6.em)
+    val measurer = rememberTextMeasurer()
+    // the longest name, in the own language's weight, the wider
+    val widest = remember(names, style, measurer) {
+        names.maxOfOrNull { measurer.measure(it.second, style.copy(fontWeight = FontWeight.W500)).size.width } ?: 0
+    }
     Column(Modifier.padding(top = 8.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            for (c in 0 until 3)
-                Column(Modifier.weight(1f)) {
-                    for ((code, name) in names.drop(c * rows).take(rows))
-                        Text(
-                            name,
-                            style = if (code == own) style.copy(fontWeight = FontWeight.W500) else style,
-                            color = if (code == own) p.ink else p.inkMuted,
-                        )
-                }
+        BoxWithConstraints {
+            val gap = 12.dp
+            val cols = ((maxWidth + gap) / (with(LocalDensity.current) { widest.toDp() } + gap)).toInt().coerceIn(1, 3)
+            val rows = (names.size + cols - 1) / cols
+            Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                for (c in 0 until cols)
+                    Column(Modifier.weight(1f)) {
+                        for ((code, name) in names.drop(c * rows).take(rows))
+                            Text(
+                                name,
+                                style = if (code == own) style.copy(fontWeight = FontWeight.W500) else style,
+                                color = if (code == own) p.ink else p.inkMuted,
+                            )
+                    }
+            }
         }
         if (o.accuracy.isNotEmpty()) {
             val details = link(stringResource(R.string.setup_details), o.accuracy, onLink, color = p.inkMuted)
@@ -542,14 +575,14 @@ fun ModelButton(offers: List<Offer>, model: String?, own: String?, onPick: (Offe
     val check = @Composable { Icon(Icons.check, null, tint = p.ink, modifier = Modifier.size(16.dp)) }
     Box {
         // its words to the column's edge, as the desktop's (#ready-model)
-        PkButton(label, { open = true }, Modifier.offset(x = 12.dp), kind = Kind.Ghost, trailing = Icons.down)
+        PkButton(label, { open = true }, Modifier.offset(x = 12.dp), kind = Kind.Ghost, trailing = Icons.down, file = own != null)
         Menu(open, { open = false }) {
             for (o in offers) {
                 val on = own == null && o.name == model
                 val note = buildAnnotatedString {
-                    append(Models.about(res, o.key))
-                    if (o.languages.size > 1 && lang in o.languages) append(res.getString(R.string.models_among, languageName(lang)))
-                    append(" · ")
+                    val about = Models.about(res, o.key)
+                    append(if (o.languages.size > 1 && lang in o.languages) res.getString(R.string.models_languages_among, about, languageName(lang)) else about)
+                    append(DOT)
                     if (o.have) withStyle(SpanStyle(color = p.ok)) { append(res.getString(R.string.models_downloaded)) }
                     else append(res.getString(R.string.models_download_size, mb(o.bytes)))
                 }

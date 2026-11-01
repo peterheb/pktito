@@ -33,7 +33,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.IntrinsicMeasurable
+import androidx.compose.ui.layout.IntrinsicMeasureScope
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.MeasurePolicy
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -44,6 +50,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -383,7 +391,9 @@ private fun Time(text: String, base: Timebase, now: Double, onBase: (Timebase) -
  * fits, the times first and 12 dp before the length: the slider gives way
  * first, as a phone's volume keys stand in for it, then the speaker. At 411
  * dp a phone had 283 for 292 in frames, and 360 dp or a large font leaves
- * less; the desktop's window is never under 480.
+ * less; the desktop's window is never under 480. Where even the two times
+ * do not fit, the length goes under the time, at the line's end: a phone's
+ * pace and length met at 1.5 times the text size and overlapped at 2.0.
  */
 @Composable
 private fun TimesLine(
@@ -393,45 +403,69 @@ private fun TimesLine(
     length: @Composable () -> Unit,
 ) {
     // a box each, so that one with nothing in it is there at no size
-    Layout({ Box { time() }; Box { speaker() }; Box { slider() }; Box { length() } }) { m, c ->
-        val (t, s, v, l) = m.map { it.measure(c.copy(minWidth = 0)) }
-        val fits = { w: Int -> w + 12.dp.roundToPx() <= c.maxWidth }
+    Layout({ Box { time() }; Box { speaker() }; Box { slider() }; Box { length() } }, measurePolicy = TimesPolicy)
+}
+
+private object TimesPolicy : MeasurePolicy {
+    override fun MeasureScope.measure(measurables: List<Measurable>, constraints: Constraints): MeasureResult {
+        val (t, s, v, l) = measurables.map { it.measure(constraints.copy(minWidth = 0)) }
+        val fits = { w: Int -> w + 12.dp.roundToPx() <= constraints.maxWidth }
         val speakerAt = t.width + 20.dp.roundToPx()
         val sliderAt = speakerAt + s.width + 8.dp.roundToPx()
         val withSpeaker = s.width > 0 && fits(speakerAt + s.width + l.width)
         val withSlider = withSpeaker && v.width > 0 && fits(sliderAt + v.width + l.width)
-        val h = maxOf(t.height, s.height, v.height, l.height)
-        layout(c.maxWidth, h) {
+        val under = !fits(t.width + l.width)
+        val h = maxOf(t.height, s.height, v.height, if (under) 0 else l.height)
+        return layout(constraints.maxWidth, if (under) h + l.height else h) {
             t.place(0, (h - t.height) / 2)
             if (withSpeaker) s.place(speakerAt, (h - s.height) / 2)
             if (withSlider) v.place(sliderAt, (h - v.height) / 2)
-            l.place(c.maxWidth - l.width, (h - l.height) / 2)
+            l.place(constraints.maxWidth - l.width, if (under) h else (h - l.height) / 2)
         }
     }
+
+    // the strip takes its height from its parts' before it lays them out
+    // (IntrinsicSize.Min), where Compose's own answer for a Layout measured
+    // each part the line's whole width: two times that never fit, a line
+    // under them at every size, and the strip that much taller
+    override fun IntrinsicMeasureScope.minIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int): Int {
+        val (t, s, v, l) = measurables
+        val under = t.maxIntrinsicWidth(Constraints.Infinity) + l.maxIntrinsicWidth(Constraints.Infinity) + 12.dp.roundToPx() > width
+        val h = maxOf(t.minIntrinsicHeight(width), s.minIntrinsicHeight(width), v.minIntrinsicHeight(width))
+        val lh = l.minIntrinsicHeight(width)
+        return if (under) h + lh else maxOf(h, lh)
+    }
+
+    override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int) =
+        minIntrinsicHeight(measurables, width)
 }
 
 /**
  * Why the recording does not play, in the times' place, whose time, speed
  * and volume mean nothing without it: one quiet line in the strip's ink,
- * two where a phone is too narrow, and Locate… after it, a control as the
- * speaker is, where the file can be found again.
+ * more where a phone is too narrow, and Locate… after it, a control as the
+ * speaker is, where the file can be found again; under the words, at the
+ * line's end, where they would keep too little beside it (Beside), the dot
+ * left at their end: at 1.5 times the text size Original not found broke
+ * in two beside it on a phone.
  */
 @Composable
 private fun Why(why: String, locate: (() -> Unit)?) {
     val p = pk
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(why, style = Tstamp.copy(lineHeight = 1.3.em), color = p.termInk, maxLines = 2, modifier = Modifier.weight(1f, fill = false))
-        if (locate != null) {
-            val label = stringResource(R.string.play_locate)
-            Text(" ·", style = Tstamp, color = p.termInk)
-            Box(
-                Modifier
-                    .bleed(vertical = 6.dp)
-                    .control(CornerSm, onTerm = true, label = label, onClick = locate)
-                    .padding(start = 6.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
-            ) {
-                Text(label, style = Tstamp, color = p.termInk, maxLines = 1)
-            }
+    val words = Tstamp.copy(lineHeight = 1.3.em)
+    if (locate == null) {
+        Text(why, style = words, color = p.termInk)
+        return
+    }
+    val label = stringResource(R.string.play_locate)
+    Beside(Modifier.fillMaxWidth(), gap = 0.dp, follow = true, words = { Text("$why\u00A0·", style = words, color = p.termInk) }) {
+        Box(
+            Modifier
+                .bleed(vertical = 6.dp)
+                .control(CornerSm, onTerm = true, label = label, onClick = locate)
+                .padding(6.dp),
+        ) {
+            Text(label, style = Tstamp, color = p.termInk)
         }
     }
 }
@@ -523,12 +557,27 @@ private fun Level(v: Double, enabled: Boolean, label: String, onChange: (Double,
 /**
  * The progress, in play's place and size: a ring that fills with the
  * waveform's played colour from the top, and the percent inside it (app.css,
- * .pk-prog).
+ * .pk-prog). The percent grows with the text size as far as 100% fits in
+ * the ring 3 dp clear of it, then stays there: at 2.0 a thumb's 48 dp ring
+ * wrapped its 11 sp, 22 dp, onto a second line, out of the ring.
  */
 @Composable
 private fun Ring(done: Double, side: Dp) {
     val p = pk
     val d = done.toFloat().coerceIn(0f, 1f)
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val style = remember(side, measurer, density) {
+        val s = TextStyle(
+            fontFamily = Fonts.sans, fontWeight = FontWeight.W700, fontSize = 11.sp, lineHeight = 1.em,
+            lineHeightStyle = CssLine, letterSpacing = (-0.02).em, fontFeatureSettings = "tnum",
+        )
+        with(density) {
+            val room = (side - 12.dp).toPx()
+            val full = measurer.measure("100%", s, softWrap = false).size.width
+            if (full <= room) s else s.copy(fontSize = (s.fontSize.toDp() * (room / full)).toSp())
+        }
+    }
     Box(
         Modifier
             .size(side)
@@ -548,14 +597,7 @@ private fun Ring(done: Double, side: Dp) {
             },
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            "${(d * 100).toInt()}%",
-            style = TextStyle(
-                fontFamily = Fonts.sans, fontWeight = FontWeight.W700, fontSize = 11.sp, lineHeight = 1.em,
-                lineHeightStyle = CssLine, letterSpacing = (-0.02).em, fontFeatureSettings = "tnum",
-            ),
-            color = p.termInk,
-        )
+        Text("${(d * 100).toInt()}%", style = style, color = p.termInk, softWrap = false)
     }
 }
 

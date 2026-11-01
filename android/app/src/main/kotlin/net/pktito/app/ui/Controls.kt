@@ -61,6 +61,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -73,6 +74,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
@@ -91,6 +93,14 @@ import net.pktito.app.R
 
 val Corner = RoundedCornerShape(Radius.radiusUi)
 val CornerSm = RoundedCornerShape(Radius.radiusSm)
+
+/**
+ * The dot between a line's parts, after a no-break space, as strings.xml
+ * has it: a line that breaks there ends with the dot rather than starting
+ * the next with it, as the setup's button began its second line "· 624 MB"
+ * at 1.5 times the text size on a phone.
+ */
+const val DOT = " · "
 
 /**
  * Hover and press as every control of the desktop's has them, a tint laid
@@ -169,7 +179,12 @@ enum class Kind { Default, Primary, Ghost, Del }
  * that waits its turn (Stop), and sunk with the error's red for one that
  * deletes (app.css, .pk-btn-del). 40 dp tall, past the desktop's 32 for a
  * finger, 48 large; a dimmed one is disabled. An icon before its words or
- * after them, 6 dp apart.
+ * after them, 6 dp apart. Where the button is narrower than its words they
+ * wrap, each line centred, and it grows to hold them 6 dp from its top and
+ * foot: kept to one line, their end was cut, the setup's Download the
+ * English model · 624 MB at 1.3 times the text size on a phone. A file's
+ * name (file) keeps to its line and gives up its middle instead, which
+ * keeps its extension, as file names do everywhere in the app.
  */
 @Composable
 fun PkButton(
@@ -181,6 +196,7 @@ fun PkButton(
     enabled: Boolean = true,
     trailing: ImageVector? = null,
     leading: ImageVector? = null,
+    file: Boolean = false,
 ) {
     val p = pk
     val fill = when (kind) {
@@ -198,13 +214,18 @@ fun PkButton(
             .alpha(if (enabled) 1f else 0.45f)
             .control(Corner, fill, enabled = enabled, onClick = onClick)
             .heightIn(min = if (large) 48.dp else 40.dp)
-            .padding(horizontal = if (large) 18.dp else 12.dp),
+            .padding(horizontal = if (large) 18.dp else 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
     ) {
         if (leading != null)
             Icon(leading, null, tint = ink, modifier = Modifier.size(16.dp))
-        Text(text, style = Type.ui.copy(fontSize = if (large) 15.sp else 14.sp), color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // measured after the icons, so that wrapping it leaves them their room
+        Text(
+            text, style = Type.ui.copy(fontSize = if (large) 15.sp else 14.sp), color = ink, textAlign = TextAlign.Center,
+            maxLines = if (file) 1 else Int.MAX_VALUE, overflow = if (file) TextOverflow.MiddleEllipsis else TextOverflow.Clip,
+            modifier = Modifier.weight(1f, fill = false),
+        )
         if (trailing != null)
             Icon(trailing, null, tint = ink, modifier = Modifier.size(16.dp))
     }
@@ -274,23 +295,96 @@ fun Spinner(modifier: Modifier = Modifier) {
 /**
  * Two choices in a sunk track, the one chosen raised to the ground with an
  * ink-muted edge (app.css, .pk-views): 8 dp above and below the words to
- * the desktop's 5, for a finger, as PkButton is 40 dp to its 32.
+ * the desktop's 5, for a finger, as PkButton is 40 dp to its 32. Side by
+ * side where both fit whole, else one under the other, as wide as the
+ * wider. In en-XA at 1.3 times the text size on a 360 dp phone the two
+ * want about 290 dp and have 272 beside the glass (Views), so they stack;
+ * a 393 dp phone gives them 305, which keeps them side by side even in
+ * English at twice the text size, 271 (2026-10-31).
  */
 @Composable
 fun Switch2(first: String, second: String, onSecond: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
     val p = pk
-    Row(modifier.background(p.sunk, Corner).padding(2.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-        for ((text, second2) in listOf(first to false, second to true)) {
-            val on = onSecond == second2
-            Text(
-                text,
-                style = Type.ui.copy(fontSize = 13.sp, lineHeight = 16.sp),
-                color = if (on) p.ink else p.inkMuted,
-                modifier = Modifier
-                    .then(if (on) Modifier.border(1.dp, p.inkMuted, CornerSm) else Modifier)
-                    .control(CornerSm, if (on) p.ground else Color.Transparent, role = Role.RadioButton) { onChange(second2) }
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-            )
+    Layout(
+        {
+            for ((text, second2) in listOf(first to false, second to true)) {
+                val on = onSecond == second2
+                Text(
+                    text,
+                    style = Type.ui.copy(fontSize = 13.sp, lineHeight = 16.sp),
+                    color = if (on) p.ink else p.inkMuted,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .then(if (on) Modifier.border(1.dp, p.inkMuted, CornerSm) else Modifier)
+                        .control(CornerSm, if (on) p.ground else Color.Transparent, role = Role.RadioButton) { onChange(second2) }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                )
+            }
+        },
+        modifier.background(p.sunk, Corner).padding(2.dp),
+    ) { (a, b), c ->
+        val gap = 2.dp.roundToPx()
+        val wa = a.maxIntrinsicWidth(Constraints.Infinity)
+        val wb = b.maxIntrinsicWidth(Constraints.Infinity)
+        if (wa + gap + wb <= c.maxWidth) {
+            val pa = a.measure(Constraints.fixedWidth(wa))
+            val pb = b.measure(Constraints.fixedWidth(wb))
+            layout(wa + gap + wb, maxOf(pa.height, pb.height)) {
+                pa.place(0, 0)
+                pb.place(wa + gap, 0)
+            }
+        } else {
+            val w = minOf(maxOf(wa, wb), c.maxWidth)
+            val pa = a.measure(Constraints.fixedWidth(w))
+            val pb = b.measure(Constraints.fixedWidth(w))
+            layout(w, pa.height + gap + pb.height) {
+                pa.place(0, 0)
+                pb.place(0, pa.height + gap)
+            }
+        }
+    }
+}
+
+/**
+ * The least that words keep beside the control they go with before it
+ * moves under them (Beside, the work screen's header): 160 dp at the
+ * default text size, the three apps' floor (2026-10-31), scaled as the
+ * app's 14 sp text is, so that it holds as many letters at any size: 2.0
+ * times the text size makes 14 sp 26 dp, and this 297.
+ */
+@Composable
+fun wordsFloor(): Dp = with(LocalDensity.current) { 14.sp.toDp() } * (160f / 14f)
+
+/**
+ * Words and the control they go with on one line, the control at its end,
+ * or right after the words (follow), while the words keep least beside it,
+ * or their whole width where that is less; else the control on a line of
+ * its own under them, at the end, as a dialog's buttons go under its
+ * words: Manage models' rows and its foot, the start screen's top row, the
+ * strip's Locate…. Until then the words wrap beside it.
+ */
+@Composable
+fun Beside(
+    modifier: Modifier = Modifier, least: Dp = wordsFloor(), gap: Dp = 16.dp, follow: Boolean = false,
+    words: @Composable () -> Unit, control: @Composable () -> Unit,
+) {
+    Layout({ Box { words() }; Box { control() } }, modifier) { (w, k), c ->
+        val kp = k.measure(c.copy(minWidth = 0, minHeight = 0))
+        val room = c.maxWidth - kp.width - gap.roundToPx()
+        if (room >= minOf(least.roundToPx(), w.maxIntrinsicWidth(Constraints.Infinity))) {
+            val wp = w.measure(c.copy(minWidth = 0, minHeight = 0, maxWidth = room))
+            val h = maxOf(wp.height, kp.height, c.minHeight)
+            layout(c.maxWidth, h) {
+                wp.place(0, (h - wp.height) / 2)
+                kp.place(if (follow) wp.width + gap.roundToPx() else c.maxWidth - kp.width, (h - kp.height) / 2)
+            }
+        } else {
+            val wp = w.measure(c.copy(minWidth = 0, minHeight = 0))
+            val under = wp.height + 8.dp.roundToPx()
+            layout(c.maxWidth, under + kp.height) {
+                wp.place(0, 0)
+                kp.place(c.maxWidth - kp.width, under)
+            }
         }
     }
 }
@@ -431,7 +525,9 @@ fun Menu(expanded: Boolean, onDismiss: () -> Unit, gap: Dp = 6.dp, wide: Boolean
  * it makes, or in its words what it is (note, .pk-sub, as the model menu
  * has it), and 16 dp after its words, on their line, the key that does it
  * too where there are keys (hint: KeyCap), or the check of the one
- * chosen of a menu's choices (selected, not null for a choice).
+ * chosen of a menu's choices (selected, not null for a choice). A file too
+ * long for the menu gives up its middle, which keeps its extension: from
+ * 1.5 times the text size, Share's five files had lost theirs on a phone.
  */
 @Composable
 fun Item(
@@ -449,9 +545,9 @@ fun Item(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Column(Modifier.weight(1f)) {
-            Text(text, style = words, color = pk.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(text, style = words, color = pk.ink)
             if (sub != null)
-                Text(sub, style = Type.stamp.copy(lineHeight = 1.4.em), color = pk.inkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(sub, style = Type.stamp.copy(lineHeight = 1.4.em), color = pk.inkMuted, maxLines = 1, overflow = TextOverflow.MiddleEllipsis)
             if (note != null)
                 Text(note, style = Type.small.copy(lineHeight = 1.4.em), color = pk.inkMuted)
         }
@@ -488,13 +584,14 @@ fun byFinger(): Boolean = !hasKeys()
 
 /**
  * A key to press beside its item, on a key's tone step: a lone < or > in the
- * type of a shortcut read as no key at all (app.css, .pk-key).
+ * type of a shortcut read as no key at all (app.css, .pk-key). 22 dp tall,
+ * or as tall as its key at a larger text size: at 2.0 its 13 sp line is 25.
  */
 @Composable
 fun KeyCap(key: String) {
     Box(
         Modifier
-            .height(22.dp)
+            .heightIn(min = 22.dp)
             .widthIn(min = 22.dp)
             .background(pk.sunk, RoundedCornerShape(5.dp))
             .padding(horizontal = 6.dp),

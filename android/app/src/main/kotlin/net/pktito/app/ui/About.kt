@@ -49,6 +49,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -65,9 +66,11 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.fromHtml
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -174,17 +177,23 @@ private fun Credits(version: String, twoColumns: Boolean, onLink: (String) -> Un
                 Words(link("GitHub", "https://github.com/peterheb/pktito", onLink), Type.small, p.inkMuted)
             }
         }
-        Column(
-            Modifier.padding(top = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(if (twoColumns) 10.dp else 12.dp),
-        ) {
-            Credit("Parakeet-TDT", twoColumns) {
+        // the names in the desktop's column, its 7.5 em of their 14 px, while
+        // the longest fits there whole, else each above its credit: at 1.3
+        // times the text size Parakeet-TDT broke in two there on a phone
+        val names = listOf("Parakeet-TDT", "Silero VAD", stringResource(R.string.about_else))
+        val measurer = rememberTextMeasurer()
+        val fits = with(LocalDensity.current) {
+            remember(names, measurer) { names.maxOf { measurer.measure(it, CreditName).size.width } } <= 105.dp.roundToPx()
+        }
+        val column = 105.dp.takeIf { twoColumns && fits }
+        Column(Modifier.padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(if (column != null) 10.dp else 12.dp)) {
+            Credit(names[0], column) {
                 Words(html(stringResource(R.string.about_models), onLink), Type.small, p.inkMuted)
             }
-            Credit("Silero VAD", twoColumns) {
+            Credit(names[1], column) {
                 Words(html(stringResource(R.string.about_silero), onLink), Type.small, p.inkMuted)
             }
-            Credit(stringResource(R.string.about_else), twoColumns) {
+            Credit(names[2], column) {
                 Column {
                     Text(stringResource(R.string.about_else_list), style = Type.small, color = p.inkMuted)
                     Words(button(stringResource(R.string.about_licenses)) { open("notices") }, Type.small.copy(lineHeight = 20.sp), p.inkMuted)
@@ -194,22 +203,24 @@ private fun Credits(version: String, twoColumns: Boolean, onLink: (String) -> Un
     }
 }
 
-/** A credit, its name before it 7.5 em of 14 sp wide, or above it where the words are narrow (.pk-credits). */
+/** A credit, its name before it in a column that wide, or above it where there is none (.pk-credits). */
 @Composable
-private fun Credit(name: String, twoColumns: Boolean, what: @Composable () -> Unit) {
+private fun Credit(name: String, column: Dp?, what: @Composable () -> Unit) {
     val p = pk
-    val style = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W500, fontSize = 14.sp, lineHeight = 1.45.em, lineHeightStyle = CssLine)
-    if (twoColumns)
+    if (column != null)
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(name, style = style, color = p.ink, modifier = Modifier.width(105.dp))
+            Text(name, style = CreditName, color = p.ink, modifier = Modifier.width(column))
             Box(Modifier.weight(1f)) { what() }
         }
     else
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(name, style = style, color = p.ink)
+            Text(name, style = CreditName, color = p.ink)
             what()
         }
 }
+
+/** A credit's name (.pk-credits dt). */
+private val CreditName = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W500, fontSize = 14.sp, lineHeight = 1.45.em, lineHeightStyle = CssLine)
 
 /** The inline content of a link that leaves the app: its icon. */
 private const val EXTERNAL = "external"
@@ -406,7 +417,10 @@ private fun Licenses(modifier: Modifier) {
  * window has them under 880 px. Its three columns over that are for
  * crates' names; a module's is twice as long (androidx.compose.foundation:
  * foundation-layout-android), and in 15 em it broke in every row. A
- * module's may break after its group.
+ * module's may break after its group, and after each dot in it, and any
+ * name after a hyphen: at 1.5 times the text size on a phone,
+ * androidx.activity broke inside activity, then activity-compose inside
+ * compose, where Android's breaker passed over its hyphen.
  */
 @Composable
 private fun NoticeRow(x: Notice) {
@@ -416,9 +430,17 @@ private fun NoticeRow(x: Notice) {
     else Type.small
     Column(Modifier.padding(vertical = 3.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(x.name.replace(":", ":\u200B"), style = name, color = p.ink, modifier = Modifier.weight(1f))
+            Text(breakable(x.name), style = name, color = p.ink, modifier = Modifier.weight(1f))
             Text(x.license, style = Type.small, color = p.inkMuted)
         }
         Text(x.notice, style = Type.small, color = p.inkMuted)
     }
+}
+
+/** A name with a place to break after each hyphen, and a module's after its group and each dot in the group. */
+private fun breakable(name: String): String {
+    val group = name.substringBefore(':', "")
+    val rest = name.substringAfter(':').replace("-", "-\u200B")
+    if (group.isEmpty()) return rest
+    return group.replace(".", ".\u200B") + ":\u200B" + rest
 }
