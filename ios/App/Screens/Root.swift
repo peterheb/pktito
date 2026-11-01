@@ -61,6 +61,9 @@ struct Root: View {
         .background {
             GeometryReader { w in
                 Color.clear.onChange(of: w.size.height, initial: true) { _, h in tall = h }
+                    #if DEBUG
+                    .onChange(of: "\(w.size) \(w.safeAreaInsets)", initial: true) { _, s in trace("window: \(s)") }
+                    #endif
             }
             .ignoresSafeArea(.keyboard)
         }

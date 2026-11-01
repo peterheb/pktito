@@ -85,6 +85,11 @@ struct Work: View {
                     .padding(.top, 16)
                 }
             }
+            // its whole height always, the rows giving way: a short window
+            // squeezed the header from its 98 to 62, its buttons pushed up
+            // to the window's top edge (Peter's iPad in a window at its least,
+            // 375 x 466, 2026-11-01)
+            .fixedSize(horizontal: false, vertical: true)
             // what the rows' room is reckoned from while the rest makes room
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { if !room { above = $0 } }
             Rows(rows: rows, review: review, marks: marks, hits: hits, stats: stats(review), edge: edge) { time, play in
