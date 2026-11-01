@@ -128,7 +128,9 @@ private struct Header: View {
                 name.frame(minWidth: floor, idealWidth: floor, maxWidth: .infinity, alignment: .leading)
                 buttons
             }
-            VStack(alignment: .leading, spacing: 8) {
+            // the name 16 under the buttons, the screen's one step, as in
+            // Android's app (2026-10-31)
+            VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 8) {
                     back
                     Spacer(minLength: 0)
@@ -261,13 +263,17 @@ private struct Views: View {
     /// the line's width, and the views' as they are drawn
     @State private var width: CGFloat = 0
     @State private var viewsWidth: CGFloat = 0
+    /// the field's 200 and 280, scaled as its text is: Android's app at
+    /// twice the text size left a search 53 of a fixed 280 (2026-10-31)
+    @ScaledMetric(relativeTo: .subheadline) private var narrow: CGFloat = 200
+    @ScaledMetric(relativeTo: .subheadline) private var searching: CGFloat = 280
 
     var body: some View {
         let s = AppState.shared
         let f = s.finder
-        let wide: CGFloat = f.query.trimmingCharacters(in: .whitespaces).isEmpty ? 200 : 280
+        let wide = f.query.trimmingCharacters(in: .whitespaces).isEmpty ? narrow : searching
         let room = { (w: CGFloat) in viewsWidth > 0 && viewsWidth + 12 + w <= width }
-        let field: CGFloat? = room(wide) ? wide : room(200) ? 200 : nil
+        let field: CGFloat? = room(wide) ? wide : room(narrow) ? narrow : nil
         HStack(spacing: 12) {
             if field != nil || !f.open {
                 Switch2(first: L("sentences"), second: L("captions"),

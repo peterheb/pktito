@@ -142,7 +142,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Version %1$@ · %2$@"
+            "value": "Version %1$@ · %2$@"
           }
         }
       }
@@ -570,7 +570,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ of %2$@ MB"
+            "value": "%1$@ of %2$@ MB"
           }
         }
       }
@@ -581,7 +581,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ of %2$@ MB · paused"
+            "value": "%1$@ of %2$@ MB · paused"
           }
         }
       }
@@ -592,7 +592,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ of %2$@ MB · %3$@ MB/s · %4$@"
+            "value": "%1$@ of %2$@ MB · %3$@ MB/s · %4$@"
           }
         }
       }
@@ -625,7 +625,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Stopped at %1$@ of %2$@ MB"
+            "value": "Stopped at %1$@ of %2$@ MB"
           }
         }
       }
@@ -839,7 +839,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This frees %1$@ MB. It's the only model here, so you'll choose a model again before transcribing. The file you opened is not affected."
+            "value": "This frees %1$@ MB. It's the only model here, so you'll choose a model again before transcribing. The file you opened is not affected."
           }
         }
       }
@@ -850,7 +850,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This frees %1$@ MB, and pktito switches to the %2$@ model. The file you opened is not affected."
+            "value": "This frees %1$@ MB, and pktito switches to the %2$@ model. The file you opened is not affected."
           }
         }
       }
@@ -872,7 +872,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This frees %1$@ MB. Downloading the %2$@ model again starts over."
+            "value": "This frees %1$@ MB. Downloading the %2$@ model again starts over."
           }
         }
       }
@@ -894,7 +894,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This frees %1$@ MB. You can download it again."
+            "value": "This frees %1$@ MB. You can download it again."
           }
         }
       }
@@ -905,7 +905,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This frees %1$@ MB. It's the only model downloaded, so you'll choose a model again before transcribing."
+            "value": "This frees %1$@ MB. It's the only model downloaded, so you'll choose a model again before transcribing."
           }
         }
       }
@@ -916,7 +916,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This frees %1$@ MB, and pktito switches to the %2$@ model. You can download it again."
+            "value": "This frees %1$@ MB, and pktito switches to the %2$@ model. You can download it again."
           }
         }
       }
@@ -960,7 +960,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Downloading · %1$@ of %2$@ MB"
+            "value": "Downloading · %1$@ of %2$@ MB"
           }
         }
       }
@@ -971,7 +971,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ GB free"
+            "value": "%1$@ GB free"
           }
         }
       }
@@ -983,7 +983,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ MB free"
+            "value": "%1$@ MB free"
           }
         }
       }
@@ -1016,7 +1016,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paused download · %1$@ of %2$@ MB"
+            "value": "Paused download · %1$@ of %2$@ MB"
           }
         }
       }
@@ -1027,7 +1027,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ MB"
+            "value": "%1$@ MB"
           }
         }
       }
@@ -1050,7 +1050,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ GB used"
+            "value": "%1$@ GB used"
           }
         }
       }
@@ -1061,7 +1061,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ MB used"
+            "value": "%1$@ MB used"
           }
         }
       }
@@ -1110,24 +1110,13 @@
         }
       }
     },
-    "models_among": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": ", %1$@ among them"
-          }
-        }
-      }
-    },
     "models_download_size": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ MB download"
+            "value": "%1$@ MB download"
           }
         }
       }
@@ -1145,7 +1134,7 @@
     },
     "models_languages_among": {
       "extractionState": "manual",
-      "comment": "a model of several's languages, %1$s (\"25 European languages\"), and the system's language among them, %2$s, as one sentence (models.languages_among); models_among goes once Android uses this",
+      "comment": "a model of several's languages, %1$s (\"25 European languages\"), and the system's language among them, %2$s, as one sentence (models.languages_among)",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -1690,19 +1679,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Remove %1$@ from Recent"
+            "value": "Delete the transcript of %1$@"
           }
         }
       }
     },
     "recent_remove_item": {
       "extractionState": "manual",
-      "comment": "recent.remove_tip, as a long press's menu has it",
+      "comment": "recent.remove_tip, as a long press's menu has it: the saved transcript goes for good, and pktito's copy of a shared recording with it, but never the original (Peter, 2026-10-31)",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Remove from Recent"
+            "value": "Delete transcript"
           }
         }
       }
@@ -1713,7 +1702,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The file stays where it is"
+            "value": "Your original file isn't deleted"
           }
         }
       }
@@ -1827,7 +1816,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Download the %1$@ model · %2$@ MB"
+            "value": "Download the %1$@ model · %2$@ MB"
           }
         }
       }
@@ -1838,7 +1827,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Download the %1$@ model · %2$@ MB to go"
+            "value": "Download the %1$@ model · %2$@ MB to go"
           }
         }
       }
@@ -1883,7 +1872,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ MB"
+            "value": "%1$@ MB"
           }
         }
       }
@@ -2113,7 +2102,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "about %1$lld min left"
+            "value": "about %1$lld min left"
           }
         }
       }
@@ -2124,7 +2113,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "about %1$lld s left"
+            "value": "about %1$lld s left"
           }
         }
       }
@@ -2208,7 +2197,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Video · %1$@"
+            "value": "Video · %1$@"
           }
         }
       }
