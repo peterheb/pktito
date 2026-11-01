@@ -533,7 +533,7 @@ private struct Preparing: View {
     var body: some View {
         Screen {
             WordmarkButton()
-            Intro(title: L("prepare_title", deviceKind), text: L("prepare_why", deviceKind))
+            Intro(title: L("prepare_title", deviceKind), text: L("prepare_why"))
             Spinner().scaleEffect(2).padding(.top, 16).padding(.leading, 8)
         } foot: {
             EmptyView()

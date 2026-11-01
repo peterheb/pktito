@@ -3,7 +3,7 @@
 <resources>
     <!-- the setup screen while Core ML compiles the Neural Engine's encoder, the first time after an install or an update; %1$s is the device's kind, "iPhone" or "iPad" -->
     <string name="prepare_title">Preparing pktito for this %1$s…</string>
-    <string name="prepare_why">The first time, this %1$s compiles the speech model for its Neural Engine. It takes about half a minute, once.</string>
+    <string name="prepare_why">Compiling the speech model for the Neural Engine.</string>
     <!-- a toast, where the Neural Engine couldn't run the model and the whole model file is downloaded instead -->
     <string name="prepare_cpu">This %1$s\'s Neural Engine can\'t run the model, so pktito uses its processor instead</string>
     <!-- the strip, where the recording found doesn't play (Android's play_cant names Android) -->

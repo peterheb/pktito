@@ -1456,7 +1456,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The first time, this %1$@ compiles the speech model for its Neural Engine. It takes about half a minute, once."
+            "value": "Compiling the speech model for the Neural Engine."
           }
         }
       }
