@@ -133,7 +133,7 @@ struct Manage: View {
     /// one in use, its two words on one line.
     private func note(_ r: Kept) -> Text {
         guard r.inUse else { return Text(r.note) }
-        return Text(r.note + " · ") + Text(L("manage_in_use").replacingOccurrences(of: " ", with: "\u{00A0}")).foregroundStyle(Pk.ok)
+        return Text(r.note + dot) + Text(L("manage_in_use").replacingOccurrences(of: " ", with: "\u{00A0}")).foregroundStyle(Pk.ok)
     }
 
     private func kept() -> [Kept] {
@@ -156,7 +156,7 @@ struct Manage: View {
                 } else {
                     text = L("manage_ask_text_last", mb(bytes))
                 }
-                out.append(Kept(id: "have:" + o.name, title: name, note: o.name + " · " + L("manage_size", mb(bytes)),
+                out.append(Kept(id: "have:" + o.name, title: name, note: o.name + dot + L("manage_size", mb(bytes)),
                                 inUse: inUse, bytes: bytes, act: L("manage_delete"),
                                 enabled: !(t.running && (inUse || t.loadedName == o.name)),
                                 ask: (L("manage_ask_title", name), text)) { s.deleted(m.delete(o)) })
@@ -203,7 +203,7 @@ private func used(_ total: Int64, _ free: Int64) -> String {
         : L("manage_used_gb", String(format: "%.2f", locale: .current, Double(total) / 1e9))
     let left = free < 1_000_000_000 ? L("manage_free_mb", mb(free))
         : L("manage_free_gb", String(format: "%.1f", locale: .current, Double(free) / 1e9))
-    return used + " · " + left
+    return used + dot + left
 }
 
 /// Between the rows, the line a menu draws between its groups, across.

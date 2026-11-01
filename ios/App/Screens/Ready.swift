@@ -218,7 +218,7 @@ private struct RecentRow: View {
                         Text(r.name).font(PkType.ui.font(14)).lineLimit(1).truncationMode(.middle)
                         HStack(spacing: 0) {
                             Text(length).font(PkType.stamp.font(13)).monospacedDigit()
-                            Text(" · " + date).pk(PkType.small)
+                            Text(dot + date).pk(PkType.small)
                         }
                         .foregroundStyle(Pk.inkMuted)
                     }

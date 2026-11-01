@@ -241,7 +241,7 @@ private struct Card: View {
             what.link = Card.languages
             what.underlineStyle = .single
         }
-        return AttributedString(o.name + " · ") + withOwn(o.entry, what)
+        return AttributedString(o.name + dot) + withOwn(o.entry, what)
     }
 }
 
@@ -568,7 +568,7 @@ struct ModelMenu: View {
                     } else {
                         Text(label(o.key))
                     }
-                    Text(String(withOwn(o.entry, AttributedString(about(o.key))).characters) + " · "
+                    Text(String(withOwn(o.entry, AttributedString(about(o.key))).characters) + dot
                          + (o.have ? L("models_downloaded") : L("models_download_size", mb(o.bytes))))
                 }
             }

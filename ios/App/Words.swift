@@ -10,6 +10,11 @@ func trace(_ s: @autoclosure () -> String) {
     #endif
 }
 
+/// The dot between two things on a line, a no-break space before it, so
+/// that a line breaking there ends with the dot rather than the next one
+/// starting with it, as the catalog's strings have it (app.js, DOT).
+let dot = "\u{00A0}· "
+
 /// Megabytes as the desktop counts them, a million bytes, whole (app.js, mb).
 func mb(_ bytes: Int64) -> String { String(Int64((Double(bytes) / 1e6).rounded())) }
 
