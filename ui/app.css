@@ -276,6 +276,13 @@ button.pk-wm:focus-visible {
   ):active:not([disabled]) {
   background-image: linear-gradient(var(--tint-press), var(--tint-press));
 }
+/* and a menu's button stays pressed while its menu is open (openMenu), as
+   a menu title or a pop-up button does on macOS and Windows: the menu,
+   under its button and over what comes next, is plainly its own (Peter,
+   2026-11-01; the Android app's menus and Recent rows the same) */
+:where([aria-haspopup="menu"])[aria-expanded="true"]:not([disabled]) {
+  background-image: linear-gradient(var(--tint-press), var(--tint-press));
+}
 
 /* ----------------------------------------------------------- title bar -- */
 /* Where the window has no title bar of its own (macOS: app.js, data-chrome)
