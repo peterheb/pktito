@@ -1615,10 +1615,15 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 .pk-about.no-stage {
   grid-template-columns: minmax(0, 1fr);
 }
-.pk-about.no-stage .pk-about-stage {
+/* without the mascot, or where over the words it would have under 120 px
+   (app.js, fitStage): in a 480 x 480 window it was a band 27 px tall with
+   a mascot an icon's size in it (the layout audit, 2026-11-01) */
+.pk-about.no-stage .pk-about-stage,
+.pk-about.short-stage .pk-about-stage {
   display: none;
 }
-.pk-about.no-stage .pk-about-text {
+.pk-about.no-stage .pk-about-text,
+.pk-about.short-stage .pk-about-text {
   padding-top: 64px;
 }
 /* the arrow at the window's top left, where a file's is */
@@ -1649,6 +1654,11 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 .pk-about-in .pk-wm {
   align-self: flex-start;
   margin-bottom: 8px;
+}
+/* the name's sound in one piece: at 980 px "pick-a-" ended a line and
+   "tito")" began the next (the layout audit, 2026-11-01) */
+.pk-about-in .pk-text i {
+  white-space: nowrap;
 }
 .pk-credits {
   display: grid;

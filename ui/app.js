@@ -3119,6 +3119,19 @@ function loadMascot() {
   return mascotFiles;
 }
 
+/* The mascot over the words, where they are one column, only with 120 px
+   of height for it (app.css, .short-stage). The words' height is taken as
+   they stand, with the stage's or without, so that a window a little taller
+   doesn't bring it back and send it away again. */
+function fitStage() {
+  const about = $("about");
+  if (about.hidden) return;
+  const one = getComputedStyle(about).gridTemplateColumns.trim().split(/\s+/).length === 1,
+    text = about.querySelector(".pk-about-text");
+  about.classList.toggle("short-stage", one && about.clientHeight - text.scrollHeight < 120);
+}
+new ResizeObserver(fitStage).observe($("about"));
+
 async function openAbout() {
   if (!st || about) return;
   closeMenu();
@@ -3139,6 +3152,7 @@ async function openAbout() {
   $("about-back").focus({ preventScroll: true });
   await loadMascot();
   $("about").classList.toggle("no-stage", !mascot);
+  fitStage();
   if (about && mascot) mascot.show();
 }
 
