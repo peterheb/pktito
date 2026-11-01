@@ -802,8 +802,15 @@ html[data-side] .pk-side {
   flex-direction: column;
   gap: 14px;
   min-height: 0;
-  padding: 20px 16px 16px 20px;
+  /* its top row on the work's header's line, the model menu's 32 in the
+     middle of the header's 62, and Choose with the strip's top, 1 more
+     under the row: at 20 the row sat 5 lower than the header's and read
+     as out of line with it (Peter, on the iPad's, 2026-11-01) */
+  padding: 15px 16px 16px 20px;
   border-right: 1px solid var(--sunk);
+}
+html[data-side] .pk-side > .pk-spread {
+  margin-bottom: 1px;
 }
 html[data-side] .pk-recent {
   margin-top: 4px;
