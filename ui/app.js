@@ -934,7 +934,7 @@ function renderReady() {
       .map(
         (r) =>
           `<li class="pk-qi"><button class="pk-row" type="button" data-recent="${esc(r.id)}" title="${esc(r.path)}" aria-keyshortcuts="Delete"${at(f && f.recentId === r.id)}>` +
-          `${ICON.file}<span class="pk-name">${esc(r.name)}</span><span class="pk-stamp">${lengthHms(r.duration)}</span>` +
+          `${ICON.file}<span class="pk-name pk-cut">${cutName(r.name)}</span><span class="pk-stamp">${lengthHms(r.duration)}</span>` +
           `<span class="pk-small pk-when">${esc(when(r.finished))}</span></button><button class="pk-x" type="button" tabindex="-1" ` +
           `data-forget="${esc(r.id)}" aria-label="${esc(t("recent.remove", { name: r.name }))}" title="${esc(t("recent.remove_tip"))}">${ICON.x}</button></li>`,
       )
@@ -1492,7 +1492,7 @@ function rowBody(f) {
   else
     status = `<span class="pk-status pk-err"${detailOf(f) ? ` title="${esc(detailOf(f))}"` : ""}>${esc(failure(f))}</span>`;
   return (
-    `${f.kind === "video" ? ICON.film : ICON.music}<span class="pk-name">${esc(f.name)}</span>` +
+    `${f.kind === "video" ? ICON.film : ICON.music}<span class="pk-name pk-cut">${cutName(f.name)}</span>` +
     `<span class="pk-stamp">${f.duration == null ? "" : lengthHms(f.duration)}</span>${status}`
   );
 }
@@ -1667,7 +1667,7 @@ function buildMain(f, mode, key) {
       : tr.scrollTop;
   mainKey = key;
   pausePlayback();
-  $("title").textContent = f.name;
+  $("title").innerHTML = cutName(f.name);
   $("title").title = fileTip(f);
   $("find").value = "";
   query = "";
@@ -1719,6 +1719,39 @@ function buildMain(f, mode, key) {
   } else if (mode === "running") updateRunning(f);
 }
 
+/* A file's name for a line it may not fill: its start and its end, the
+   extension and the four characters before it, which stay when the start
+   gives way (app.css, .pk-cut), as the phones' apps cut a name in the middle */
+function cutName(name) {
+  const dot = name.lastIndexOf("."),
+    ext = dot > 0 && name.length - dot <= 6 ? name.length - dot : 0,
+    at = Math.max(0, name.length - ext - 4);
+  return at < 4
+    ? `<span>${esc(name)}</span>`
+    : `<span>${esc(name.slice(0, at))}</span><span>${esc(name.slice(at))}</span>`;
+}
+
+/* Find in the header, beside the name, or on the views line where the
+   header hasn't the room for it beside its buttons and 160 of the name:
+   the floor the phones' apps keep their name's (the out-of-space rules,
+   2026-10-31). Measured by the buttons alone, which stay where they are,
+   so that where Find is doesn't change where it goes. */
+const NAME_FLOOR = 160;
+function placeFind() {
+  const head = $("title").parentElement,
+    box = $("find-box"),
+    line = $("views-line"),
+    cs = getComputedStyle(head),
+    room = head.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+    shown = ["back", "copy", "again", "save-as", "stop"].map($).filter((b) => b.offsetWidth > 0),
+    gap = parseFloat(cs.columnGap) || 10,
+    need = shown.reduce((n, b) => n + b.offsetWidth, 0) + gap * (shown.length + 1) + 200 + NAME_FLOOR,
+    under = need > room;
+  if (under && box.parentElement !== line) line.append(box);
+  else if (!under && box.parentElement === line) head.insertBefore(box, $("copy"));
+}
+new ResizeObserver(placeFind).observe($("title").parentElement);
+
 function updateHead(f, mode) {
   const review = mode === "review",
     has = f.segments.length > 0;
@@ -1750,6 +1783,7 @@ function updateHead(f, mode) {
       ? t("status.stopped_at", { pct: percent(f.done) })
       : "";
   $("stop").hidden = mode !== "running";
+  placeFind();
 }
 
 function updateRunning(f) {
