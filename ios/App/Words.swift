@@ -54,6 +54,11 @@ func words(_ key: String?, host: String = "") -> String {
     case "model_file.cant_open": return L("model_file_cant_open")
     case "model_file.damaged": return L("model_file_damaged")
     case "problem.memory": return L("problem_memory")
+    case "decode.unreadable", "decode.unreadable_try_ffmpeg": return L("decode_unreadable")
+    case "decode.not_media": return L("decode_not_media")
+    case "decode.no_audio": return L("decode_no_audio")
+    case "decode.not_found": return L("decode_not_found")
+    case "decode.cant_convert": return L("decode_cant_convert")
     default: return L("problem_unexpected")
     }
 }

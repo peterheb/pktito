@@ -387,6 +387,62 @@
         }
       }
     },
+    "decode_cant_convert": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't convert this audio"
+          }
+        }
+      }
+    },
+    "decode_no_audio": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No audio track"
+          }
+        }
+      }
+    },
+    "decode_not_found": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File not found"
+          }
+        }
+      }
+    },
+    "decode_not_media": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not audio or video"
+          }
+        }
+      }
+    },
+    "decode_unreadable": {
+      "extractionState": "manual",
+      "comment": "a recording that can't be read, the desktop's decode.* (the core's keys, Words.swift); iOS has no ffmpeg to suggest",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't read this file"
+          }
+        }
+      }
+    },
     "download_bar": {
       "extractionState": "manual",
       "comment": "download.from_html",

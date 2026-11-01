@@ -6,9 +6,33 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXAggregateTarget section */
+		E1A000000000000000000020 /* pktito core */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = E1A000000000000000000021 /* Build configuration list for PBXAggregateTarget "pktito core" */;
+			buildPhases = (
+				E1A00000000000000000000B /* pktito core */,
+			);
+			dependencies = (
+			);
+			name = "pktito core";
+			productName = "pktito core";
+		};
+/* End PBXAggregateTarget section */
+
 /* Begin PBXBuildFile section */
 		E1A00000000000000000000D /* PktitoCore.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = E1A00000000000000000000C /* PktitoCore.xcframework */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		E1A000000000000000000024 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E1A000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E1A000000000000000000020;
+			remoteInfo = "pktito core";
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		E1A000000000000000000004 /* pktito.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = pktito.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -72,7 +96,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = E1A00000000000000000000F /* Build configuration list for PBXNativeTarget "pktito" */;
 			buildPhases = (
-				E1A00000000000000000000B /* pktito core */,
 				E1A000000000000000000008 /* Sources */,
 				E1A000000000000000000009 /* Frameworks */,
 				E1A00000000000000000000A /* Resources */,
@@ -80,6 +103,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				E1A000000000000000000025 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				E1A000000000000000000005 /* App */,
@@ -121,6 +145,7 @@
 			projectRoot = "";
 			targets = (
 				E1A000000000000000000007 /* pktito */,
+				E1A000000000000000000020 /* pktito core */,
 			);
 		};
 /* End PBXProject section */
@@ -150,6 +175,9 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
+				"$(SRCROOT)/build/PktitoCore.xcframework/Info.plist",
+				"$(SRCROOT)/build/PktitoCore.xcframework/ios-arm64/libpktito_app.a",
+				"$(SRCROOT)/build/PktitoCore.xcframework/ios-arm64-simulator/libpktito_app.a",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -167,7 +195,29 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		E1A000000000000000000025 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E1A000000000000000000020 /* pktito core */;
+			targetProxy = E1A000000000000000000024 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		E1A000000000000000000022 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		E1A000000000000000000023 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 		E1A000000000000000000010 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -304,6 +354,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		E1A000000000000000000021 /* Build configuration list for PBXAggregateTarget "pktito core" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E1A000000000000000000022 /* Debug */,
+				E1A000000000000000000023 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		E1A00000000000000000000E /* Build configuration list for PBXProject "pktito" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

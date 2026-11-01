@@ -159,10 +159,16 @@ pub extern "C" fn pkapp_transcribe(
         let l = unsafe { &mut *(handle as usize as *mut Loaded) };
         STOP.store(false, Ordering::Relaxed);
         let fps = decode::frame_rate(&path).unwrap_or(0.0);
-        let x = decode::decode(&path).map_err(|e| {
-            let m = e.message();
-            if name.is_empty() { m } else { format!("{name}: {m}") }
-        })?;
+        // a file that can't be read: its words' key and what said so, for
+        // the app's catalog to word (Words.swift), the line for a log
+        let x = match decode::decode(&path) {
+            Ok(x) => x,
+            Err(e) => {
+                let p = e.problem();
+                let line = if name.is_empty() { p.line() } else { format!("{name}: {}", p.line()) };
+                return Ok(json!({ "error": line, "key": p.key, "detail": p.detail }));
+            }
+        };
         let duration = x.len() as f64 / decode::RATE as f64;
         let peaks = audio::peaks(&x, audio::PEAKS);
         audio_fn(ctx, duration, fps, peaks.as_ptr(), peaks.len());

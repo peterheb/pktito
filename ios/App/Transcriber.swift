@@ -263,7 +263,15 @@ final class Transcriber {
                 done = t.complete ? 1 : done
                 step = t.complete ? .done : .stopped
             } catch {
-                self.error = error.localizedDescription
+                // the app's words where the core gave a key: not the core's
+                // English, nor the file's name the header has, nor the
+                // system's "(Cannot Open)" (the layout audit, 2026-11-01)
+                if let e = error as? CoreError, let key = e.key {
+                    self.error = words(key)
+                    trace("can't transcribe: \(e.localizedDescription)")
+                } else {
+                    self.error = error.localizedDescription
+                }
                 step = .error
             }
         }

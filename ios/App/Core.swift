@@ -1,10 +1,18 @@
 import Foundation
 import PktitoCore
 
-/// What pktito's core says went wrong, in its own words (English).
+/// What pktito's core says went wrong, in its own words (English), and
+/// where it has one, its catalog key and what said so, for the app's own
+/// words (Words.swift, words).
 struct CoreError: LocalizedError {
     let errorDescription: String?
-    init(_ message: String) { errorDescription = message }
+    var key: String?
+    var detail = ""
+    init(_ message: String, key: String? = nil, detail: String = "") {
+        errorDescription = message
+        self.key = key
+        self.detail = detail
+    }
 }
 
 /// The core's answer to one call (src-tauri/src/ios.rs): its JSON decoded as
@@ -15,12 +23,16 @@ private func take<T: Decodable>(_ s: UnsafeMutablePointer<CChar>?, as: T.Type) t
     defer { pkapp_free_string(s) }
     let data = Data(bytes: s, count: strlen(s))
     if let failed = try? JSONDecoder().decode(Failed.self, from: data) {
-        throw CoreError(failed.error)
+        throw CoreError(failed.error, key: failed.key, detail: failed.detail ?? "")
     }
     return try JSONDecoder().decode(T.self, from: data)
 }
 
-private struct Failed: Decodable { let error: String }
+private struct Failed: Decodable {
+    let error: String
+    let key: String?
+    let detail: String?
+}
 private struct Nothing: Decodable {}
 
 /// A word of a transcript, its times in seconds.
