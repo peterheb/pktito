@@ -78,11 +78,13 @@ struct Ready: View {
                 if listed { RecentList(scrolls: !short) }
             }
             .frame(maxWidth: 640)
-            // a phone's 16, as every screen's, and its top row on the line the
-            // work's header has, 11 down round its 40 (Header): at 20 the row
-            // moved 9 between the two (the layout audit, 2026-11-01)
+            // a phone's 16, as every screen's, and with a list its top row on
+            // the line the work's header has, 11 down round its 40 (Header):
+            // at 20 the row moved 9 between the two (the layout audit,
+            // 2026-11-01); alone in the middle, 16 above as below, so that it
+            // is in the middle
             .padding(.horizontal, g.size.width < 600 ? 16 : 40)
-            .padding(.top, 11)
+            .padding(.top, listed ? 11 : 16)
             .padding(.bottom, 16)
             if short {
                 ScrollView { column.frame(maxWidth: .infinity) }
