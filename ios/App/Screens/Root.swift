@@ -104,8 +104,10 @@ struct Root: View {
     /// or simctl: -open NAME transcribes Application Support/bench/NAME,
     /// and -receive NAME a copy of it as iOS sends one (Open in);
     /// -recent opens the newest transcript of the list; -play SECONDS plays
-    /// it from there; -find WORDS searches it; -show about or manage opens
-    /// that, and with about, -sheet privacy or notices one of its sheets;
+    /// it from there; -find WORDS searches it, and with -typing as typed,
+    /// the keyboard up; -landscape turns a phone on its side; -show about
+    /// or manage opens that, and with about, -sheet privacy or notices one
+    /// of its sheets;
     /// -download english or multilingual downloads that model (its server
     /// PKTITO_MODEL_BASE, where the environment gives one), and with it
     /// -pauseAfter S pauses it S seconds on, and -resumeAfter S goes on S
@@ -138,9 +140,21 @@ struct Root: View {
                 Player.shared.seek(t, play: true)
             }
         }
+        if args.contains("-landscape"),
+           let scene = UIApplication.shared.connectedScenes.first(where: { $0 is UIWindowScene }) as? UIWindowScene {
+            scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) { trace("landscape: \($0.localizedDescription)") }
+        }
         if let q = value("-find") {
             s.finder.open = true
-            s.finder.query = q
+            if args.contains("-typing") {
+                // the field opened empty takes the keyboard, as the glass's does; then the words
+                Task {
+                    try? await Task.sleep(for: .seconds(1))
+                    s.finder.query = q
+                }
+            } else {
+                s.finder.query = q
+            }
         }
         if let key = value("-download"), let o = Models.shared.offers.first(where: { $0.key == key }) {
             Downloads.shared.start(o)
