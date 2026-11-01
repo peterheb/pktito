@@ -297,6 +297,7 @@ class MainActivity : ComponentActivity() {
             val row = info.visibleItemsInfo.firstOrNull { it.index == h.row }
             if (row == null || row.offset < info.viewportStartOffset || row.offset + row.size > info.viewportEndOffset)
                 list.animateScrollToItem(h.row, -info.viewportSize.height / 3)
+            finder.show()
         }
         // the cues, the first time the transcript is shown as captions
         LaunchedEffect(captions, t.transcript) {
