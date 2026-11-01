@@ -279,9 +279,10 @@ private struct SheetFrame<Content: View>: View {
                 Spacer()
                 IconButton(icon: .x, label: L("sheet_close"), kind: .ghost) { dismiss() }
             }
-            // the text's edge, and the cross's ink on it, 12 into its 40
+            // the text's edge, and the cross's ink on it, 15 into its 40 (at 12
+            // it stood 3 in: 356.0 on the iPhone SE against the text's 359)
             .padding(.leading, sheetEdge(size))
-            .padding(.trailing, sheetEdge(size) - 12)
+            .padding(.trailing, sheetEdge(size) - 15)
             .padding(.vertical, 6)
             .background(Pk.surface)
             content()
