@@ -1739,23 +1739,37 @@ function cutName(name) {
    views, where the header hasn't the room for it beside its buttons and
    160 of the name:
    the floor the phones' apps keep their name's (the out-of-space rules,
-   2026-10-31). Measured by the buttons alone, which stay where they are,
-   so that where Find is doesn't change where it goes. */
+   2026-10-31). And the name itself on a line of its own under the row,
+   on the strip's edge, where even without Find it would keep under 160
+   beside the buttons, as the phones' apps put it: at 480 px on a Mac,
+   beside Start again, Copy and Save as, the name kept 69 px, "c…-one.flac"
+   (the layout audit, 2026-11-01). Measured by the buttons alone, which
+   stay where they are, so that where Find and the name are doesn't change
+   where they go. */
 const NAME_FLOOR = 160;
 function placeFind() {
-  const head = $("title").parentElement,
+  const head = $("head"),
     box = $("find-box"),
     line = $("views-line"),
+    nameLine = $("head-name"),
     cs = getComputedStyle(head),
     room = head.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
     shown = ["back", "copy", "again", "save-as", "stop"].map($).filter((b) => b.offsetWidth > 0),
     gap = parseFloat(cs.columnGap) || 10,
-    need = shown.reduce((n, b) => n + b.offsetWidth, 0) + gap * (shown.length + 1) + 200 + NAME_FLOOR,
-    under = need > room;
+    // the buttons, and a gap each between them, the name and the space that pushes them apart
+    buttons = shown.reduce((n, b) => n + b.offsetWidth, 0) + gap * (shown.length + 1),
+    under = buttons + gap + 200 + NAME_FLOOR > room,
+    stacked = buttons + NAME_FLOOR > room;
   if (under && box.parentElement !== line) line.append(box);
   else if (!under && box.parentElement === line) head.insertBefore(box, $("copy"));
+  if (stacked && $("title").parentElement !== nameLine) nameLine.append($("title"), $("spin"));
+  else if (!stacked && $("title").parentElement === nameLine) {
+    head.insertBefore($("title"), head.querySelector(".pk-grow"));
+    head.insertBefore($("spin"), head.querySelector(".pk-grow"));
+  }
+  nameLine.hidden = !stacked;
 }
-new ResizeObserver(placeFind).observe($("title").parentElement);
+new ResizeObserver(placeFind).observe($("head"));
 
 function updateHead(f, mode) {
   const review = mode === "review",

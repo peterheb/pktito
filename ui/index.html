@@ -91,7 +91,7 @@
     <!-- The work: one file, alone or opened from a batch -->
     <div id="work" class="pk-work" hidden>
       <section class="pk-main">
-        <header class="pk-head" data-tauri-drag-region="deep">
+        <header class="pk-head" id="head" data-tauri-drag-region="deep">
           <button
             class="pk-btn pk-btn-ghost pk-btn-ico pk-back"
             id="back"
@@ -150,6 +150,9 @@
             data-t="work.stop"
           ></button>
         </header>
+        <!-- the name, where beside the header's buttons it would keep under
+             160 px (app.js, placeFind) -->
+        <div class="pk-head-name" id="head-name" hidden></div>
         <div class="pk-strip-wrap" id="strip-wrap">
           <div class="pk-strip" id="strip">
             <!-- play, and under it playback's speed, on the line of the times -->

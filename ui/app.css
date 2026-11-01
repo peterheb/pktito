@@ -300,7 +300,7 @@ html[data-chrome="mac"]:not([data-fullscreen]) .pk-head {
   padding-left: var(--lights);
 }
 html[data-chrome="mac"]:not([data-fullscreen]) .pk-about > .pk-back {
-  left: calc(var(--lights) - 8px);
+  left: calc(var(--lights) - 11px);
 }
 /* A one-column screen's top row is beside the lights where the column
    starts past them, at 744 px wide (640 px centred, 40 px padding), and
@@ -584,11 +584,13 @@ html[data-chrome="win"] .pk-head {
   gap: 12px;
   margin-top: 8px;
 }
+/* the figures on the percentage's baseline: at its foot, 4 px up, they sat
+   1.8 px above it on every engine (the layout audit, 2026-11-01); a
+   narrow window puts them on a line of their own under it */
 .pk-dl .pk-spread {
-  align-items: flex-end;
+  align-items: baseline;
 }
 .pk-dl .pk-stamp {
-  padding-bottom: 4px;
   white-space: normal;
 }
 .pk-bar {
@@ -666,9 +668,11 @@ html[data-chrome="win"] .pk-head {
 }
 /* the model's button with its chevron on the strip's right edge, as the
    wordmark is on its left: its padding outside it (Peter's screenshot,
-   2026-10-22) */
+   2026-10-22), and the chevron's own margin in its 16 px box, 3.3 px with
+   its stroke's cap, which at -12 left its ink 3.3 px in (the layout audit,
+   2026-11-01) */
 #ready-model {
-  margin-right: -12px;
+  margin-right: -15px;
 }
 /* the prompt and its button in a drop zone, dashed as the drop over the
    whole window is: it says where a file goes, and gives the screen the
@@ -955,12 +959,27 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
 /* the file's name gives way first, down to nothing, before Find: shrunk in
    proportion, a long name left Find a letter of its search (the Windows
    test, 2026-10-22) */
-.pk-head h1 {
+.pk-head h1,
+.pk-head-name h1 {
   flex: 0 1000 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* the name under the header's row where beside its buttons it would keep
+   under 160 px (app.js, placeFind): 16 under the buttons, the screen's one
+   step, and 15 over the strip, as the row's buttons are; on the strip's
+   edge, whatever stands beside the row above (the traffic lights,
+   Windows' caption buttons) */
+.pk-head-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 1px 24px 15px;
+}
+.pk-head-name[hidden] {
+  display: none;
 }
 /* beside the name from the moment the file starts until its ring shows
    progress: the strip says nothing until the audio is read (app.js,
@@ -988,9 +1007,18 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
     animation: none;
   }
 }
-/* the arrow drawn on the strip's left edge, its button's padding outside it */
+/* the arrow drawn on the strip's left edge: its button's padding and the
+   arrow's own margin in its 16 px box outside it (feather's arrow starts 4
+   of 24 in with its stroke's cap, 2.7 px), its ink 0.3 px past the edge;
+   at -8 it sat 2.7 px in (the layout audit, 2026-11-01) */
 .pk-head .pk-back {
-  margin-left: -8px;
+  margin-left: -11px;
+}
+/* Stop, the row's last while a file is at work, its words on the strip's
+   right edge as Save as's box is once it is done: its padding outside it.
+   Not beside Windows' caption buttons, which end the row there */
+html:not([data-chrome="win"]) .pk-head > #stop {
+  margin-right: -12px;
 }
 .pk-grow {
   flex: 1;
@@ -1587,12 +1615,13 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
   padding-top: 64px;
 }
 /* the arrow at the window's top left, where a file's is */
-/* where a header row's arrow is: 16 px in, the row's 24 less the 8 of the
-   button's padding outside it, and 8 px under 600 px wide */
+/* where a header row's arrow is: 13 px in, the row's 24 less the 11 of
+   the button's padding and the arrow's margin outside it, and 5 px under
+   600 px wide */
 .pk-about > .pk-back {
   position: absolute;
   top: 15px;
-  left: 16px;
+  left: 13px;
   z-index: 1;
 }
 .pk-about-text {
@@ -1893,10 +1922,12 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
   border-radius: var(--radius-ui);
   background: var(--sunk);
 }
-/* each choice's words on one line: Find beside them gives way first */
+/* each choice's words on one line: Find beside them gives way first. 32
+   tall with the track, as Find beside them and every button are: at 30 its
+   middle sat 1 px above Find's (the layout audit, 2026-11-01) */
 .pk-view {
   border: 0;
-  padding: 5px 10px;
+  padding: 6px 10px;
   border-radius: var(--radius-sm);
   background: none;
   color: var(--ink-muted);
@@ -2107,13 +2138,16 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
     padding: 24px 20px 28px;
   }
   .pk-about > .pk-back {
-    left: 8px;
+    left: 5px;
   }
 }
 /* and the work's, by its own width, which is the window's in one column */
 @container (max-width: 599px) {
   .pk-head {
     padding: 15px 16px;
+  }
+  .pk-head-name {
+    padding: 1px 16px 15px;
   }
   .pk-strip-wrap {
     padding: 0 16px;
@@ -2205,21 +2239,12 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
   flex-basis: 280px;
   min-width: 190px;
 }
-/* folded to its icon where the header has no room for it, under 860 px of
-   the work, and opened by a click or the shortcut; on the views line, a
-   field */
-@container (max-width: 859px) {
-  .pk-head .pk-find:not(:focus-within):not(.has-query) {
-    flex: none;
-    width: 32px;
-    min-width: 32px;
-    padding: 0 8px;
-  }
-  .pk-head .pk-find:not(:focus-within):not(.has-query) :is(input, .pk-kbd) {
-    width: 0;
-    opacity: 0;
-  }
-}
+/* a field that says "Find" wherever it is: the header keeps it only with
+   room for the field and 160 of the name (app.js, placeFind), else it goes
+   beside the views. Folded to its icon under 860 px of the work, it was an
+   icon alone in the header at the window's default 680 on Windows and
+   Linux, where a reader might not see that the transcript can be searched
+   (Peter, 2026-10-31; the layout audit, 2026-11-01) */
 
 /* ------------------------------------------------------------------ menus -- */
 .pk-menu {
