@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
@@ -74,6 +75,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -239,7 +241,12 @@ fun PkButton(
     }
 }
 
-/** A button of an icon alone, its words for a reader and a long press. */
+/**
+ * A button of an icon alone, its words for a reader and a long press: 40 dp
+ * square, and as big as a PkButton's words make it beside it at a larger
+ * text size, their 14 sp line and 6 dp above and below: at twice the text
+ * size Copy stayed 40 beside Share's 48.5 (2026-11-01).
+ */
 @Composable
 fun IconBtn(
     icon: ImageVector,
@@ -250,11 +257,12 @@ fun IconBtn(
     enabled: Boolean = true,
 ) {
     val p = pk
+    val side = maxOf(40.dp, with(LocalDensity.current) { 14.sp.toDp() } * 1.4f + 12.dp)
     Box(
         modifier
             .alpha(if (enabled) 1f else 0.45f)
             .control(Corner, if (kind == Kind.Ghost) Color.Transparent else p.sunk, enabled = enabled, label = label, onClick = onClick)
-            .size(40.dp),
+            .size(side),
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, null, tint = p.ink, modifier = Modifier.size(18.dp))
@@ -302,8 +310,11 @@ fun Spinner(modifier: Modifier = Modifier) {
 
 /**
  * Two choices in a sunk track, the one chosen raised to the ground with an
- * ink-muted edge (app.css, .pk-views): 8 dp above and below the words to
- * the desktop's 5, for a finger, as PkButton is 40 dp to its 32. Side by
+ * ink-muted edge (app.css, .pk-views): 10 dp above and below the words to
+ * the desktop's 5, for a finger, which makes the track 40 dp, as tall as
+ * the field and the buttons it lines up with: at 8 it was 36, centred in
+ * the views line's 40, and its gaps to the strip and the rows were 17.8 dp
+ * to the screen's 16 (2026-11-01). Side by
  * side where both fit whole, else one under the other, as wide as the
  * wider. In en-XA at 1.3 times the text size on a 360 dp phone the two
  * want about 290 dp and have 272 beside the glass (Views), so they stack;
@@ -325,7 +336,7 @@ fun Switch2(first: String, second: String, onSecond: Boolean, onChange: (Boolean
                     modifier = Modifier
                         .then(if (on) Modifier.border(1.dp, p.inkMuted, CornerSm) else Modifier)
                         .control(CornerSm, if (on) p.ground else Color.Transparent, role = Role.RadioButton) { onChange(second2) }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
                 )
             }
         },
@@ -394,9 +405,14 @@ fun Beside(
             }
         } else {
             val wp = w.measure(c.copy(minWidth = 0, minHeight = 0))
-            val under = wp.height + 8.dp.roundToPx()
+            // the words keep the line the control would have given them, in
+            // its middle, as beside it: the side's wordmark, alone on its
+            // line at twice the text size, sat 7 dp above the work header's
+            // line beside it (2026-11-01)
+            val line = maxOf(wp.height, kp.height)
+            val under = line + 8.dp.roundToPx()
             layout(c.maxWidth, under + kp.height) {
-                wp.place(0, 0)
+                wp.place(0, (line - wp.height) / 2)
                 kp.place(c.maxWidth - kp.width, under)
             }
         }
@@ -475,7 +491,9 @@ fun Confirm(title: String, text: String, yes: String, onYes: () -> Unit, onCance
                 .floating()
                 .padding(24.dp),
         ) {
-            Text(title, style = Type.ui, color = p.ink)
+            // balanced: at twice the text size a phone's 352 dp box left
+            // "model?" alone under "Delete the English" (2026-11-01)
+            Text(title, style = Type.ui.copy(lineBreak = LineBreak.Heading), color = p.ink)
             Text(text, style = Type.ui.copy(fontWeight = FontWeight.W400), color = p.ink, modifier = Modifier.padding(top = 8.dp))
             Row(
                 Modifier.fillMaxWidth().padding(top = 24.dp),
@@ -543,6 +561,8 @@ fun Menu(expanded: Boolean, onDismiss: () -> Unit, gap: Dp = 6.dp, wide: Boolean
  * chosen of a menu's choices (selected, not null for a choice). A file too
  * long for the menu gives up its middle, which keeps its extension: from
  * 1.5 times the text size, Share's five files had lost theirs on a phone.
+ * At least 48 dp tall, Android's least for a finger, as Material's menu
+ * items are: an item of one line was 35 to 40 (2026-11-01).
  */
 @Composable
 fun Item(
@@ -555,6 +575,7 @@ fun Item(
             .control(CornerSm, role = if (selected != null) Role.RadioButton else Role.Button, onClick = onClick)
             .then(if (selected != null) Modifier.semantics { this.selected = selected } else Modifier)
             .fillMaxWidth()
+            .heightIn(min = 48.dp)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -624,6 +645,9 @@ fun Check(text: String, checked: Boolean, onChange: (Boolean) -> Unit) {
         Modifier
             .control(CornerSm, role = Role.Checkbox) { onChange(!checked) }
             .fillMaxWidth()
+            // 48 dp at the least, as Item, its box still on its words' first line
+            .heightIn(min = 48.dp)
+            .wrapContentHeight()
             .padding(horizontal = 10.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {

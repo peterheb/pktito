@@ -67,6 +67,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.Constraints
@@ -322,6 +323,9 @@ private fun Privacy(onLink: (String) -> Unit, modifier: Modifier) {
     val heading = TextStyle(
         fontFamily = Fonts.sans, fontWeight = FontWeight.W700, fontSize = 17.sp, lineHeight = 1.3.em,
         lineHeightStyle = CssLine, letterSpacing = (-0.005).em,
+        // balanced: at twice the text size a phone left "internet" alone
+        // under "What reaches the" (2026-11-01)
+        lineBreak = LineBreak.Heading,
     )
     val para = @Composable { s: AnnotatedString -> Words(s, sheetText, p.ink, Modifier.widthIn(max = 560.dp).padding(bottom = 12.dp)) }
     val h3 = @Composable { s: String -> Text(s, style = heading, color = p.ink, modifier = Modifier.padding(top = 16.dp, bottom = 6.dp)) }

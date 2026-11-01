@@ -90,6 +90,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
@@ -209,7 +210,9 @@ private fun Drop(a: ReadyActions, modifier: Modifier) {
     ) {
         Text(
             stringResource(R.string.ready_lead),
-            style = Type.lead.copy(fontSize = 22.sp),
+            // balanced, as the desktop's (app.css, .pk-lead): at twice the
+            // text size a phone left "video" alone on the second line
+            style = Type.lead.copy(fontSize = 22.sp, lineBreak = LineBreak.Heading),
             color = p.ink,
             textAlign = TextAlign.Center,
         )
@@ -248,10 +251,16 @@ fun Side(recent: List<Recents.Item>, a: ReadyActions, open: Opened?, model: @Com
                 .fillMaxHeight()
                 // its edge, the desktop's border-right
                 .drawBehind { drawRect(p.sunk, Offset(size.width - 1.dp.toPx(), 0f), Size(1.dp.toPx(), size.height)) }
-                .padding(start = 20.dp, top = 20.dp, end = 16.dp, bottom = 16.dp),
+                // its top row on the work's header's line, the model menu's
+                // 40 in the middle of the header's 62, and Choose with the
+                // strip's top, 2 more under the row (the header's 11 and the
+                // strip's 5): at 20 the row sat 9 lower than the header's
+                // and Choose 7 lower than the strip (Peter, on the iPad's,
+                // 2026-11-01; app.css, the side)
+                .padding(start = 20.dp, top = 11.dp, end = 16.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            TopRow(a, model)
+            TopRow(a, model, Modifier.padding(bottom = 2.dp))
             if (open != null) PkButton(stringResource(R.string.choose), a.choose, Modifier.fillMaxWidth(), enabled = !running)
             if (recent.isNotEmpty() || live != null)
                 Recent(recent, a, onClear = { asking = true }, scrolls = true, Modifier.weight(1f), top = 4.dp, open = open?.id, live = live, enabled = !running)
