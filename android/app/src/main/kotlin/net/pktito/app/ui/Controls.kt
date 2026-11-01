@@ -346,14 +346,20 @@ fun Switch2(first: String, second: String, onSecond: Boolean, onChange: (Boolean
 }
 
 /**
- * The least that words keep beside the control they go with before it
- * moves under them (Beside, the work screen's header): 160 dp at the
- * default text size, the three apps' floor (2026-10-31), scaled as the
- * app's 14 sp text is, so that it holds as many letters at any size: 2.0
- * times the text size makes 14 sp 26 dp, and this 297.
+ * A width for words, set at the default text size, grown as the app's 14 sp
+ * text is at the system's, so that it holds as many letters at any size:
+ * 2.0 times the text size makes 14 sp 26 dp, and 160 dp 297.
  */
 @Composable
-fun wordsFloor(): Dp = with(LocalDensity.current) { 14.sp.toDp() } * (160f / 14f)
+fun Dp.withText(): Dp = this * with(LocalDensity.current) { 14.sp.toDp() / 14.dp }
+
+/**
+ * The least that words keep beside the control they go with before it
+ * moves under them (Beside, the work screen's header): 160 dp at the
+ * default text size, the three apps' floor (2026-10-31), withText.
+ */
+@Composable
+fun wordsFloor(): Dp = 160.dp.withText()
 
 /**
  * Words and the control they go with on one line, the control at its end,

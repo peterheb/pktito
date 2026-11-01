@@ -271,7 +271,7 @@ fun Side(recent: List<Recents.Item>, a: ReadyActions, open: Opened?, model: @Com
  * Delete from the keyboard, which goes on to the row that takes its place
  * (app.js, renderReady and forget). Each row is a line where that leaves
  * its name 250 dp, as the desktop's narrowest window's list, 440 wide (480
- * less its margins), leaves it, scaled as the words are (wordsFloor),
+ * less its margins), leaves it, grown with the text (withText),
  * beside the list's widest length and date; on a phone, narrower, its
  * length and date go under its name, which keeps the width. On an open
  * fold, 673 dp, a row keeps its line through 1.5 times the text size, the
@@ -302,7 +302,7 @@ private fun Recent(
             }?.toDp() ?: 0.dp
         }
     }
-    val least = with(density) { 14.sp.toDp() } * (250f / 14f)
+    val least = 250.dp.withText()
     val now by rememberUpdatedState(items)
     var refocus by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(refocus) {
@@ -736,7 +736,7 @@ private fun Head(back: (@Composable () -> Unit)?, name: @Composable () -> Unit, 
  * and .pk-find): alone at the line's far end, a reader might not see that
  * the transcript can be searched (Peter, 2026-10-31). Its field, which
  * says Find, where that fits beside them, the desktop's 200 dp and 280 with
- * a search in it, scaled as the words are (wordsFloor): at twice the text
+ * a search in it, grown with the text (withText): at twice the text
  * size a tablet's 280 left "rabbit" 53 dp and scrolled its first letter
  * out (2026-10-31). Else the glass, which opens the field across the line
  * until the search is let go, as a phone's find in page does. The views
@@ -749,12 +749,13 @@ private fun Views(captions: Boolean, setCaptions: (Boolean) -> Unit, find: Finde
     val second = stringResource(R.string.captions)
     val label = stringResource(R.string.find_label)
     val opened = find.open || find.query.isNotBlank()
+    val width = (if (find.query.isNotBlank()) 280.dp else 200.dp).withText()
     SubcomposeLayout(modifier.fillMaxWidth()) { c ->
         val gap = 12.dp.roundToPx()
         val loose = c.copy(minWidth = 0, minHeight = 0)
         val v = subcompose("views") { Switch2(first, second, captions, setCaptions) }
             .first().measure(loose.copy(maxWidth = c.maxWidth - gap - 40.dp.roundToPx()))
-        val field = ((if (find.query.isNotBlank()) 280.dp else 200.dp) * (14.sp.toDp() / 14.dp)).roundToPx()
+        val field = width.roundToPx()
         val beside = v.width + gap + field <= c.maxWidth
         // one field at either width, which keeps the keys when a search
         // makes it too wide to stay beside the views
