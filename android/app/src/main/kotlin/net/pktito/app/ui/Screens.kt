@@ -126,8 +126,9 @@ class ReadyActions(
  * which says where a file goes. A phone has nothing to drop, so the zone
  * says what it is for. The wordmark opens About. With transcripts on the
  * recent list, the column is the screen's height and the list takes what
- * is left under the zone (app.css, .has-recent); without, the column is in
- * the middle. Where the top row and the zone, as tall as their words make
+ * is left under the zone (app.css, .has-recent); without, the top row and
+ * the zone have their middle in the window's, as iOS's and the desktop's
+ * (.pk-ready). Where the top row and the zone, as tall as their words make
  * them, leave the list under 160 dp, the screen scrolls as a whole, the
  * list with it: the desktop's window is never that short, but a split
  * screen is, and a phone on its side at any text size. The emulator's
@@ -165,8 +166,12 @@ fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> 
                 // list's own 8; its top row on the work header's line, 11
                 // down round its 40 as the side's, and 16 under the list
                 // (app.css, .pk-ready): they were 20 in, steps of 22, and
-                // 20 above and below (the layout audit, 2026-11-01)
-                .padding(start = edge, end = edge, top = 11.dp, bottom = 16.dp),
+                // 20 above and below (the layout audit, 2026-11-01). With
+                // nothing on the list, the column in the window's middle, 16
+                // above and below, so that the top row and the zone have
+                // their middle there: at 11 above they stood 2.6 dp over it
+                // on a phone
+                .padding(start = edge, end = edge, top = if (listed) 11.dp else 16.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             TopRow(a, model, Modifier.onSizeChanged { top = it.height })
