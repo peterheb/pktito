@@ -4,17 +4,17 @@ import SwiftUI
 /// model in use, its menu.
 private struct TopRow: View {
     var body: some View {
-        // the model under the wordmark where a large text size leaves no
-        // room for the two on a line
+        // the model menu under the wordmark, at the end, where the two
+        // don't fit on a line
         ViewThatFits(in: .horizontal) {
             HStack {
                 WordmarkButton()
                 Spacer()
                 ModelMenu()
             }
-            VStack(alignment: .leading, spacing: 8) {
-                WordmarkButton()
-                ModelMenu().padding(.leading, -12)
+            VStack(alignment: .trailing, spacing: 8) {
+                WordmarkButton().frame(maxWidth: .infinity, alignment: .leading)
+                ModelMenu()
             }
         }
     }
@@ -49,17 +49,26 @@ struct Drop: View {
 /// transcripts on the recent list the list under it; without, the column
 /// in the middle.
 struct Ready: View {
-    @Environment(\.dynamicTypeSize) private var type
+    /// the top row and the zone, as tall as their text size and language make them
+    @State private var zone: CGFloat = 330
 
     var body: some View {
         let listed = !Recents.shared.items.isEmpty
         GeometryReader { g in
-            // a short window, or text at an accessibility size, scrolls the
-            // column whole, the list in it, not squeezed into what is left
-            let short = g.size.height < 480 || type.isAccessibilitySize
+            // where the window, less the top row and the zone, leaves the list
+            // less than three rows and its heading, the column scrolls whole,
+            // the list in it, rather than being squeezed into what is left
+            // (Android's Ready: the zone's 330 and 150 under it)
+            let short = g.size.height < zone + 40 + 150
             let column = VStack(spacing: 22) {
-                TopRow()
-                Drop()
+                // its whole height always, so that it is measured true and the
+                // list is what gives way
+                VStack(spacing: 22) {
+                    TopRow()
+                    Drop()
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { zone = $0 }
                 if listed { RecentList(scrolls: !short) }
             }
             .frame(maxWidth: 640)

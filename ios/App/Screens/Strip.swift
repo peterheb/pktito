@@ -89,8 +89,8 @@ struct Strip: View {
                     .font(tstamp)
                     .foregroundStyle(Pk.termInk)
                 } else {
-                    // the length under the time where a large text size
-                    // leaves no room for the two on a line
+                    // the length under the time where the two don't fit on a
+                    // line, still at the end: they name the waveform's ends
                     let time = Group {
                         if review {
                             TimeMenu(text: AppState.shared.base.with(duration: duration, video: t.fps)
@@ -110,9 +110,10 @@ struct Strip: View {
                             Spacer(minLength: 12)
                             length
                         }
+                        // the length still at the end, under the waveform's end
                         VStack(alignment: .leading, spacing: 4) {
                             time
-                            length
+                            length.frame(maxWidth: .infinity, alignment: .trailing)
                         }
                     }
                 }
@@ -219,6 +220,13 @@ private struct Ticks: View {
 /// (app.css, .pk-prog).
 private struct Ring: View {
     let done: Double
+    @ScaledMetric(relativeTo: .caption2) private var label: CGFloat = 11
+
+    /// the size at which "100%" fills the ring's 42 inside, 3 clear each side
+    private static let full: CGFloat = {
+        let font = UIFont(name: PkType.figure.face, size: 11) ?? .systemFont(ofSize: 11)
+        return 11 * 36 / ("100%" as NSString).size(withAttributes: [.font: font]).width
+    }()
 
     var body: some View {
         let d = min(max(done, 0), 1)
@@ -229,10 +237,10 @@ private struct Ring: View {
                                               .init(color: .clear, location: d), .init(color: .clear, location: 1)],
                                       center: .center, startAngle: .degrees(-90), endAngle: .degrees(270)))
             RoundedRectangle(cornerRadius: Radius.radiusUi - 3).fill(Pk.term).padding(3)
-            // the ring's own label, its size the ring's, which a larger
-            // text size would overflow
+            // the ring's own label, growing with the text size until "100%"
+            // fills the ring, which it never outgrows (as Android's)
             Text(verbatim: "\(percent(d))%")
-                .font(.custom(PkType.figure.face, fixedSize: 11))
+                .font(.custom(PkType.figure.face, fixedSize: min(label, Ring.full)))
                 .monospacedDigit()
                 .foregroundStyle(Pk.termInk)
         }

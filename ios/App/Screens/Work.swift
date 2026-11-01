@@ -111,26 +111,31 @@ private struct Header: View {
     let review: Bool
     /// whether there are rows to copy and share
     let shown: Bool
+    /// what the name keeps beside the buttons before it goes under them:
+    /// 160 at the default text size, about twenty characters, and as many
+    /// at any other
+    @ScaledMetric(relativeTo: .subheadline) private var floor: CGFloat = 160
 
     var body: some View {
         let t = Transcriber.shared
-        // the buttons on a line of their own under the name where a large
-        // text size leaves the name too little of one line, under 160
+        // where the name would keep under its floor beside the buttons, the way
+        // back and the buttons keep the bar's line and the name goes under
+        // them, as a large title does on both platforms (agreed with
+        // Android's app, 2026-10-31)
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 8) {
                 back
-                name.frame(minWidth: 160, idealWidth: 160, maxWidth: .infinity, alignment: .leading)
+                name.frame(minWidth: floor, idealWidth: floor, maxWidth: .infinity, alignment: .leading)
                 buttons
             }
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
                     back
-                    name
-                }
-                HStack(spacing: 8) {
                     Spacer(minLength: 0)
                     buttons
                 }
+                // on the cards' edge, 16 in
+                name.padding(.leading, Transcriber.shared.running ? 0 : 14)
             }
         }
         .padding(.leading, t.running ? 16 : 2)

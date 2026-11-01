@@ -34,6 +34,10 @@ struct Manage: View {
     @State private var asking: String?
     /// what the rows take, for the sheet to be as tall as they are
     @State private var tall: CGFloat = 320
+    /// what a row's words keep beside its button before it goes under them
+    /// (the header's floor): 160 at the default text size, about twenty
+    /// characters, and as many at any other
+    @ScaledMetric(relativeTo: .subheadline) private var floor: CGFloat = 160
 
     var body: some View {
         let s = AppState.shared
@@ -107,18 +111,18 @@ struct Manage: View {
         }
     }
 
-    /// A row's words and its button side by side, or the button under them
-    /// where the words would keep less than 160 beside it, the header's
-    /// floor (Work.swift).
+    /// A row's words and its button side by side, the words wrapping beside
+    /// it, or the button under them, at the end, where the words would keep
+    /// less than their floor beside it.
     private func fitting<Words: View, Button: View>(@ViewBuilder _ words: () -> Words,
                                                      @ViewBuilder button: () -> Button) -> some View {
         let w = words(), b = button()
         return ViewThatFits(in: .horizontal) {
             HStack(spacing: 16) {
-                w.frame(minWidth: 160, idealWidth: 160, maxWidth: .infinity, alignment: .leading)
+                w.frame(minWidth: floor, idealWidth: floor, maxWidth: .infinity, alignment: .leading)
                 b.fixedSize()
             }
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .trailing, spacing: 8) {
                 w.frame(maxWidth: .infinity, alignment: .leading)
                 b
             }
