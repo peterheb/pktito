@@ -87,7 +87,9 @@ private class Kept(
  * In a window of Material's compact width (compact: under 600 dp, a phone's
  * as the screen's root measures it, MainActivity), Android's sheet from the
  * screen's foot, where the thumb is; in a wider one, a dialog in its
- * middle, as the desktop's. While a
+ * middle, as the desktop's, 440 dp wide grown with the text (withText) to
+ * the window's margins: at twice the text size on a tablet, 440 put Delete
+ * and Close under their words (2026-10-31). While a
  * transcription runs, the model in use and the one it loaded, if another
  * was chosen since, keep their Delete dimmed: the second is mapped under
  * the transcription (Models.delete), the first will be the next one's.
@@ -186,7 +188,7 @@ fun Manage(
         }
     else
         Modal(a.close) {
-            Box(Modifier.widthIn(max = 440.dp).fillMaxWidth().floating()) { panel(24.dp) }
+            Box(Modifier.widthIn(max = 440.dp.withText()).fillMaxWidth().floating()) { panel(24.dp) }
             toast?.let { Toast(it, Modifier.align(Alignment.BottomCenter)) }
         }
     // keyed on the rows alone, so a question put away (Cancel, Esc) leaves

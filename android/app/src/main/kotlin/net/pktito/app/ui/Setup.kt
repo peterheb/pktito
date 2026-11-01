@@ -63,6 +63,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
@@ -155,7 +156,11 @@ private fun Screen(top: @Composable ColumnScope.() -> Unit, foot: @Composable Co
 @Composable
 private fun Intro(title: String, text: String? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, style = Type.lead, color = pk.ink, modifier = Modifier.semantics { heading() })
+        // balanced, as the desktop's lead is (app.css, .pk-lead, text-wrap:
+        // balance): a phone left "model" alone on the second line of
+        // "Downloading the English model", and of "Choose a speech model" at
+        // twice the text size (2026-11-01)
+        Text(title, style = Type.lead.copy(lineBreak = LineBreak.Heading), color = pk.ink, modifier = Modifier.semantics { heading() })
         if (text != null) Text(text, style = Text15, color = pk.ink)
     }
 }
@@ -575,7 +580,7 @@ fun ModelButton(offers: List<Offer>, model: String?, own: String?, onPick: (Offe
     val check = @Composable { Icon(Icons.check, null, tint = p.ink, modifier = Modifier.size(16.dp)) }
     Box {
         // its words to the column's edge, as the desktop's (#ready-model)
-        PkButton(label, { open = true }, Modifier.offset(x = 12.dp), kind = Kind.Ghost, trailing = Icons.down, file = own != null)
+        PkButton(label, { open = true }, Modifier.offset(x = 12.dp), kind = Kind.Ghost, trailing = Icons.down, file = own != null, held = open)
         Menu(open, { open = false }) {
             for (o in offers) {
                 val on = own == null && o.name == model

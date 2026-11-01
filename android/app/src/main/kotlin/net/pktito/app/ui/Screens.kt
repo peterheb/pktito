@@ -18,10 +18,12 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,6 +31,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.selection.SelectionState
@@ -47,6 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +62,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -84,6 +90,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
@@ -96,6 +103,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import net.pktito.app.R
 import net.pktito.app.Recents
 import net.pktito.app.Seg
@@ -201,7 +210,9 @@ private fun Drop(a: ReadyActions, modifier: Modifier) {
     ) {
         Text(
             stringResource(R.string.ready_lead),
-            style = Type.lead.copy(fontSize = 22.sp),
+            // balanced, as the desktop's (app.css, .pk-lead): at twice the
+            // text size a phone left "video" alone on the second line
+            style = Type.lead.copy(fontSize = 22.sp, lineBreak = LineBreak.Heading),
             color = p.ink,
             textAlign = TextAlign.Center,
         )
@@ -240,10 +251,16 @@ fun Side(recent: List<Recents.Item>, a: ReadyActions, open: Opened?, model: @Com
                 .fillMaxHeight()
                 // its edge, the desktop's border-right
                 .drawBehind { drawRect(p.sunk, Offset(size.width - 1.dp.toPx(), 0f), Size(1.dp.toPx(), size.height)) }
-                .padding(start = 20.dp, top = 20.dp, end = 16.dp, bottom = 16.dp),
+                // its top row on the work's header's line, the model menu's
+                // 40 in the middle of the header's 62, and Choose with the
+                // strip's top, 2 more under the row (the header's 11 and the
+                // strip's 5): at 20 the row sat 9 lower than the header's
+                // and Choose 7 lower than the strip (Peter, on the iPad's,
+                // 2026-11-01; app.css, the side)
+                .padding(start = 20.dp, top = 11.dp, end = 16.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            TopRow(a, model)
+            TopRow(a, model, Modifier.padding(bottom = 2.dp))
             if (open != null) PkButton(stringResource(R.string.choose), a.choose, Modifier.fillMaxWidth(), enabled = !running)
             if (recent.isNotEmpty() || live != null)
                 Recent(recent, a, onClear = { asking = true }, scrolls = true, Modifier.weight(1f), top = 4.dp, open = open?.id, live = live, enabled = !running)
@@ -271,7 +288,7 @@ fun Side(recent: List<Recents.Item>, a: ReadyActions, open: Opened?, model: @Com
  * Delete from the keyboard, which goes on to the row that takes its place
  * (app.js, renderReady and forget). Each row is a line where that leaves
  * its name 250 dp, as the desktop's narrowest window's list, 440 wide (480
- * less its margins), leaves it, scaled as the words are (wordsFloor),
+ * less its margins), leaves it, grown with the text (withText),
  * beside the list's widest length and date; on a phone, narrower, its
  * length and date go under its name, which keeps the width. On an open
  * fold, 673 dp, a row keeps its line through 1.5 times the text size, the
@@ -302,7 +319,7 @@ private fun Recent(
             }?.toDp() ?: 0.dp
         }
     }
-    val least = with(density) { 14.sp.toDp() } * (250f / 14f)
+    val least = 250.dp.withText()
     val now by rememberUpdatedState(items)
     var refocus by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(refocus) {
@@ -395,7 +412,7 @@ private fun RecentRow(
             Modifier
                 .focusRequester(focus)
                 .control(
-                    Corner, if (current) p.surface else Color.Transparent, enabled = enabled,
+                    Corner, if (current) p.surface else Color.Transparent, enabled = enabled, held = menu,
                     onLongClick = { menu = true }, onClick = { if (!current) onOpen() },
                 )
                 .then(if (current) Modifier.semantics { selected = true } else Modifier)
@@ -554,7 +571,20 @@ val FORMATS = listOf(
  * header with the way back, the name, and what can be done with it (at
  * work only Stop; Copy and Share once it is done), the strip, the
  * choice of sentences or captions, a line for what went wrong, and the rows.
+ * While the keyboard is up for Find and leaves the rows under the floor
+ * (160 dp withText) below the header, the strip and the views line as they
+ * were last shown, those make room for it: the field takes the top line and
+ * the rows the rest, as a phone's find in page takes its top; the keyboard
+ * put away, or the search closed, they come back (the three apps, Peter,
+ * 2026-11-01). On its side the emulator's Pixel 5 has 120 dp above the
+ * keyboard, where the three took 235 and left the field out of sight and
+ * the transcript not a row; upright, 499 leave the rows 250 at the default
+ * text size, and at twice it 164, under the floor's 297. The emulator's
+ * 1280 by 800 dp tablet makes room too on its side, at the default text
+ * size: 408 dp above the keyboard, where the three as shown leave the rows
+ * 152; upright, at twice the text size, it keeps 598 dp of rows.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun Work(
     name: String,
@@ -586,12 +616,23 @@ fun Work(
     val base = chosen.copy(duration = duration)
     val running = step == "loading" || step == "reading" || step == "transcribing"
     val review = step == "done" || step == "stopped"
-    Column(Modifier.fillMaxSize()) {
+    // the header's, the strip's and the views line's heights as last shown,
+    // which making room is measured by, so that their going cannot undo it
+    var head by remember { mutableIntStateOf(0) }
+    var strip by remember { mutableIntStateOf(0) }
+    var line by remember { mutableIntStateOf(0) }
+    // the screen's height, the keyboard's taken from it
+    var tall by remember { mutableIntStateOf(0) }
+    val floor = 160.dp.withText()
+    // what the three leave the rows, less the rows' 16 dp above them
+    val makeRoom = WindowInsets.isImeVisible && find.typing && review && rows.isNotEmpty() && tall > 0 &&
+        with(LocalDensity.current) { (tall - head - strip - line).toDp() } - 16.dp < floor
+    Column(Modifier.fillMaxSize().onSizeChanged { tall = it.height }) {
         // the header's buttons in the middle of its 62 dp (app.css, .pk-head),
         // the way back's arrow on the cards' line, 16 dp from the screen's
         // edge, its button's padding outside it: the arrow's ink is 14 dp into
         // its 40 (11 to the 18 dp icon, and 3 in that), so the button is at 2
-        Head(
+        if (!makeRoom) Head(
             back = if (running) null else ({ IconBtn(Icons.back, stringResource(R.string.back), a.back, kind = Kind.Ghost) }),
             name = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -601,6 +642,7 @@ fun Work(
                 }
             },
             modifier = Modifier
+                .onSizeChanged { head = it.height }
                 .fillMaxWidth()
                 .heightIn(min = 62.dp)
                 .padding(start = if (running) 16.dp else 2.dp, end = 16.dp, top = 11.dp, bottom = 11.dp),
@@ -612,7 +654,7 @@ fun Work(
                 ShareAs(name, times, a)
             }
         }
-        if (step != "error")
+        if (step != "error" && !makeRoom)
             Strip(
                 peaks = peaks,
                 review = review,
@@ -645,15 +687,15 @@ fun Work(
                 },
                 // 16 under the header's buttons, the one gap between the
                 // screen's blocks (Peter, 2026-10-27): their 11 and 5
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 5.dp),
+                modifier = Modifier.onSizeChanged { strip = it.height }.padding(start = 16.dp, end = 16.dp, top = 5.dp),
                 why = why,
                 locate = locate,
             )
         if (review && rows.isNotEmpty())
             // a step while it plays takes the playhead to its match (Finder.step)
             Views(
-                captions, a.setCaptions, find, hits, if (playing) ({ t: Double -> a.seek(t, false) }) else null,
-                Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
+                captions, a.setCaptions, find, hits, if (playing) ({ t: Double -> a.seek(t, false) }) else null, makeRoom,
+                Modifier.onSizeChanged { if (!makeRoom) line = it.height }.padding(start = 16.dp, end = 16.dp, top = 16.dp),
             )
         val msg = when {
             error != null -> error
@@ -661,7 +703,7 @@ fun Work(
             step == "done" && rows.isEmpty() -> stringResource(R.string.no_speech)
             else -> null
         }
-        if (msg != null)
+        if (msg != null && !makeRoom)
             Row(
                 Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -671,7 +713,7 @@ fun Work(
                 if (bad) Icon(Icons.alert, null, tint = p.err, modifier = Modifier.size(16.dp))
                 Text(msg, style = Type.body.copy(fontSize = 15.sp), color = if (bad) p.err else p.inkMuted)
             }
-        Rows(rows, review, captions, playing, position, stats, base, hits, find.at, list, a, Modifier.weight(1f))
+        Rows(rows, review, captions, playing, position, stats, base, hits, find.at, find.shown, list, a, Modifier.weight(1f))
     }
 }
 
@@ -736,34 +778,38 @@ private fun Head(back: (@Composable () -> Unit)?, name: @Composable () -> Unit, 
  * and .pk-find): alone at the line's far end, a reader might not see that
  * the transcript can be searched (Peter, 2026-10-31). Its field, which
  * says Find, where that fits beside them, the desktop's 200 dp and 280 with
- * a search in it, scaled as the words are (wordsFloor): at twice the text
+ * a search in it, grown with the text (withText): at twice the text
  * size a tablet's 280 left "rabbit" 53 dp and scrolled its first letter
  * out (2026-10-31). Else the glass, which opens the field across the line
  * until the search is let go, as a phone's find in page does. The views
  * have what the glass leaves them, stacked where that is too little for
- * the two side by side (Switch2).
+ * the two side by side (Switch2). Alone, while the header and the strip
+ * make room for the keyboard (Work): the field by itself across the line,
+ * the same field as beside the views, so that it keeps the keys and the
+ * keyboard stays up as it moves.
  */
 @Composable
-private fun Views(captions: Boolean, setCaptions: (Boolean) -> Unit, find: Finder, hits: List<Hit>, seek: ((Double) -> Unit)?, modifier: Modifier) {
+private fun Views(captions: Boolean, setCaptions: (Boolean) -> Unit, find: Finder, hits: List<Hit>, seek: ((Double) -> Unit)?, alone: Boolean, modifier: Modifier) {
     val first = stringResource(R.string.sentences)
     val second = stringResource(R.string.captions)
     val label = stringResource(R.string.find_label)
     val opened = find.open || find.query.isNotBlank()
+    val width = (if (find.query.isNotBlank()) 280.dp else 200.dp).withText()
     SubcomposeLayout(modifier.fillMaxWidth()) { c ->
         val gap = 12.dp.roundToPx()
         val loose = c.copy(minWidth = 0, minHeight = 0)
         val v = subcompose("views") { Switch2(first, second, captions, setCaptions) }
             .first().measure(loose.copy(maxWidth = c.maxWidth - gap - 40.dp.roundToPx()))
-        val field = ((if (find.query.isNotBlank()) 280.dp else 200.dp) * (14.sp.toDp() / 14.dp)).roundToPx()
-        val beside = v.width + gap + field <= c.maxWidth
+        val field = width.roundToPx()
+        val beside = !alone && v.width + gap + field <= c.maxWidth
         // one field at either width, which keeps the keys when a search
-        // makes it too wide to stay beside the views
-        val f = if (beside || opened) {
+        // makes it too wide to stay beside the views, or the keyboard needs the room
+        val f = if (beside || opened || alone) {
             val w = if (beside) field else c.maxWidth
             subcompose("field") { FindField(find, hits, seek, find::clear) }.first().measure(loose.copy(minWidth = w, maxWidth = w))
         } else
             subcompose("glass") { IconBtn(Icons.search, label, find::focus, kind = Kind.Ghost) }.first().measure(loose)
-        val views = beside || !opened
+        val views = beside || !(opened || alone)
         val h = maxOf(if (views) v.height else 0, f.height)
         layout(c.maxWidth, h) {
             if (views) v.place(0, (h - v.height) / 2)
@@ -786,7 +832,7 @@ private fun ShareAs(name: String, times: Boolean, a: WorkActions) {
     var open by remember { mutableStateOf(false) }
     val stem = name.substringBeforeLast('.').ifEmpty { name }
     Box {
-        PkButton(stringResource(R.string.share), { open = true }, kind = Kind.Primary, trailing = Icons.down)
+        PkButton(stringResource(R.string.share), { open = true }, kind = Kind.Primary, trailing = Icons.down, held = open)
         Menu(open, { open = false }) {
             for (f in FORMATS)
                 Item(stringResource(if (times) f.withTimes else f.label), "$stem.${f.ext}") {
@@ -820,6 +866,7 @@ private fun Rows(
     base: Timebase,
     hits: List<Hit>,
     at: Int,
+    shown: Int,
     list: LazyListState,
     a: WorkActions,
     modifier: Modifier,
@@ -849,7 +896,7 @@ private fun Rows(
                 itemsIndexed(rows) { i, s ->
                     val now = i == current
                     val word = if (now) s.words.indexOfLast { it.start <= position + 1e-3 } else -1
-                    SegRow(s, now, word, marks[i], at, column, captions, review, base, selection) { a.seek(s.start, true) }
+                    SegRow(s, now, word, marks[i], at, shown, column, captions, review, base, selection) { a.seek(s.start, true) }
                 }
                 if (stats != null)
                     item {
@@ -868,7 +915,7 @@ private fun Rows(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SegRow(
-    s: Seg, now: Boolean, word: Int, marks: List<IndexedValue<Hit>>?, at: Int, column: Dp?, cue: Boolean, review: Boolean,
+    s: Seg, now: Boolean, word: Int, marks: List<IndexedValue<Hit>>?, at: Int, shown: Int, column: Dp?, cue: Boolean, review: Boolean,
     base: Timebase, selection: SelectionState, onTime: () -> Unit,
 ) {
     val p = pk
@@ -936,12 +983,12 @@ private fun SegRow(
         Row(box.padding(horizontal = 16.dp, vertical = 8.dp)) {
             time(Modifier.width(column).alignByBaseline())
             Spacer(Modifier.width(12.dp))
-            Sentence(s, word, marks, at, Modifier.weight(1f).alignByBaseline())
+            Sentence(s, word, marks, at, shown, Modifier.weight(1f).alignByBaseline())
         }
     else
         Column(box.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             time(Modifier)
-            Sentence(s, word, marks, at, Modifier)
+            Sentence(s, word, marks, at, shown, Modifier)
         }
 }
 
@@ -951,10 +998,14 @@ private fun SegRow(
  * (app.css, .pk-hit): each on plume mixed 45% into the ground, as tall as
  * its letters and 2 dp round them, its corners 3 dp; the one the reader is
  * on in plume, its letters on-plume, an ink bar 2 dp under it, for a state
- * shown by more than its colour (the tokens' contrast, 2026-10-22).
+ * shown by more than its colour (the tokens' contrast, 2026-10-22). Once
+ * the list has brought a move's row into sight (Finder.show), the match's
+ * own line too, and the row's 8 dp round it: a row taller than the room,
+ * above the keyboard (Work) or a long one, had its top in sight and the
+ * match below.
  */
 @Composable
-private fun Sentence(s: Seg, word: Int, marks: List<IndexedValue<Hit>>?, at: Int, modifier: Modifier) {
+private fun Sentence(s: Seg, word: Int, marks: List<IndexedValue<Hit>>?, at: Int, shown: Int, modifier: Modifier) {
     val p = pk
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val span = remember(s, word) { if (word < 0) null else wordSpan(s, word) }
@@ -966,12 +1017,23 @@ private fun Sentence(s: Seg, word: Int, marks: List<IndexedValue<Hit>>?, at: Int
         }
     }
     val hl = mix(p.ground, p.plume, 0.45f)
+    val sight = remember { BringIntoViewRequester() }
+    val pad = with(LocalDensity.current) { 8.dp.toPx() }
+    // what was shown before this row came onto the list is not this row's to show
+    val first = remember { shown }
+    LaunchedEffect(shown) {
+        if (shown == first || on == null || on.end > s.text.length) return@LaunchedEffect
+        val l = snapshotFlow { layout }.filterNotNull().first()
+        val top = l.getLineTop(l.getLineForOffset(on.start))
+        val bottom = l.getLineBottom(l.getLineForOffset(maxOf(on.start, on.end - 1)))
+        sight.bringIntoView(Rect(0f, top - pad, l.size.width.toFloat(), bottom + pad))
+    }
     Text(
         text,
         style = Type.transcript,
         color = p.ink,
         onTextLayout = { layout = it },
-        modifier = modifier.drawBehind {
+        modifier = modifier.bringIntoViewRequester(sight).drawBehind {
             val l = layout ?: return@drawBehind
             for (m in marks.orEmpty()) {
                 val current = m.index == at

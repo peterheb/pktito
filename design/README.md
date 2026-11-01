@@ -49,7 +49,7 @@ One ground, one ink, one accent, one mark. Every color is a token with a light a
 - **State.** `ok` and `err` always sit beside a word: "Done", "Downloaded", or the failure. `err` also sets the word on the one destructive button.
 - **Scrim.** `scrim` lies behind a sheet or the ask dialog.
 - **Focus.** `focus` draws a 2 px solid ring: ink in light, plume in dark, and plume on `term` in both. The offset is 2 px in the app and 3 px on the site.
-- **Hover and press.** One rule for every control on both surfaces: `tint`, then `tint-press`, laid over whatever the control sits on or is filled with, so it darkens in light and lightens in dark. On `term`, and on an ink fill, use `tint-term` and `tint-term-press`. Links in running text thicken their underline instead.
+- **Hover and press.** One rule for every control on both surfaces: `tint`, then `tint-press`, laid over whatever the control sits on or is filled with, so it darkens in light and lightens in dark. On `term`, and on an ink fill, use `tint-term` and `tint-term-press`. Links in running text thicken their underline instead. Whatever opens a menu keeps `tint-press` while the menu is open, as a menu title or pop-up button does on macOS and Windows, so the menu is plainly its own: the app's menu buttons, and on Android a Recent row while its long press's menu is up (iOS's menus grow out of their button, and a context menu lifts its row, which marks them already).
 
 Areas are told apart by tone, not by lines. Outlines mark only a state or where a file goes: a chosen card's ring, the chosen switch segment's 1 px `ink-muted` edge, the drop overlay's dashed edge and the start screen's drop zone, dashed as it is, a menu's ring. A menu separates its groups with a divider: 1 px of `sunk`, inset to the items' text. Shadows only on what floats: `shadow-float` for menus, sheets, dialogs and the toast.
 
@@ -82,6 +82,7 @@ Two families, shipped as files (`ui/fonts`, and the site's `fonts/`) with their 
 About lies over whichever screen opened it, and the Privacy and license sheets over About. The ask dialog, the drop overlay, menus and the toast come and go over any screen.
 
 - **Size.** The window opens at 680 × 800 (portrait, about 65 characters of transcript a line and 20 lines) and is at least `window-min` (480 px) each way.
+- **Edges.** The work keeps 24 px from the window's sides, setup and the start screen a 640 px column with 40 px inside it, About's words 40 px; under 600 px wide all keep 16, as the phones' apps do.
 - **Side.** From 920 px wide, the start screen's top row and its recent list keep a column at the window's left, the side, beside the drop zone or the file or batch open, the work. 920 is the side at its narrowest, 240, beside the 680 the window opens at. Under that, or at the start with nothing on the list, there is no side. The side is 300 px wide. Dragging its edge sets it anywhere from 240 to 480, never leaving the work under 680, and a double-click there fits the longest name, as a Finder column does. The work's narrow rules follow its own width, not the window's, so beside the side it looks as a window of its width would.
 - **Title bar.** Each screen's header row is the title bar, and its empty space drags the window:
   - macOS: the system's traffic lights at its left end, with no title bar drawn and no lights in full screen.
@@ -142,6 +143,7 @@ Line icons after Feather (MIT): a 24 px grid and 2 px round strokes, drawn in `c
   - external-link: 12 px, after an outbound link's last word, held to it so it never starts a line
   - zap: 12 px, marks a caption that asks more than 20 characters a second of its reader
 - **Play and pause** are filled, at 20 px.
+- **On an edge**, an icon that starts or ends a row, or heads a column of words, stands its drawn ink on the edge the words and boxes beside it keep, not its 16 px box: each sits 1 to 3 px inside its box. So the way back's arrow is on the strip's left edge, the model menu's chevron on the column's right one, a sheet's close cross on its body's right edge, and a list's icons under its heading's first letter.
 - **On the site**, an outbound link ends in the → glyph. No emoji, and no icons in tinted squares.
 
 ## Logo

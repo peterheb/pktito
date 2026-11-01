@@ -120,6 +120,13 @@ class Finder {
         private set
     var moved by mutableIntStateOf(0)
         private set
+    /**
+     * Counts the moves whose rows the list has brought into sight, for each
+     * row then to bring its match's own line (Sentence): a row taller than
+     * the room had its top in sight and the match below it.
+     */
+    var shown by mutableIntStateOf(0)
+        private set
     /** the field has the keys: a key typed there is the field's, not playback's */
     var typing by mutableStateOf(false)
     /**
@@ -167,6 +174,11 @@ class Finder {
         passed = k
         at = maxOf(0, k)
         time = hits[at].time
+    }
+
+    /** The list has brought the move's row into sight (MainActivity): now its match's line. */
+    fun show() {
+        shown++
     }
 
     fun go(hits: List<Hit>, k: Int) {

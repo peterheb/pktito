@@ -221,6 +221,6 @@
     <string name="model_file_damaged">Model file incomplete or damaged</string>
     <string name="problem_unexpected">Something went wrong</string>
     <string name="problem_memory">Not enough memory. Close other apps and try again.</string>
-    <string name="time_left_seconds">about %1$d&#160;s left</string>
-    <string name="time_left_minutes">about %1$d&#160;min left</string>
+    <string name="time_left_seconds">about&#160;%1$d&#160;s&#160;left</string>
+    <string name="time_left_minutes">about&#160;%1$d&#160;min&#160;left</string>
 </resources>

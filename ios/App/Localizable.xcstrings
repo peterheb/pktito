@@ -2102,7 +2102,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "about %1$lld min left"
+            "value": "about %1$lld min left"
           }
         }
       }
@@ -2113,7 +2113,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "about %1$lld s left"
+            "value": "about %1$lld s left"
           }
         }
       }

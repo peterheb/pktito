@@ -192,6 +192,6 @@
     <string name="model_file_damaged">[Mőďęł fįłę įńčőmpłęțę őř ďąmągęď ····· ····]</string>
     <string name="problem_unexpected">[Șőmęțhįńg węńț wřőńg ····· ···]</string>
     <string name="problem_memory">[Ńőț ęńőűgh męmőřý. Čłőșę őțhęř ąppș ąńď țřý ągąįń. ····· ····· ·····]</string>
-    <string name="time_left_seconds">[ąbőűț %1$d&#160;ș łęfț ·····]</string>
-    <string name="time_left_minutes">[ąbőűț %1$d&#160;mįń łęfț ······]</string>
+    <string name="time_left_seconds">[ąbőűț&#160;%1$d&#160;ș&#160;łęfț ····· ·]</string>
+    <string name="time_left_minutes">[ąbőűț&#160;%1$d&#160;mįń&#160;łęfț ·····]</string>
 </resources>
