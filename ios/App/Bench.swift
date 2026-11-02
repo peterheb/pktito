@@ -194,6 +194,10 @@ extension BenchState {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         await transcribe(base.appendingPathComponent("bench").appendingPathComponent(file))
         say(stats)
+        // the transcript beside the file (FILE.txt), for AliceBench's scoring
+        // against its references off the device
+        try? text.write(to: base.appendingPathComponent("bench").appendingPathComponent(file + ".txt"),
+                        atomically: true, encoding: .utf8)
         say("first lines: " + text.split(separator: "\n").prefix(3).joined(separator: " / "))
     }
 }
