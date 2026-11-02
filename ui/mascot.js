@@ -399,7 +399,9 @@ function drawMascot(stage, canvas, { yaw: homeYaw = 0 } = {}) {
   let shown = false,
     running = false,
     last = 0,
-    down = null;
+    down = null,
+    // the turn home's wait: a timer, not frames, since nothing moves in it
+    homeTimer = 0;
   const wake = () => {
     if (!shown || running) return;
     running = true;
@@ -548,7 +550,13 @@ function drawMascot(stage, canvas, { yaw: homeYaw = 0 } = {}) {
           S.pitchDrag = 0;
         }
         busy = true;
-      } else if (S.yawDrag !== 0 || S.pitchDrag !== 0) busy = true;
+      } else if (S.yawDrag !== 0 || S.pitchDrag !== 0) {
+        // until the turn home, the same frame each frame: none drawn, and
+        // the loop woken when it's due (it drew 4.5 s of one frame, 270
+        // at 60 Hz, after a drag with no fling; Peter, 2026-11-02)
+        clearTimeout(homeTimer);
+        homeTimer = setTimeout(wake, S.lastInteract + 4500 - now + 1);
+      }
     }
 
     // the bubble's waveform talks during the turn and after a chirp

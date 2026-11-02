@@ -18,14 +18,30 @@ use std::sync::OnceLock;
 
 const EN: &str = include_str!("../../ui/locales/en.json");
 
+/// The words in scripts/pseudo.py's pseudo-language, which a debug build
+/// run with PKTITO_PSEUDO=1 takes for English: longer, accented and
+/// bracketed, to show whether the window holds a language less compact
+/// than English, a string cut short, and one hard-coded or put together
+/// from pieces. Not in a release build.
+#[cfg(debug_assertions)]
+const PSEUDO: &str = include_str!("../../ui/locales/en-XA.json");
+
+fn source() -> &'static str {
+    #[cfg(debug_assertions)]
+    if std::env::var_os("PKTITO_PSEUDO").is_some() {
+        return PSEUDO;
+    }
+    EN
+}
+
 /// The catalog, as JSON, for the page.
 pub fn json() -> &'static str {
-    EN
+    source()
 }
 
 fn catalog() -> &'static Map<String, Value> {
     static C: OnceLock<Map<String, Value>> = OnceLock::new();
-    C.get_or_init(|| serde_json::from_str(EN).expect("ui/locales/en.json is a JSON object"))
+    C.get_or_init(|| serde_json::from_str(source()).expect("ui/locales' catalog is a JSON object"))
 }
 
 /// key's words, {name} filled from args; a key the catalog lacks is itself,
@@ -158,6 +174,17 @@ mod tests {
             }
         }
         out
+    }
+
+    /// The pseudo-language has every key English has, and no other: it is
+    /// made again (scripts/pseudo.py) whenever English changes.
+    #[cfg(debug_assertions)]
+    #[test]
+    fn pseudo_language_is_current() {
+        let keys = |s: &str| -> BTreeSet<String> {
+            serde_json::from_str::<Map<String, Value>>(s).unwrap().keys().cloned().collect()
+        };
+        assert_eq!(keys(EN), keys(PSEUDO), "ui/locales/en-XA.json is stale: run scripts/pseudo.py");
     }
 
     /// Every key the page (ui/index.html, ui/app.js) and the app's Rust name

@@ -1,0 +1,8 @@
+#!/bin/sh
+# The app by the name people type (Peter, 2026-10-27: "pktito: command not
+# found" on the Pi). The program is pktito-app, as Tauri names it, and
+# nothing else on a system is called pktito: the CLI is pktito-cli.
+# exec by its own path, so that it runs just as when started from the
+# menu: its window's class, which pktito.desktop's StartupWMClass names,
+# comes from that name, and a link would give it pktito instead.
+exec /usr/bin/pktito-app "$@"

@@ -6,7 +6,7 @@
 
 use crate::model;
 use crate::pktito;
-use crate::transcribe::Segment;
+use crate::transcribe::{Segment, Window};
 use std::path::{Path, PathBuf};
 
 /// The formats, by the extension each is saved under
@@ -51,6 +51,12 @@ pub struct Transcript<'a> {
 
 /// t in a format: times before each sentence of .txt and .md if asked.
 pub fn text(t: &Transcript, ext: &str, times: bool) -> Result<String, String> {
+    text_windows(t, ext, times, &[])
+}
+
+/// text(), and in json the chunks pktito transcribed, where windows has
+/// them (pktito-cli, for measuring the cuts; the apps' files leave them out).
+pub fn text_windows(t: &Transcript, ext: &str, times: bool, windows: &[Window]) -> Result<String, String> {
     let segs = t.segments;
     Ok(match ext {
         "txt" => {
@@ -108,25 +114,31 @@ pub fn text(t: &Transcript, ext: &str, times: bool) -> Result<String, String> {
                 .collect();
             format!("WEBVTT\n\n{body}")
         }
-        "json" => json(t, &cues(t)?),
+        "json" => json(t, &cues(t)?, windows),
         _ => return Err(format!("No such format: {ext}")),
     })
 }
 
 /// A cue as the files write it: its times in milliseconds, its text with a
 /// line break where its second line begins, and an ellipsis after one cut
-/// at a pause in mid-sentence (PK_CUE_PAUSE)
-struct Cue {
-    start: i64,
-    end: i64,
-    text: String,
+/// at a pause in mid-sentence (PK_CUE_PAUSE); and its words, n of the
+/// transcript's from the first, for the Android app's Captions view to
+/// follow and find them, which the files leave out.
+#[derive(serde::Serialize)]
+pub struct Cue {
+    pub start: i64,
+    pub end: i64,
+    pub text: String,
+    pub first: usize,
+    pub n: usize,
 }
 
 const PK_CUE_PAUSE: i32 = 8;
 
 /// The subtitle track of t: English's rules for a model of English alone,
-/// and for any other the engine's own guess whether its words are English
-fn cues(t: &Transcript) -> Result<Vec<Cue>, String> {
+/// and for any other the engine's own guess whether its words are English.
+/// The Android app's Captions view shows them as they are (android.rs).
+pub fn cues(t: &Transcript) -> Result<Vec<Cue>, String> {
     let ms = |s: f64| (s * 1000.0).round() as i64;
     let words: Vec<&crate::transcribe::Word> = t.segments.iter().flat_map(|s| &s.words).collect();
     let timed: Vec<(String, i64, i64)> = words
@@ -159,13 +171,15 @@ fn cues(t: &Transcript) -> Result<Vec<Cue>, String> {
                 start: c.start,
                 end: c.end,
                 text,
+                first,
+                n,
             }
         })
         .collect())
 }
 
 /// A segment to a few lines, a word to a line, the cues as their lines
-fn json(t: &Transcript, cues: &[Cue]) -> String {
+fn json(t: &Transcript, cues: &[Cue], windows: &[Window]) -> String {
     let j = |s: &str| serde_json::to_string(s).unwrap();
     let seg = |s: &Segment| {
         let words: Vec<String> = s
@@ -199,13 +213,40 @@ fn json(t: &Transcript, cues: &[Cue]) -> String {
     };
     let segs: Vec<String> = t.segments.iter().map(seg).collect();
     let cues: Vec<String> = cues.iter().map(cue).collect();
+    // each chunk: its stretch, the silence to the next, and its words as
+    // the first of the transcript's words (counted across the segments) and
+    // how many; a sentence carried across a cut has words in two
+    let mut first = 0;
+    let windows: Vec<String> = windows
+        .iter()
+        .enumerate()
+        .map(|(i, w)| {
+            let gap = windows.get(i + 1).map_or("null".into(), |n| r3(n.start - w.end).to_string());
+            let line = format!(
+                "    {{\"start\": {}, \"end\": {}, \"gap\": {}, \"first_word\": {}, \"words\": {}}}",
+                r3(w.start),
+                r3(w.end),
+                gap,
+                first,
+                w.words
+            );
+            first += w.words;
+            line
+        })
+        .collect();
+    let windows = if windows.is_empty() {
+        String::new()
+    } else {
+        format!(",\n  \"windows\": [\n{}\n  ]", windows.join(",\n"))
+    };
     format!(
-        "{{\n  \"file\": {},\n  \"duration\": {},\n  \"model\": {},\n  \"segments\": [\n{}\n  ],\n  \"captions\": [\n{}\n  ]\n}}\n",
+        "{{\n  \"file\": {},\n  \"duration\": {},\n  \"model\": {},\n  \"segments\": [\n{}\n  ],\n  \"captions\": [\n{}\n  ]{}\n}}\n",
         j(t.name),
         r3(t.duration),
         t.model.filter(|m| !m.is_empty()).map(j).unwrap_or_else(|| "null".into()),
         segs.join(",\n"),
-        cues.join(",\n")
+        cues.join(",\n"),
+        windows
     )
 }
 

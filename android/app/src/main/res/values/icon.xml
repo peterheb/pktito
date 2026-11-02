@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- the launcher icon's background: design/app-icon.svg's (android/icon.py) -->
+<resources>
+    <color name="icon_background">#6cc4f5</color>
+</resources>

@@ -94,13 +94,13 @@ static void k_quantize(pk_act *a, const float *x, size_t xs) {
                 m = vmaxnmq_f32(m, vabsq_f32(z));
             }
             float amax = vmaxnmvq_f32(m);
-            if (vmaxvq_u32(bad) || !isfinite(amax)) {
+            if (vmaxvq_u32(bad) || !isfinite(amax) || amax < 0x1p-121f) {   /* ref's test */
                 a->d[(size_t)t * nb + b] = 0;
                 memset(q, 0, a->qb);
                 continue;
             }
             a->d[(size_t)t * nb + b] = amax / 127.0f;
-            float32x4_t id = vdupq_n_f32(amax > 0 ? 127.0f / amax : 0.0f);
+            float32x4_t id = vdupq_n_f32(127.0f / amax);
             for (uint32_t i = 0; i < a->qb; i += 16) {
                 int32x4_t q0 = vcvtq_s32_f32(vrndnq_f32(vmulq_f32(vld1q_f32(v + i), id)));
                 int32x4_t q1 = vcvtq_s32_f32(vrndnq_f32(vmulq_f32(vld1q_f32(v + i + 4), id)));
@@ -182,6 +182,460 @@ void q8_step_v80(const int8_t *g, const int8_t *const *x, uint32_t k, int32x4_t 
         }
     }
 }
+
+/* The 3-column tile's blocks at 32 inputs, which is every product in the
+ * encoder, as one loop of assembly: in C the step's order is the
+ * compiler's, and gcc's generic order (the release build's) is its A53
+ * order, which takes the A72 44.0 cycles a step against its own 36.5; the
+ * A53 takes 3% longer in the A72's. The order below came from probes on
+ * both cores (backend/neon/CLIMB.md, 2026-10-28): 148 cycles a block on
+ * the A72 and 273 on the A53, each within 0.4% of the best order measured
+ * on that core. Against the C step it takes 19% off a Pi 4's run under
+ * gcc 12 and 25% under clang 21, and 4.7% off a Pi 3's at its full clock
+ * (the same file, the results of 2026-10-28).
+ *
+ * A block is twelve units, unit u column u % 3 of step u / 3 (8 inputs):
+ * its 8 multiplies of the step's weights v0-v3 (rows 0-3 and 4-7 of
+ * groups k/4 and k/4 + 1) by its activation pair a, b (the column's first
+ * 4 inputs across a, the next 4 across b) into int16 sums t0-t3, two
+ * products each. The unit before's four pairwise adds into its column's
+ * int32 sums (SADDLP in a block's first step, SADALP after) sit among the
+ * multiplies, and the unit loads the next unit's 8 bytes of activations
+ * into the b register of the other pair and DUPs them across it. A step's
+ * third unit loads the next step's weights after its 4th and 8th
+ * multiplies. Each block's finish - each column's int32 pairs added
+ * (ADDP), made floats and added to its floats times the block's scale
+ * (FMLA by element: fused, as the C tile's vfmaq_f32), the C tile's
+ * operations in its order - is spread over the next block's first three
+ * units, whose activations and weights the block's last unit loads: so
+ * the loop is block 0's first three units, nb - 1 rounds of units 3-11
+ * and the next block's 0-2, and the last block's 3-11 and finish, and no
+ * load reaches past the tile's last block.
+ *
+ * Registers: v0-v3 the weights; v4/v5 and v6/v7 the activation pairs,
+ * unit u's pair u % 2; v8-v13 the int16 sums, unit u's j-th in
+ * v8 + (j - u) mod 6, which comes back every 12 units and which the order
+ * allows, each unit's j-th SMULL coming after its (j - 1)-th add of the
+ * unit before; v14-v25 the int32 sums, column c's j-th in v14 + 4c + j;
+ * v26-v31 the floats, column c's two in v26 + 2c and v27 + 2c. The finish
+ * works in place: sums 0 and 2 take the ADDPs and become floats, sum 1
+ * the block's scale. */
+
+/* one unit, in the order L S M M S S M S M M M A M M B: l loads the next
+ * unit's activations, s0-s3 are the unit before's adds, da and db the next
+ * unit's DUPs, and e1-e8 follow the multiplies */
+#define Q8V_UNIT(t0, t1, t2, t3, a, b, s0, s1, s2, s3, l, da, db,            \
+                 e1, e2, e3, e4, e5, e6, e7, e8)                             \
+    l s0                                                                     \
+    "smull v" t0 ".8h, v0.8b, v" a ".8b\n\t" e1                              \
+    "smull2 v" t1 ".8h, v0.16b, v" a ".16b\n\t" e2                           \
+    s1 s2                                                                    \
+    "smull v" t2 ".8h, v1.8b, v" a ".8b\n\t" e3                              \
+    s3                                                                       \
+    "smull2 v" t3 ".8h, v1.16b, v" a ".16b\n\t" e4                           \
+    "smlal v" t0 ".8h, v2.8b, v" b ".8b\n\t" e5                              \
+    "smlal2 v" t1 ".8h, v2.16b, v" b ".16b\n\t" e6                           \
+    da                                                                       \
+    "smlal v" t2 ".8h, v3.8b, v" b ".8b\n\t" e7                              \
+    "smlal2 v" t3 ".8h, v3.16b, v" b ".16b\n\t" e8                           \
+    db
+
+/* int16 sum t's pairs added into int32 sum s: op saddlp or sadalp */
+#define Q8V_ADD(op, s, t) op " v" s ".4s, v" t ".8h\n\t"
+/* 8 bytes of a column's activations at x + o into b, and lane l of b
+ * across v */
+#define Q8V_LDD(b, x, o) "ldr d" b ", [%[" x "], #" o "]\n\t"
+#define Q8V_DUP(v, b, l) "dup v" v ".4s, v" b ".s[" l "]\n\t"
+/* two weight vectors at g + o */
+#define Q8V_LDW(v, w, o) "ldp q" v ", q" w ", [%[g], #" o "]\n\t"
+/* the finish of a column: its int32 sums s and t's pairs added into s; s
+ * made floats; the block's scale from d into s1; float f plus s times it */
+#define Q8V_ADDP(s, t) "addp v" s ".4s, v" s ".4s, v" t ".4s\n\t"
+#define Q8V_SCVTF(s) "scvtf v" s ".4s, v" s ".4s\n\t"
+#define Q8V_SCALE(s1, d) "ldr s" s1 ", [%[" d "]], #4\n\t"
+#define Q8V_FMLA(f, s, s1) "fmla v" f ".4s, v" s ".4s, v" s1 ".s[0]\n\t"
+
+/* The loops are asm strings of about 11 and 19 KB, past the 4095
+ * characters C11 requires a compiler to take in a literal, which clang's
+ * -Wpedantic points out; gcc and clang take them whole. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Woverlength-strings"
+#endif
+
+/* The loops' parts. The tile's floats loaded, then its first block's first
+ * weights and words, and its units 0-2: a block's first step's adds are
+ * SADDLP, and unit 0 has no unit before it. */
+#define Q8V_HEAD                                                                         \
+    "ld1 {v26.4s, v27.4s, v28.4s, v29.4s}, [%[f]]\n\t"                                   \
+    "ldp q30, q31, [%[f], #64]\n\t"                                                      \
+    Q8V_LDW("0", "1", "0") Q8V_LDW("2", "3", "64")                                       \
+    Q8V_LDD("5", "x0", "0") Q8V_DUP("4", "5", "0") Q8V_DUP("5", "5", "1")                \
+    /* unit 0: column 0 of step 0 */                                                     \
+    Q8V_UNIT("8", "9", "10", "11", "4", "5",                                             \
+             "", "",                                                                     \
+             "", "",                                                                     \
+             Q8V_LDD("7", "x1", "0"), Q8V_DUP("6", "7", "0"), Q8V_DUP("7", "7", "1"),    \
+             "", "", "", "", "", "", "", "")                                             \
+    /* unit 1: column 1 of step 0 */                                                     \
+    Q8V_UNIT("13", "8", "9", "10", "6", "7",                                             \
+             Q8V_ADD("saddlp", "14", "8"), Q8V_ADD("saddlp", "15", "9"),                 \
+             Q8V_ADD("saddlp", "16", "10"), Q8V_ADD("saddlp", "17", "11"),               \
+             Q8V_LDD("5", "x2", "0"), Q8V_DUP("4", "5", "0"), Q8V_DUP("5", "5", "1"),    \
+             "", "", "", "", "", "", "", "")                                             \
+    /* unit 2: column 2 of step 0 */                                                     \
+    Q8V_UNIT("12", "13", "8", "9", "4", "5",                                             \
+             Q8V_ADD("saddlp", "18", "13"), Q8V_ADD("saddlp", "19", "8"),                \
+             Q8V_ADD("saddlp", "20", "9"), Q8V_ADD("saddlp", "21", "10"),                \
+             Q8V_LDD("7", "x0", "8"), Q8V_DUP("6", "7", "0"), Q8V_DUP("7", "7", "1"),    \
+             "", "", "", Q8V_LDW("0", "1", "128"), "", "", "", Q8V_LDW("2", "3", "192"))
+
+/* Units 3-11 of 32 inputs: unit 3's adds (unit 2's) are op3, SADDLP in a
+ * block's first 32 and SADALP after; unit 11 loads the next 32's first
+ * words (l11, its DUPs da11 and db11) and weights (w11a, w11b), or, in the
+ * tile's last, nothing. */
+#define Q8V_UNITS3_11(op3, l11, da11, db11, w11a, w11b)                                  \
+    /* unit 3: column 0 of step 1 */                                                     \
+    Q8V_UNIT("11", "12", "13", "8", "6", "7",                                            \
+             Q8V_ADD(op3, "22", "12"), Q8V_ADD(op3, "23", "13"),                         \
+             Q8V_ADD(op3, "24", "8"), Q8V_ADD(op3, "25", "9"),                           \
+             Q8V_LDD("5", "x1", "8"), Q8V_DUP("4", "5", "0"), Q8V_DUP("5", "5", "1"),    \
+             "", "", "", "", "", "", "", "")                                             \
+    /* unit 4: column 1 of step 1 */                                                     \
+    Q8V_UNIT("10", "11", "12", "13", "4", "5",                                           \
+             Q8V_ADD("sadalp", "14", "11"), Q8V_ADD("sadalp", "15", "12"),               \
+             Q8V_ADD("sadalp", "16", "13"), Q8V_ADD("sadalp", "17", "8"),                \
+             Q8V_LDD("7", "x2", "8"), Q8V_DUP("6", "7", "0"), Q8V_DUP("7", "7", "1"),    \
+             "", "", "", "", "", "", "", "")                                             \
+    /* unit 5: column 2 of step 1 */                                                     \
+    Q8V_UNIT("9", "10", "11", "12", "6", "7",                                            \
+             Q8V_ADD("sadalp", "18", "10"), Q8V_ADD("sadalp", "19", "11"),               \
+             Q8V_ADD("sadalp", "20", "12"), Q8V_ADD("sadalp", "21", "13"),               \
+             Q8V_LDD("5", "x0", "16"), Q8V_DUP("4", "5", "0"), Q8V_DUP("5", "5", "1"),   \
+             "", "", "", Q8V_LDW("0", "1", "256"), "", "", "", Q8V_LDW("2", "3", "320")) \
+    /* unit 6: column 0 of step 2 */                                                     \
+    Q8V_UNIT("8", "9", "10", "11", "4", "5",                                             \
+             Q8V_ADD("sadalp", "22", "9"), Q8V_ADD("sadalp", "23", "10"),                \
+             Q8V_ADD("sadalp", "24", "11"), Q8V_ADD("sadalp", "25", "12"),               \
+             Q8V_LDD("7", "x1", "16"), Q8V_DUP("6", "7", "0"), Q8V_DUP("7", "7", "1"),   \
+             "", "", "", "", "", "", "", "")                                             \
+    /* unit 7: column 1 of step 2 */                                                     \
+    Q8V_UNIT("13", "8", "9", "10", "6", "7",                                             \
+             Q8V_ADD("sadalp", "14", "8"), Q8V_ADD("sadalp", "15", "9"),                 \
+             Q8V_ADD("sadalp", "16", "10"), Q8V_ADD("sadalp", "17", "11"),               \
+             Q8V_LDD("5", "x2", "16"), Q8V_DUP("4", "5", "0"), Q8V_DUP("5", "5", "1"),   \
+             "", "", "", "", "", "", "", "")                                             \
+    /* unit 8: column 2 of step 2 */                                                     \
+    Q8V_UNIT("12", "13", "8", "9", "4", "5",                                             \
+             Q8V_ADD("sadalp", "18", "13"), Q8V_ADD("sadalp", "19", "8"),                \
+             Q8V_ADD("sadalp", "20", "9"), Q8V_ADD("sadalp", "21", "10"),                \
+             Q8V_LDD("7", "x0", "24"), Q8V_DUP("6", "7", "0"), Q8V_DUP("7", "7", "1"),   \
+             "", "", "", Q8V_LDW("0", "1", "384"), "", "", "", Q8V_LDW("2", "3", "448")) \
+    /* unit 9: column 0 of step 3 */                                                     \
+    Q8V_UNIT("11", "12", "13", "8", "6", "7",                                            \
+             Q8V_ADD("sadalp", "22", "12"), Q8V_ADD("sadalp", "23", "13"),               \
+             Q8V_ADD("sadalp", "24", "8"), Q8V_ADD("sadalp", "25", "9"),                 \
+             Q8V_LDD("5", "x1", "24"), Q8V_DUP("4", "5", "0"), Q8V_DUP("5", "5", "1"),   \
+             "", "", "", "", "", "", "", "")                                             \
+    /* unit 10: column 1 of step 3 */                                                    \
+    Q8V_UNIT("10", "11", "12", "13", "4", "5",                                           \
+             Q8V_ADD("sadalp", "14", "11"), Q8V_ADD("sadalp", "15", "12"),               \
+             Q8V_ADD("sadalp", "16", "13"), Q8V_ADD("sadalp", "17", "8"),                \
+             Q8V_LDD("7", "x2", "24"), Q8V_DUP("6", "7", "0"), Q8V_DUP("7", "7", "1"),   \
+             "", "", "", "", "", "", "", "")                                             \
+    /* unit 11: column 2 of step 3 */                                                    \
+    Q8V_UNIT("9", "10", "11", "12", "6", "7",                                            \
+             Q8V_ADD("sadalp", "18", "10"), Q8V_ADD("sadalp", "19", "11"),               \
+             Q8V_ADD("sadalp", "20", "12"), Q8V_ADD("sadalp", "21", "13"),               \
+             l11, da11, db11,                                                            \
+             "", "", "", w11a, "", "", "", w11b)
+
+/* units 3-11 with unit 11 loading the next 32 inputs' first words and
+ * weights, or nothing; and the pointers stepped to the next 32 */
+#define Q8V_UNITS3_11_NEXT(op3)                                                          \
+    Q8V_UNITS3_11(op3, Q8V_LDD("5", "x0", "32"), Q8V_DUP("4", "5", "0"),                 \
+                  Q8V_DUP("5", "5", "1"), Q8V_LDW("0", "1", "512"), Q8V_LDW("2", "3", "576"))
+#define Q8V_UNITS3_11_LAST(op3) Q8V_UNITS3_11(op3, "", "", "", "", "")
+#define Q8V_STEP32                                                                       \
+    "add %[g], %[g], #512\n\t" "add %[x0], %[x0], #32\n\t"                               \
+    "add %[x1], %[x1], #32\n\t" "add %[x2], %[x2], #32\n\t"
+
+/* Units 0-2 of a block's second 32 inputs (blocks of 64): unit 0 takes unit
+ * 11's adds, and every add is SADALP, into the sums the first 32 left. */
+#define Q8V_HALF                                                                         \
+    /* unit 0: column 0 of step 0 */                                                     \
+    Q8V_UNIT("8", "9", "10", "11", "4", "5",                                             \
+             Q8V_ADD("sadalp", "22", "9"), Q8V_ADD("sadalp", "23", "10"),                \
+             Q8V_ADD("sadalp", "24", "11"), Q8V_ADD("sadalp", "25", "12"),               \
+             Q8V_LDD("7", "x1", "0"), Q8V_DUP("6", "7", "0"), Q8V_DUP("7", "7", "1"),    \
+             "", "", "", "", "", "", "", "")                                             \
+    /* unit 1: column 1 of step 0 */                                                     \
+    Q8V_UNIT("13", "8", "9", "10", "6", "7",                                             \
+             Q8V_ADD("sadalp", "14", "8"), Q8V_ADD("sadalp", "15", "9"),                 \
+             Q8V_ADD("sadalp", "16", "10"), Q8V_ADD("sadalp", "17", "11"),               \
+             Q8V_LDD("5", "x2", "0"), Q8V_DUP("4", "5", "0"), Q8V_DUP("5", "5", "1"),    \
+             "", "", "", "", "", "", "", "")                                             \
+    /* unit 2: column 2 of step 0 */                                                     \
+    Q8V_UNIT("12", "13", "8", "9", "4", "5",                                             \
+             Q8V_ADD("sadalp", "18", "13"), Q8V_ADD("sadalp", "19", "8"),                \
+             Q8V_ADD("sadalp", "20", "9"), Q8V_ADD("sadalp", "21", "10"),                \
+             Q8V_LDD("7", "x0", "8"), Q8V_DUP("6", "7", "0"), Q8V_DUP("7", "7", "1"),    \
+             "", "", "", Q8V_LDW("0", "1", "128"), "", "", "", Q8V_LDW("2", "3", "192"))
+
+/* Units 0-2 of the next block, with the block's finish: column 0's before
+ * unit 1's SADDLPs reuse its sums, column 1's before unit 2's, column 2's
+ * after unit 0's SADALPs complete it and before unit 3's */
+#define Q8V_NEXT_FINISH                                                                  \
+    /* unit 0: column 0 of step 0 */                                                     \
+    Q8V_UNIT("8", "9", "10", "11", "4", "5",                                             \
+             Q8V_ADD("sadalp", "22", "9"), Q8V_ADD("sadalp", "23", "10"),                \
+             Q8V_ADD("sadalp", "24", "11"), Q8V_ADD("sadalp", "25", "12"),               \
+             Q8V_LDD("7", "x1", "0"), Q8V_DUP("6", "7", "0"), Q8V_DUP("7", "7", "1"),    \
+             Q8V_ADDP("14", "15"), Q8V_ADDP("16", "17"), Q8V_SCVTF("14"), Q8V_SCVTF("16"), Q8V_SCALE("15", "d0"), Q8V_FMLA("26", "14", "15"), Q8V_FMLA("27", "16", "15"), Q8V_ADDP("18", "19")) \
+    /* unit 1: column 1 of step 0 */                                                     \
+    Q8V_UNIT("13", "8", "9", "10", "6", "7",                                             \
+             Q8V_ADD("saddlp", "14", "8"), Q8V_ADD("saddlp", "15", "9"),                 \
+             Q8V_ADD("saddlp", "16", "10"), Q8V_ADD("saddlp", "17", "11"),               \
+             Q8V_LDD("5", "x2", "0"), Q8V_DUP("4", "5", "0"), Q8V_DUP("5", "5", "1"),    \
+             Q8V_ADDP("20", "21"), Q8V_SCVTF("18"), Q8V_SCVTF("20"), Q8V_SCALE("19", "d1"), Q8V_FMLA("28", "18", "19"), Q8V_FMLA("29", "20", "19"), Q8V_ADDP("22", "23"), Q8V_ADDP("24", "25")) \
+    /* unit 2: column 2 of step 0 */                                                     \
+    Q8V_UNIT("12", "13", "8", "9", "4", "5",                                             \
+             Q8V_ADD("saddlp", "18", "13"), Q8V_ADD("saddlp", "19", "8"),                \
+             Q8V_ADD("saddlp", "20", "9"), Q8V_ADD("saddlp", "21", "10"),                \
+             Q8V_LDD("7", "x0", "8"), Q8V_DUP("6", "7", "0"), Q8V_DUP("7", "7", "1"),    \
+             Q8V_SCVTF("22"), Q8V_SCVTF("24"), Q8V_SCALE("23", "d2"), Q8V_LDW("0", "1", "128") Q8V_FMLA("30", "22", "23"), Q8V_FMLA("31", "24", "23"), "", "", Q8V_LDW("2", "3", "192"))
+
+/* The last unit's adds and the tile's last finish, and its floats stored */
+#define Q8V_TAIL                                                                         \
+    Q8V_ADD("sadalp", "22", "9") Q8V_ADDP("14", "15") Q8V_ADD("sadalp", "23", "10")      \
+    Q8V_ADDP("16", "17") Q8V_SCVTF("14") Q8V_ADD("sadalp", "24", "11")                   \
+    Q8V_ADDP("18", "19") Q8V_ADD("sadalp", "25", "12") Q8V_ADDP("20", "21")              \
+    Q8V_SCVTF("16") Q8V_SCVTF("18") Q8V_SCALE("15", "d0")                                \
+    Q8V_SCVTF("20") Q8V_FMLA("26", "14", "15") Q8V_FMLA("27", "16", "15")                \
+    Q8V_SCALE("19", "d1") Q8V_ADDP("22", "23") Q8V_ADDP("24", "25")                      \
+    Q8V_FMLA("28", "18", "19") Q8V_FMLA("29", "20", "19") Q8V_SCVTF("22")                \
+    Q8V_SCVTF("24") Q8V_SCALE("23", "d2") Q8V_FMLA("30", "22", "23")                     \
+    Q8V_FMLA("31", "24", "23")                                                           \
+    "st1 {v26.4s, v27.4s, v28.4s, v29.4s}, [%[f]]\n\t"                                   \
+    "stp q30, q31, [%[f], #64]\n\t"
+
+/* the loop's head on a 64-byte line, but on Windows (the neon-dp loop's
+ * comment says why) */
+#ifndef _WIN32
+#define Q8V_ALIGN ".p2align 6\n"
+#else
+#define Q8V_ALIGN
+#endif
+
+/* nb blocks from g (the half panel's weights), x[c] (each column's int8
+ * activations) and d[c] (its scales), into f (each column's 8 floats) */
+static inline __attribute__((always_inline))
+void q8_blocks3_qb32(float f[24], const int8_t *g, const int8_t *const *x,
+                     const float *const *d, uint32_t nb) {
+    const int8_t *x0 = x[0], *x1 = x[1], *x2 = x[2];
+    const float *d0 = d[0], *d1 = d[1], *d2 = d[2];
+    __asm__ volatile(
+        Q8V_HEAD
+        "subs %w[nb], %w[nb], #1\n\t"
+        "b.eq 2f\n"
+        Q8V_ALIGN
+        "1:\n\t"
+        /* units 3-11 of block b; unit 11 loads block b + 1's first weights and words */
+        Q8V_UNITS3_11_NEXT("saddlp")
+        Q8V_STEP32
+        /* units 0-2 of block b + 1, with block b's finish */
+        Q8V_NEXT_FINISH
+        "subs %w[nb], %w[nb], #1\n\t"
+        "b.ne 1b\n"
+        "2:\n\t"
+        /* units 3-11 of the last block, and its finish */
+        Q8V_UNITS3_11_LAST("saddlp")
+        Q8V_TAIL
+        : [g] "+r"(g), [x0] "+r"(x0), [x1] "+r"(x1), [x2] "+r"(x2),
+          [d0] "+r"(d0), [d1] "+r"(d1), [d2] "+r"(d2), [nb] "+r"(nb)
+        : [f] "r"(f)
+        : "cc", "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
+          "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22",
+          "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31");
+}
+
+/* The same tile's blocks at 64 inputs, the fast mode's
+ * (pk_asr_set_fast_mode), as the loop above with two of its blocks' units
+ * to a block and the finish after the second: the first 32 inputs' units
+ * 3-11 as a block of 32's, then the second 32's units 0-2 with no finish to
+ * carry and their adds into the sums the first left (Q8V_HALF), and its
+ * units 3-11 with unit 3's adds SADALP too. The pointers step 32 inputs at
+ * a time, 512 bytes of weights, so that each 32's offsets are a block of
+ * 32's: the next block's weights would be 1024 bytes on, past the 1008 an
+ * LDP's offset reaches. A row's sum at the finish is 64 products of at most
+ * 127 x 127, under the 2^24 that SCVTF takes exactly, as the C tile's. */
+static inline __attribute__((always_inline))
+void q8_blocks3_qb64(float f[24], const int8_t *g, const int8_t *const *x,
+                     const float *const *d, uint32_t nb) {
+    const int8_t *x0 = x[0], *x1 = x[1], *x2 = x[2];
+    const float *d0 = d[0], *d1 = d[1], *d2 = d[2];
+    __asm__ volatile(
+        Q8V_HEAD
+        "subs %w[nb], %w[nb], #1\n\t"
+        "b.eq 2f\n"
+        Q8V_ALIGN
+        "1:\n\t"
+        /* block b's first 32: units 3-11; unit 11 loads the second 32's first */
+        Q8V_UNITS3_11_NEXT("saddlp")
+        Q8V_STEP32
+        /* its second 32, unit 11 loading block b + 1's first */
+        Q8V_HALF
+        Q8V_UNITS3_11_NEXT("sadalp")
+        Q8V_STEP32
+        /* units 0-2 of block b + 1, with block b's finish */
+        Q8V_NEXT_FINISH
+        "subs %w[nb], %w[nb], #1\n\t"
+        "b.ne 1b\n"
+        "2:\n\t"
+        /* the last block's first 32, then its second 32, and its finish */
+        Q8V_UNITS3_11_NEXT("saddlp")
+        Q8V_STEP32
+        Q8V_HALF
+        Q8V_UNITS3_11_LAST("sadalp")
+        Q8V_TAIL
+        : [g] "+r"(g), [x0] "+r"(x0), [x1] "+r"(x1), [x2] "+r"(x2),
+          [d0] "+r"(d0), [d1] "+r"(d1), [d2] "+r"(d2), [nb] "+r"(nb)
+        : [f] "r"(f)
+        : "cc", "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
+          "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22",
+          "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31");
+}
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+#undef Q8V_HEAD
+#undef Q8V_UNITS3_11
+#undef Q8V_UNITS3_11_NEXT
+#undef Q8V_UNITS3_11_LAST
+#undef Q8V_STEP32
+#undef Q8V_HALF
+#undef Q8V_NEXT_FINISH
+#undef Q8V_TAIL
+#undef Q8V_ALIGN
+#undef Q8V_UNIT
+#undef Q8V_ADD
+#undef Q8V_LDD
+#undef Q8V_DUP
+#undef Q8V_LDW
+#undef Q8V_ADDP
+#undef Q8V_SCVTF
+#undef Q8V_SCALE
+#undef Q8V_FMLA
+#endif
+
+#ifdef PK_NEON_DOTPROD
+/* The 4-column tile's blocks at 32 inputs, which is every product in the
+ * encoder, as one loop of assembly. A block is two chunks of 16 inputs, each
+ * eight weight vectors (two LDPs a group of 4 inputs, 64 bytes apart) and
+ * one activation vector a column, and 32 SDOTs by lane: each weight vector
+ * against the four columns in turn, rows 0-3 of the half panel into v16,
+ * v18, v20, v22 and rows 4-7 into v17, v19, v21, v23. Then the sums are
+ * floats (SCVTF, exact: 32 products of at most 128 * 127) and each column's
+ * two take one FMLA by element with its block's scale, v12 + c: the
+ * fused multiply-add vfmaq_f32 is, so f's chain is the C tile's and ref's.
+ * f[c][0] and f[c][1] are v24 + 2c and v25 + 2c, zero at the start.
+ *
+ * Each scale has a register of its own. Gathered into one register's lanes,
+ * each lane's load waited on the one before, and the loop ran 1.1% slower
+ * than clang 21's C and 4.5% slower than gcc 15's.
+ *
+ * Written out so that where the loop sits is not a compiler's to choose: a
+ * build that put the C tile's loops 32 bytes along modulo 64 ran a Pi 5
+ * 6 to 8% slower under clang 21 and gcc 15. A64's instructions are 4 bytes
+ * whatever the registers, so the loop below is the same bytes under every
+ * compiler, and its head is on a 64-byte line everywhere but Windows.
+ * Against the C tile it ran a Pi 5's minute 4.8% faster under clang 21 and
+ * 1.5% under gcc 15, its two builds within 0.4% of each other; a GB10's
+ * X925s 2.3% faster under gcc 13 and level under clang 18; an M4 Pro 2.2%
+ * faster (backend/neon-dp/CLIMB.md, 2026-10-27). */
+
+/* weight vectors a (rows 0-3) and b (rows 4-7) against lane L of v8-v11 */
+#define Q8_SDOT8(a, b, L)                                                  \
+    "sdot v16.4s, v" a ".16b, v8.4b[" L "]\n\t"                           \
+    "sdot v18.4s, v" a ".16b, v9.4b[" L "]\n\t"                           \
+    "sdot v20.4s, v" a ".16b, v10.4b[" L "]\n\t"                          \
+    "sdot v22.4s, v" a ".16b, v11.4b[" L "]\n\t"                          \
+    "sdot v17.4s, v" b ".16b, v8.4b[" L "]\n\t"                           \
+    "sdot v19.4s, v" b ".16b, v9.4b[" L "]\n\t"                           \
+    "sdot v21.4s, v" b ".16b, v10.4b[" L "]\n\t"                          \
+    "sdot v23.4s, v" b ".16b, v11.4b[" L "]\n\t"
+
+/* 16 inputs: the four columns' activations, and the four groups' weights at
+ * g + o0 .. g + o3 */
+#define Q8_CHUNK(o0, o1, o2, o3)                                           \
+    "ldr q8, [%[x0]], #16\n\t"                                             \
+    "ldr q9, [%[x1]], #16\n\t"                                             \
+    "ldr q10, [%[x2]], #16\n\t"                                            \
+    "ldr q11, [%[x3]], #16\n\t"                                            \
+    "ldp q0, q1, [%[g], #" o0 "]\n\t"                                      \
+    "ldp q2, q3, [%[g], #" o1 "]\n\t"                                      \
+    "ldp q4, q5, [%[g], #" o2 "]\n\t"                                      \
+    "ldp q6, q7, [%[g], #" o3 "]\n\t"                                      \
+    Q8_SDOT8("0", "1", "0") Q8_SDOT8("2", "3", "1")                        \
+    Q8_SDOT8("4", "5", "2") Q8_SDOT8("6", "7", "3")
+
+/* nb blocks from g (the half panel's weights), x[c] (each column's int8
+ * activations) and d[c] (its scales), into f */
+static inline __attribute__((always_inline))
+void q8_blocks4_qb32(float32x4_t f[4][2], const int8_t *g, const int8_t *const *x,
+                     const float *const *d, uint32_t nb) {
+    const int8_t *x0 = x[0], *x1 = x[1], *x2 = x[2], *x3 = x[3];
+    const float *d0 = d[0], *d1 = d[1], *d2 = d[2], *d3 = d[3];
+    float out[32], *o = out;
+    __asm__ volatile(
+        "movi v24.4s, #0\n\t" "movi v25.4s, #0\n\t" "movi v26.4s, #0\n\t" "movi v27.4s, #0\n\t"
+        "movi v28.4s, #0\n\t" "movi v29.4s, #0\n\t" "movi v30.4s, #0\n\t" "movi v31.4s, #0\n\t"
+        /* Not on Windows. Its Arm64 unwind records hold each function's
+         * length, and llvm-mingw's clang 23.1 cannot work one out past an
+         * alignment inside a function that saves registers: "Failed to
+         * evaluate function length in SEH unwind info", from this or from
+         * its own -falign-loops=16. There the loop lands where the linker
+         * puts it: 16 bytes into a line in pktito-c.exe, on one in
+         * tests/kcheck.exe. */
+#ifndef _WIN32
+        ".p2align 6\n"
+#endif
+        "1:\n\t"
+        "movi v16.4s, #0\n\t" "movi v17.4s, #0\n\t" "movi v18.4s, #0\n\t" "movi v19.4s, #0\n\t"
+        "movi v20.4s, #0\n\t" "movi v21.4s, #0\n\t" "movi v22.4s, #0\n\t" "movi v23.4s, #0\n\t"
+        Q8_CHUNK("0", "64", "128", "192")
+        Q8_CHUNK("256", "320", "384", "448")
+        "add %[g], %[g], #512\n\t"
+        "ldr s12, [%[d0]], #4\n\t"
+        "ldr s13, [%[d1]], #4\n\t"
+        "ldr s14, [%[d2]], #4\n\t"
+        "ldr s15, [%[d3]], #4\n\t"
+        "scvtf v16.4s, v16.4s\n\t" "scvtf v17.4s, v17.4s\n\t"
+        "scvtf v18.4s, v18.4s\n\t" "scvtf v19.4s, v19.4s\n\t"
+        "scvtf v20.4s, v20.4s\n\t" "scvtf v21.4s, v21.4s\n\t"
+        "scvtf v22.4s, v22.4s\n\t" "scvtf v23.4s, v23.4s\n\t"
+        "fmla v24.4s, v16.4s, v12.s[0]\n\t" "fmla v25.4s, v17.4s, v12.s[0]\n\t"
+        "fmla v26.4s, v18.4s, v13.s[0]\n\t" "fmla v27.4s, v19.4s, v13.s[0]\n\t"
+        "fmla v28.4s, v20.4s, v14.s[0]\n\t" "fmla v29.4s, v21.4s, v14.s[0]\n\t"
+        "fmla v30.4s, v22.4s, v15.s[0]\n\t" "fmla v31.4s, v23.4s, v15.s[0]\n\t"
+        "subs %w[nb], %w[nb], #1\n\t"
+        "b.ne 1b\n\t"
+        "st1 {v24.4s, v25.4s, v26.4s, v27.4s}, [%[o]], #64\n\t"
+        "st1 {v28.4s, v29.4s, v30.4s, v31.4s}, [%[o]]\n\t"
+        : [g] "+r"(g), [x0] "+r"(x0), [x1] "+r"(x1), [x2] "+r"(x2), [x3] "+r"(x3),
+          [d0] "+r"(d0), [d1] "+r"(d1), [d2] "+r"(d2), [d3] "+r"(d3), [nb] "+r"(nb),
+          [o] "+r"(o)
+        :
+        : "cc", "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
+          "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22",
+          "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31");
+    for (int c = 0; c < 4; c++) {
+        f[c][0] = vld1q_f32(out + 8 * c);
+        f[c][1] = vld1q_f32(out + 8 * c + 4);
+    }
+}
+#undef Q8_CHUNK
+#undef Q8_SDOT8
 #endif
 
 /* Blocks [b0, b1) of the product, for NC columns from t0. A tile that
@@ -207,6 +661,40 @@ void q8_tile(float *out, size_t os, const int8_t *w, uint32_t n, uint32_t h,
     }
     const int8_t *x[4];
     for (int c = 0; c < NC; c++) x[c] = a->q + (size_t)(t0 + c) * n;
+#ifdef PK_NEON_DOTPROD
+    if (NC == 4 && qb == 32 && first && b1 > b0) {
+        const int8_t *xb[4];
+        const float *d[4];
+        for (int c = 0; c < 4; c++) {
+            xb[c] = x[c] + (size_t)b0 * 32;
+            d[c] = a->d + (size_t)(t0 + c) * nb + b0;
+        }
+        q8_blocks4_qb32(f, w + (size_t)b0 * 8 * 64 + 16 * h, xb, d, b1 - b0);
+        b0 = b1;
+    }
+#else
+    if (NC == 3 && (qb == 32 || qb == 64) && b1 > b0) {
+        const int8_t *xb[3];
+        const float *d[3];
+        float fb[24];
+        for (int c = 0; c < 3; c++) {
+            xb[c] = x[c] + (size_t)b0 * qb;
+            d[c] = a->d + (size_t)(t0 + c) * nb + b0;
+            vst1q_f32(fb + 8 * c, f[c][0]);
+            vst1q_f32(fb + 8 * c + 4, f[c][1]);
+        }
+        const int8_t *g = w + (size_t)b0 * qb * 16 + 16 * h;     /* block b0's first group */
+        if (qb == 32)
+            q8_blocks3_qb32(fb, g, xb, d, b1 - b0);
+        else
+            q8_blocks3_qb64(fb, g, xb, d, b1 - b0);
+        for (int c = 0; c < 3; c++) {
+            f[c][0] = vld1q_f32(fb + 8 * c);
+            f[c][1] = vld1q_f32(fb + 8 * c + 4);
+        }
+        b0 = b1;
+    }
+#endif
     for (uint32_t b = b0; b < b1; b++) {
 #ifdef PK_NEON_DOTPROD
         int32x4_t s[4][2];

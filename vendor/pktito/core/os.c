@@ -132,6 +132,19 @@ static long sysfs_long(long cpu, const char *what) {
     }
     return v;
 }
+
+/* Whether cpu is the first of its core's hardware threads (the first number
+ * in thread_siblings_list), so that each physical core counts once whatever
+ * its IDs say. Distinct (package, core_id) pairs did that where a core_id is
+ * its package's own, as on x86, but Linux numbers a device tree's cores from
+ * 0 within each cluster, all in package 0 without a socket node
+ * (drivers/base/arch_topology.c, parse_cluster): Android 17 on a Snapdragon
+ * X Elite, three clusters of four, gave 4 cores of 12, and test.wav took
+ * 1.03 s on them against 0.68 s once counted (backend/neon-dp/CLIMB.md,
+ * 2026-10-25). An offline CPU has no topology to read, and is not counted. */
+static int first_thread(long cpu) {
+    return sysfs_long(cpu, "topology/thread_siblings_list") == cpu;
+}
 #endif
 
 /* One thread a physical core, of every kind. On a chip with two kinds of
@@ -160,20 +173,11 @@ int pk_os_cores(void) {
     long ncpu = sysconf(_SC_NPROCESSORS_CONF);
     if (ncpu > 4096)
         ncpu = 4096;
-    /* one per distinct (package, core) pair */
-    int seen[1024], nseen = 0;
-    for (long c = 0; c < ncpu; c++) {
-        long core = sysfs_long(c, "topology/core_id"), pkg = sysfs_long(c, "topology/physical_package_id");
-        if (core < 0)
-            continue;
-        int key = (int)((pkg < 0 ? 0 : pkg) * 65536 + core), dup = 0;
-        for (int i = 0; i < nseen; i++)
-            dup |= seen[i] == key;
-        if (!dup && nseen < 1024)
-            seen[nseen++] = key;
-    }
-    if (nseen > 0)
-        return nseen;
+    int cores = 0;
+    for (long c = 0; c < ncpu; c++)
+        cores += first_thread(c);
+    if (cores > 0)
+        return cores;
 #endif
     long n = sysconf(_SC_NPROCESSORS_ONLN);
     return n < 1 ? 1 : (int)n;
@@ -191,23 +195,16 @@ int pk_os_fast_cores(void) {
     long ncpu = sysconf(_SC_NPROCESSORS_CONF);
     if (ncpu > 4096)
         ncpu = 4096;
-    int seen[1024], nseen = 0;
+    int nseen = 0;
     long speed[1024], top = 0;
     for (long c = 0; c < ncpu; c++) {
-        long core = sysfs_long(c, "topology/core_id"), pkg = sysfs_long(c, "topology/physical_package_id");
-        if (core < 0)
-            continue;
-        int key = (int)((pkg < 0 ? 0 : pkg) * 65536 + core), dup = 0;
-        for (int i = 0; i < nseen; i++)
-            dup |= seen[i] == key;
-        if (dup || nseen >= 1024)
+        if (!first_thread(c) || nseen >= 1024)
             continue;
         long s = sysfs_long(c, "cpu_capacity");
         if (s < 0)
             s = sysfs_long(c, "cpufreq/cpuinfo_max_freq");
         if (s < 0)
             return pk_os_cores();               /* a core whose speed it does not say */
-        seen[nseen] = key;
         speed[nseen++] = s;
         top = s > top ? s : top;
     }
@@ -227,6 +224,8 @@ double pk_os_now(void) {
 }
 
 void pk_os_stdio(void) {}
+pk_os_throttle pk_os_unthrottle(void) { return (pk_os_throttle){ 0, 0 }; }
+void pk_os_rethrottle(pk_os_throttle was) { (void)was; }
 
 #elif defined(PK_WINDOWS)
 
@@ -308,6 +307,42 @@ static int cores(int fastest) {
 int pk_os_cores(void) { return cores(0); }
 int pk_os_fast_cores(void) { return cores(1); }
 
+/* Windows gives EcoQoS, by its own heuristics, to a process with no
+ * window - one run over ssh, a service - and on battery to one whose
+ * window is minimised, and confines its threads to the cores it calls
+ * efficient, on a Snapdragon X Elite 4 of its 12 identical cores.
+ * `pktito-c bench` over ssh there had its 8 threads on those 4 a few
+ * seconds in, the screen off or on: 8.9 to 11.4 s for ten minutes of
+ * audio, against 5.8 to 6.4 s with them opted out. pktito's app never
+ * packed on AC, focused or minimised, but minimised on battery took 4.7
+ * times as long as focused, and within 8% of it with its process opted
+ * out; the threads' opt-out alone was not measured on battery
+ * (backend/neon-dp/CLIMB.md, 2026-10-27). pinfer's pool went the way of
+ * pktito-c's (its core/SCHED.md), and a Snapdragon 7c, whose classes name
+ * its A76s, ran the same over ssh with the opt-out and without. The
+ * library's threads opt out one at a time, each worker for good and the
+ * caller's for the call that runs on it, which leaves the rest of a host's
+ * process as it was. A thread's state is two masks, both 0 - the system's
+ * to decide - until something sets them, and that is what a thread whose
+ * Windows cannot say is put back to. A Windows older than 10 1709, without
+ * ThreadPowerThrottling, refuses every call, and nothing changes. */
+pk_os_throttle pk_os_unthrottle(void) {
+    HANDLE t = GetCurrentThread();
+    THREAD_POWER_THROTTLING_STATE s = { THREAD_POWER_THROTTLING_CURRENT_VERSION, 0, 0 };
+    pk_os_throttle was = { 0, 0 };
+    if (GetThreadInformation(t, ThreadPowerThrottling, &s, sizeof s))
+        was = (pk_os_throttle){ s.ControlMask, s.StateMask };
+    s.ControlMask = THREAD_POWER_THROTTLING_EXECUTION_SPEED;
+    s.StateMask = 0;
+    SetThreadInformation(t, ThreadPowerThrottling, &s, sizeof s);
+    return was;
+}
+
+void pk_os_rethrottle(pk_os_throttle was) {
+    THREAD_POWER_THROTTLING_STATE s = { THREAD_POWER_THROTTLING_CURRENT_VERSION, was.control, was.state };
+    SetThreadInformation(GetCurrentThread(), ThreadPowerThrottling, &s, sizeof s);
+}
+
 double pk_os_now(void) {
     static LARGE_INTEGER hz;
     LARGE_INTEGER t;
@@ -387,6 +422,8 @@ double pk_os_now(void) {
 }
 
 void pk_os_stdio(void) {}
+pk_os_throttle pk_os_unthrottle(void) { return (pk_os_throttle){ 0, 0 }; }
+void pk_os_rethrottle(pk_os_throttle was) { (void)was; }
 
 #endif
 
@@ -485,16 +522,27 @@ static int cpu_has(const char *f) {
     return 0;
 }
 
-#else /* macOS on Apple silicon, whose every core has the dot product; elsewhere
-         no feature can be asked for, and ref and neon need none */
+#elif defined(__aarch64__) && defined(__APPLE__)
+
+/* Every Mac's chip has the dot product, but not every iPhone's and iPad's:
+ * Apple's clang defines __ARM_FEATURE_DOTPROD for -mcpu=apple-a13 and not
+ * for apple-a12, and iPadOS 26 still runs on A12 iPads. The system names
+ * each feature it has in hw.optional.arm (1 on the M4 Pro); one that does
+ * not name it gets neon. */
+static int cpu_has(const char *f) {
+    if (!strcmp(f, "asimddp")) {
+        int has = 0;
+        size_t len = sizeof has;
+        return sysctlbyname("hw.optional.arm.FEAT_DotProd", &has, &len, NULL, 0) == 0 && has;
+    }
+    return 0;
+}
+
+#else /* elsewhere no feature can be asked for, and ref and neon need none */
 
 static int cpu_has(const char *f) {
-#if defined(__aarch64__) && defined(__APPLE__)
-    return !strcmp(f, "asimddp");
-#else
     (void)f;
     return 0;
-#endif
 }
 
 #endif

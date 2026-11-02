@@ -7,7 +7,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use pktito_app::strings::{t, Problem};
-use pktito_app::{audio, decode, download, format, model, pktito, recent, strings, transcribe};
+use pktito_app::{
+    audio, awake, decode, download, format, model, pktito, recent, strings, transcribe,
+};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -22,6 +24,9 @@ struct Engine {
     model: pktito::Model,
     asr: pktito::Asr,
     path: PathBuf,
+    /// its encoder the Neural Engine's: one loaded before its Core ML
+    /// encoder came (Manage models' offer) is loaded again
+    neural: bool,
 }
 
 #[derive(Default)]
@@ -31,11 +36,36 @@ struct AppState {
     download: Mutex<Option<Arc<download::Job>>>,
     /// The transcription asked to stop, by id; 0 for none.
     stop: AtomicU32,
+    /// The model file the transcription under way uses, from its reading of
+    /// the settings to its end (Using): Manage models can't delete it
+    /// meanwhile, whichever model is in use by then (delete_model).
+    transcribing: Mutex<Option<PathBuf>>,
     /// Files the system asked the app to open (a .pkf double-clicked) before
     /// the page was there to take them (hand_over), and whether it is now;
     /// the lock is held for both, so that none falls between.
     opened: Mutex<Vec<String>>,
     page_ready: AtomicBool,
+    /// On Linux, the server the player's audio comes from, from the first
+    /// file played (serve.rs).
+    #[cfg(target_os = "linux")]
+    serve: Mutex<Option<pktito_app::serve::Server>>,
+}
+
+/// A transcription's model file in AppState.transcribing, until it ends,
+/// however it ends.
+struct Using<'a>(&'a Mutex<Option<PathBuf>>);
+
+impl<'a> Using<'a> {
+    fn new(slot: &'a Mutex<Option<PathBuf>>, path: &Path) -> Using<'a> {
+        *slot.lock().unwrap() = Some(path.to_path_buf());
+        Using(slot)
+    }
+}
+
+impl Drop for Using<'_> {
+    fn drop(&mut self) {
+        *self.0.lock().unwrap() = None;
+    }
 }
 
 const VIDEO: &[&str] = &["mp4", "m4v", "mov", "webm", "mkv", "wmv", "avi", "3gp"];
@@ -128,14 +158,20 @@ fn audio_dir(app: &AppHandle) -> Result<PathBuf, String> {
         .map_err(|e| e.to_string())
 }
 
+/// A catalog model as the window offers it: its entry, with `bytes` what it
+/// takes on this computer (model::bytes_of: on a Mac its Neural Engine
+/// edition's, unless the whole file is here).
 #[derive(Serialize)]
 struct Offer {
     #[serde(flatten)]
-    entry: &'static model::Entry,
-    /// Downloaded and on this computer.
+    entry: serde_json::Value,
+    /// Downloaded and on this computer, in either edition.
     have: bool,
     /// Bytes kept from a download that stopped.
     partial: u64,
+    /// On a Mac, the bytes of its Core ML encoder, which Manage models
+    /// offers where a whole file of it is here without one.
+    faster: Option<u64>,
 }
 
 #[derive(Serialize)]
@@ -158,6 +194,10 @@ struct Status {
     store: bool,
     /// The data folder is that package's own (data_in_package).
     data_in_package: bool,
+    /// The file manager can show the models' folder, which the model menu
+    /// offers beside Manage models: not from the Store's package, whose
+    /// storage Explorer outside it does not show.
+    reveal: bool,
     media: &'static [&'static str],
     video: &'static [&'static str],
 }
@@ -176,19 +216,53 @@ fn file_dialog(app: &AppHandle) -> FileDialogBuilder<tauri::Wry> {
 }
 
 /// Load the model at path into the engine, unless it is the one there, on
-/// PKTITO_THREADS's threads (transcribe::threads_wanted).
-fn ensure_engine<'a>(slot: &'a mut Option<Engine>, path: &Path) -> Result<&'a mut Engine, String> {
-    if slot.as_ref().map(|e| e.path != path).unwrap_or(true) {
+/// PKTITO_THREADS's threads (transcribe::threads_wanted); on a Mac with its
+/// Core ML encoder where it has one (model::encoder_of, neural).
+fn ensure_engine<'a>(slot: &'a mut Option<Engine>, data: &Path, path: &Path) -> Result<&'a mut Engine, String> {
+    let encoder = model::encoder_of(data, path);
+    let stale = |e: &Engine| e.path != path || (encoder.is_some() && !e.neural);
+    if slot.as_ref().map(stale).unwrap_or(true) {
         *slot = None;
         let model = pktito::Model::load(path)?;
-        let asr = pktito::Asr::new(&model, transcribe::threads_wanted())?;
+        #[allow(unused_mut)]
+        let mut asr = pktito::Asr::new(&model, transcribe::threads_wanted())?;
+        let neural = neural(&mut asr, &model, encoder.as_deref())?;
         *slot = Some(Engine {
             model,
             asr,
             path: path.to_path_buf(),
+            neural,
         });
     }
     Ok(slot.as_mut().unwrap())
+}
+
+/// On a Mac, the encoder on the Neural Engine, the Core ML model at
+/// encoder (model::encoder_of); whether it runs there. Core ML compiles it
+/// for this Mac the first time the app loads it (about 10 s for v2 on the
+/// M4 Pro), once. Where the Neural Engine can't run it, a whole model file
+/// runs its own encoder on the CPU; the Neural Engine edition's file has
+/// none, and that is the error.
+#[cfg(target_os = "macos")]
+fn neural(asr: &mut pktito::Asr, m: &pktito::Model, encoder: Option<&Path>) -> Result<bool, String> {
+    let Some(encoder) = encoder else { return Ok(false) };
+    match asr.use_ane(Some(encoder)) {
+        Ok(()) => Ok(true),
+        Err(why) => {
+            let _ = asr.use_ane(None);
+            if m.has_encoder() {
+                eprintln!("pktito: the Neural Engine can't run the encoder ({why}); using the CPU");
+                Ok(false)
+            } else {
+                Err(format!("the Neural Engine can't run the model's encoder: {why}"))
+            }
+        }
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn neural(_asr: &mut pktito::Asr, _m: &pktito::Model, _encoder: Option<&Path>) -> Result<bool, String> {
+    Ok(false)
 }
 
 #[tauri::command]
@@ -214,10 +288,15 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, Problem>
         model_file: s.model_file,
         catalog: model::CATALOG
             .iter()
-            .map(|e| Offer {
-                entry: e,
-                have: model::have(&dir, e),
-                partial: model::partial(&dir, e),
+            .map(|e| {
+                let mut entry = serde_json::to_value(e).unwrap_or_default();
+                entry["bytes"] = model::bytes_of(&dir, e).into();
+                Offer {
+                    entry,
+                    have: model::have_any(&dir, e),
+                    partial: model::kept(&dir, e),
+                    faster: model::encoder_offer(&data, e),
+                }
             })
             .collect(),
         download,
@@ -227,6 +306,7 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, Problem>
         platform: std::env::consts::OS,
         store: store_edition(),
         data_in_package: data_in_package(&data),
+        reveal: !store_edition(),
         media: decode::MEDIA,
         video: VIDEO,
     })
@@ -245,7 +325,7 @@ fn set_prefs(app: AppHandle, prefs: model::Prefs) -> Result<(), Problem> {
 fn choose_model(app: AppHandle, name: String) -> Result<(), Problem> {
     let e = model::entry(&name).ok_or("no such model")?;
     let data = data_dir(&app)?;
-    if !model::have(&data.join("models"), e) {
+    if !model::have_any(&data.join("models"), e) {
         return Err(Problem::new("choose.not_downloaded"));
     }
     let mut s = model::load_settings(&data);
@@ -296,6 +376,34 @@ fn download_model(app: AppHandle, state: State<'_, AppState>, name: String) -> R
     Ok(())
 }
 
+/// Manage models' offer on a Mac: name's Core ML encoder alone, for its
+/// whole model file here (or the user's own copy of it), which then runs
+/// on the Neural Engine. "download" events say how it goes, as a model's.
+#[tauri::command]
+fn get_encoder(app: AppHandle, state: State<'_, AppState>, name: String) -> Result<(), Problem> {
+    let e = model::entry(&name).ok_or("no such model")?;
+    let data = data_dir(&app)?;
+    if model::encoder_offer(&data, e).is_none() {
+        return Ok(());
+    }
+    let mut slot = state.download.lock().unwrap();
+    if let Some(j) = slot.as_ref().filter(|j| j.alive()) {
+        return Err(Problem::new("download.busy").with("name", j.name()));
+    }
+    let job = Arc::new(download::Job::encoder(e, &data.join("models")));
+    *slot = Some(job.clone());
+    let tell = app.clone();
+    job.start_encoder(
+        e,
+        data.join("models"),
+        move |s| {
+            let _ = tell.emit("download", s);
+        },
+        |_| {},
+    );
+    Ok(())
+}
+
 #[tauri::command]
 fn pause_download(state: State<'_, AppState>) {
     if let Some(j) = state.download.lock().unwrap().as_ref() {
@@ -306,20 +414,73 @@ fn pause_download(state: State<'_, AppState>) {
 /// Stop the download and delete what it had.
 #[tauri::command]
 fn cancel_download(app: AppHandle, state: State<'_, AppState>) -> Result<(), Problem> {
-    let slot = state.download.lock().unwrap();
-    let Some(j) = slot.as_ref() else {
-        return Ok(());
-    };
+    match state.download.lock().unwrap().as_ref() {
+        Some(j) => cancel(&app, j),
+        None => Ok(()),
+    }
+}
+
+/// j stopped and what it had deleted: by its thread, which says so, while it
+/// runs; else here.
+fn cancel(app: &AppHandle, j: &download::Job) -> Result<(), Problem> {
     if j.alive() {
         // its thread deletes what it had, and says so
         j.ctl.cancel.store(true, Ordering::Relaxed);
         return Ok(());
     }
     let e = model::entry(&j.name()).ok_or("no such model")?;
-    let _ = fs::remove_file(model::part_in(&data_dir(&app)?.join("models"), e));
+    let _ = model::remove_parts(&data_dir(app)?.join("models"), e);
     j.set_step("cancelled");
     let _ = app.emit("download", j.state());
     Ok(())
+}
+
+/// Manage models' Delete: a catalog model's downloaded file,
+/// or with part what a download of it that stopped kept, as Cancel deletes
+/// it. Deleting the model in use puts another downloaded one in its place,
+/// whose name comes back for the window to say so, or none, and the window
+/// goes back to choosing one (model::delete). The engine lets go of the file
+/// first: Windows deletes no file that is mapped, and macOS and Linux free
+/// its room only once nothing maps it. A transcription's model waits for it
+/// to end, in use or not: a model chosen during it is in use while the one
+/// before is still transcribing. The window greys their Deletes meanwhile.
+#[tauri::command]
+fn delete_model(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    name: String,
+    part: bool,
+) -> Result<Option<String>, Problem> {
+    let e = model::entry(&name).ok_or("no such model")?;
+    let data = data_dir(&app)?;
+    let cant = |why: String| Problem::new("manage.cant_delete").detail(why);
+    if part {
+        if let Some(j) = state.download.lock().unwrap().as_ref() {
+            if j.name() == name {
+                return cancel(&app, j).map(|_| None);
+            }
+        }
+        return model::remove_parts(&data.join("models"), e).map(|_| None).map_err(cant);
+    }
+    let dir = data.join("models");
+    // its files: the whole one, and on a Mac the Neural Engine edition's
+    let files = [model::file_in(&dir, e), model::slim_in(&dir, e)];
+    let used = |p: &Path| files.iter().any(|f| model::same_file(p, f));
+    let using = state.transcribing.lock().unwrap().clone();
+    if using.is_some_and(|p| used(&p)) {
+        return Err(Problem::new("manage.busy"));
+    }
+    // held until the file is gone, so that no transcription loads it
+    // meanwhile; a transcription holding it has another model's file
+    let mut engine = state.engine.try_lock();
+    if let Ok(slot) = engine.as_mut() {
+        if slot.as_ref().is_some_and(|en| used(&en.path)) {
+            **slot = None;
+        }
+    }
+    let now = model::delete(&data, e).map_err(cant)?;
+    drop(engine);
+    Ok(now.map(|x| x.name.to_string()))
 }
 
 /// A .pkf already on this computer, checked by loading it.
@@ -356,45 +517,10 @@ async fn open_model(
 fn use_file(app: &AppHandle, state: &AppState, path: &Path) -> Result<(), Problem> {
     {
         let mut slot = state.engine.lock().unwrap();
-        ensure_engine(&mut slot, path)
-            .map_err(|why| Problem::new(model_trouble(&why)).detail(why))?;
+        ensure_engine(&mut slot, &data_dir(app)?, path)
+            .map_err(|why| Problem::new(model::trouble(&why)).detail(why))?;
     }
     Ok(model::choose_file(&data_dir(app)?, path)?)
-}
-
-/// What a model file pktito could not load means to its user, as the
-/// catalog's key (strings.rs), from the
-/// engine's reason (core/model.c's pk_model_load, os.c's pk_map_file): a
-/// newer pktito's model, or one for another architecture, wants a newer
-/// app; a file that is not one at all is said so; one that is, but cut
-/// short or damaged, is told apart from it, as a download that stopped is.
-fn model_trouble(why: &str) -> &'static str {
-    let has = |words: &[&str]| words.iter().any(|w| why.contains(w));
-    if has(&["out of memory", "not enough memory"]) {
-        "problem.memory"
-    } else if has(&["model file version", "the architecture is not"]) {
-        "model_file.newer"
-    } else if has(&[
-        "not a pktito model file",
-        "shorter than a header",
-        "empty file",
-        "no model bytes",
-        "larger than any model file",
-    ]) {
-        "model_file.not_model"
-    } else if has(&[
-        "cannot map",
-        "mmap:",
-        "cannot tell its size",
-        "No such file",
-        "not found",
-        "Permission denied",
-        "denied",
-    ]) {
-        "model_file.cant_open"
-    } else {
-        "model_file.damaged"
-    }
 }
 
 /// Of these paths, the files that are there: the window queues no others.
@@ -508,6 +634,9 @@ async fn transcribe(app: AppHandle, id: u32, path: String) -> Result<(), Problem
 }
 
 fn job(app: &AppHandle, id: u32, path: &Path) {
+    // the computer awake from the file's reading to its transcript's end,
+    // let go on this thread when the job returns (awake.rs)
+    let _awake = awake::awake("pktito is transcribing");
     let state = app.state::<AppState>();
     let send = |ev: JobEvent| {
         let _ = app.emit("job", JobEvent { id, ..ev });
@@ -557,6 +686,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
     let Some(model_path) = model::usable(&data, &model::load_settings(&data)) else {
         return fail(Problem::new("transcribe.no_model"));
     };
+    let _using = Using::new(&state.transcribing, &model_path);
     let mut slot = state.engine.lock().unwrap();
     let loading = slot.as_ref().map(|e| e.path != model_path).unwrap_or(true);
     send(JobEvent {
@@ -568,7 +698,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
         fps,
         ..Default::default()
     });
-    let Engine { model, asr, .. } = match ensure_engine(&mut slot, &model_path) {
+    let Engine { model, asr, .. } = match ensure_engine(&mut slot, &data, &model_path) {
         Ok(e) => e,
         Err(why) => return fail(trouble("transcribe.cant_load_model", why.to_string())),
     };
@@ -614,6 +744,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
     match r {
         Ok((segments, true)) => {
             let took = t0.elapsed().as_secs_f64();
+            let (size, modified) = recent::stamp(path);
             let item = recent::Item {
                 id: key.clone(),
                 path: path.to_path_buf(),
@@ -627,6 +758,8 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
                 transcribed,
                 model: name.clone(),
                 fps,
+                size,
+                modified,
             };
             let kept = recent::add(
                 &data,
@@ -697,18 +830,89 @@ fn open_recent(app: AppHandle, id: String) -> Result<Opened, Problem> {
     })
 }
 
-/// A cached transcript's audio, its bytes, for the window on Linux, whose
-/// WebKitGTK player can't read media by the asset protocol (app.js,
-/// audioSrc). Only a WAV in the audio cache.
+/// Where the window's player gets a cached transcript's audio on Linux: the
+/// app's own server on 127.0.0.1, since WebKitGTK's player can't read media
+/// by the asset protocol (serve.rs). Only a WAV in the audio cache, and none
+/// while GStreamer lacks what the player needs (gstreamer_missing).
+#[cfg(target_os = "linux")]
 #[tauri::command]
-fn audio_bytes(app: AppHandle, path: String) -> Result<tauri::ipc::Response, Problem> {
+fn audio_url(app: AppHandle, state: State<'_, AppState>, path: String) -> Result<String, Problem> {
     let p = PathBuf::from(&path);
     let dir = audio_dir(&app)?;
     if p.parent() != Some(dir.as_path()) || p.extension().map_or(true, |e| e != "wav") {
         return Err(Problem::new("play.cant"));
     }
-    let bytes = std::fs::read(&p).map_err(|e| Problem::new("play.cant").detail(e))?;
-    Ok(tauri::ipc::Response::new(bytes))
+    let missing = gstreamer_missing();
+    if !missing.is_empty() {
+        return Err(Problem::new("play.no_gstreamer").with("what", missing.join(", ")));
+    }
+    let mut serve = state.serve.lock().unwrap();
+    if serve.is_none() {
+        let s = pktito_app::serve::Server::start();
+        *serve = Some(s.map_err(|e| Problem::new("play.cant").detail(e))?);
+    }
+    Ok(serve.as_ref().unwrap().url(&p))
+}
+
+/// The GStreamer elements WebKitGTK's player needs for the cached WAV that
+/// this system lacks, asked of GStreamer itself, once. Arch leaves its
+/// plugins optional, and the window hung when its player was handed a
+/// transcript's audio without them (the Omarchy VM, 2026-10-25: "GStreamer
+/// element autoaudiosink not found"); the play button says what's missing
+/// instead. libgstreamer is opened here, not linked: WebKitGTK brings it,
+/// and its absence is one more thing to say. On a Pi 5 with the base
+/// plugins alone this gives wavparse and autoaudiosink, the good plugins'.
+#[cfg(target_os = "linux")]
+fn gstreamer_missing() -> &'static [&'static str] {
+    use std::ffi::{c_char, c_int, c_void, CStr};
+    use std::ptr::null_mut;
+    use std::sync::OnceLock;
+    static MISSING: OnceLock<Vec<&'static str>> = OnceLock::new();
+    const NEEDS: [&CStr; 5] = [
+        c"playbin",
+        c"wavparse",
+        c"autoaudiosink",
+        c"audioconvert",
+        c"audioresample",
+    ];
+    extern "C" {
+        fn dlopen(name: *const c_char, flags: c_int) -> *mut c_void;
+        fn dlsym(handle: *mut c_void, name: *const c_char) -> *mut c_void;
+    }
+    const RTLD_NOW: c_int = 2;
+    MISSING.get_or_init(|| unsafe {
+        let gst = dlopen(c"libgstreamer-1.0.so.0".as_ptr(), RTLD_NOW);
+        let sym = |name: &CStr| match gst.is_null() {
+            true => null_mut(),
+            false => dlsym(gst, name.as_ptr()),
+        };
+        let (init, find, unref) = (
+            sym(c"gst_init_check"),
+            sym(c"gst_element_factory_find"),
+            sym(c"gst_object_unref"),
+        );
+        if init.is_null() || find.is_null() || unref.is_null() {
+            return vec!["GStreamer"];
+        }
+        let init: extern "C" fn(*mut c_int, *mut c_void, *mut c_void) -> c_int =
+            std::mem::transmute(init);
+        let find: extern "C" fn(*const c_char) -> *mut c_void = std::mem::transmute(find);
+        let unref: extern "C" fn(*mut c_void) = std::mem::transmute(unref);
+        if init(null_mut(), null_mut(), null_mut()) == 0 {
+            return vec!["GStreamer"];
+        }
+        NEEDS
+            .iter()
+            .filter(|name| {
+                let factory = find(name.as_ptr());
+                if !factory.is_null() {
+                    unref(factory);
+                }
+                factory.is_null()
+            })
+            .map(|name| name.to_str().unwrap_or("?"))
+            .collect()
+    })
 }
 
 /// A recent transcript's audio, read again from its original once the cache
@@ -1321,6 +1525,9 @@ fn headless(args: &[String]) -> Result<(), String> {
     let t1 = Instant::now();
     let model = pktito::Model::load(&model_path)?;
     let mut asr = pktito::Asr::new(&model, transcribe::threads_wanted())?;
+    if let Some(data) = model::data_dir() {
+        neural(&mut asr, &model, model::encoder_of(&data, &model_path).as_deref())?;
+    }
     let (segs, _) = transcribe::run(
         &model,
         &mut asr,
@@ -1426,7 +1633,8 @@ fn main_window(app: &tauri::App) -> tauri::Result<tauri::WebviewWindow> {
 static PLACED: Mutex<Option<(f64, f64)>> = Mutex::new(None);
 
 /// The window, sized by fit_size before it is shown, in the middle of the
-/// monitor's work area. tauri.conf.json makes it hidden until then.
+/// monitor's work area; on Linux where the desktop puts it. tauri.conf.json
+/// makes it hidden until then.
 fn place_window(w: &tauri::WebviewWindow, saved: Option<[f64; 2]>) {
     let monitor = w
         .current_monitor()
@@ -1449,6 +1657,12 @@ fn place_window(w: &tauri::WebviewWindow, saved: Option<[f64; 2]>) {
     let (width, height) = fit_size(saved, room);
     *PLACED.lock().unwrap() = Some((width, height));
     let _ = w.set_size(tauri::LogicalSize::new(width, height));
+    // Not on Linux, where the desktop places a new window: Wayland lets no
+    // app place its own, and an X server can report a screen other than the
+    // one shown. WSLg's X gave a 2880 by 1620 panel's physical pixels while
+    // Windows showed 1920 by 1080 of them at 150%, and the window, centred
+    // on the first, opened mostly off the second (snappy, 2026-10-27).
+    #[cfg(not(target_os = "linux"))]
     let _ = w.center();
     let _ = w.show();
 }
@@ -1749,8 +1963,10 @@ fn main() {
             set_prefs,
             choose_model,
             download_model,
+            get_encoder,
             pause_download,
             cancel_download,
+            delete_model,
             use_model_file,
             open_model,
             initial_files,
@@ -1761,7 +1977,8 @@ fn main() {
             recent_list,
             open_recent,
             reload_audio,
-            audio_bytes,
+            #[cfg(target_os = "linux")]
+            audio_url,
             clear_recent,
             save_text,
             save_many,

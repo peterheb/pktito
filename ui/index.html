@@ -23,23 +23,55 @@
     <section id="ready" class="pk-center" hidden>
       <div class="pk-dragbar pk-band" data-tauri-drag-region></div>
       <div class="pk-screen pk-ready">
-        <div class="pk-spread" data-tauri-drag-region="deep">
+        <!-- the top row and the recent list, which a wide window keeps in a
+         column of their own at its left, beside the drop zone or the file
+         open: the side (app.css) -->
+        <div class="pk-side">
+          <div class="pk-spread" data-tauri-drag-region="deep">
+            <button
+              class="pk-wm"
+              type="button"
+              data-about
+              data-t-aria-label="about.open"
+              data-t-title="about.open"
+            >
+              pktito
+            </button>
+            <button
+              class="pk-btn pk-btn-ghost"
+              id="ready-model"
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded="false"
+            ></button>
+          </div>
           <button
-            class="pk-wm"
+            class="pk-btn pk-side-choose"
+            id="side-choose"
             type="button"
-            data-about
-            data-t-aria-label="about.open"
-            data-t-title="about.open"
-          >
-            pktito
-          </button>
-          <button
-            class="pk-btn pk-btn-ghost"
-            id="ready-model"
-            type="button"
-            aria-haspopup="menu"
-            aria-expanded="false"
           ></button>
+          <section class="pk-recent" id="recent" hidden>
+            <div class="pk-spread">
+              <h2 class="pk-ui" data-t="recent.title"></h2>
+              <button
+                class="pk-btn pk-btn-ghost"
+                id="clear-recent"
+                type="button"
+                data-t-aria-label="recent.clear_label"
+                data-t="recent.clear"
+              ></button>
+            </div>
+            <ul id="recent-list"></ul>
+          </section>
+          <div
+            class="pk-side-edge"
+            id="side-edge"
+            role="separator"
+            aria-orientation="vertical"
+            tabindex="0"
+            data-t-aria-label="side.width"
+            data-t-title="side.width_tip"
+          ></div>
         </div>
         <div class="pk-ready-drop">
           <div class="pk-ready-text">
@@ -53,33 +85,20 @@
             ></button>
           </div>
         </div>
-        <section class="pk-recent" id="recent" hidden>
-          <div class="pk-spread">
-            <h2 class="pk-ui" data-t="recent.title"></h2>
-            <button
-              class="pk-btn pk-btn-ghost"
-              id="clear-recent"
-              type="button"
-              data-t-aria-label="recent.clear_label"
-              data-t="recent.clear"
-            ></button>
-          </div>
-          <ul id="recent-list"></ul>
-        </section>
       </div>
     </section>
 
     <!-- The work: one file, alone or opened from a batch -->
     <div id="work" class="pk-work" hidden>
       <section class="pk-main">
-        <header class="pk-head" data-tauri-drag-region="deep">
+        <header class="pk-head" id="head" data-tauri-drag-region="deep">
           <button
             class="pk-btn pk-btn-ghost pk-btn-ico pk-back"
             id="back"
             type="button"
             data-t-aria-label="nav.back"
           ></button>
-          <h1 class="pk-ui" id="title"></h1>
+          <h1 class="pk-ui pk-cut" id="title"></h1>
           <span class="pk-spin" id="spin" hidden aria-hidden="true"></span>
           <span class="pk-grow"></span>
           <label class="pk-find" id="find-box">
@@ -131,6 +150,9 @@
             data-t="work.stop"
           ></button>
         </header>
+        <!-- the name, where beside the header's buttons it would keep under
+             160 px (app.js, placeFind) -->
+        <div class="pk-head-name" id="head-name" hidden></div>
         <div class="pk-strip-wrap" id="strip-wrap">
           <div class="pk-strip" id="strip">
             <!-- play, and under it playback's speed, on the line of the times -->
@@ -178,7 +200,9 @@
             </div>
           </div>
         </div>
-        <!-- a finished transcript as its sentences or as its subtitle track's cues -->
+        <!-- a finished transcript as its sentences or as its subtitle track's
+             cues; and Find, where the header hasn't the room for it (placeFind) -->
+        <div class="pk-views-line" id="views-line">
         <div
           class="pk-views"
           id="views"
@@ -200,6 +224,7 @@
             data-view="captions"
             data-t="work.captions"
           ></button>
+        </div>
         </div>
         <p class="pk-msg" id="msg" role="status"></p>
         <details class="pk-details pk-msg-details" id="msg-details" hidden>
@@ -247,7 +272,10 @@
         </header>
         <div class="pk-batch">
           <div class="pk-batch-files">
-            <p class="pk-small pk-num" id="tally" role="status"></p>
+            <div class="pk-tally">
+              <p class="pk-small pk-num" id="tally" role="status"></p>
+              <span class="pk-stamp" id="batch-pace"></span>
+            </div>
             <ul id="queue" data-t-aria-label="batch.files_label"></ul>
           </div>
           <button class="pk-btn pk-batch-add" id="add" type="button"></button>
@@ -381,8 +409,31 @@
       </div>
     </section>
 
-    <!-- Before the recent list is cleared: Cancel the default, its buttons in
-     the platform's order (app.js, askClear) -->
+    <!-- Manage models, where the file manager can't show their folder: the
+     models on this computer and what a stopped download kept, each with a
+     Delete; app.js fills it (openManage) -->
+    <div class="pk-notices" id="manage" hidden>
+      <div
+        class="pk-notices-box pk-manage-box"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="manage-title"
+      >
+        <div class="pk-notices-head">
+          <h2 class="pk-ui" id="manage-title" data-t="manage.title"></h2>
+          <button
+            class="pk-btn pk-btn-ghost pk-btn-ico"
+            id="manage-close"
+            type="button"
+            data-t-aria-label="sheet.close"
+          ></button>
+        </div>
+        <div class="pk-notices-body" id="manage-body"></div>
+      </div>
+    </div>
+
+    <!-- Before something is deleted, the recent list cleared or a model:
+     Cancel the default, its buttons in the platform's order (app.js, ask) -->
     <div class="pk-ask" id="ask" hidden>
       <div
         class="pk-ask-box"
@@ -392,15 +443,10 @@
         aria-describedby="ask-text"
         tabindex="-1"
       >
-        <h2 class="pk-ui" id="ask-title" data-t="ask.clear_title"></h2>
-        <p id="ask-text" data-t="ask.clear_text"></p>
+        <h2 class="pk-ui" id="ask-title"></h2>
+        <p id="ask-text"></p>
         <div class="pk-ask-btns" id="ask-btns">
-          <button
-            class="pk-btn pk-btn-del"
-            id="ask-yes"
-            type="button"
-            data-t="ask.clear"
-          ></button>
+          <button class="pk-btn pk-btn-del" id="ask-yes" type="button"></button>
           <button
             class="pk-btn pk-btn-primary"
             id="ask-no"

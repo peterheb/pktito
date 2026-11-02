@@ -11,13 +11,19 @@
  *
  *   a model      pk_model_load    a .pkf file: the model, its vocabulary and
  *                                 the VAD, with where every number came from
- *   transcribe   pk_asr_run       16 kHz samples in, tokens with times out
+ *   a recording  pk_asr_transcribe  the high-level path: any length in,
+ *                                 each chunk's tokens out, VAD, chunking
+ *                                 and the retries done
+ *   transcribe   pk_asr_run       the low-level path: 16 kHz samples in,
+ *                                 tokens with times out, NeMo's to the bit
  *   text         pk_text          tokens to UTF-8, as NeMo writes them
  *   segments     pk_vad_probs,    Silero's per-frame speech probabilities, and
  *                pk_segments      get_speech_timestamps' segments from them
  *   chunks       pk_chunks        a long recording cut at its silences into
  *                                 pieces the encoder takes whole, its
- *                                 silence left out
+ *                                 silence left out; pk_asr_run_chunks
+ *                                 transcribes them, each chunk's decoder
+ *                                 beside the next one's encoder
  *   captions     pk_captions      words with times to a subtitle track's cues
  *
  * A model is read-only once loaded and may be shared by any number of
@@ -44,7 +50,8 @@ typedef struct pk_model pk_model;
  * UTF-8 on every system: on Windows it is opened as UTF-16, so a model in
  * a user folder whose name is past ASCII loads whatever the process's
  * code page, and bytes that are not UTF-8 are refused, never read in the
- * code page instead. */
+ * code page instead. The checks run on the calling thread, which on
+ * Windows is out of power throttling for the call, as for a pk_asr_run. */
 pk_model *pk_model_load(const char *path, char *err, size_t errlen);
 
 /* The same from a copy the caller holds - a file embedded in a binary, or
@@ -80,14 +87,30 @@ double pk_model_frame_seconds(const pk_model *m);
 
 typedef struct pk_asr pk_asr;
 
-/* A transcriber with `threads` threads in all (0: one a core). NULL if
- * memory or a thread cannot be had. With 0, on a chip whose cores are of
- * two kinds, the first recording of 8 s or more times the encoder on every
- * core and on the fast kind alone, and the transcriber keeps the faster;
- * pk_asr_threads says how many it runs on. */
+/* A transcriber on `threads` threads (0: one a core). NULL if memory or a
+ * thread cannot be had. With 0, on a chip whose cores are of two kinds, the
+ * second recording of 8 s or more times the encoder on every core and on
+ * the fast kind alone, and the transcriber keeps the faster;
+ * pk_asr_threads says how many it runs on. On 8 threads or more it may run
+ * a recording's chunks several at once (pk_asr_run_chunks), and makes the
+ * threads and the memory for that the first time a recording takes them. */
 pk_asr *pk_asr_new(const pk_model *m, int threads);
 void    pk_asr_free(pk_asr *a);
 int     pk_asr_threads(const pk_asr *a);
+
+/* The fast mode, off until asked for: the encoder's activations in blocks
+ * of 64 inputs, not 32, wherever an input is whole blocks of 64 (every one
+ * of Parakeet's). For a caller who wants the speed more than the
+ * transcript nearest float32's: WER is level, a few more transcripts differ
+ * from float32's (49 of FLEURS' 360 against 45), and on the boards
+ * measured a run is 3.9 to 7.3% faster where the int8 product is a dot
+ * product (SDOT, VPDPBUSD), 5.5% on a Pi 4 and 3.2 to 3.4% on a Pi 3 with
+ * the ARMv8.0 loop, and 1 to 3% with x86's VPMADDUBSW (README, "Why int8";
+ * backend/avx2/CLIMB.md and backend/neon/CLIMB.md, 2026-10-29). AMX's
+ * pipeline takes blocks of 32 alone, and in the mode the amx-int8 build
+ * runs its zmm tile, unmeasured. From the next call on; every backend
+ * computes the same bits in either mode. */
+void    pk_asr_set_fast_mode(pk_asr *a, int on);
 
 /* One token of a transcript: a piece of the vocabulary, the encoder frame
  * it was emitted at, and the number of frames TDT says it lasts. */
@@ -103,8 +126,86 @@ typedef struct {
  *
  * The encoder's attention costs grow with the square of the length, and
  * its working memory with the length: a minute is about 60 MB. Long
- * recordings are pk_chunks' business. */
+ * recordings are pk_chunks' business.
+ *
+ * The calling thread does a share of the work. On Windows it is out of the
+ * power throttling the system gives a process without a window for the
+ * call, as the transcriber's own threads are for good, and leaves as it
+ * came (core/os.h). */
 long pk_asr_run(pk_asr *a, const float *x, size_t n, const pk_tok **toks);
+
+/* A stretch of a recording, in samples; end is exclusive. */
+typedef struct { int64_t start, end; } pk_seg;
+
+/* pk_asr_run over a recording's chunks c[0..n) of x (pk_chunks), in order:
+ * fn(arg, i, toks, count) for each, on the calling thread, with chunk i's
+ * tokens as pk_asr_run would return them, the same bits, lasting until fn
+ * returns. Each chunk's decoder runs beside the next chunk's encoder, on a
+ * thread of its own, so that only the last one's is waited for, and fn has
+ * a chunk once the next one's encoder is done: 1.2 to 5.6% less time than
+ * through pk_asr_run a chunk at a time where there are more than four
+ * cores, and about the same on four (core/asr.c).
+ *
+ * On 8 threads or more a run may take several chunks at once, a lane for
+ * each four threads at most, each lane on its share of them with working
+ * memory of its own, because one chunk keeps few of many threads busy. It
+ * takes as many as its chunks' lengths say end it soonest, and one where
+ * none would; fn has the chunks in order as before. AliceBench's chapters
+ * ran 1.22 times as fast this way on a 9950X's 16 threads and 2.03 times on
+ * an M5 Ultra's 36, and a Pi's four threads keep one lane (README, "How
+ * fast"). The working memory is the longest chunk's, and a second chunk's
+ * joint half, 1 MB at 30 s, for each lane: about 45 MB a lane at 30.72 s.
+ * Returns 0, or -1 if memory runs out (fn has then seen the chunks
+ * before). */
+typedef void (*pk_chunk_fn)(void *arg, size_t i, const pk_tok *toks, long count);
+int pk_asr_run_chunks(pk_asr *a, const float *x, const pk_seg *c, size_t n, pk_chunk_fn fn,
+                      void *arg);
+
+/* A recording of any length, x[0, n), to its transcript, with all the
+ * processing pktito does for one: the high-level path, where pk_asr_run is
+ * the low-level one, transcript = f(x), NeMo's to the bit. In order:
+ * Silero's VAD, its encoder over the transcriber's threads, and its speech
+ * segments (pk_vad_probs, pk_segments); the chunks of at most max_chunk_s
+ * (pk_chunks: the whole recording if it fits, else its speech cut at the
+ * last pause that fits, and what lies between), a cut in mid-sentence heard
+ * with the speech past it (context); each chunk transcribed, its search
+ * beside the next chunk's encoder, and several chunks at once where there
+ * are threads for it (pk_asr_run_chunks); and, with retry, each stretch of
+ * a chunk that Silero heard speech in but the model wrote no word for,
+ * transcribed again on its own - where the model drops speech, as NeMo's
+ * own float32 transcription does, a whole chunk of it at times
+ * (core/transcribe.c; README, "Transcribing a recording", has why and the
+ * measurements). Without the context and the retry each chunk is
+ * pk_asr_run's transcript of it.
+ *
+ * fn(arg, out) has each chunk in order as soon as it is done, on the
+ * calling thread, its tokens' frames counted from the chunk's start and
+ * lasting until fn returns; fn returns nonzero to stop the run there.
+ * Returns 0 when every chunk is done, 1 when fn stopped it, and -1 if
+ * memory runs out or max_chunk_s is under a second. Besides the
+ * transcriber's working memory, which is the longest chunk's for each
+ * chunk run at once, and its VAD's, which it keeps (0.85 MB a thread), the
+ * call holds about 2% of the recording's own size. */
+typedef struct {
+    double max_chunk_s;         /* 30.72: the most the encoder hears at once (README, "Long recordings") */
+    int    retry;               /* 1: speech the model wrote nothing for heard again */
+    int    context;             /* 1: a cut in mid-sentence heard with the speech past it */
+} pk_transcribe_opts;
+
+void pk_transcribe_defaults(pk_transcribe_opts *o);
+
+typedef struct {
+    size_t        i, n;         /* this chunk, of how many */
+    pk_seg        at;           /* its samples in the recording */
+    const pk_tok *toks;         /* its tokens, frames from at.start, retries' included */
+    long          count;
+    int           retried;      /* stretches of it transcribed again */
+    int64_t       done, total;  /* samples of chunks done, of all of them: progress */
+} pk_chunk_out;
+
+typedef int (*pk_transcribe_fn)(void *arg, const pk_chunk_out *c);
+int pk_asr_transcribe(pk_asr *a, const float *x, size_t n, const pk_transcribe_opts *o,
+                      pk_transcribe_fn fn, void *arg);
 
 /* The text of n tokens, UTF-8 and NUL-terminated in out[cap]: SentencePiece's
  * decoding with NeMo's one change to it, the space before punctuation taken
@@ -149,7 +250,8 @@ void    pk_vad_free(pk_vad *v);
 #define PK_VAD_SAMPLES 512      /* a frame: 32 ms at 16 kHz */
 
 /* P(speech) for the next frame, or for n consecutive frames x[n * 512] ->
- * probs[n] (the same bits, several times quicker). */
+ * probs[n] (the same bits, several times quicker; on Windows out of power
+ * throttling for the call, as pk_asr_run is). */
 float pk_vad_prob(pk_vad *v, const float *frame);
 void  pk_vad_probs(pk_vad *v, const float *x, size_t n, float *probs);
 
@@ -167,9 +269,6 @@ typedef struct {
 } pk_seg_params;
 
 void pk_seg_defaults(pk_seg_params *p);
-
-/* A stretch of a recording, in samples; end is exclusive. */
-typedef struct { int64_t start, end; } pk_seg;
 
 /* get_speech_timestamps_from_probs (silero_vad/utils_vad.py, v6.2.3): the
  * speech in n frames' probabilities. Returns how many segments there are;

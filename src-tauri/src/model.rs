@@ -12,9 +12,19 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::OnceLock;
 use std::time::Duration;
 
 pub const DEFAULT_BASE: &str = "https://models.pktito.net/";
+
+/// Whether this system downloads a model's edition for the Neural Engine
+/// (Coreml: the model file without its encoder, and its Core ML encoder)
+/// where it downloads one: the Mac's, every one of which has it (macOS 12
+/// on Apple silicon, the app's floor), at 3x the CPU's speed for v2 on an
+/// M4 Pro (AliceBench, 349x to 117x, WER 0.059% apart, 2026-11-02). The
+/// iOS app downloads its own, in Swift. A whole .pkf already here still
+/// runs, on the Neural Engine too once its encoder is beside it.
+pub const NEURAL: bool = cfg!(target_os = "macos");
 
 #[derive(Clone, Copy, Serialize)]
 pub struct Entry {
@@ -32,6 +42,33 @@ pub struct Entry {
     pub accuracy: &'static str,
     pub bytes: u64,
     pub sha256: &'static str,
+    /// Its edition for Apple's Neural Engine, which the iOS app downloads
+    /// where the device can run it (ios.rs).
+    pub coreml: Coreml,
+}
+
+/// A file models.pktito.net serves beside a .pkf, under the first twelve
+/// digits of its SHA-256 as one is (part_url): file is its name with its
+/// extension.
+#[derive(Clone, Copy, Serialize)]
+pub struct Part {
+    pub file: &'static str,
+    pub bytes: u64,
+    pub sha256: &'static str,
+}
+
+/// A model's edition for Apple's Neural Engine, from pktito's ane fork: the
+/// model file without its encoder (`pktito-tools slim`), which only the
+/// fork loads, and the encoder as a compiled Core ML model, int8, in an
+/// Apple Archive (tools/ane/encoder.py, then `aa archive`), made from the
+/// same checkpoint, whose SHA-256 each names and the fork holds them to.
+/// For v2 589 MB in all where its .pkf is 624; the same transcript as the
+/// .pkf with that encoder, which runs at 254x on an M1 iPad (the fork's
+/// tools/ane/CLIMB.md).
+#[derive(Clone, Copy, Serialize)]
+pub struct Coreml {
+    pub slim: Part,
+    pub encoder: Part,
 }
 
 /// The models models.pktito.net serves: pktito-tools' conversions of NVIDIA's
@@ -47,6 +84,18 @@ pub const CATALOG: &[Entry] = &[
         accuracy: "",
         bytes: 624_480_196,
         sha256: "8bfa6750b83cd7c447bad82057c7a12473563b72b3d35487fcca6da0786d83c7",
+        coreml: Coreml {
+            slim: Part {
+                file: "parakeet-tdt-0.6b-v2-slim.pkf",
+                bytes: 12_115_524,
+                sha256: "e582eb76db19e9fba4d9e15d45ce041dd9a230bac3c2970643aa6808bf966acb",
+            },
+            encoder: Part {
+                file: "parakeet-tdt-0.6b-v2-encoder.mlmodelc.aar",
+                bytes: 577_037_560,
+                sha256: "8a11f959618e9463386ca9ff5234bec82d535c6a0b1e1b2101cd507c8549297c",
+            },
+        },
     },
     Entry {
         name: "parakeet-tdt-0.6b-v3",
@@ -61,6 +110,18 @@ pub const CATALOG: &[Entry] = &[
         accuracy: "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3#multilingual-asr",
         bytes: 647_552_644,
         sha256: "35a59c9a433d4da2289640db93e73c42478b576e49a293090ef61b4ae595152a",
+        coreml: Coreml {
+            slim: Part {
+                file: "parakeet-tdt-0.6b-v3-slim.pkf",
+                bytes: 35_187_972,
+                sha256: "169ead8b6b98c67676d13c40bd592614f9d1a3b3783da027fe03967cd559b100",
+            },
+            encoder: Part {
+                file: "parakeet-tdt-0.6b-v3-encoder.mlmodelc.aar",
+                bytes: 575_464_480,
+                sha256: "64cf1a407ada158ee22450e8f258258373fe8e2ba3ac4ba0f482a91f0c122cdc",
+            },
+        },
     },
 ];
 
@@ -85,15 +146,57 @@ pub fn choose_file(data: &Path, path: &Path) -> Result<(), String> {
     let mut s = load_settings(data);
     let dir = data.join("models");
     match CATALOG.iter().find(|e| same_file(&file_in(&dir, e), path)) {
-        Some(e) => (s.model, s.model_file) = (Some(e.name.to_string()), None),
-        None => s.model_file = Some(path.to_path_buf()),
+        Some(e) => (s.model, s.model_file, s.model_file_is) = (Some(e.name.to_string()), None, None),
+        None => {
+            s.model_file = Some(path.to_path_buf());
+            // a copy of a catalog model, downloaded by hand: on a Mac its
+            // Core ML encoder serves it too (encoder_of), and Manage models
+            // offers it (Peter, 2026-11-02)
+            s.model_file_is = if NEURAL { copy_of(path).map(|e| e.name.to_string()) } else { None };
+        }
     }
     save_settings(data, &s)
 }
 
+/// The catalog model the file at path is, byte for byte: its size, then its
+/// SHA-256 (a second or two for 624 MB, once, when it is chosen).
+pub fn copy_of(path: &Path) -> Option<&'static Entry> {
+    let size = fs::metadata(path).ok()?.len();
+    let e = CATALOG.iter().find(|e| e.bytes == size)?;
+    let mut file = File::open(path).ok()?;
+    (sha256(&mut file, &Ctl::default()).ok()? == e.sha256).then_some(e)
+}
+
+/// The Core ML encoder for the model file at path, on a Mac: a catalog
+/// model's beside it (encoder_for), or for a file of the user's own that is
+/// a catalog model's copy (Settings::model_file_is), that model's.
+pub fn encoder_of(data: &Path, path: &Path) -> Option<PathBuf> {
+    let dir = data.join("models");
+    if let Some(enc) = encoder_for(&dir, path) {
+        return Some(enc);
+    }
+    let s = load_settings(data);
+    let own = s.model_file.as_deref().is_some_and(|f| same_file(f, path));
+    let e = entry(s.model_file_is.as_deref().filter(|_| NEURAL && own)?)?;
+    have_encoder(&dir, e).then(|| encoder_in(&dir, e))
+}
+
+/// On a Mac, the bytes of e's Core ML encoder where a whole model file of
+/// e is here without it, to offer (Manage models): one in the models
+/// folder, or the user's own file that is e's copy. None otherwise.
+pub fn encoder_offer(data: &Path, e: &Entry) -> Option<u64> {
+    if !NEURAL {
+        return None;
+    }
+    let dir = data.join("models");
+    let s = load_settings(data);
+    let own = s.model_file_is.as_deref() == Some(e.name) && s.model_file.as_ref().is_some_and(|f| f.is_file());
+    ((have(&dir, e) || own) && !have_encoder(&dir, e)).then_some(e.coreml.encoder.bytes)
+}
+
 /// Whether a and b are one file: the same path, or the same once each is
 /// canonical (through links and .., and on Windows in its \\?\ form)
-fn same_file(a: &Path, b: &Path) -> bool {
+pub fn same_file(a: &Path, b: &Path) -> bool {
     a == b || matches!((fs::canonicalize(a), fs::canonicalize(b)), (Ok(x), Ok(y)) if x == y)
 }
 
@@ -104,8 +207,124 @@ pub fn usable(data: &Path, s: &Settings) -> Option<PathBuf> {
         return Some(p.clone());
     }
     let e = entry(s.model.as_deref()?)?;
-    let dir = data.join("models");
-    have(&dir, e).then(|| file_in(&dir, e))
+    file_of(&data.join("models"), e)
+}
+
+/// e's model file in dir, if it is here: the whole one, else on a Mac its
+/// Neural Engine edition's, whose encoder is beside it.
+pub fn file_of(dir: &Path, e: &Entry) -> Option<PathBuf> {
+    if have(dir, e) {
+        Some(file_in(dir, e))
+    } else if NEURAL && have_neural(dir, e) {
+        Some(slim_in(dir, e))
+    } else {
+        None
+    }
+}
+
+/// Whether e is here to transcribe with, in either edition (file_of).
+pub fn have_any(dir: &Path, e: &Entry) -> bool {
+    file_of(dir, e).is_some()
+}
+
+/// The files a download of e fetches on this system, in order: on a Mac its
+/// Neural Engine edition (the slim model file, then the encoder's archive,
+/// unpacked once it checks), elsewhere the whole model.
+pub fn edition(dir: &Path, e: &Entry) -> Vec<Wanted> {
+    if NEURAL {
+        vec![Wanted::part(dir, e, &e.coreml.slim), Wanted::part(dir, e, &e.coreml.encoder)]
+    } else {
+        vec![Wanted::model(dir, e)]
+    }
+}
+
+/// The bytes of e on this computer once it is downloaded: what is here, or
+/// what a download of it fetches.
+pub fn bytes_of(dir: &Path, e: &Entry) -> u64 {
+    let whole = if have(dir, e) { e.bytes } else { 0 };
+    // the edition's files, or an encoder fetched for a whole file alone
+    let slim = if NEURAL && Wanted::part(dir, e, &e.coreml.slim).here() { e.coreml.slim.bytes } else { 0 };
+    let encoder = if NEURAL && have_encoder(dir, e) { e.coreml.encoder.bytes } else { 0 };
+    let neural = if whole > 0 || slim > 0 { slim + encoder } else { 0 };
+    match whole + neural {
+        0 => edition(dir, e).iter().map(|w| w.bytes).sum(),
+        n => n,
+    }
+}
+
+/// The bytes a download of e that stopped has kept: its files done and the
+/// part of the one under way. None once it is here.
+pub fn kept(dir: &Path, e: &Entry) -> u64 {
+    if have_any(dir, e) {
+        return 0;
+    }
+    edition(dir, e)
+        .iter()
+        .map(|w| if w.here() { w.bytes } else { w.partial() })
+        .sum()
+}
+
+/// What a download of e that stopped kept, deleted.
+pub fn remove_parts(dir: &Path, e: &Entry) -> Result<(), String> {
+    for w in edition(dir, e) {
+        // a slim file checked but its encoder not yet: part of the download
+        let done = NEURAL && !have_encoder(dir, e) && w.here();
+        for f in [Some(&w.part), done.then_some(&w.dst)].into_iter().flatten() {
+            match fs::remove_file(f) {
+                Err(err) if err.kind() != io::ErrorKind::NotFound => {
+                    return Err(format!("{err}\n{}", f.display()))
+                }
+                _ => {}
+            }
+        }
+    }
+    Ok(())
+}
+
+/// The Core ML encoder beside the catalog model whose file path is (whole or
+/// slim), where it has one.
+pub fn encoder_for(dir: &Path, path: &Path) -> Option<PathBuf> {
+    if !NEURAL {
+        return None;
+    }
+    let e = CATALOG.iter().find(|e| same_file(&file_in(dir, e), path) || same_file(&slim_in(dir, e), path))?;
+    have_encoder(dir, e).then(|| encoder_in(dir, e))
+}
+
+/// The Core ML encoder out of its Apple Archive (`aa archive` of the
+/// compiled model) into dst, with macOS's own aa: unpacked beside it first
+/// and renamed into place whole, so that an encoder in place is a whole one
+/// (have_encoder), and the archive deleted after, as the iOS app does (its
+/// Unpack.swift). Only an archive whose SHA-256 checked comes here.
+pub fn unpack_encoder(archive: &Path, dst: &Path) -> Result<(), String> {
+    let mut work = dst.as_os_str().to_owned();
+    work.push(".unpacking");
+    let work = PathBuf::from(work);
+    let _ = fs::remove_dir_all(&work);
+    fs::create_dir_all(&work).map_err(|err| format!("couldn't make {}: {err}", work.display()))?;
+    let ran = std::process::Command::new("/usr/bin/aa")
+        .arg("extract")
+        .arg("-i")
+        .arg(archive)
+        .arg("-d")
+        .arg(&work)
+        .status();
+    let fail = |why: String| {
+        let _ = fs::remove_dir_all(&work);
+        Err(why)
+    };
+    match ran {
+        Ok(s) if s.success() => {}
+        Ok(s) => return fail(format!("aa couldn't unpack {} ({s})", archive.display())),
+        Err(err) => return fail(format!("couldn't run aa to unpack {}: {err}", archive.display())),
+    }
+    if !work.join("model.mil").is_file() {
+        return fail(format!("{} holds no Core ML model", archive.display()));
+    }
+    let _ = fs::remove_dir_all(dst);
+    fs::rename(&work, dst).map_err(|err| format!("couldn't put {} in place: {err}", dst.display()))?;
+    let _ = fs::remove_file(archive);
+    Ok(())
 }
 
 /// What the app remembers between runs: the catalog model in use, or a
@@ -116,6 +335,8 @@ pub fn usable(data: &Path, s: &Settings) -> Option<PathBuf> {
 pub struct Settings {
     pub model: Option<String>,
     pub model_file: Option<PathBuf>,
+    /// The catalog model model_file is a copy of, where it is one (copy_of).
+    pub model_file_is: Option<String>,
     pub prefs: Prefs,
     pub window: Option<[f64; 2]>,
 }
@@ -139,6 +360,8 @@ pub struct Prefs {
     pub speed: f64,
     /// Playback's volume, 0 to 1.
     pub volume: f64,
+    /// A wide window's recent list's width in pixels; 0 for its default.
+    pub side: f64,
 }
 
 impl Default for Prefs {
@@ -152,6 +375,7 @@ impl Default for Prefs {
             video_rate: true,
             speed: 1.0,
             volume: 1.0,
+            side: 0.0,
         }
     }
 }
@@ -177,6 +401,30 @@ pub fn file_in(dir: &Path, e: &Entry) -> PathBuf {
     dir.join(format!("{}.pkf", e.name))
 }
 
+/// Where e's Core ML encoder lives once it is unpacked into dir (a
+/// directory, as Core ML compiles it), named as the iOS app names it.
+pub fn encoder_in(dir: &Path, e: &Entry) -> PathBuf {
+    dir.join(format!("{}-encoder.mlmodelc", e.name))
+}
+
+/// Where e's model file without its encoder lives (Coreml's slim), which
+/// transcribes only with its Core ML encoder.
+pub fn slim_in(dir: &Path, e: &Entry) -> PathBuf {
+    Wanted::part(dir, e, &e.coreml.slim).dst
+}
+
+/// Whether e's edition for the Neural Engine is in dir: its slim model file
+/// and its Core ML encoder, unpacked.
+pub fn have_neural(dir: &Path, e: &Entry) -> bool {
+    Wanted::part(dir, e, &e.coreml.slim).here() && have_encoder(dir, e)
+}
+
+/// Whether e's Core ML encoder is in dir: put in place whole, after it was
+/// unpacked, so its model file is enough to tell.
+pub fn have_encoder(dir: &Path, e: &Entry) -> bool {
+    encoder_in(dir, e).join("model.mil").is_file()
+}
+
 /// Where its download gathers until it checks.
 pub fn part_in(dir: &Path, e: &Entry) -> PathBuf {
     dir.join(format!("{}.pkf.part", e.name))
@@ -197,18 +445,138 @@ pub fn partial(dir: &Path, e: &Entry) -> u64 {
         .unwrap_or(0)
 }
 
+/// Delete e's downloaded file, to free its room. The catalog model in use,
+/// if it was e, becomes another one that is downloaded, or none; the model
+/// now in use, when that put another catalog model in its place (a file of
+/// the user's own, set, stays in use instead).
+pub fn delete(data: &Path, e: &Entry) -> Result<Option<&'static Entry>, String> {
+    let dir = data.join("models");
+    // the whole file, and on a Mac the Neural Engine edition beside it
+    for file in [file_in(&dir, e), slim_in(&dir, e)] {
+        match fs::remove_file(&file) {
+            Err(err) if err.kind() != io::ErrorKind::NotFound => {
+                return Err(format!("{err}\n{}", file.display()))
+            }
+            _ => {}
+        }
+    }
+    let encoder = encoder_in(&dir, e);
+    match fs::remove_dir_all(&encoder) {
+        Err(err) if err.kind() != io::ErrorKind::NotFound => {
+            return Err(format!("{err}\n{}", encoder.display()))
+        }
+        _ => {}
+    }
+    let mut s = load_settings(data);
+    if s.model.as_deref() != Some(e.name) {
+        return Ok(None);
+    }
+    let next = CATALOG.iter().find(|x| x.name != e.name && have_any(&dir, x));
+    s.model = next.map(|x| x.name.to_string());
+    save_settings(data, &s)?;
+    Ok(next.filter(|_| s.model_file.is_none()))
+}
+
 /// A file's address names its contents: under the first twelve digits of its
 /// SHA-256, so no address ever serves two files. A CDN can keep each one
 /// forever, and a model converted again gets a new address instead of a
 /// cached copy of the old one that fails the check.
 pub fn download_url(e: &Entry) -> String {
+    format!("{}{}/{}.pkf", base(), &e.sha256[..12], e.name)
+}
+
+/// The same for a Core ML edition's file.
+pub fn part_url(p: &Part) -> String {
+    format!("{}{}/{}", base(), &p.sha256[..12], p.file)
+}
+
+/// A file to download from models.pktito.net into a folder: a model's
+/// .pkf, or a part of its Core ML edition (Coreml). It gathers in part,
+/// and is renamed to dst once its size and SHA-256 are the published ones.
+#[derive(Clone)]
+pub struct Wanted {
+    /// what a download of it is called: its model's name
+    pub name: String,
+    pub url: String,
+    pub bytes: u64,
+    pub sha256: &'static str,
+    pub part: PathBuf,
+    pub dst: PathBuf,
+}
+
+impl Wanted {
+    /// e's .pkf, the whole model, which runs on any CPU.
+    pub fn model(dir: &Path, e: &Entry) -> Wanted {
+        Wanted {
+            name: e.name.into(),
+            url: download_url(e),
+            bytes: e.bytes,
+            sha256: e.sha256,
+            part: part_in(dir, e),
+            dst: file_in(dir, e),
+        }
+    }
+
+    /// A part of e's Core ML edition, into dir under its own name.
+    pub fn part(dir: &Path, e: &Entry, p: &Part) -> Wanted {
+        Wanted {
+            name: e.name.into(),
+            url: part_url(p),
+            bytes: p.bytes,
+            sha256: p.sha256,
+            part: dir.join(format!("{}.part", p.file)),
+            dst: dir.join(p.file),
+        }
+    }
+
+    /// The bytes of it a download that stopped has kept.
+    pub fn partial(&self) -> u64 {
+        fs::metadata(&self.part).map(|m| m.len().min(self.bytes)).unwrap_or(0)
+    }
+
+    /// Whether it is here, checked: renamed into place only after its
+    /// SHA-256 checked, so the size is enough to tell.
+    pub fn here(&self) -> bool {
+        fs::metadata(&self.dst).map(|m| m.len() == self.bytes).unwrap_or(false)
+    }
+}
+
+fn base() -> String {
     let base = std::env::var("PKTITO_MODEL_BASE").unwrap_or_else(|_| DEFAULT_BASE.to_string());
-    let base = if base.ends_with('/') {
+    if base.ends_with('/') {
         base
     } else {
         base + "/"
+    }
+}
+
+/// The program user_agent names: the window's "pktito" (Android's too)
+/// unless another of the app's programs says it is the one (pktito-cli).
+static CLIENT: OnceLock<&'static str> = OnceLock::new();
+
+/// This program's name in its downloads from now on.
+pub fn set_client(name: &'static str) {
+    let _ = CLIENT.set(name);
+}
+
+/// What a download says it is (User-Agent), "pktito/0.9.4 (Windows; arm64)":
+/// the program, its version and the system, for the CDN's logs to count the
+/// app's downloads by, where ureq's own ("ureq/2.12.1") said only that some
+/// client asked. Nothing in it tells one computer or person from another.
+pub fn user_agent() -> String {
+    let os = match std::env::consts::OS {
+        "macos" => "macOS",
+        "windows" => "Windows",
+        "linux" => "Linux",
+        "android" => "Android",
+        other => other,
     };
-    format!("{base}{}/{}.pkf", &e.sha256[..12], e.name)
+    let arch = match std::env::consts::ARCH {
+        "aarch64" => "arm64",
+        other => other,
+    };
+    let client = CLIENT.get().copied().unwrap_or("pktito");
+    format!("{client}/{} ({os}; {arch})", env!("CARGO_PKG_VERSION"))
 }
 
 /// The server's name in an address, for saying which one cannot be reached.
@@ -252,6 +620,42 @@ fn proxy_for(url: &str) -> Option<ureq::Proxy> {
     ureq::Proxy::new(p.trim()).ok()
 }
 
+/// What a model file pktito could not load means to its user, as the
+/// catalog's key (strings.rs), from the engine's reason (core/model.c's
+/// pk_model_load, os.c's pk_map_file): a newer pktito's model, or one for
+/// another architecture, wants a newer app; a file that is not one at all
+/// is said so; one that is, but cut short or damaged, is told apart from
+/// it, as a download that stopped is. The window words it, and the
+/// Android app (android.rs, trouble).
+pub fn trouble(why: &str) -> &'static str {
+    let has = |words: &[&str]| words.iter().any(|w| why.contains(w));
+    if has(&["out of memory", "not enough memory"]) {
+        "problem.memory"
+    } else if has(&["model file version", "the architecture is not"]) {
+        "model_file.newer"
+    } else if has(&[
+        "not a pktito model file",
+        "shorter than a header",
+        "empty file",
+        "no model bytes",
+        "larger than any model file",
+    ]) {
+        "model_file.not_model"
+    } else if has(&[
+        "cannot map",
+        "mmap:",
+        "cannot tell its size",
+        "No such file",
+        "not found",
+        "Permission denied",
+        "denied",
+    ]) {
+        "model_file.cant_open"
+    } else {
+        "model_file.damaged"
+    }
+}
+
 /// What a download is told while it runs, from another thread.
 #[derive(Default)]
 pub struct Ctl {
@@ -278,9 +682,15 @@ pub fn download(
     e: &Entry,
     dir: &Path,
     ctl: &Ctl,
-    mut progress: impl FnMut(u64, bool),
+    progress: impl FnMut(u64, bool),
 ) -> Result<PathBuf, Stop> {
-    let part = part_in(dir, e);
+    download_file(&Wanted::model(dir, e), ctl, progress)
+}
+
+/// download() for any file models.pktito.net serves.
+pub fn download_file(w: &Wanted, ctl: &Ctl, mut progress: impl FnMut(u64, bool)) -> Result<PathBuf, Stop> {
+    let part = w.part.clone();
+    let dir = part.parent().unwrap_or(Path::new("."));
     let write_err = |err: io::Error| written(&part, err);
     fs::create_dir_all(dir).map_err(write_err)?;
     let mut file = OpenOptions::new()
@@ -291,11 +701,11 @@ pub fn download(
         .open(&part)
         .map_err(write_err)?;
     let mut got = file.metadata().map_err(write_err)?.len();
-    if got > e.bytes {
+    if got > w.bytes {
         got = 0;
     }
-    if got < e.bytes {
-        got = match fetch(e, &part, &mut file, got, ctl, &mut progress) {
+    if got < w.bytes {
+        got = match fetch(w, &part, &mut file, got, ctl, &mut progress) {
             Ok(got) => got,
             Err(stop) => {
                 // nothing kept, nothing to leave behind
@@ -311,33 +721,34 @@ pub fn download(
     file.sync_all().map_err(write_err)?;
     let digest = sha256(&mut file, ctl)?;
     drop(file);
-    if digest != e.sha256 {
+    if digest != w.sha256 {
         let _ = fs::remove_file(&part);
         return Err(Stop::Hard(
             Problem::new("download.damaged")
-                .detail(format!("SHA-256 {digest}\nexpected {}", e.sha256)),
+                .detail(format!("SHA-256 {digest}\nexpected {}", w.sha256)),
         ));
     }
-    let dst = file_in(dir, e);
+    let dst = w.dst.clone();
     fs::rename(&part, &dst).map_err(|err| written(&dst, err))?;
     Ok(dst)
 }
 
-/// The rest of e into file, which holds its first `got` bytes; how many it
+/// The rest of w into file, which holds its first `got` bytes; how many it
 /// holds once the server has sent them all.
 fn fetch(
-    e: &Entry,
+    w: &Wanted,
     part: &Path,
     file: &mut File,
     mut got: u64,
     ctl: &Ctl,
     progress: &mut impl FnMut(u64, bool),
 ) -> Result<u64, Stop> {
-    let url = download_url(e);
+    let url = w.url.clone();
     let host = host(&url).to_string();
     // a connection that goes quiet is a connection lost: without a read
     // timeout, a network that goes away mid-download leaves it waiting
     let mut agent = ureq::AgentBuilder::new()
+        .user_agent(&user_agent())
         .timeout_connect(Duration::from_secs(15))
         .timeout_read(Duration::from_secs(30));
     if let Some(p) = proxy_for(&url) {
@@ -362,7 +773,7 @@ fn fetch(
         // what the part holds is not the start of this file: start again
         Err(ureq::Error::Status(416, _)) if got > 0 => {
             file.set_len(0).map_err(|err| written(part, err))?;
-            return fetch(e, part, file, 0, ctl, progress);
+            return fetch(w, part, file, 0, ctl, progress);
         }
         Err(ureq::Error::Status(code, r)) => {
             let what = format!("{code} {}", r.status_text());
@@ -426,13 +837,13 @@ fn fetch(
         if k == 0 {
             break;
         }
-        if got + k as u64 > e.bytes {
+        if got + k as u64 > w.bytes {
             // a server that sends more than the file would fill the disk
             file.set_len(0).map_err(|err| written(part, err))?;
             return Err(Stop::Hard(
                 Problem::new("download.too_much")
                     .with("host", host.clone())
-                    .detail(request(&format!("more than {} bytes", e.bytes))),
+                    .detail(request(&format!("more than {} bytes", w.bytes))),
             ));
         }
         file.write_all(&buf[..k])
@@ -440,9 +851,9 @@ fn fetch(
         got += k as u64;
         progress(got, false);
     }
-    if got < e.bytes {
+    if got < w.bytes {
         return Err(Stop::Net(Problem::new("download.connection_lost").detail(
-            request(&format!("it ended at {got} of {} bytes", e.bytes)),
+            request(&format!("it ended at {got} of {} bytes", w.bytes)),
         )));
     }
     Ok(got)
@@ -526,6 +937,70 @@ mod tests {
         choose_file(&data, &own).unwrap();
         assert_eq!(load_settings(&data).model_file, Some(own));
         let _ = fs::remove_dir_all(&data);
+    }
+
+    /// e downloaded into data's models, as have() tells it: a file of its
+    /// size, sparse, so that none of it is written
+    fn downloaded(data: &Path, e: &Entry) {
+        let dir = data.join("models");
+        fs::create_dir_all(&dir).unwrap();
+        File::create(file_in(&dir, e))
+            .unwrap()
+            .set_len(e.bytes)
+            .unwrap();
+        assert!(have(&dir, e));
+    }
+
+    #[test]
+    fn deleting_the_model_in_use_puts_another_downloaded_one_in_its_place() {
+        let data = scratch("delete");
+        let (v2, v3) = (&CATALOG[0], &CATALOG[1]);
+        downloaded(&data, v2);
+        downloaded(&data, v3);
+        choose_file(&data, &file_in(&data.join("models"), v2)).unwrap();
+        assert_eq!(delete(&data, v2).unwrap().map(|e| e.name), Some(v3.name));
+        assert!(!have(&data.join("models"), v2));
+        assert_eq!(load_settings(&data).model.as_deref(), Some(v3.name));
+        // the last one: none in use, and the window back to choosing one
+        assert!(delete(&data, v3).unwrap().is_none());
+        let s = load_settings(&data);
+        assert_eq!((usable(&data, &s), s.model), (None, None));
+        let _ = fs::remove_dir_all(&data);
+    }
+
+    #[test]
+    fn deleting_a_model_not_in_use_leaves_the_one_in_use() {
+        let data = scratch("delete-other");
+        let (v2, v3) = (&CATALOG[0], &CATALOG[1]);
+        downloaded(&data, v2);
+        downloaded(&data, v3);
+        choose_file(&data, &file_in(&data.join("models"), v2)).unwrap();
+        assert!(delete(&data, v3).unwrap().is_none());
+        assert_eq!(load_settings(&data).model.as_deref(), Some(v2.name));
+        // a file of the user's own in use: the catalog model under it gives
+        // way, and the window has no change to tell
+        let own = data.join("tuned.pkf");
+        fs::write(&own, b"its bytes").unwrap();
+        choose_file(&data, &own).unwrap();
+        assert!(delete(&data, v2).unwrap().is_none());
+        let s = load_settings(&data);
+        assert_eq!((s.model, s.model_file), (None, Some(own)));
+        let _ = fs::remove_dir_all(&data);
+    }
+
+    #[test]
+    fn a_download_says_its_program_version_and_system() {
+        // the shape the CDN's logs are read by: "pktito/0.9.4 (Windows; arm64)"
+        let ua = user_agent();
+        let (program, system) = ua.split_once(' ').unwrap();
+        assert_eq!(program, format!("pktito/{}", env!("CARGO_PKG_VERSION")));
+        let system = system.strip_prefix('(').and_then(|s| s.strip_suffix(')'));
+        let (os, arch) = system.and_then(|s| s.split_once("; ")).unwrap();
+        assert!(
+            ["macOS", "Windows", "Linux", "Android"].contains(&os),
+            "{ua}"
+        );
+        assert!(["arm64", "x86_64"].contains(&arch), "{ua}");
     }
 
     #[test]

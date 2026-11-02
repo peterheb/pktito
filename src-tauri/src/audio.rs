@@ -15,8 +15,13 @@ use std::path::{Path, PathBuf};
 pub const PEAKS: usize = 2400;
 
 /// Most the cache keeps of the recent list's audio, its oldest let go
-/// first: 16 kHz 16-bit audio is 115 MB an hour.
+/// first: 16 kHz 16-bit audio is 115 MB an hour, so 18 hours of it. A
+/// phone's 512 MB is four and a half: its storage holds its photos too,
+/// and Android may empty the cache when it runs short.
+#[cfg(not(target_os = "android"))]
 const CACHE_BYTES: u64 = 2 << 30;
+#[cfg(target_os = "android")]
+const CACHE_BYTES: u64 = 512 << 20;
 
 /// The loudness of x in n even slices: each slice's RMS in dB, over the 48
 /// dB below the loudest slice, as 0 to 255. Decibels, not amplitude, so

@@ -117,7 +117,15 @@ The models are NVIDIA's (CC-BY-4.0), converted by pktito-tools.
 
 Text appears as each part of a recording finishes (whole up to 30 s, else
 cut at its silences), and Stop ends it after the part it is on, keeping the
-text so far. Each finished transcript stays on the recent list, the 50
+text so far. A stretch in which Silero heard speech but the model wrote
+no words is transcribed again on its own: 2 s of speech inside a sentence,
+1 s between sentences, and a part with no words at all cut in two, if its
+speech is within 4 dB of the recording's, so that a voice in the
+background stays out. The
+English model, NeMo's own included, drops the LibriVox notices, credits
+and titles at the start of seven of AliceBench's chapters as they are
+cut, and these give them back (pktito's `pk_asr_transcribe`,
+`vendor/pktito/core/transcribe.c`). Each finished transcript stays on the recent list, the 50
 newest in the app's data folder, with its audio as pktito heard it: a 16 kHz
 16-bit WAV in the cache, so that playback lines up with the timestamps
 whatever the original's format, and whether or not the webview could play
@@ -232,9 +240,9 @@ copyright notices stay as they are.
 ## Building
 
 Rust, the Tauri CLI (`cargo install tauri-cli --version "^2" --locked`) and
-a C compiler: Xcode's command line tools on macOS, MSYS2's MinGW-w64 gcc on
-Windows (with Rust's `x86_64-pc-windows-gnu` toolchain), gcc or clang on
-Linux.
+a C compiler: Xcode's command line tools on macOS,
+[llvm-mingw](https://github.com/mstorsjo/llvm-mingw)'s clang on Windows
+(below), gcc or clang on Linux.
 
 ```sh
 cargo tauri dev             # run it
@@ -247,22 +255,34 @@ prettier@3.6.2 --write .` at the top before a commit (`--check` says whether
 either is due). `.prettierignore` leaves out what scripts write and the
 design system's own files.
 
-Windows on Arm builds on x64 Windows, cross-compiled: rustup's
-`stable-x86_64-pc-windows-gnullvm` toolchain with the
-`aarch64-pc-windows-gnullvm` target, and [llvm-mingw](https://github.com/mstorsjo/llvm-mingw)'s
-`bin` on `PATH` (its clang compiles and links; `src-tauri/.cargo/config.toml`
-names it and links everything statically). The exe needs only Windows' own
-DLLs and the Arm64 `WebView2Loader.dll` beside it.
+Windows builds on x64 Windows with rustup's
+`stable-x86_64-pc-windows-gnullvm` toolchain and llvm-mingw's `bin` on
+`PATH` (its clang compiles and links; `src-tauri/.cargo/config.toml` names
+it and links everything statically): `x86_64-pc-windows-gnullvm` for x64,
+and the `aarch64-pc-windows-gnullvm` target, cross-compiled, for Windows on
+Arm. Each exe needs only Windows' own DLLs and its architecture's
+`WebView2Loader.dll` beside it.
 
 ```sh
+cargo +stable-x86_64-pc-windows-gnullvm build --release --target x86_64-pc-windows-gnullvm
 cargo +stable-x86_64-pc-windows-gnullvm build --release --target aarch64-pc-windows-gnullvm
 ```
 
-Its installer names the DLL as a resource: tauri-bundler 2.10.4 adds
+Each installer names the DLL as a resource: tauri-bundler 2.10.4 adds
 `WebView2Loader.dll` only for targets ending in `-gnu`, and without it the
-installed app does not start.
+installed app does not start. tauri-build copies it into the target's
+folder, but only after it has checked the resources, so a first build in a
+fresh folder fails on the DLL not being there yet: copy it in from
+webview2-com-sys, which carries Microsoft's loader for each architecture
+(its version is Cargo.lock's), `x64` or `arm64`:
+
+```powershell
+Copy-Item (Resolve-Path "$env:USERPROFILE\.cargo\registry\src\index.crates.io-*\webview2-com-sys-0.39.1\x64\WebView2Loader.dll") src-tauri\target\x86_64-pc-windows-gnullvm\release\
+```
 
 ```sh
+cargo tauri build --target x86_64-pc-windows-gnullvm --bundles nsis --config \
+  '{"bundle":{"resources":{"target/x86_64-pc-windows-gnullvm/release/WebView2Loader.dll":"WebView2Loader.dll"}}}'
 cargo tauri build --target aarch64-pc-windows-gnullvm --bundles nsis --config \
   '{"bundle":{"resources":{"target/aarch64-pc-windows-gnullvm/release/WebView2Loader.dll":"WebView2Loader.dll"}}}'
 ```

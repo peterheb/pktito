@@ -41,7 +41,11 @@ pub struct Edit {
 /// The first audio track's edit, if the file is an MP4 with one that is one
 /// segment of the track, after any empty ones.
 pub fn audio_edit(path: &Path) -> Option<Edit> {
-    let mut f = File::open(path).ok()?;
+    audio_edit_in(&mut File::open(path).ok()?)
+}
+
+/// The same of a file already open, as Android hands one over (decode.rs).
+pub fn audio_edit_in(f: &mut File) -> Option<Edit> {
     let end = f.metadata().ok()?.len();
     let mut at = 0u64;
     while at + 8 <= end {

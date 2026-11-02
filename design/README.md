@@ -49,9 +49,9 @@ One ground, one ink, one accent, one mark. Every color is a token with a light a
 - **State.** `ok` and `err` always sit beside a word: "Done", "Downloaded", or the failure. `err` also sets the word on the one destructive button.
 - **Scrim.** `scrim` lies behind a sheet or the ask dialog.
 - **Focus.** `focus` draws a 2 px solid ring: ink in light, plume in dark, and plume on `term` in both. The offset is 2 px in the app and 3 px on the site.
-- **Hover and press.** One rule for every control on both surfaces: `tint`, then `tint-press`, laid over whatever the control sits on or is filled with, so it darkens in light and lightens in dark. On `term`, and on an ink fill, use `tint-term` and `tint-term-press`. Links in running text thicken their underline instead.
+- **Hover and press.** One rule for every control on both surfaces: `tint`, then `tint-press`, laid over whatever the control sits on or is filled with, so it darkens in light and lightens in dark. On `term`, and on an ink fill, use `tint-term` and `tint-term-press`. Links in running text thicken their underline instead. Whatever opens a menu keeps `tint-press` while the menu is open, as a menu title or pop-up button does on macOS and Windows, so the menu is plainly its own: the app's menu buttons, and on Android a Recent row while its long press's menu is up (iOS's menus grow out of their button, and a context menu lifts its row, which marks them already).
 
-Areas are told apart by tone, not by lines. Outlines mark only a state or where a file goes: a chosen card's ring, the chosen switch segment's 1 px `ink-muted` edge, the drop overlay's dashed edge and the start screen's drop zone, dashed as it is, a menu's ring. A menu separates its groups with a divider: 1 px of `sunk`, inset to the items' text. Shadows only on what floats: `shadow-float` for menus, sheets, dialogs and the toast.
+Areas are told apart by tone, not by lines. Outlines mark only a state or where a file goes: a chosen card's ring, the chosen switch segment's 1 px `ink-muted` edge, the drop overlay's dashed edge and the start screen's drop zone, dashed as it is, a menu's ring. One more, for what would otherwise vanish: in dark the toast has a 1 px `toast-edge`, since `term` there is a step above the ground. A menu separates its groups with a divider: 1 px of `sunk`, inset to the items' text. Shadows only on what floats: `shadow-float` for menus, sheets, dialogs and the toast.
 
 ## Type
 
@@ -77,11 +77,13 @@ Two families, shipped as files (`ui/fonts`, and the site's `fonts/`) with their 
 - setup: choose a model, its download, or the download stopped
 - start: a drop zone, "Drop audio or video here" and Choose files… on `surface` inside a 2 px dashed `ink-muted` edge, and the recent list
 - one file's transcript
-- a batch: the files dropped together, each row with its progress, opening its transcript, and Save all
+- a batch: the files dropped together, how far it has got and its pace so far (over the rows' lengths, in their type), each row with its progress, opening its transcript, and Save all
 
 About lies over whichever screen opened it, and the Privacy and license sheets over About. The ask dialog, the drop overlay, menus and the toast come and go over any screen.
 
 - **Size.** The window opens at 680 × 800 (portrait, about 65 characters of transcript a line and 20 lines) and is at least `window-min` (480 px) each way.
+- **Edges.** The work keeps 24 px from the window's sides, setup and the start screen a 640 px column with 40 px inside it, About's words 40 px; under 600 px wide all keep 16, as the phones' apps do.
+- **Side.** From 920 px wide, the start screen's top row and its recent list keep a column at the window's left, the side, beside the drop zone or the file or batch open, the work. 920 is the side at its narrowest, 240, beside the 680 the window opens at. Under that, or at the start with nothing on the list, there is no side. The side is 300 px wide. Dragging its edge sets it anywhere from 240 to 480, never leaving the work under 680, and a double-click there fits the longest name, as a Finder column does. The work's narrow rules follow its own width, not the window's, so beside the side it looks as a window of its width would.
 - **Title bar.** Each screen's header row is the title bar, and its empty space drags the window:
   - macOS: the system's traffic lights at its left end, with no title bar drawn and no lights in full screen.
   - Windows: the app draws minimize, maximize and close at its right to Windows 11's measure (46 × 32, Segoe Fluent Icons, close red, dimmed while the window is inactive), with the system menu on Alt+Space.
@@ -123,7 +125,7 @@ Motion in pktito follows the audio or answers a hand. Nothing moves to decorate.
 - In the app:
   - Progress moves along the waveform, and the transcript appears as each part finishes.
   - In playback the playhead moves, the playing word is underlined, and the transcript scrolls to keep the playing sentence in view.
-  - A spinner beside the file's name marks a file at work.
+  - A spinner beside the file's name marks a file at work until its progress shows, and one beside a batch's title while none of its rows moves. Then the progress says it, and nothing turns through a long job: on a Pi 5 the spinner's frames took three quarters of a core from the transcription.
   - The mascot turns and hops when it's dragged or clicked.
 - Controls answer hover and press with the tint (see Color), and press moves a button 1 px.
 - The site has no animation beyond that: a link's arrow moves 3 px on hover.
@@ -141,6 +143,7 @@ Line icons after Feather (MIT): a 24 px grid and 2 px round strokes, drawn in `c
   - external-link: 12 px, after an outbound link's last word, held to it so it never starts a line
   - zap: 12 px, marks a caption that asks more than 20 characters a second of its reader
 - **Play and pause** are filled, at 20 px.
+- **On an edge**, an icon that starts or ends a row, or heads a column of words, stands its drawn ink on the edge the words and boxes beside it keep, not its 16 px box: each sits 1 to 3 px inside its box. So the way back's arrow is on the strip's left edge, the model menu's chevron on the column's right one, a sheet's close cross on its body's right edge, and a list's icons under its heading's first letter.
 - **On the site**, an outbound link ends in the → glyph. No emoji, and no icons in tinted squares.
 
 ## Logo
@@ -155,8 +158,8 @@ The model icon (`design/model-icon.svg`) marks pktito's model files, .pkf, in Ex
 
 The site's components are plain HTML and CSS in `design/bundle.css` (classes `pk-*`): Button, Link, Wordmark and Stage. The app has its own stylesheet, `ui/app.css`, on the same tokens. Its patterns are documented here, so that a picture of the app or a new screen matches it:
 
-- **Strip:** the waveform on `term`, play at its left and the speed under play; under the waveform the time (seconds or frames), the volume (a speaker that mutes, and a slider) and the length, with search ticks between. While a file is transcribed a ring in play's place fills with its progress, the percent inside, and the pace takes the time's place, so that the waveform keeps its pixels when it finishes. Its small buttons, the speed, the time and the speaker, are one box: 25 px tall, 6 px round their words, 14 px apart.
-- **Transcript:** rows of a start time in `stamp` and a sentence in `transcript` type. The playing row sits on `surface`, with the beak square after its time and the playing word underlined. Clicking a time plays from it. Sentences | Captions switches the view.
+- **Strip:** the waveform on `term`, play at its left and the speed under play; under the waveform the time (seconds or frames), the volume (a speaker that mutes, filled with `beak` while playback is silent, and a slider) and the length, with search ticks between. While a file is transcribed a ring in play's place fills with its progress, the percent inside, and the pace takes the time's place, so that the waveform keeps its pixels when it finishes. Its small buttons, the speed, the time and the speaker, are one box: 25 px tall, 6 px round their words, 14 px apart.
+- **Transcript:** rows of a start time in `stamp` and a sentence in `transcript` type. The playing row sits on `surface`, with the beak square after its time and the playing word underlined. Clicking a time plays from it; a finger's tap plays the row from anywhere on it. Sentences | Captions switches the view.
 - **Row:** a file on the start screen's recent list or in a batch: its icon, name, length and step, with a progress bar while it works and a remove × on hover.
 - **Menu:** `ground`, `radius-ui`, `shadow-float` and a 1 px `sunk` ring. Its items are 14 px/500 with an optional second line, a check for the chosen one, key caps, rows of chips (speeds, frame rates), and dividers between groups.
 - **Toast:** a few words on `term` at the bottom of the window, a check or an alert icon, and an optional Show in Finder (or File Explorer, or folder). It stays 3.5 s, or 6 s with an error or a file to show. An error's details are its tooltip.

@@ -164,19 +164,29 @@ let batchSave = null; // what Save all chose while some of the batch was still t
 let sel = null; // the id of the file shown; none for the batch screen
 let nextId = 1;
 let running = false; // a transcription is under way
+let runningModel = null; // the catalog model in use when it began
 let home = false; // the start screen is shown, files still under way or not
 let about = false; // About is shown, over the screen that opened it
 
 /* ---------------------------------------------------------- formatting -- */
 
 const two = (n) => String(n).padStart(2, "0");
-function hms(s) {
+/* hh:mm:ss, with the hours' digits that say something of the longest time
+   shown with it (len): none under an hour (10:40), one under ten (1:05:00),
+   so that a file's rows keep one width and the hours are not a wall of
+   zeros (Peter, 2026-10-25). Without len, all of them. */
+function hms(s, len = 36000) {
   s = Math.max(0, Math.floor(s));
-  return `${two(Math.floor(s / 3600))}:${two(Math.floor(s / 60) % 60)}:${two(s % 60)}`;
+  const h = Math.floor(s / 3600),
+    ms = `${two(Math.floor(s / 60) % 60)}:${two(s % 60)}`,
+    top = Math.max(len, s);
+  return top >= 36000 ? `${two(h)}:${ms}` : top >= 3600 ? `${h}:${ms}` : ms;
 }
-function stamp(s) {
+/* a length shown on its own, with its own hours */
+const lengthHms = (d) => hms(d, d);
+function stamp(s, len) {
   const cs = Math.max(0, Math.round(s * 100));
-  return `${hms(Math.floor(cs / 100))}.${two(cs % 100)}`;
+  return `${hms(Math.floor(cs / 100), len)}.${two(cs % 100)}`;
 }
 function msTime(s, sep) {
   const ms = Math.max(0, Math.round(s * 1000));
@@ -247,17 +257,23 @@ const rateLabel = (r) => String(Math.round(exactRate(r) * 1000) / 1000);
    chosen is to count a video's too */
 const ownRate = (f) => !!f && f.fps > 0 && prefs.video_rate !== false;
 const rateOf = (f) => (ownRate(f) ? f.fps : prefs.fps > 0 ? prefs.fps : 24);
-/* a time as the strip and the transcript show it: seconds and hundredths, or frames */
+/* a time as the strip and the transcript show it: seconds and hundredths,
+   the hours as the file's length has them, or frames, whose timecode is
+   always hh:mm:ss:ff, as an editor's is */
 const tc = (t, f = current()) =>
-  prefs.frames ? timecode(t, rateOf(f)) : stamp(t);
+  prefs.frames ? timecode(t, rateOf(f)) : stamp(t, (f && f.duration) || 0);
 /* a file's length as the strip shows it */
 const lengthOf = (f) =>
-  prefs.frames ? timecode(f.duration, rateOf(f)) : hms(f.duration);
+  prefs.frames ? timecode(f.duration, rateOf(f)) : lengthHms(f.duration);
 
 const baseName = (p) => p.split(/[\\/]/).pop();
 const stemOf = (p) => baseName(p).replace(/\.[^.]+$/, "");
 const extOf = (p) =>
   (baseName(p).match(/\.([^.]+)$/) || ["", ""])[1].toLowerCase();
+/* the dot between two things on a line, a no-break space before it, so
+   that a line breaking there ends with the dot rather than the next one
+   starting with it (the catalog's strings have the same) */
+const DOT = "\u00a0· ";
 const esc = (s) =>
   String(s).replace(
     /[&<>"]/g,
@@ -299,15 +315,60 @@ function viewName() {
 /* The view in sight: About covers the one beneath, which goes on as ever. */
 const shown = () => (about ? "about" : viewName());
 
+/* The start screen's top row and recent list as a column at the window's
+   left, the side, where the window holds it at its least beside the work at
+   the 680 px the window opens at, 920 (app.css, the side): "home" beside
+   the drop zone, while the list has anything in it, and "open" beside a
+   file or the batch; "" for none. */
+const SIDE = 300,
+  SIDE_MIN = 240,
+  SIDE_MAX = 480,
+  WORK_MIN = 680;
+const wide = matchMedia(`(min-width: ${SIDE_MIN + WORK_MIN}px)`);
+function sideMode(v = viewName()) {
+  if (!wide.matches) return "";
+  if (v === "work" || v === "batch") return "open";
+  return v === "ready" && (recent.length || files.length) ? "home" : "";
+}
+
+/* The side's width: dragged at its edge, or fitted to its longest name by a
+   double-click there, as a Finder column is; kept between runs
+   (prefs.side, 0 for 300 px). Never under 240, where the model's button
+   meets the wordmark, nor over 480, nor past what leaves the work its 680
+   (Peter, 2026-10-27: a name a few pixels too long for 300). */
+const sideMax = () =>
+  Math.max(SIDE_MIN, Math.min(SIDE_MAX, innerWidth - WORK_MIN));
+const sideWidth = (w = prefs.side || SIDE) =>
+  Math.round(Math.max(SIDE_MIN, Math.min(w, sideMax())));
+function showSide(w) {
+  const px = sideWidth(w),
+    edge = $("side-edge");
+  document.documentElement.style.setProperty("--side", `${px}px`);
+  edge.setAttribute("aria-valuenow", px);
+  edge.setAttribute("aria-valuemin", SIDE_MIN);
+  edge.setAttribute("aria-valuemax", sideMax());
+  return px;
+}
+addEventListener("resize", () => {
+  if (document.documentElement.dataset.side) showSide();
+});
+
 function render() {
-  const v = viewName();
-  for (const id of ["setup", "ready", "batch", "work"]) $(id).hidden = id !== v;
+  const v = viewName(),
+    side = sideMode(v);
+  if (side) document.documentElement.dataset.side = side;
+  else delete document.documentElement.dataset.side;
+  if (side) showSide();
+  for (const id of ["setup", "ready", "batch", "work"])
+    $(id).hidden = id !== v && !(id === "ready" && side === "open");
   if (v !== "work") pausePlayback();
   if (v === "setup") renderSetup();
   else if (v === "ready") renderReady();
   else if (v === "batch") renderBatch();
   else if (v === "work") renderWork();
+  if (side === "open") renderReady();
 }
+wide.addEventListener("change", () => render());
 
 async function refresh() {
   st = await invoke("status");
@@ -331,7 +392,7 @@ function modelLabel(long) {
   const m = inUse();
   if (!m) return t("models.choose");
   return long
-    ? `${labelOf(m)} · ${m.name}`
+    ? `${labelOf(m)}${DOT}${m.name}`
     : t("models.named", { label: labelOf(m) });
 }
 
@@ -382,12 +443,14 @@ const langNames = (() => {
 })();
 const langName = (c) => (langNames && langNames.of(c)) || c;
 const ownLang = () => (navigator.language || "en").slice(0, 2).toLowerCase();
-/* After a model of several's count, the system's language where it is one
-   of them: whether theirs is there is what most who look want to know */
-const amongThem = (m) =>
+/* A model of several's languages, about (HTML: in Setup's card, the link
+   that opens their list), and the system's language where it is one of
+   them, as one sentence a translator can order: whether theirs is there is
+   what most who look want to know */
+const withOwn = (m, about) =>
   m.languages.length > 1 && m.languages.includes(ownLang())
-    ? t("models.among", { lang: langName(ownLang()) })
-    : "";
+    ? esc(t("models.languages_among", { languages: "\u0001", lang: langName(ownLang()) })).replace("\u0001", about)
+    : about;
 const langsOf = (m) =>
   m.languages
     .map((c) => ({ c, n: langName(c) }))
@@ -411,7 +474,7 @@ function modelMenu(anchor, keys) {
         : m.name;
     return (
       `<button class="pk-mi" type="button" role="menuitemradio" aria-checked="${on}" data-model="${m.name}" title="${esc(title)}">` +
-      `<span>${esc(labelOf(m))}</span><small class="pk-sub">${esc(aboutOf(m) + amongThem(m))} · ${state}</small>${on ? ICON.check : ""}</button>`
+      `<span>${esc(labelOf(m))}</span><small class="pk-sub">${withOwn(m, esc(aboutOf(m)))}${DOT}${state}</small>${on ? ICON.check : ""}</button>`
     );
   });
   if (st.model_file) {
@@ -420,8 +483,12 @@ function modelMenu(anchor, keys) {
         `<span>${esc(baseName(st.model_file))}</span><small title="${esc(st.model_file)}">${esc(st.model_file)}</small>${ICON.check}</button>`,
     );
   }
-  // where the models are: about 620 MB each, and the files the CLI takes
-  // with -m; the Store edition's are in its package, which Explorer can't show
+  // Manage models in every edition: each model's size and Delete, and on a
+  // Mac the Neural Engine encoder offered for a whole model file (Peter,
+  // 2026-11-02), beside Open a model file, the two that open a window; then
+  // where the models are, about 620 MB each and the files the CLI takes with
+  // -m, except in the Store edition, whose are in its package, which
+  // Explorer can't show.
   const show = esc(revealLabel());
   const file = st.model_file
     ? baseName(st.model_file)
@@ -431,9 +498,10 @@ function modelMenu(anchor, keys) {
   items.push(
     `<div class="pk-menu-sep" aria-hidden="true"></div>` +
       `<button class="pk-mi" type="button" role="menuitem" data-own="1"><span>${esc(t("models.open_file"))}</span></button>` +
-      (st.data_in_package
-        ? ""
-        : `<button class="pk-mi" type="button" role="menuitem" data-reveal="1"${file ? ` title="${esc(file)}"` : ""}><span>${show}</span></button>`),
+      `<button class="pk-mi" type="button" role="menuitem" data-manage="1"><span>${esc(t("models.manage"))}</span></button>` +
+      (st.reveal
+        ? `<button class="pk-mi" type="button" role="menuitem" data-reveal="1"${file ? ` title="${esc(file)}"` : ""}><span>${show}</span></button>`
+        : ""),
   );
   openMenu(anchor, keys, items.join(""), "down right", (m) => {
     m.onclick = async (e) => {
@@ -442,6 +510,7 @@ function modelMenu(anchor, keys) {
       closeMenu();
       if (b.dataset.own) return useOwnFile();
       if (b.dataset.reveal) return invoke("reveal_model").catch(toastErr);
+      if (b.dataset.manage) return openManage(anchor);
       const entry = st.catalog.find((x) => x.name === b.dataset.model);
       if (!entry || (!st.model_file && st.model === entry.name)) return;
       if (!entry.have) return startDownload(entry);
@@ -455,6 +524,207 @@ function modelMenu(anchor, keys) {
     };
   });
 }
+
+/* -------------------------------------------------------------- manage -- */
+
+/* Manage models, in every edition's model menu: each catalog model
+   downloaded and what a stopped download of one kept, with their sizes,
+   each to delete, and their total; on a Mac, the Neural Engine encoder
+   offered for a whole model file here without one (fasterRow). The model in use says so,
+   and its Delete and the transcription's own wait while one runs (held). A
+   download under way has the window to itself (setup), so none is listed
+   here. Delete asks first, saying what it frees and what follows: the
+   model in use gives way to another downloaded one, which the toast names,
+   or, the last, to choosing one again (main.rs, delete_model). */
+let manageFrom = null; // the model menu's button, which gets the keyboard back
+
+function openManage(from) {
+  if (!$("manage").hidden) return;
+  manageFrom = from;
+  $("manage").hidden = false;
+  renderManage();
+  focusManage();
+}
+
+/* false if it was not open */
+function closeManage() {
+  if ($("manage").hidden) return false;
+  $("manage").hidden = true;
+  if (manageFrom && manageFrom.isConnected)
+    manageFrom.focus({ preventScroll: true });
+  manageFrom = null;
+  return true;
+}
+
+const focusManage = () =>
+  (
+    $("manage-body").querySelector("button:not([disabled])") ||
+    $("manage-close")
+  ).focus({ preventScroll: true });
+
+function renderManage() {
+  const rows = [];
+  let used = 0;
+  const row = (m, sub, part) => {
+    const id = `kept-${m.key}${part ? "-part" : ""}`;
+    return (
+      `<li><div class="pk-kept-text"><span class="pk-ui" id="${id}">${esc(labelOf(m))}</span><small class="pk-small">${sub}</small></div>` +
+      `<button class="pk-btn pk-btn-del" type="button" data-delete="${m.name}"${part ? ' data-part="1"' : ""} aria-describedby="${id}"${!part && held(m) ? " disabled" : ""}>` +
+      `${esc(t("manage.delete"))}</button></li>`
+    );
+  };
+  for (const m of st.catalog) {
+    if (m.have) {
+      const on = !st.model_file && st.model === m.name;
+      used += m.bytes;
+      const size = t("manage.size", { mb: num(mb(m.bytes)) });
+      const tag = on
+        ? ` · <span class="pk-have">${esc(t("manage.in_use"))}</span>`
+        : "";
+      rows.push(row(m, `${esc(`${m.name}${DOT}${size}`)}${tag}`, false));
+    }
+    if (m.partial) {
+      used += m.partial;
+      const got = { got: num(mb(m.partial)), total: num(mb(m.bytes)) };
+      rows.push(row(m, esc(t("manage.paused", got)), true));
+    }
+  }
+  // on a Mac, a whole model file here without its Core ML encoder: the
+  // encoder offered, which runs it on the Neural Engine (main.rs get_encoder)
+  for (const m of st.catalog.filter((x) => x.faster)) rows.push(fasterRow(m));
+  const total =
+    used >= 1e9
+      ? t("manage.used_gb", { gb: num(used / 1e9, 2) })
+      : t("manage.used_mb", { mb: num(mb(used)) });
+  $("manage-body").innerHTML = rows.length
+    ? `<ul class="pk-kept">${rows.join("")}</ul><p class="pk-small pk-kept-total">${esc(total)}</p>`
+    : `<p class="pk-small">${esc(t("manage.none"))}</p>`;
+}
+
+/* The encoder's download, in its row alone: a model's download (dl) is the
+   setup screen's. */
+let enc = null;
+
+function fasterRow(m) {
+  const id = `faster-${m.key}`;
+  const e = enc && enc.name === m.name ? enc : null;
+  const sizes = { got: num(mb(e ? e.got : 0)), total: num(mb(m.faster)) };
+  const sub = !e
+    ? t("manage.faster_text", { label: labelOf(m), mb: num(mb(m.faster)) })
+    : e.step === "checking"
+      ? t("download.checking")
+      : e.step === "failed"
+        ? t("download.stopped_at", sizes)
+        : t("download.progress", sizes);
+  const going = e && e.step !== "failed";
+  const button = going
+    ? `<button class="pk-btn" type="button" data-encoder-cancel="1" aria-describedby="${id}">${esc(t("download.cancel"))}</button>`
+    : `<button class="pk-btn" type="button" data-encoder="${m.name}" aria-describedby="${id}">${esc(t(e ? "download.try_again" : "manage.get"))}</button>`;
+  return (
+    `<li><div class="pk-kept-text"><span class="pk-ui" id="${id}">${esc(t("manage.faster"))}</span><small class="pk-small">${esc(sub)}</small></div>` +
+    `${button}</li>`
+  );
+}
+
+async function getEncoder(name) {
+  const m = st.catalog.find((x) => x.name === name);
+  if (!m) return;
+  enc = { name, step: "downloading", got: 0, total: m.faster };
+  renderManage();
+  try {
+    await invoke("get_encoder", { name });
+  } catch (e) {
+    enc = null;
+    renderManage();
+    toastErr(e);
+  }
+}
+
+/* While a transcription runs, the Deletes of the model in use and of the
+   one in use when it began wait: it transcribes with one of the two (it
+   reads the settings once the file is read), and on Windows a file the
+   engine has open can't be deleted. main.rs refuses the one it transcribes
+   with in any case (delete_model). */
+const held = (m) =>
+  running &&
+  (m.name === runningModel || (!st.model_file && m.name === st.model));
+
+function manageRunning() {
+  if ($("manage").hidden) return;
+  for (const b of $("manage-body").querySelectorAll(
+    "[data-delete]:not([data-part])",
+  )) {
+    const had = document.activeElement === b;
+    b.disabled = held(st.catalog.find((m) => m.name === b.dataset.delete));
+    if (had && b.disabled) $("manage-close").focus({ preventScroll: true });
+  }
+}
+
+async function deleteKept(b) {
+  const m = st.catalog.find((x) => x.name === b.dataset.delete);
+  if (!m) return;
+  const part = !!b.dataset.part;
+  const on = !part && !st.model_file && st.model === m.name;
+  // the one model.rs (delete) puts in its place: the catalog's first other
+  // one downloaded
+  const other = on && st.catalog.find((x) => x.name !== m.name && x.have);
+  const frees = num(mb(part ? m.partial : m.bytes));
+  const yes = part
+    ? await ask(
+        t("manage.ask_part_title"),
+        t("manage.ask_part_text", { mb: frees, label: labelOf(m) }),
+        t("manage.delete"),
+        b,
+      )
+    : await ask(
+        t("manage.ask_title", { label: labelOf(m) }),
+        t(
+          other
+            ? "manage.ask_text_switch"
+            : on
+              ? "manage.ask_text_last"
+              : "manage.ask_text",
+          { mb: frees, other: other ? labelOf(other) : "" },
+        ),
+        t("manage.delete"),
+        b,
+      );
+  if (!yes) return;
+  try {
+    const now = await invoke("delete_model", { name: m.name, part });
+    await refresh();
+    // the last model gone: the setup screen, to choose one again
+    if (!st.ready) return closeManage();
+    renderManage();
+    focusManage();
+    const next = now && st.catalog.find((x) => x.name === now);
+    if (next) toast(t("models.using", { label: labelOf(next) }));
+  } catch (e) {
+    toastErr(e);
+  }
+}
+
+$("manage-body").onclick = (e) => {
+  const b = e.target.closest("[data-delete]");
+  if (b && !b.disabled) deleteKept(b);
+  const g = e.target.closest("[data-encoder]");
+  if (g) getEncoder(g.dataset.encoder);
+  if (e.target.closest("[data-encoder-cancel]"))
+    invoke("cancel_download").catch(toastErr);
+};
+$("manage-close").onclick = () => closeManage();
+$("manage").addEventListener("click", (e) => {
+  if (e.target === $("manage")) closeManage();
+});
+/* the keyboard stays in it: its close button and its Deletes */
+$("manage").addEventListener("keydown", (e) => {
+  if (e.key !== "Tab") return;
+  e.preventDefault();
+  const all = [...$("manage").querySelectorAll("button:not([disabled])")],
+    i = all.indexOf(document.activeElement),
+    n = all.length;
+  all[i < 0 ? 0 : (i + (e.shiftKey ? n - 1 : 1)) % n].focus();
+});
 
 /* --------------------------------------------------------------- setup -- */
 
@@ -530,7 +800,7 @@ function chooseHtml() {
       const many = m.languages.length > 1;
       const about = !many
         ? esc(aboutOf(m))
-        : `<button class="pk-linkbtn pk-linkbtn-sm" type="button" data-langs aria-expanded="false">${esc(aboutOf(m))}</button>${esc(amongThem(m))}`;
+        : withOwn(m, `<button class="pk-linkbtn pk-linkbtn-sm" type="button" data-langs aria-expanded="false">${esc(aboutOf(m))}</button>`);
       const list = !many
         ? ""
         : `<div class="pk-langs-box" hidden>` +
@@ -550,7 +820,7 @@ function chooseHtml() {
       return (
         `<label class="pk-choice"><input type="radio" name="model" value="${m.name}"${m.name === choice ? " checked" : ""}>` +
         `<span class="pk-name">${esc(labelOf(m))}</span><span class="pk-stamp">${esc(m.have ? t("setup.on_computer") : t("setup.size", { mb: mb(m.bytes) }))}</span>` +
-        `<span class="pk-desc">${esc(m.name)} · ${about}</span>${list}</label>`
+        `<span class="pk-desc">${esc(m.name)}${DOT}${about}</span>${list}</label>`
       );
     })
     .join("");
@@ -673,6 +943,18 @@ function updateDownload() {
 
 listen("download", async (e) => {
   const s = e.payload;
+  // the encoder's, for Manage models' row
+  if (enc && enc.name === s.name) {
+    const over = s.step === "done" || s.step === "cancelled";
+    enc = over ? null : s;
+    if (over) await refresh();
+    if (!$("manage").hidden) renderManage();
+    if (s.step === "done") {
+      const m = st.catalog.find((x) => x.name === s.name);
+      toast(t("models.ready", { label: m ? labelOf(m) : s.name }));
+    }
+    return;
+  }
   if (s.step === "done" || s.step === "cancelled") {
     dl = null;
     setupKey = "";
@@ -693,47 +975,62 @@ listen("download", async (e) => {
    screen shows a file, or a batch as one row. */
 function renderReady() {
   $("ready-model").innerHTML = `${esc(modelLabel(false))}${ICON.down}`;
-  $("choose").innerHTML = `${ICON.plus}${esc(t("ready.choose"))}`;
-  $("choose").title = tip(t("ready.choose_tip"), "O");
+  for (const b of [$("choose"), $("side-choose")]) {
+    b.innerHTML = `${ICON.plus}${esc(t("ready.choose"))}`;
+    b.title = tip(t("ready.choose_tip"), "O");
+  }
   $("recent").hidden = !recent.length && !files.length;
   $("ready").classList.toggle("has-recent", !$("recent").hidden);
   $("clear-recent").hidden = !recent.length;
+  // beside the side, the row of what is open marked: a file's, or the
+  // batch's; a file is its transcript's row once the list has it
+  const v = viewName(),
+    f = v === "work" ? current() : null,
+    at = (yes) => (yes ? ' aria-current="true"' : "");
   // each with the × that takes it off the list, over its date under the
   // pointer; from the keyboard, Delete
   $("recent-list").innerHTML =
-    (batch ? batchRowHtml() : files.map(liveHtml).join("")) +
+    (batch
+      ? batchRowHtml(v === "batch")
+      : files
+          .filter((x) => !recent.some((r) => r.id === x.recentId))
+          .map((x) => liveHtml(x, x === f))
+          .join("")) +
     recent
       .map(
         (r) =>
-          `<li class="pk-qi"><button class="pk-row" type="button" data-recent="${esc(r.id)}" title="${esc(r.path)}" aria-keyshortcuts="Delete">` +
-          `${ICON.file}<span class="pk-name">${esc(r.name)}</span><span class="pk-stamp">${hms(r.duration)}</span>` +
+          `<li class="pk-qi"><button class="pk-row" type="button" data-recent="${esc(r.id)}" title="${esc(r.path)}" aria-keyshortcuts="Delete"${at(f && f.recentId === r.id)}>` +
+          `${ICON.file}<span class="pk-name pk-cut">${cutName(r.name)}</span><span class="pk-stamp">${lengthHms(r.duration)}</span>` +
           `<span class="pk-small pk-when">${esc(when(r.finished))}</span></button><button class="pk-x" type="button" tabindex="-1" ` +
           `data-forget="${esc(r.id)}" aria-label="${esc(t("recent.remove", { name: r.name }))}" title="${esc(t("recent.remove_tip"))}">${ICON.x}</button></li>`,
       )
       .join("");
 }
 
-const liveHtml = (f) =>
-  `<li><button class="pk-row" type="button" data-live="${f.id}" title="${esc(f.path)}">${rowBody(f)}</button></li>`;
+const liveHtml = (f, open = false) =>
+  `<li><button class="pk-row" type="button" data-live="${f.id}" title="${esc(f.path)}"${open ? ' aria-current="true"' : ""}>${rowBody(f)}</button></li>`;
 
 /* A batch on the start screen, under way or done since: how far it has
-   got, all its files counted, and their length once every one is read. */
-function batchRowHtml() {
-  const n = files.length,
-    done = files.filter((f) => f.step === "done").length,
-    over = files.filter((f) => !live(f)).length;
-  const f = files.find((x) => x.step === "transcribing");
-  const length = files.every((x) => x.duration != null)
-    ? hms(files.reduce((t, x) => t + x.duration, 0))
+   got, all its files counted, and their length once every one is read. A
+   transcript opened from the list beside it is no part of it (Peter,
+   2026-10-27: a batch of two counted three, its bar with them). */
+function batchRowHtml(open = false) {
+  const of = files.filter((x) => !x.lone),
+    n = of.length,
+    done = of.filter((f) => f.step === "done").length,
+    over = of.filter((f) => !live(f)).length;
+  const f = of.find((x) => x.step === "transcribing");
+  const length = of.every((x) => x.duration != null)
+    ? lengthHms(of.reduce((t, x) => t + x.duration, 0))
     : "";
-  const status = files.some(live)
+  const status = of.some(live)
     ? `<span class="pk-bar pk-mini"><i style="width:${(((over + (f ? f.done : 0)) / n) * 100).toFixed(1)}%"></i></span>` +
       `<span class="pk-status pk-num">${esc(t("batch.transcribing", { i: Math.min(n, over + 1), n }))}</span>`
     : done === n
       ? `<span class="pk-status pk-ok">${ICON.check}${esc(t("status.done"))}</span>`
       : `<span class="pk-status pk-num">${esc(t("batch.done_of", { done, n }))}</span>`;
   return (
-    `<li><button class="pk-row" type="button" data-batch title="${esc(files.map((x) => x.name).join("\n"))}">${ICON.folder}` +
+    `<li><button class="pk-row" type="button" data-batch title="${esc(of.map((x) => x.name).join("\n"))}"${open ? ' aria-current="true"' : ""}>${ICON.folder}` +
     `<span class="pk-name">${esc(fileCount(n))}</span><span class="pk-stamp">${length}</span>${status}</button></li>`
   );
 }
@@ -749,8 +1046,9 @@ function updateLive(f) {
   const at = batch ? "[data-batch]" : `[data-live="${f.id}"]`,
     row = $("recent-list").querySelector(at);
   if (!row) return renderReady();
-  const focused = document.activeElement === row;
-  row.parentNode.outerHTML = batch ? batchRowHtml() : liveHtml(f);
+  const focused = document.activeElement === row,
+    open = row.getAttribute("aria-current") === "true";
+  row.parentNode.outerHTML = batch ? batchRowHtml(open) : liveHtml(f, open);
   if (focused) $("recent-list").querySelector(at).focus();
 }
 
@@ -814,7 +1112,8 @@ async function forget(id) {
     await invoke("forget_recent", { id });
     const i = recent.findIndex((r) => r.id === id);
     recent = recent.filter((r) => r.id !== id);
-    renderReady();
+    // the side, which goes with the list's last row
+    render();
     // the keyboard on the row that took its place
     const rows = $("recent-list").querySelectorAll("[data-recent]");
     if (rows.length)
@@ -837,20 +1136,27 @@ $("recent-list").onclick = (e) => {
   const x = e.target.closest("[data-forget]");
   if (x) return forget(x.dataset.forget);
   const b = e.target.closest("[data-recent], [data-live], [data-batch]");
-  if (!b) return;
+  if (!b || b.getAttribute("aria-current") === "true") return;
+  if (sideMode() === "open") leave();
   if (b.dataset.recent) return openRecent(b.dataset.recent);
   sel = b.dataset.live ? Number(b.dataset.live) : null;
   home = false;
   render();
 };
-/* Clearing the list asks first, in the window: the system's dialog makes
-   its first button the default, so Enter or Space there cleared the list
-   (the Windows test, 2026-10-22). Here Cancel is the default, Esc and a
-   click outside are Cancel too, and Clear wants its own click, or Tab and
-   Enter. */
-let answer = null;
+/* Clearing the list asks first, in the window, as deleting a model does: the
+   system's dialog makes its first button the default, so Enter or Space
+   there cleared the list (the Windows test, 2026-10-22). Here Cancel is the
+   default, Esc and a click outside are Cancel too, and yes, the button that
+   says what it destroys, wants its own click, or Tab and Enter. The
+   keyboard goes back to from. */
+let answer = null,
+  askFrom = null;
 
-function askClear() {
+function ask(title, text, yes, from) {
+  $("ask-title").textContent = title;
+  $("ask-text").textContent = text;
+  $("ask-yes").textContent = yes;
+  askFrom = from;
   $("ask").hidden = false;
   $("ask-no").focus({ preventScroll: true });
   return new Promise((r) => (answer = r));
@@ -860,7 +1166,7 @@ function askClear() {
 function closeAsk(yes = false) {
   if ($("ask").hidden) return false;
   $("ask").hidden = true;
-  $("clear-recent").focus({ preventScroll: true });
+  if (askFrom && askFrom.isConnected) askFrom.focus({ preventScroll: true });
   answer(yes);
   return true;
 }
@@ -876,8 +1182,14 @@ $("ask").addEventListener("keydown", (e) => {
   e.preventDefault();
   (document.activeElement === $("ask-no") ? $("ask-yes") : $("ask-no")).focus();
 });
-$("clear-recent").onclick = async () => {
-  if (!(await askClear())) return;
+$("clear-recent").onclick = async (e) => {
+  const yes = await ask(
+    t("ask.clear_title"),
+    t("ask.clear_text"),
+    t("ask.clear"),
+    e.currentTarget,
+  );
+  if (!yes) return;
   try {
     await invoke("clear_recent");
     recent = [];
@@ -887,7 +1199,71 @@ $("clear-recent").onclick = async () => {
   }
 };
 $("choose").onclick = () => chooseFiles();
+$("side-choose").onclick = () => chooseFiles();
 $("ready-model").onclick = (e) => modelMenu(e.currentTarget, !e.detail);
+
+/* the side's edge: held, it follows the pointer a frame at a time, and the
+   width is kept when it is let go */
+$("side-edge").addEventListener("pointerdown", (e) => {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  const edge = e.currentTarget,
+    from = e.clientX,
+    was = sideWidth();
+  let w = was,
+    frame = 0;
+  edge.setPointerCapture(e.pointerId);
+  edge.classList.add("is-held");
+  document.documentElement.classList.add("is-sizing");
+  const move = (m) => {
+    w = was + m.clientX - from;
+    frame ||= requestAnimationFrame(() => {
+      frame = 0;
+      showSide(w);
+    });
+  };
+  const done = () => {
+    edge.removeEventListener("pointermove", move);
+    edge.removeEventListener("pointerup", done);
+    edge.removeEventListener("pointercancel", done);
+    cancelAnimationFrame(frame);
+    edge.classList.remove("is-held");
+    document.documentElement.classList.remove("is-sizing");
+    const px = showSide(w);
+    if (px !== was) setPref("side", px);
+  };
+  edge.addEventListener("pointermove", move);
+  edge.addEventListener("pointerup", done);
+  edge.addEventListener("pointercancel", done);
+});
+/* a double-click: the width the longest name needs, wider or narrower,
+   each name's own width against the room its row gives it */
+$("side-edge").addEventListener("dblclick", () => {
+  let over = -Infinity;
+  for (const el of $("recent-list").querySelectorAll(".pk-name")) {
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    over = Math.max(
+      over,
+      Math.ceil(r.getBoundingClientRect().width) - el.clientWidth,
+    );
+  }
+  if (over > -Infinity) setPref("side", showSide(sideWidth() + over));
+});
+/* from the keyboard: the arrows 16 px a press, Home and End its least and
+   most */
+$("side-edge").addEventListener("keydown", (e) => {
+  const w = sideWidth(),
+    to = {
+      ArrowLeft: w - 16,
+      ArrowRight: w + 16,
+      Home: SIDE_MIN,
+      End: sideMax(),
+    }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  setPref("side", showSide(to));
+});
 
 /* --------------------------------------------------------------- files -- */
 
@@ -962,7 +1338,7 @@ async function addPaths(paths) {
     other.length && t("files.not_media", { names: other.join(", ") }),
   ];
   if (gone.length || other.length)
-    toast(say.filter(Boolean).join(" · "), { err: true });
+    toast(say.filter(Boolean).join(DOT), { err: true });
   render();
   pump();
 }
@@ -972,6 +1348,8 @@ async function pump() {
   const f = files.find((x) => x.step === "waiting");
   if (!f) return;
   running = true;
+  runningModel = st.model_file ? null : st.model;
+  manageRunning();
   f.step = "reading";
   update(f);
   try {
@@ -985,6 +1363,8 @@ async function pump() {
     update(f);
   }
   running = false;
+  runningModel = null;
+  manageRunning();
   pump();
 }
 
@@ -1029,7 +1409,7 @@ async function finished(f) {
   }
   // a lone file finished while the start screen was shown is on the recent list now
   if (home && !batch) dropFile(f);
-  if (viewName() === "ready") renderReady();
+  if (viewName() === "ready" || sideMode() === "open") renderReady();
   if (plan && f.segments.length) await saveTo([f], plan.kind, plan.dir);
 }
 
@@ -1038,6 +1418,7 @@ function update(f, segs = []) {
   const v = viewName();
   if (v === "setup") return renderSetup();
   if (v === "ready") return updateLive(f);
+  if (sideMode(v) === "open") updateLive(f);
   if (v === "batch") return updateRow(f);
   if (v === "work" && f.id === sel) showMain(segs);
 }
@@ -1097,6 +1478,21 @@ function back() {
   goHome();
 }
 
+/* What another of the side's rows leaves, as going back to the start and
+   choosing it there would: a file opened beside a batch closes, and so does
+   a lone file finished, stopped or failed, a finished transcript staying on
+   the recent list; one under way goes on, and a batch does too, unless it
+   is left done from its own screen. */
+function leave() {
+  const v = viewName(),
+    f = v === "work" ? current() : null;
+  closeMenu();
+  if (f && f.lone) dropFile(f);
+  else if (!batch) for (const x of files.filter((x) => !live(x))) dropFile(x);
+  else if (v === "batch" && !files.some(live)) closeFiles();
+  mainKey = "";
+}
+
 /* Back to the start. A lone file finished, stopped or failed is closed, a
    finished transcript staying on the recent list; one waiting or being
    transcribed goes on, and heads the list there. A batch goes on there as
@@ -1154,7 +1550,7 @@ function rowBody(f) {
   else if (f.step === "transcribing") {
     status =
       `<span class="pk-bar pk-mini"><i style="width:${(f.done * 100).toFixed(1)}%"></i></span>` +
-      `<span class="pk-status pk-num">${esc(t("status.transcribing", { pct: percent(f.done) }))}${f.eta > 0 ? ` · ${esc(timeLeft(f.eta))}` : ""}</span>`;
+      `<span class="pk-status pk-num">${esc(t("status.transcribing", { pct: percent(f.done) }))}${f.eta > 0 ? `${DOT}${esc(timeLeft(f.eta))}` : ""}</span>`;
   } else if (f.step === "done")
     status = `<span class="pk-status pk-ok">${ICON.check}${esc(t("status.done"))}</span>`;
   else if (f.step === "stopped")
@@ -1162,8 +1558,8 @@ function rowBody(f) {
   else
     status = `<span class="pk-status pk-err"${detailOf(f) ? ` title="${esc(detailOf(f))}"` : ""}>${esc(failure(f))}</span>`;
   return (
-    `${f.kind === "video" ? ICON.film : ICON.music}<span class="pk-name">${esc(f.name)}</span>` +
-    `<span class="pk-stamp">${f.duration == null ? "" : hms(f.duration)}</span>${status}`
+    `${f.kind === "video" ? ICON.film : ICON.music}<span class="pk-name pk-cut">${cutName(f.name)}</span>` +
+    `<span class="pk-stamp">${f.duration == null ? "" : lengthHms(f.duration)}</span>${status}`
   );
 }
 
@@ -1209,22 +1605,41 @@ function updateRow(f) {
 }
 
 /* How far the batch has got, and what Save all does with the rest as it
-   finishes; Stop and the spinner while any of it is to come. */
+   finishes; its pace so far; Stop while any of it is to come. */
 function batchHead() {
   const going = files.some(live),
     p = going && batchSave;
   const saving = !p
     ? ""
-    : ` · ${p.kind === "folder" ? t("batch.saving_folder", { folder: baseName(p.dir) }) : t("batch.saving_beside", { ext: p.kind })}`;
+    : `${DOT}${p.kind === "folder" ? t("batch.saving_folder", { folder: baseName(p.dir) }) : t("batch.saving_beside", { ext: p.kind })}`;
   $("tally").textContent =
     t("batch.done_of", {
       done: files.filter((f) => f.step === "done").length,
       n: files.length,
     }) + saving;
-  $("batch-spin").hidden = $("batch-stop").hidden = !going;
+  $("batch-pace").textContent = batchPace();
+  $("batch-stop").hidden = !going;
+  // the spinner while no row's progress moves, as beside a file's name
+  // (updateRunning): between files, not through each one
+  $("batch-spin").hidden =
+    !going || files.some((f) => f.step === "transcribing" && f.done > 0);
   $("save-all").disabled = !files.some(
     (f) => live(f) || (f.step === "done" && f.segments.length),
   );
+}
+
+/* The audio the batch's files have had transcribed over the time that took,
+   as the strip's pace says of one (updateRunning): the file under way so
+   far and those done, so that it doesn't start again with each file. */
+function batchPace() {
+  let audio = 0,
+    secs = 0;
+  for (const f of files)
+    if ((f.step === "transcribing" || f.step === "done") && f.transcribed > 0) {
+      audio += f.done * f.duration;
+      secs += f.transcribed;
+    }
+  return secs > 0 ? realTime(audio, secs) : "";
 }
 
 $("queue").addEventListener("click", (e) => {
@@ -1274,6 +1689,14 @@ function modeOf(f) {
   return f.step === "error" ? "error" : "review";
 }
 
+/* The spinner beside the name: from the file's start until its ring has
+   progress to show, and not through the rest of the job. Its frames, drawn
+   by WebKit, the window and the desktop's compositor, took three quarters
+   of a core from the transcription on a Pi 5: chapter 1 at 8.0x real time
+   to the command line's 13.4x (Peter's Pi, 2026-10-27, a 1066 px window). */
+const spins = (f, mode) =>
+  mode === "running" && !(f.step === "transcribing" && f.done > 0);
+
 /* Where the file is and what made its transcript, for its name's tooltip:
    the window keeps both out of sight. */
 const fileTip = (f) =>
@@ -1310,7 +1733,7 @@ function buildMain(f, mode, key) {
       : tr.scrollTop;
   mainKey = key;
   pausePlayback();
-  $("title").textContent = f.name;
+  $("title").innerHTML = cutName(f.name);
   $("title").title = fileTip(f);
   $("find").value = "";
   query = "";
@@ -1362,6 +1785,54 @@ function buildMain(f, mode, key) {
   } else if (mode === "running") updateRunning(f);
 }
 
+/* A file's name for a line it may not fill: its start and its end, the
+   extension and the four characters before it, which stay when the start
+   gives way (app.css, .pk-cut), as the phones' apps cut a name in the middle */
+function cutName(name) {
+  const dot = name.lastIndexOf("."),
+    ext = dot > 0 && name.length - dot <= 6 ? name.length - dot : 0,
+    at = Math.max(0, name.length - ext - 4);
+  return at < 4
+    ? `<span>${esc(name)}</span>`
+    : `<span>${esc(name.slice(0, at))}</span><span>${esc(name.slice(at))}</span>`;
+}
+
+/* Find in the header, beside the name, or on the views line, beside the
+   views, where the header hasn't the room for it beside its buttons and
+   160 of the name:
+   the floor the phones' apps keep their name's (the out-of-space rules,
+   2026-10-31). And the name itself on a line of its own under the row,
+   on the strip's edge, where even without Find it would keep under 160
+   beside the buttons, as the phones' apps put it: at 480 px on a Mac,
+   beside Start again, Copy and Save as, the name kept 69 px, "c…-one.flac"
+   (the layout audit, 2026-11-01). Measured by the buttons alone, which
+   stay where they are, so that where Find and the name are doesn't change
+   where they go. */
+const NAME_FLOOR = 160;
+function placeFind() {
+  const head = $("head"),
+    box = $("find-box"),
+    line = $("views-line"),
+    nameLine = $("head-name"),
+    cs = getComputedStyle(head),
+    room = head.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+    shown = ["back", "copy", "again", "save-as", "stop"].map($).filter((b) => b.offsetWidth > 0),
+    gap = parseFloat(cs.columnGap) || 10,
+    // the buttons, and a gap each between them, the name and the space that pushes them apart
+    buttons = shown.reduce((n, b) => n + b.offsetWidth, 0) + gap * (shown.length + 1),
+    under = buttons + gap + 200 + NAME_FLOOR > room,
+    stacked = buttons + NAME_FLOOR > room;
+  if (under && box.parentElement !== line) line.append(box);
+  else if (!under && box.parentElement === line) head.insertBefore(box, $("copy"));
+  if (stacked && $("title").parentElement !== nameLine) nameLine.append($("title"), $("spin"));
+  else if (!stacked && $("title").parentElement === nameLine) {
+    head.insertBefore($("title"), head.querySelector(".pk-grow"));
+    head.insertBefore($("spin"), head.querySelector(".pk-grow"));
+  }
+  nameLine.hidden = !stacked;
+}
+new ResizeObserver(placeFind).observe($("head"));
+
 function updateHead(f, mode) {
   const review = mode === "review",
     has = f.segments.length > 0;
@@ -1373,8 +1844,7 @@ function updateHead(f, mode) {
   $("copy").title = t(prefs.captions ? "copy.captions" : "copy.text");
   $("copy").setAttribute("aria-label", $("copy").title);
   $("copy").disabled = !has;
-  // at work: from the file's start until its last words, before its first too
-  $("spin").hidden = mode !== "running";
+  $("spin").hidden = !spins(f, mode);
   // saving is what a finished transcript is for
   $("save-as").classList.add("pk-btn-primary");
   $("save-as").hidden = !review;
@@ -1394,12 +1864,14 @@ function updateHead(f, mode) {
       ? t("status.stopped_at", { pct: percent(f.done) })
       : "";
   $("stop").hidden = mode !== "running";
+  placeFind();
 }
 
 function updateRunning(f) {
   const going = f.step === "transcribing";
   $("pct").textContent = `${percent(going ? f.done : 0)}%`;
   $("prog").style.setProperty("--done", `${(going ? f.done : 0) * 100}%`);
+  $("spin").hidden = !spins(f, "running");
   // under the waveform the step, and once the first audio is done, the pace so far
   $("pace").textContent =
     f.step === "reading"
@@ -1574,10 +2046,20 @@ function appendSegs(f, segs) {
   updateHead(f, "running");
 }
 
+/* A row plays from its time stamp, or for a finger from anywhere on it: the
+   stamp is too small a target for one (Peter, on his phone, 2026-10-26),
+   on a touchscreen as much as there. A mouse keeps the words for selecting,
+   and a tap that comes while a selection is up only puts it away. */
+let tapClears = false;
+$("transcript").addEventListener("pointerdown", (e) => {
+  tapClears = e.pointerType === "touch" && !!String(getSelection());
+});
 $("transcript").addEventListener("click", (e) => {
-  const t = e.target.closest(".pk-seg-t");
-  const f = current();
+  const touch = e.pointerType === "touch",
+    t = e.target.closest(touch ? ".pk-seg" : ".pk-seg-t"),
+    f = current();
   if (!t || !f || modeOf(f) !== "review") return;
+  if (touch && tapClears) return getSelection().removeAllRanges();
   seek(rowsOf(f)[Number(t.closest(".pk-seg").dataset.i)].start, true);
 });
 
@@ -1595,24 +2077,40 @@ const barsIn = (el) => Math.max(1, Math.floor((el.clientWidth + 1) / BAR));
    below the loudest (src-tauri/src/audio.rs), and narration as even as
    most is within a few dB of its top throughout: drawn on all 48 dB its
    bars were a solid block, its pauses lost (Peter's file, 2026-10-21).
+   A recording quieter for minutes at a time puts more than a tenth of it
+   under that floor, where it drew as silence: AliceBench's 12 chapters
+   as one file (2:58:51) have chapter 4, 11% of it, 13 dB under the rest.
+   So the floor goes 3 dB under the quietest stretch of the file where
+   that is lower: each stretch a tenth of the file or 5 minutes long,
+   whichever is longer, by its median, leaving out stretches more than
+   36 dB under the top, which are silence and drew right. A file at one
+   level keeps its floor (chapter 1 alone, 10:40, draws as before).
    Kept on the array, which its file keeps. */
-function rangeOf(peaks) {
+function rangeOf(peaks, seconds) {
   if (!peaks._range) {
     const s = Float64Array.from(peaks).sort();
-    const lo = s[Math.floor(s.length * 0.1)],
-      hi = s[Math.min(s.length - 1, Math.floor(s.length * 0.995))];
+    let lo = s[Math.floor(s.length * 0.1)];
+    const hi = s[Math.min(s.length - 1, Math.floor(s.length * 0.995))];
+    const n = peaks.length;
+    const half = Math.max(n / 20, seconds ? (150 * n) / seconds : 0) | 0;
+    for (let c = half; half > 0 && 2 * half < n && c + half <= n; c += Math.max(1, (half / 5) | 0)) {
+      const w = Float64Array.from(peaks.slice(c - half, c + half)).sort();
+      const median = w[w.length >> 1];
+      if (median > 64) lo = Math.min(lo, median - 16);
+    }
     peaks._range = [lo, Math.max(hi, lo + 16)];
   }
   return peaks._range;
 }
 
-/* Bars across el from the outline (0-255 a slice), the playhead at bar k;
-   no outline draws the empty strip. A bar is the mean of the slices under
-   it: their loudest hid every pause shorter than a bar. */
-function drawWave(el, peaks, k) {
+/* Bars across el from the outline (0-255 a slice) of a recording seconds
+   long, the playhead at bar k; no outline draws the empty strip. A bar is
+   the mean of the slices under it: their loudest hid every pause shorter
+   than a bar. */
+function drawWave(el, peaks, k, seconds) {
   const n = barsIn(el);
   const top = el.clientHeight || 64;
-  const [lo, hi] = peaks && peaks.length ? rangeOf(peaks) : [0, 255];
+  const [lo, hi] = peaks && peaks.length ? rangeOf(peaks, seconds) : [0, 255];
   const h = [];
   for (let i = 0; i < n; i++) {
     let v = 0;
@@ -1662,7 +2160,7 @@ function drawMainWave() {
       : f.step === "transcribing"
         ? f.done
         : 0;
-  drawWave(wave, mode === "waiting" ? null : f.peaks, Math.floor(at * n));
+  drawWave(wave, mode === "waiting" ? null : f.peaks, Math.floor(at * n), f.duration);
 }
 
 /* The drop's strip: a made-up phrase, louder in the middle */
@@ -1741,6 +2239,7 @@ function showVolume() {
   $("vol").value = v;
   $("vol").style.setProperty("--v", `${v * 100}%`);
   $("mute").innerHTML = v === 0 ? ICON.volX : v < 0.5 ? ICON.vol1 : ICON.vol2;
+  $("mute").classList.toggle("is-silent", v === 0);
   $("mute").title = t(v === 0 ? "volume.unmute" : "volume.mute");
   $("mute").setAttribute("aria-label", $("mute").title);
 }
@@ -1800,24 +2299,18 @@ function loadAudio(f) {
 }
 
 /* The player's source: the cached audio's file by the asset protocol, or on
-   Linux its bytes over IPC as a blob. WebKitGTK's player can't read media by
-   the asset protocol ("Loading failed, error: FormatError", while GStreamer
-   played the file: the Omarchy test, 2026-10-25). */
-let blobUrl = null,
-  coming = null; // the file whose bytes are on their way
+   Linux by HTTP from the app's own server on 127.0.0.1, since WebKitGTK's
+   player can't read media by the asset protocol (serve.rs). */
+let coming = null; // the file whose address is on its way
 function audioSrc(f) {
-  if (blobUrl) URL.revokeObjectURL(blobUrl);
-  blobUrl = null;
   if (!f.audio) return player.removeAttribute("src");
   if (!isLinux()) return (player.src = T.core.convertFileSrc(f.audio));
   const id = f.id;
   coming = id;
-  invoke("audio_bytes", { path: f.audio }).then(
-    (bytes) => {
+  invoke("audio_url", { path: f.audio }).then(
+    (url) => {
       if (coming === id) coming = null;
-      if (playId !== id) return;
-      blobUrl = URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
-      player.src = blobUrl;
+      if (playId === id) player.src = url;
     },
     (e) => {
       if (coming === id) coming = null;
@@ -1862,14 +2355,7 @@ function playFrom(pos) {
       .play()
       .catch((e) => toast(t("play.cant"), { err: true, detail: e.message }));
   const mine = ++playToken;
-  // on Linux always the seek, which flushes the player: WebKitGTK's played a
-  // few seconds from about a minute in (2 MiB of the WAV) before the start,
-  // from a blob, when asked to play where it already was (the Omarchy test)
-  if (
-    !isLinux() &&
-    Math.abs(player.currentTime - pos) < 0.01 &&
-    !player.seeking
-  )
+  if (Math.abs(player.currentTime - pos) < 0.01 && !player.seeking)
     return start();
   player.currentTime = pos;
   const go = () => {
@@ -2008,6 +2494,9 @@ function showTime(t, follow = false) {
     if (word) word.classList.add("pk-now");
     curWord = word;
   }
+  // a search's match after the playhead: where a jump lands, and as
+  // playback passes one
+  if (follow) followHit(t, follow === true);
 }
 
 /* The strip's time is where its format is chosen: seconds and hundredths,
@@ -2027,7 +2516,7 @@ function timeMenu(anchor, keys) {
   const chip = (value, label, on) =>
     `<button class="pk-rate${on ? " is-on" : ""}" type="button" data-rate="${value}" aria-pressed="${on}">${label}</button>`;
   const html =
-    choice(false, esc(t("times.seconds")), stamp(now)) +
+    choice(false, esc(t("times.seconds")), stamp(now, f.duration || 0)) +
     choice(
       true,
       esc(t("times.frames")),
@@ -2116,7 +2605,19 @@ $("wavebtn").addEventListener("keydown", (e) => {
 let query = "",
   hits = [],
   hitTimes = [],
-  hitAt = -1;
+  hitAt = -1,
+  // the match the playhead last passed when the reader was last put by it
+  // (followHit); -1 for none
+  passed = -1;
+
+/* the match the playhead has last passed at t, or -1 */
+function passedAt(t) {
+  let k = -1;
+  hitTimes.forEach((h, j) => {
+    if (h <= t) k = j;
+  });
+  return k;
+}
 
 /* text with each match marked, and where in text it starts */
 /* The word of s at a character of its text, found as bodyHtml finds them:
@@ -2133,9 +2634,13 @@ function wordAt(s, offset) {
   return found;
 }
 
-function runFind() {
+/* The search as the field has it, the transcript marked again; sought when
+   the reader typed it, rather than the transcript drawn anew under it */
+function runFind(sought) {
   const f = current();
   if (!f || modeOf(f) !== "review") return;
+  // the time of the match the reader is on, before the search changes
+  const was = hitTimes[hitAt];
   query = $("find").value.trim();
   const tr = $("transcript"),
     top = tr.scrollTop,
@@ -2153,34 +2658,63 @@ function runFind() {
       k = wordAt(s, Number(h.dataset.at));
     return k >= 0 ? s.words[k].start : s.start;
   });
-  // the match the playhead last passed, so that a search typed as it plays
-  // or rests mid-recording starts where the listener is; the first when it
-  // has passed none
+  // the match the reader was on while it is still one, so that a search
+  // typed on keeps its place, as Android's does; otherwise the match the
+  // playhead last passed, so that a search typed as it plays or rests
+  // mid-recording starts where the listener is; the first when it has
+  // passed none
   hitAt = -1;
+  passed = passedAt(f.pos);
+  const kept = hitTimes.indexOf(was);
   if (hits.length) {
-    let k = 0;
-    hitTimes.forEach((t, j) => {
-      if (t <= f.pos) k = j;
-    });
+    const k = kept >= 0 ? kept : Math.max(0, passed);
+    // typed at rest, the playhead to the match the reader goes to, so that
+    // Play starts where the transcript went: a search typed is a place
+    // sought (Peter, 2026-11-01); playing, it stays with the listener, and
+    // the reader follows it (followHit). Before goHit, as in stepHit: the
+    // seek's follow would take the reader to the last of matches in one word
+    if (sought && !playing) seek(hitTimes[k], false);
     goHit(k);
   }
   findCount();
 }
 
+/* The reader on the match the playhead last passed, the first where it has
+   passed none, as a tick tapped puts them (Peter, 2026-10-26): as playback
+   passes a match, and wherever a seek lands (jump), though it lands short
+   of the next. A match stepped to stays until then. The transcript stays
+   where the playhead has it. */
+function followHit(t, jump) {
+  if (!hits.length) return;
+  const k = passedAt(t);
+  if (!jump && k === passed) return;
+  passed = k;
+  goHit(Math.max(0, k), false);
+}
+
+/* A step (Enter, the arrows) takes the playhead to its match, as a tick
+   does: while it plays, because the reader follows the playhead and would
+   be taken back at the next match passed; at rest, so that Play starts at
+   the word the transcript went to. A step at rest once only read, keeping
+   the listener's place (2026-10-27), but with the transcript at the match
+   a Play from elsewhere felt like a mistake (Peter, 2026-11-01). */
 function stepHit(d) {
-  if (hits.length) goHit((hitAt + d + hits.length) % hits.length);
+  if (!hits.length) return;
+  const k = (hitAt + d + hits.length) % hits.length;
+  seek(hitTimes[k], false);
+  goHit(k);
 }
 
 /* every piece of match k */
 const hitPieces = (k) =>
   $("transcript").querySelectorAll(`[data-hit="${hits[k].dataset.hit}"]`);
 
-function goHit(k) {
+function goHit(k, scroll = true) {
   if (hitAt >= 0)
     for (const el of hitPieces(hitAt)) el.classList.remove("is-on");
   hitAt = k;
   for (const el of hitPieces(hitAt)) el.classList.add("is-on");
-  hits[hitAt].scrollIntoView({ block: "center" });
+  if (scroll) hits[hitAt].scrollIntoView({ block: "center" });
   findCount();
 }
 
@@ -2201,6 +2735,12 @@ function findCount() {
         )
         .join("")
     : "";
+  // the waveform a little shorter while there are ticks (app.css), its bars
+  // drawn again to its height
+  const strip = $("strip"),
+    was = strip.classList.contains("has-ticks");
+  if (strip.classList.toggle("has-ticks", !!dur && hits.length > 0) !== was)
+    drawMainWave();
 }
 
 function clearFind() {
@@ -2215,7 +2755,7 @@ function openFind() {
   $("find").select();
 }
 
-$("find").addEventListener("input", runFind);
+$("find").addEventListener("input", () => runFind(true));
 $("find-prev").onclick = (e) => {
   e.preventDefault();
   stepHit(-1);
@@ -2224,12 +2764,28 @@ $("find-next").onclick = (e) => {
   e.preventDefault();
   stepHit(1);
 };
-/* a tick: its match, and the playhead there */
+/* a tick: its match, and the playhead there. A click on the lane takes the
+   tick nearest it within 16 px, as Android's lane does: ticks are 9 px
+   wide and overlap where matches are close, and the one drawn over took a
+   click meant for the nearer (2 px right of one, the next 3 px further). */
 $("ticks").addEventListener("click", (e) => {
-  const k = e.target.closest("[data-k]");
-  if (!k) return;
-  goHit(Number(k.dataset.k));
-  seek(hitTimes[hitAt], false);
+  const f = current(),
+    r = e.currentTarget.getBoundingClientRect();
+  if (!f || !f.duration) return;
+  let i = -1,
+    near = 16;
+  hitTimes.forEach((t, k) => {
+    const d = Math.abs(r.left + (t / f.duration) * r.width - e.clientX);
+    if (d < near) {
+      near = d;
+      i = k;
+    }
+  });
+  if (i < 0) return;
+  seek(hitTimes[i], false);
+  // after the seek, which puts the reader on the match it last passed: a
+  // tick's own, where two share its time
+  goHit(i);
 });
 $("find").addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
@@ -2654,6 +3210,19 @@ function loadMascot() {
   return mascotFiles;
 }
 
+/* The mascot over the words, where they are one column, only with 120 px
+   of height for it (app.css, .short-stage). The words' height is taken as
+   they stand, with the stage's or without, so that a window a little taller
+   doesn't bring it back and send it away again. */
+function fitStage() {
+  const about = $("about");
+  if (about.hidden) return;
+  const one = getComputedStyle(about).gridTemplateColumns.trim().split(/\s+/).length === 1,
+    text = about.querySelector(".pk-about-text");
+  about.classList.toggle("short-stage", one && about.clientHeight - text.scrollHeight < 120);
+}
+new ResizeObserver(fitStage).observe($("about"));
+
 async function openAbout() {
   if (!st || about) return;
   closeMenu();
@@ -2674,6 +3243,7 @@ async function openAbout() {
   $("about-back").focus({ preventScroll: true });
   await loadMascot();
   $("about").classList.toggle("no-stage", !mascot);
+  fitStage();
   if (about && mascot) mascot.show();
 }
 
@@ -2895,11 +3465,18 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (!st) return;
-  // Esc backs out one step: a question, a menu, About, a search, then the
-  // file, then its batch
+  // Esc backs out one step: a question, a menu, Manage models, About, a
+  // search, then the file, then its batch
   if (e.key === "Escape") {
     e.preventDefault();
-    if (closeAsk() || closeMenu() || closeSheet() || closeAbout()) return;
+    if (
+      closeAsk() ||
+      closeMenu() ||
+      closeManage() ||
+      closeSheet() ||
+      closeAbout()
+    )
+      return;
     if (query && viewName() === "work") clearFind();
     else back();
     return;
@@ -2944,12 +3521,20 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* The mouse's back button goes back as the header's arrow does, closing
-   first a question, a menu or About. WebKit and WebView2 both give it as
-   button 3; the page has no history of its own for it to go back in. */
+   first a question, a menu, Manage models or About. WebKit and WebView2
+   both give it as button 3; the page has no history of its own for it to
+   go back in. */
 document.addEventListener("mouseup", (e) => {
   if (e.button !== 3 || !st) return;
   e.preventDefault();
-  if (closeAsk() || closeMenu() || closeSheet() || closeAbout()) return;
+  if (
+    closeAsk() ||
+    closeMenu() ||
+    closeManage() ||
+    closeSheet() ||
+    closeAbout()
+  )
+    return;
   back();
 });
 
@@ -2957,6 +3542,7 @@ listen("menu", (e) => {
   const id = e.payload;
   // a command from the menu bar while the window asks: Cancel, and on to it
   closeAsk();
+  closeManage();
   if (id === "add") chooseFiles();
   else if (id === "about") openAbout();
   else if (id === "find") openFind();
@@ -2993,7 +3579,7 @@ async function start() {
   $("speed").title = t("speed.tip");
   showSpeed();
   showVolume();
-  for (const id of ["notices-close", "privacy-close"]) {
+  for (const id of ["notices-close", "privacy-close", "manage-close"]) {
     $(id).innerHTML = ICON.x;
     $(id).title = keyTip(t("sheet.close"), t("key.esc"));
   }

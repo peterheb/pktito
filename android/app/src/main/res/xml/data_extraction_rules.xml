@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What Android's backup and its move to a new phone take from Android 12:
+     what its backup took before (backup_rules.xml), the recent list and the
+     settings. Android states no 25 MB cap for a move to a new phone. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="file" path="recent/" />
+        <include domain="sharedpref" path="pktito.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="file" path="recent/" />
+        <include domain="sharedpref" path="pktito.xml" />
+    </device-transfer>
+</data-extraction-rules>

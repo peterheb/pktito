@@ -1,0 +1,6 @@
+# Gradle's, and native.sh's libraries, built from src-tauri
+/.gradle/
+/build/
+/app/build/
+/app/src/main/jniLibs/
+/local.properties

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- A transcription runs in a foreground service, its progress in a
+         notification, so that it goes on with the screen off or another app
+         in front: mediaProcessing from Android 15, which has the type and
+         limits it to 6 hours a day, dataSync before (TranscribeService). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROCESSING" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- A model's download from models.pktito.net (Downloads): from Android
+         14 a user-initiated data transfer job, whose condition is a
+         network, so it reads the network's state; before 14, a dataSync
+         foreground service, as above -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RUN_USER_INITIATED_JOBS" />
+
+    <!-- no permission to read files: each recording is one the person picked,
+         or opened with pktito or shared to it from another app, and each of
+         those grants that one -->
+    <!-- Android's backup and its move to a new phone take the recent list
+         and the settings, not the models or the recordings' copies
+         (backup_rules.xml, and data_extraction_rules.xml from Android 12) -->
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.Pktito">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize">
+            <!-- the keyboard as an inset the screen makes room for (the
+                 root pads by safeDrawing), not a pan of the whole window:
+                 on a phone on its side the pan took the header under the
+                 status bar and left Find's field out of sight (Work) -->
+            <!-- A window's first size where Android has windows (the
+                 Googlebook, a tablet's desktop): the desktop's, 680 by 800
+                 inside its title bar and 480 by 480 at the least
+                 (tauri.conf.json, main.rs fit_size), with the 40 dp header
+                 Android draws across a window's top (60 px at 240 dpi,
+                 measured on the Googlebook) -->
+            <layout
+                android:defaultWidth="680dp"
+                android:defaultHeight="840dp"
+                android:minWidth="480dp"
+                android:minHeight="520dp" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Open with, from the Files app: a type and no scheme takes
+                 content: and file: alike -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
+            <!-- Share, from a recorder or anything with a recording -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
+        </activity>
+        <service
+            android:name=".TranscribeService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProcessing|dataSync" />
+        <!-- scheduled only from Android 14, which has user-initiated jobs (Downloads.start) -->
+        <service
+            android:name=".DownloadJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            tools:targetApi="34" />
+        <service
+            android:name=".DownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+        <!-- a transcript shared as a file, for the app it goes to to read
+             (MainActivity.share): the cache's shared folder, nothing else -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/shared" />
+        </provider>
+    </application>
+</manifest>

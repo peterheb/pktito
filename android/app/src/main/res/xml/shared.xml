@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What FileProvider serves (AndroidManifest.xml): the files a share
+     writes into the cache's shared folder (MainActivity.share), and nothing
+     else of the app's -->
+<paths>
+    <cache-path name="shared" path="shared/" />
+</paths>

@@ -272,7 +272,9 @@ def check(data):
     return 1
 
 
-def main():
+def notices(systems, extras_by_hand):
+    """What each of systems' builds links and the extras listed by hand, as
+    notices.js has them, and the licenses not in PREFER, to be checked."""
     crates, texts = {}, {}
 
     def keep(key, title, text):
@@ -299,7 +301,7 @@ def main():
             texts[k]["by"].append(p["name"])
         return k
 
-    for bit, targets in SYSTEMS.values():
+    for bit, targets in systems.values():
         for t in targets:
             for i, p in linked(t).items():
                 crates.setdefault(i, [p, 0])[1] |= bit
@@ -374,7 +376,7 @@ def main():
         out.append([p["name"], p["version"], shown, notice, mask, list(dict.fromkeys(keys))])
 
     extras = []
-    for group, name, notice, lic, mask, ks in EXTRAS:
+    for group, name, notice, lic, mask, ks in extras_by_hand:
         kk = []
         for k in ks:
             if k in texts:
@@ -397,10 +399,16 @@ def main():
                 v["title"] = f"{names[0]}: {v['at']}"
         for x in ("by", "lic", "at"):
             v.pop(x, None)
-    data = {"systems": {s: b for s, (b, _) in SYSTEMS.items()}, "extras": extras, "crates": out,
+    data = {"systems": {s: b for s, (b, _) in systems.items()}, "extras": extras, "crates": out,
             "texts": {k: v for k, v in texts.items() if k in used}}
+    return data, unknown
+
+
+def main():
+    data, unknown = notices(SYSTEMS, EXTRAS)
     if "--check" in sys.argv[1:]:
         sys.exit(check(data))
+    out = data["crates"]
     js = ("/* What pktito is built from, besides its own code and the models About\n"
           "   names, and the licenses each is used under: from scripts/notices.py. */\n"
           "const NOTICES = " + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";\n")

@@ -1,15 +1,20 @@
-# The Windows Arm64 build, cross-compiled on x64 Windows: Rust's
-# aarch64-pc-windows-gnullvm target (and x86_64-pc-windows-gnullvm for the
-# host's build scripts, the same C runtime), with llvm-mingw's clang on PATH
-# as compiler and linker. Every library is linked statically, so the exe
-# needs nothing a Windows install does not have. The x64 build uses
-# x86_64-pc-windows-gnu and none of this.
+# The Windows builds, x64 and Arm64, both on llvm-mingw: Rust's
+# x86_64-pc-windows-gnullvm and aarch64-pc-windows-gnullvm targets (Arm64
+# cross-compiled on x64 Windows, the host's build scripts on the first),
+# with llvm-mingw's clang on PATH as compiler and linker. Every library is
+# linked statically, so the exe needs nothing a Windows install does not
+# have; without it both exes import libunwind.dll. clang 23 against MSYS2's
+# gcc 16.2 for the x64 engine, on a 9950X: AliceBench 271.5x against
+# 262.3x, transcripts byte for byte the same, and -10.3% on the avx2
+# backend, -2.4% on avx2-vnni and -2.0% on avx512-vnni (libpktito and
+# pktito-9950x, 2026-10-27).
 [target.aarch64-pc-windows-gnullvm]
 linker = "aarch64-w64-mingw32-clang"
 rustflags = ["-C", "target-feature=+crt-static"]
 
 [target.x86_64-pc-windows-gnullvm]
 linker = "x86_64-w64-mingw32-clang"
+rustflags = ["-C", "target-feature=+crt-static"]
 
 [env]
 CC_aarch64_pc_windows_gnullvm = "aarch64-w64-mingw32-clang"

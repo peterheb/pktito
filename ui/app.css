@@ -42,6 +42,14 @@ ul {
   list-style: none;
   padding: 0;
 }
+/* a heading's lines even, never one word alone on its last (the three
+   apps', 2026-11-01; WebKit before Safari 17.5 sets them as it did) */
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
 
 /* ------------------------------------------------------------------ type -- */
 .pk-wm {
@@ -276,6 +284,13 @@ button.pk-wm:focus-visible {
   ):active:not([disabled]) {
   background-image: linear-gradient(var(--tint-press), var(--tint-press));
 }
+/* and a menu's button stays pressed while its menu is open (openMenu), as
+   a menu title or a pop-up button does on macOS and Windows: the menu,
+   under its button and over what comes next, is plainly its own (Peter,
+   2026-11-01; the Android app's menus and Recent rows the same) */
+:where([aria-haspopup="menu"])[aria-expanded="true"]:not([disabled]) {
+  background-image: linear-gradient(var(--tint-press), var(--tint-press));
+}
 
 /* ----------------------------------------------------------- title bar -- */
 /* Where the window has no title bar of its own (macOS: app.js, data-chrome)
@@ -293,7 +308,7 @@ html[data-chrome="mac"]:not([data-fullscreen]) .pk-head {
   padding-left: var(--lights);
 }
 html[data-chrome="mac"]:not([data-fullscreen]) .pk-about > .pk-back {
-  left: calc(var(--lights) - 8px);
+  left: calc(var(--lights) - 11px);
 }
 /* A one-column screen's top row is beside the lights where the column
    starts past them, at 744 px wide (640 px centred, 40 px padding), and
@@ -421,14 +436,25 @@ html[data-chrome="win"] .pk-head {
   overflow: auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  place-items: center;
+  justify-items: center;
+}
+/* in the middle while it fits, and from its top, all of it in reach,
+   where it is taller than the window: centred as the grid's item instead,
+   a setup screen with its languages open in a 480 px window lost its top
+   58 px, wordmark and title, where scrolling can't go, and at 600 px its
+   wordmark sat under the traffic lights (the layout audit, 2026-11-01) */
+.pk-center > .pk-screen {
+  margin-top: auto;
+  margin-bottom: auto;
 }
 .pk-screen {
   width: min(640px, 100%);
   min-height: min(100%, 520px);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  /* steps on the scale, as the start screen's: 24 (it was 20; the layout
+     audit, with Android's, 2026-11-01) */
+  gap: 24px;
   padding: 28px 40px 24px;
 }
 .pk-intro {
@@ -450,7 +476,7 @@ html[data-chrome="win"] .pk-head {
   margin-top: auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 .pk-wide {
   width: 100%;
@@ -473,7 +499,7 @@ html[data-chrome="win"] .pk-head {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
 }
 .pk-choices legend {
@@ -577,11 +603,13 @@ html[data-chrome="win"] .pk-head {
   gap: 12px;
   margin-top: 8px;
 }
+/* the figures on the percentage's baseline: at its foot, 4 px up, they sat
+   1.8 px above it on every engine (the layout audit, 2026-11-01); a
+   narrow window puts them on a line of their own under it */
 .pk-dl .pk-spread {
-  align-items: flex-end;
+  align-items: baseline;
 }
 .pk-dl .pk-stamp {
-  padding-bottom: 4px;
   white-space: normal;
 }
 .pk-bar {
@@ -650,18 +678,27 @@ html[data-chrome="win"] .pk-head {
 }
 
 /* ready */
+/* with nothing on the recent list, its top row and zone together in the
+   window's middle, as iOS's start screen: held 600 tall from its top, their
+   middle sat 235 px down an 800 px window (Peter, 2026-11-01) */
 .pk-ready {
-  height: min(100%, 600px);
+  height: auto;
   min-height: 0;
-  gap: 22px;
-  padding-top: 20px;
-  padding-bottom: 20px;
+  /* its steps on the scale, 24, and 32 over the recent list (8 more);
+     they were 22 and 30 (the layout audit, 2026-11-01) */
+  gap: 24px;
+  /* 16 above and below, so that alone in the window's middle it is in its
+     middle (they were 20 and 20) */
+  padding-top: 16px;
+  padding-bottom: 16px;
 }
 /* the model's button with its chevron on the strip's right edge, as the
    wordmark is on its left: its padding outside it (Peter's screenshot,
-   2026-10-22) */
+   2026-10-22), and the chevron's own margin in its 16 px box, 3.3 px with
+   its stroke's cap, which at -12 left its ink 3.3 px in (the layout audit,
+   2026-11-01) */
 #ready-model {
-  margin-right: -12px;
+  margin-right: -15px;
 }
 /* the prompt and its button in a drop zone, dashed as the drop over the
    whole window is: it says where a file goes, and gives the screen the
@@ -672,7 +709,8 @@ html[data-chrome="win"] .pk-head {
 .pk-ready-drop {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  /* the lead to its button 16, as the phones' zone (it was 22) */
+  gap: 16px;
   padding: 36px 24px;
   border: 2px dashed var(--ink-muted);
   border-radius: var(--radius-ui);
@@ -703,6 +741,9 @@ html[data-chrome="win"] .pk-head {
    what is left below the button: a tall window shows more of it */
 .has-recent .pk-ready {
   height: 100%;
+  /* its top row on the work header's line, 15 down round its 32, as the
+     side's */
+  padding-top: 15px;
 }
 .has-recent .pk-recent {
   margin-top: 8px;
@@ -749,8 +790,181 @@ html[data-chrome="win"] .pk-head {
   visibility: hidden;
 }
 
+/* -------------------------------------------------------------- the side -- */
+/* The start screen is one column: its top row, the drop zone and the recent
+   list, in that order whatever the markup's. A wide window keeps the top
+   row and the list in a column of their own at its left, the side (app.js,
+   sideMode): beside the drop zone while the list has anything in it, and
+   beside a file or the batch open, whose row it marks; Choose stands in
+   there for the drop zone's. A window from 920: the side at its least,
+   240, and the work at the 680 the window opens at; the side 300 from 980.
+   One column left the transcript's text at its 560 from a window of about
+   770, and everything past that empty beside it (436 px at 1160, where the
+   side first came; Peter, 2026-10-27). The work's narrow rules ask its own
+   width (.pk-work, a container), so beside the side it looks as a window
+   of its width does. A transcript's row puts its times under its name,
+   which has the side's width to itself. */
+.pk-side {
+  display: contents;
+}
+.pk-side > .pk-spread {
+  order: 0;
+}
+.pk-ready-drop {
+  order: 1;
+}
+.pk-recent {
+  order: 2;
+}
+.pk-side-choose {
+  display: none;
+}
+html[data-side] {
+  --side: 300px;
+}
+html[data-side] .pk-ready {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  display: grid;
+  grid-template-columns: var(--side) minmax(0, 1fr);
+  gap: 0;
+}
+html[data-side] .pk-side {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  /* its top row on the work's header's line, the model menu's 32 in the
+     middle of the header's 62, and Choose with the strip's top, 15 under
+     the row as the strip is under the header's buttons: at 20 the row sat
+     5 lower than the header's and read as out of line with it (Peter, on
+     the iPad's, 2026-11-01). Its steps 16, the scale's, as the phones'
+     apps' sides are (the layout audit, 2026-11-01): they were 14, and 18
+     over the list */
+  padding: 15px 16px 16px 20px;
+  border-right: 1px solid var(--sunk);
+}
+html[data-side] .pk-side > .pk-spread {
+  margin-bottom: -1px;
+}
+html[data-side] .pk-recent {
+  flex: 1 1 auto;
+}
+/* The list is the side's one scroll. Where scrollbars take room (macOS set
+   to show them, Windows), the list's hung beside its rows 19 px past their
+   column, 3 more than the side's padding, and the side beside a file, fixed
+   at its width, scrolled across and then down for it: three scrollbars
+   (Peter's Mac, 2026-10-27). The list's reach is held to the padding, and
+   the side never scrolls. */
+html[data-side] #ready {
+  overflow: hidden;
+}
+html[data-side] .pk-recent ul {
+  margin-right: calc(-4px - min(var(--sb, 0px), 12px));
+}
+/* its edge, which a drag moves and a double-click fits to the longest
+   name (app.js, the side's width): 7 px over the line, the line lit in the
+   accent while it is pointed at or held, and in the focus ring's colour
+   when the keyboard is on it */
+.pk-side-edge {
+  display: none;
+}
+html[data-side] .pk-side-edge {
+  display: block;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -1px;
+  width: 7px;
+  z-index: 2;
+  cursor: col-resize;
+  touch-action: none;
+}
+html[data-side] .pk-side-edge:is(:hover, .is-held) {
+  background: linear-gradient(var(--plume), var(--plume)) right / 3px 100%
+    no-repeat;
+}
+html[data-side] .pk-side-edge:focus-visible {
+  outline: none;
+  background: linear-gradient(var(--focus), var(--focus)) right / 2px 100%
+    no-repeat;
+}
+html.is-sizing,
+html.is-sizing * {
+  cursor: col-resize !important;
+  user-select: none;
+}
+html[data-side] .pk-ready-drop {
+  align-self: center;
+  justify-self: center;
+  width: min(560px, calc(100% - 80px));
+}
+html[data-side="open"] #ready {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--side);
+}
+html[data-side="open"] .pk-ready {
+  grid-template-columns: minmax(0, 1fr);
+}
+html[data-side="open"] .pk-ready-drop {
+  display: none;
+}
+html[data-side="open"] .pk-side-choose {
+  display: flex;
+}
+html[data-side="open"] :is(#work, #batch) {
+  margin-left: var(--side);
+}
+/* the traffic lights are over the side: its top row under them, as a
+   narrow window's is, and the work's header starts at its own edge */
+html[data-chrome="mac"][data-side]:not([data-fullscreen]) .pk-side {
+  padding-top: 60px;
+}
+html[data-chrome="mac"][data-side="open"]:not([data-fullscreen]) .pk-head {
+  padding-left: 24px;
+}
+html[data-side] .pk-recent .pk-row[data-recent] {
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  row-gap: 2px;
+}
+html[data-side] .pk-recent .pk-row[data-recent] .pk-name {
+  grid-column: 2 / -1;
+}
+html[data-side] .pk-recent .pk-row[data-recent] > .pk-stamp {
+  grid-row: 2;
+  grid-column: 2;
+}
+html[data-side] .pk-recent .pk-row[data-recent] > .pk-when {
+  grid-row: 2;
+  grid-column: 3;
+}
+html[data-side] .pk-recent .pk-qi .pk-x {
+  top: auto;
+  bottom: 6px;
+}
+/* a file under way has its name the side's width too, which its length
+   left "new-ta..." of (sidecheck, 2026-10-27); its transcript's row says
+   the length when it is done */
+html[data-side] .pk-recent .pk-row[data-live] .pk-name {
+  grid-column: 2 / -1;
+}
+html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
+  display: none;
+}
+/* the file open beside the side, on its row */
+.pk-recent .pk-row[aria-current="true"] {
+  background: var(--surface);
+}
+
 /* ------------------------------------------------------------------ work -- */
+/* A container: the work's narrow rules (the rows' times above their text,
+   the edges closer in, Find folded) ask its width, which is the window's
+   in one column and the window's less the side's beside it (the side). */
 .pk-work {
+  container-type: inline-size;
   height: 100%;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -777,15 +991,31 @@ html[data-chrome="win"] .pk-head {
 /* the file's name gives way first, down to nothing, before Find: shrunk in
    proportion, a long name left Find a letter of its search (the Windows
    test, 2026-10-22) */
-.pk-head h1 {
+.pk-head h1,
+.pk-head-name h1 {
   flex: 0 1000 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* beside the name while the file is at work, from the moment it starts:
-   the strip says nothing until the audio is read */
+/* the name under the header's row where beside its buttons it would keep
+   under 160 px (app.js, placeFind): 16 under the buttons, the screen's one
+   step, and 15 over the strip, as the row's buttons are; on the strip's
+   edge, whatever stands beside the row above (the traffic lights,
+   Windows' caption buttons) */
+.pk-head-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 1px 24px 15px;
+}
+.pk-head-name[hidden] {
+  display: none;
+}
+/* beside the name from the moment the file starts until its ring shows
+   progress: the strip says nothing until the audio is read (app.js,
+   updateRunning) */
 .pk-spin {
   flex: none;
   width: 14px;
@@ -809,9 +1039,18 @@ html[data-chrome="win"] .pk-head {
     animation: none;
   }
 }
-/* the arrow drawn on the strip's left edge, its button's padding outside it */
+/* the arrow drawn on the strip's left edge: its button's padding and the
+   arrow's own margin in its 16 px box outside it (feather's arrow starts 4
+   of 24 in with its stroke's cap, 2.7 px), its ink 0.3 px past the edge;
+   at -8 it sat 2.7 px in (the layout audit, 2026-11-01) */
 .pk-head .pk-back {
-  margin-left: -8px;
+  margin-left: -11px;
+}
+/* Stop, the row's last while a file is at work, its words on the strip's
+   right edge as Save as's box is once it is done: its padding outside it.
+   Not beside Windows' caption buttons, which end the row there */
+html:not([data-chrome="win"]) .pk-head > #stop {
+  margin-right: -12px;
 }
 .pk-grow {
   flex: 1;
@@ -879,8 +1118,23 @@ html[data-chrome="win"] .pk-head {
   gap: 4px;
   min-height: 0;
 }
-.pk-batch-files .pk-small {
+/* how far the batch has got, and over the rows' lengths, in their type, its
+   pace so far: what the strip says of one file, said of them all */
+.pk-tally {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
   padding: 0 12px;
+}
+.pk-tally .pk-stamp {
+  line-height: 1.45;
+}
+/* Chromium (WebView2) sets the mono line on its baseline 1 px lower than
+   the tally's, so the row grew a pixel as the first pace came and the rows
+   under it moved; an empty pace keeps its line */
+.pk-tally .pk-stamp:empty::before {
+  content: "\00a0";
 }
 /* room inside the scroll for a row's focus ring */
 .pk-batch-files ul {
@@ -922,6 +1176,23 @@ html[data-chrome="win"] .pk-head {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* a file's name cut in the middle, which keeps its extension (app.js,
+   cutName): its start gives way, its end stays (the out-of-space rules,
+   the same on the phones') */
+.pk-cut {
+  display: flex;
+}
+.pk-cut > span {
+  white-space: pre;
+}
+.pk-cut > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pk-cut > span:last-child {
+  flex: none;
+}
 .pk-row .pk-status {
   grid-column: 2 / -1;
   display: flex;
@@ -933,6 +1204,13 @@ html[data-chrome="win"] .pk-head {
 }
 .pk-row .pk-status.pk-ok {
   color: var(--ok);
+}
+/* an icon that heads a column of words with its ink on theirs, not its
+   box: the file's 1 px and Done's check 1.5 px inside the words above
+   them, measured from the drawn pixels (the layout audit, 2026-11-01) */
+.pk-recent .pk-row[data-recent] > svg:first-child,
+.pk-row .pk-status > svg:first-child {
+  margin-left: -1px;
 }
 .pk-row .pk-status.pk-err {
   color: var(--err);
@@ -1057,6 +1335,15 @@ html[data-chrome="win"] .pk-head {
   margin: 0;
   padding: 4px 6px 5px;
 }
+/* silent, muted or at 0: the speaker lit, its ✕ in the strip's colour on
+   the beak's. The icons alone, waves or a ✕ at 16 px, told too little:
+   Peter was left muted unawares on his phone (2026-10-27; the Android app
+   lights it the same way). 4.02:1 for the ✕ on the beak and the beak on
+   the strip in light, 7.59 in dark (tokens.css's --beak on --term). */
+.pk-volbtn.is-silent {
+  background-color: var(--beak);
+  color: var(--term);
+}
 .pk-vol-range {
   -webkit-appearance: none;
   appearance: none;
@@ -1112,9 +1399,9 @@ html[data-chrome="win"] .pk-head {
 }
 /* a match's tick, 2 px drawn in a target 9 px wide that reaches down to the
    times: 7 px tall alone was hard to hit (the Windows test, 2026-10-22);
-   the current one lighter, wider, and taller by the lane's gaps above and
-   below, so that its shape tells it too: its colour is 1.6:1 against the
-   others' (the tokens' contrast, 2026-10-22) */
+   the current one lighter, wider, and 3 px taller above and below, so that
+   its shape tells it too: its colour is 1.6:1 against the others' (the
+   tokens' contrast, 2026-10-22) */
 .pk-ticks {
   position: relative;
   height: 9px;
@@ -1139,6 +1426,20 @@ html[data-chrome="win"] .pk-head {
   bottom: -3px;
   background-image: linear-gradient(var(--term-ink), var(--term-ink));
   background-size: 3px 100%;
+}
+/* While a search has ticks the waveform gives 8 px to the gaps round them,
+   4 a side: at 3 the current tick, 3 px longer each way, met the bars above
+   and the times below, and the lane read as crowded (Peter, 2026-10-27).
+   The strip keeps its height, so the transcript does not move when a search
+   finds something, and play keeps to the waveform's middle. */
+#strip.has-ticks .pk-wave {
+  height: 56px;
+}
+#strip.has-ticks .pk-lane {
+  gap: 7px;
+}
+#strip.has-ticks .pk-transport {
+  padding-top: 8px;
 }
 /* bars 2 px wide a pixel apart, as app.js's BAR counts them; the playhead
    a pixel wider each side, over the gaps, so that it moves nothing */
@@ -1346,19 +1647,25 @@ html[data-chrome="win"] .pk-head {
 .pk-about.no-stage {
   grid-template-columns: minmax(0, 1fr);
 }
-.pk-about.no-stage .pk-about-stage {
+/* without the mascot, or where over the words it would have under 120 px
+   (app.js, fitStage): in a 480 x 480 window it was a band 27 px tall with
+   a mascot an icon's size in it (the layout audit, 2026-11-01) */
+.pk-about.no-stage .pk-about-stage,
+.pk-about.short-stage .pk-about-stage {
   display: none;
 }
-.pk-about.no-stage .pk-about-text {
+.pk-about.no-stage .pk-about-text,
+.pk-about.short-stage .pk-about-text {
   padding-top: 64px;
 }
 /* the arrow at the window's top left, where a file's is */
-/* where a header row's arrow is: 16 px in, the row's 24 less the 8 of the
-   button's padding outside it, and 8 px under 600 px wide */
+/* where a header row's arrow is: 13 px in, the row's 24 less the 11 of
+   the button's padding and the arrow's margin outside it, and 5 px under
+   600 px wide */
 .pk-about > .pk-back {
   position: absolute;
   top: 15px;
-  left: 16px;
+  left: 13px;
   z-index: 1;
 }
 .pk-about-text {
@@ -1379,6 +1686,11 @@ html[data-chrome="win"] .pk-head {
 .pk-about-in .pk-wm {
   align-self: flex-start;
   margin-bottom: 8px;
+}
+/* the name's sound in one piece: at 980 px "pick-a-" ended a line and
+   "tito")" began the next (the layout audit, 2026-11-01) */
+.pk-about-in .pk-text i {
+  white-space: nowrap;
 }
 .pk-credits {
   display: grid;
@@ -1487,12 +1799,16 @@ html[data-chrome="win"] .pk-head {
   background: var(--ground);
   box-shadow: var(--shadow-float);
 }
+/* the title on the body's left edge and the close's cross on its right,
+   24 in: the cross is 12 into its button, so the button is 12 from the
+   sheet's edge; at 10 the cross stood 2 px past the text under it (the
+   layout audit, 2026-11-01) */
 .pk-notices-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 10px 10px 24px;
+  padding: 10px 12px 10px 24px;
   background: var(--surface);
 }
 .pk-notices-body {
@@ -1607,26 +1923,69 @@ html[data-chrome="win"] .pk-head {
   color: var(--err);
 }
 
+/* Manage models: a sheet as Privacy is, as tall as its list; its rows apart
+   by space, not lines (design/README.md), each a model and its size with
+   its Delete at the right */
+.pk-manage-box {
+  height: auto;
+  max-height: min(760px, 100%);
+  width: min(480px, 100%);
+}
+.pk-kept li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 8px 0;
+}
+.pk-kept-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.pk-kept-text .pk-small {
+  overflow-wrap: anywhere;
+}
+.pk-kept-total {
+  margin-top: var(--space-2);
+}
+
 /* -------------------------------------------- sentences or captions -- */
 /* two buttons in a sunk track, the one chosen raised to the ground */
 /* 16 px above, and the transcript's 16 px margin below: the same space
    either side when its first row is the current one, drawn as a block */
+/* the views and, where the header hasn't the room for it, Find beside
+   them, a field that says what it is, not an icon alone at the line's far
+   end, where it went unnoticed (Peter, 2026-10-31; app.js, placeFind);
+   nothing at all while neither shows */
+.pk-views-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: var(--space-3) 24px 0;
+}
+.pk-views-line:not(:has(> :not([hidden]))) {
+  display: none;
+}
 .pk-views {
   display: flex;
   gap: 2px;
   align-self: flex-start;
-  margin: var(--space-3) 24px 0;
   padding: 2px;
   border-radius: var(--radius-ui);
   background: var(--sunk);
 }
+/* each choice's words on one line: Find beside them gives way first. 32
+   tall with the track, as Find beside them and every button are: at 30 its
+   middle sat 1 px above Find's (the layout audit, 2026-11-01) */
 .pk-view {
   border: 0;
-  padding: 5px 10px;
+  padding: 6px 10px;
   border-radius: var(--radius-sm);
   background: none;
   color: var(--ink-muted);
   font: 500 13px/16px var(--font-sans);
+  white-space: nowrap;
   cursor: pointer;
 }
 /* the one chosen raised to the ground, with an edge in ink-muted: the tone
@@ -1776,10 +2135,10 @@ html[data-chrome="win"] .pk-head {
     0 0 0 2px var(--hl),
     0 4px 0 0 var(--ink);
 }
-/* each row's time above its text up to 619 px: beside it, the times' column
-   left 51 characters a line at 577 px, and above it 68 (the window study,
-   2026-10-23) */
-@media (max-width: 619px) {
+/* each row's time above its text up to 619 px of the work (a window's
+   width in one column): beside it, the times' column left 51 characters a
+   line at 577 px, and above it 68 (the window study, 2026-10-23) */
+@container (max-width: 619px) {
   .pk-seg {
     grid-template-columns: 1fr;
     row-gap: 2px;
@@ -1787,26 +2146,75 @@ html[data-chrome="win"] .pk-head {
   .pk-stats {
     padding-left: 12px;
   }
-  /* a cue's start and end side by side above its lines */
+  /* a cue's start and end side by side above its lines, as a range,
+     00:02.88 – 00:05.60, spaced as the mono type spaces it (0.6 em, a
+     space's width), and the beak after the range: a start with the beak
+     after it and the end beside that read as two times of their own
+     (Peter, the Android app on the S25, 2026-10-26) */
   .pk-seg-times {
     flex-direction: row;
     align-items: baseline;
-    gap: 10px;
+    gap: 0;
+  }
+  .pk-cue .pk-seg-end {
+    align-items: baseline;
+    gap: 0;
+  }
+  .pk-cue .pk-seg-end::before {
+    content: "\2013";
+    padding: 0 0.6em;
+  }
+  .pk-cue.is-current .pk-seg-t::after {
+    content: none;
+  }
+  .pk-cue.is-current .pk-seg-end::after {
+    content: "";
+    width: 7px;
+    height: 7px;
+    margin-left: 3px;
+    background: var(--beak);
+    flex: none;
+  }
+  .pk-cue .pk-fast {
+    order: 1;
+    align-self: center;
+    margin-left: 4px;
   }
 }
 /* a narrow window, down to the 480 it allows: the edges closer in */
+/* a narrow window's screens on one edge, 16 px in, the work's and the
+   phones' apps': at 20 the start screen's edge stood 4 px off the
+   transcript's it opens (the layout audit, 2026-11-01) */
 @media (max-width: 599px) {
   .pk-screen {
-    padding-left: 20px;
-    padding-right: 20px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
+  .pk-about-text {
+    padding: 24px 16px 28px;
+  }
+  .pk-about > .pk-back {
+    left: 5px;
+  }
+}
+/* and the work's, by its own width, which is the window's in one column */
+@container (max-width: 599px) {
   .pk-head {
     padding: 15px 16px;
+  }
+  /* the batch's rows' icons and its count on the 16 px edge, their hover
+     reaching 4 px from the window's: they stayed at 24 (the layout audit,
+     2026-11-01) */
+  .pk-batch {
+    padding: 0 4px var(--space-3);
+  }
+  .pk-head-name {
+    padding: 1px 16px 15px;
   }
   .pk-strip-wrap {
     padding: 0 16px;
   }
-  .pk-views {
+  .pk-views-line {
     margin-left: 16px;
     margin-right: 16px;
   }
@@ -1817,12 +2225,6 @@ html[data-chrome="win"] .pk-head {
   }
   .pk-transcript {
     padding: 0 16px;
-  }
-  .pk-about-text {
-    padding: 24px 20px 28px;
-  }
-  .pk-about > .pk-back {
-    left: 8px;
   }
 }
 
@@ -1899,20 +2301,12 @@ html[data-chrome="win"] .pk-head {
   flex-basis: 280px;
   min-width: 190px;
 }
-/* folded to its icon where the header has no room for it, under 860px, and
-   opened by a click or the shortcut */
-@media (max-width: 859px) {
-  .pk-find:not(:focus-within):not(.has-query) {
-    flex: none;
-    width: 32px;
-    min-width: 32px;
-    padding: 0 8px;
-  }
-  .pk-find:not(:focus-within):not(.has-query) :is(input, .pk-kbd) {
-    width: 0;
-    opacity: 0;
-  }
-}
+/* a field that says "Find" wherever it is: the header keeps it only with
+   room for the field and 160 of the name (app.js, placeFind), else it goes
+   beside the views. Folded to its icon under 860 px of the work, it was an
+   icon alone in the header at the window's default 680 on Windows and
+   Linux, where a reader might not see that the transcript can be searched
+   (Peter, 2026-10-31; the layout audit, 2026-11-01) */
 
 /* ------------------------------------------------------------------ menus -- */
 .pk-menu {
@@ -1944,6 +2338,12 @@ html[data-chrome="win"] .pk-head {
   padding: 8px 10px;
   cursor: pointer;
   font: 500 14px/1.35 var(--font-sans);
+}
+/* the chosen one's check as far in from the separator's end as the words
+   are from its start, 1 px: it stood 2 px in (the layout audit,
+   2026-11-01) */
+.pk-mi > svg:last-child {
+  margin-right: -1px;
 }
 .pk-mi small {
   grid-column: 1;
@@ -2053,11 +2453,18 @@ html[data-chrome="win"] .pk-head {
   gap: 12px;
   width: max-content;
   max-width: calc(100vw - 48px);
-  padding: 10px 12px 10px 14px;
+  /* 40 tall with its link or without: without, it was 38.2 */
+  min-height: 40px;
+  /* its icon's ink 12 in, as the words or the link are at its right end
+     and the words from its top and foot: at 14 the check stood 16.7 in
+     (the layout audit, 2026-11-01) */
+  padding: 10px 12px 10px 10px;
   border-radius: var(--radius-ui);
   background: var(--term);
   color: var(--term-ink);
-  box-shadow: var(--shadow-float);
+  /* and in dark its 1 px edge (toast-edge): term one step above the ground
+     left it all but unseen (Peter, 2026-11-01) */
+  box-shadow: var(--shadow-float), inset 0 0 0 1px var(--toast-edge);
   font: 500 14px/1.3 var(--font-sans);
 }
 /* two lines at most, so that a long file's name shows whole in a narrow window */

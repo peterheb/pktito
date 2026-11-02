@@ -14,11 +14,25 @@
 /* Queries the attention takes at a time on one thread */
 #define PK_ATT_BLOCK 16
 
+/* Which recording of PK_TUNE_FRAMES or more races every core against the
+ * fast kind (core/encoder.c, layers): the second */
+#define PK_TUNE_AT 2
+
+/* A chunk keeps few of many threads busy: each pass is a job over the
+ * pool, and each job waits for its slowest item. Several transcriptions
+ * at once, each on its share of the threads, keep more of them busy; but
+ * a Pi 5's four cores gave its one transcriber's rate as two of two
+ * threads and 0.91 of it as four of one (backend/avx2/CLIMB.md,
+ * 2026-11-02). So a lane for each PK_LANE_THREADS threads, PK_LANES_MAX
+ * at most (core/asr.c, run_lanes). */
+#define PK_LANE_THREADS 4
+#define PK_LANES_MAX    16
+
 /* make PROFILE=1: wall time in each stage of a transcription, read on the
  * calling thread around whole passes, never inside a kernel, and printed by
  * `pktito-c bench`. */
-enum { PK_P_MEL, PK_P_SUB, PK_P_POS, PK_P_NORM, PK_P_QUANT, PK_P_FF, PK_P_QKV, PK_P_REPACK,
-       PK_P_ATT, PK_P_ATTO, PK_P_CONV, PK_P_DW, PK_P_DEC, PK_NPROF };
+enum { PK_P_MEL, PK_P_SUB, PK_P_POS, PK_P_NORM, PK_P_QUANT, PK_P_FF, PK_P_QKV, PK_P_ATT,
+       PK_P_ATTO, PK_P_CONV, PK_P_DW, PK_P_DEC, PK_NPROF };
 #ifdef PK_PROFILE
 extern double pk_prof[PK_NPROF];
 double pk_prof_now(void);
@@ -34,7 +48,7 @@ typedef struct {
     float  *qu, *qv;                 /* a block of queries plus each position bias */
     float  *sc, *bd;                 /* its scores, and their position half */
     float  *mel;                     /* a block of power spectra, and the FFT's scratch */
-    float  *row;                     /* a frame of the feed-forward's hidden activations */
+    float  *row;                     /* a frame of a layer norm's output, or of the hidden's */
 } pk_thread_ws;
 
 struct pk_asr {
@@ -43,9 +57,23 @@ struct pk_asr {
     int nth;
     /* Every core, or the fast kind alone (pk_os_fast_cores, `fast` of them)
      * where the cores are of two kinds and the threads are pktito's choice:
-     * `tune` until a recording has timed the encoder's layers on each
-     * (encoder.c, layers), `wide` the threads the passes run on. */
+     * `tune` the long recordings until the one that times the encoder's
+     * layers on each (encoder.c, layers), `wide` the threads the passes
+     * run on. */
     int fast, wide, tune;
+    /* The caller's fast mode (pk_asr_set_fast_mode): the encoder's
+     * activations in blocks of 64 where an input allows, not 32 */
+    int qb64;
+    /* A recording's chunks several at once (core/asr.c, run_lanes): at
+     * most `lanes`, lane j > 0 a transcriber of its own on this one's
+     * model, made the first time a run needs it, lane 0 this one; `drive`
+     * the threads that run them, one a lane. */
+    int lanes;
+    pk_asr **lane;
+    pk_pool *drive;
+    /* pk_asr_transcribe's VAD, made the first time it runs and kept, with
+     * a block's activations for each of the pool's threads */
+    pk_vad *vad;
 
     size_t cap;                      /* feature frames the buffers below hold */
     void  *mem;
@@ -60,11 +88,12 @@ struct pk_asr {
     float *q, *o;                    /* [Te][D] */
     float *pe, *p;                   /* [2Te-1][D]: positions, and their projection */
     float *kp, *vp, *pp;             /* K, V and P per head, as pk_k_gemm_f32 panels */
-    pk_act act, ape;                 /* int8 activations; the positions' */
+    pk_act act, ape, hid;            /* int8 activations; the positions'; the feed-forward's hidden */
     pk_thread_ws *tws;
 
     /* the decoder */
-    float *fproj;                    /* [Te][J]: the joint's encoder half */
+    float *fproj[2];                 /* [Te][J]: the joint's encoder half, a chunk's and the next's */
+    int dsplit;                      /* the search's widest products split over the pool */
     float *dx, *gates, *dh, *dc, *gp, *z, *logit;
     pk_act dact;
     pk_tok *toks;
@@ -75,9 +104,44 @@ struct pk_asr {
  * Te frames, which it returns. */
 uint32_t pk_encode(pk_asr *a, uint32_t T0);
 
-/* TDT's greedy search over Te encoder frames in a->x: a->toks. Returns the
- * token count, or -1 if memory runs out. */
-long pk_decode(pk_asr *a, uint32_t Te);
+/* The joint's encoder half of Te encoder frames in a->x, every frame at
+ * once: f[Te][J] */
+void pk_joint_frames(pk_asr *a, uint32_t Te, float *f);
+
+/* TDT's greedy search over Te frames whose joint half is f: a->toks.
+ * Returns the token count, or -1 if memory runs out. With split, its
+ * widest products go over the pool's first threads, from the thread that
+ * runs its jobs; without, the search runs on a thread of its own beside
+ * them (pk_pool_aside), each product whole. */
+long pk_decode(pk_asr *a, uint32_t Te, const float *f, int split);
+
+/* pk_asr_run_chunks with a hook that can stop it: each(arg, i, toks,
+ * count, spare) has chunk i's tokens, on the calling thread, and returns
+ * nonzero to stop there (which the call returns). spare is a joint buffer
+ * of a's free until each returns, the one chunk i used where one chunk
+ * runs at a time, while the other holds chunk i + 1's encoder output:
+ * pk_retry_run may use it then, and only it (core/transcribe.c). */
+typedef int (*pk_each_fn)(void *arg, size_t i, const pk_tok *toks, long count, float *spare);
+int pk_run_chunks_with(pk_asr *a, const float *x, const pk_seg *c, size_t n,
+                       pk_each_fn each, void *arg);
+
+/* pk_asr_run on n samples no longer than the longest chunk of the run in
+ * progress, its joint half in spare: a->toks, the count, or -1. */
+long pk_retry_run(pk_asr *a, const float *x, size_t n, float *spare);
+
+/* pk_vad_probs with Silero's encoder over the pool's active threads, a run
+ * of blocks at a time, and the LSTM on the calling thread after each run:
+ * the same bits, since a block's encoder needs only its own samples and the
+ * 64 before them (core/vad.c). pk_vad_probs itself where the pool is one
+ * thread, or the threads' memory cannot be had. */
+void pk_vad_probs_on(pk_vad *v, pk_pool *pool, const float *x, size_t n, float *probs);
+
+/* pk_chunks, with what each chunk is heard in (core/transcribe.c): win[k]
+ * is out[k] and, where out[k]'s cut falls in a silence shorter than pause,
+ * ctx of the recording past it, room left for that in its max_len. With
+ * ctx 0, out is pk_chunks', and win NULL is allowed. */
+size_t pk_chunks_past(const float *x, const pk_seg *s, size_t n, int64_t total, int64_t max_len,
+                      int64_t ctx, int64_t pause, pk_seg *out, pk_seg *win);
 
 /* Encoder frames T0 feature frames make: three halvings, each rounding up. */
 static inline uint32_t pk_enc_frames(uint32_t T0) {
