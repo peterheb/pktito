@@ -30,6 +30,8 @@ struct Strip: View {
     let onTick: (Int) -> Void
     let seek: (Double) -> Void
     @State private var scrub: Double?
+    /// the recording still not ready to play, a moment after it was asked for
+    @State private var waited = false
 
     var body: some View {
         let t = Transcriber.shared
@@ -44,16 +46,35 @@ struct Strip: View {
             if review && !silent {
                 VStack {
                     Button { player.toggle() } label: {
-                        (player.playing ? PkIcon.pause : PkIcon.play)
-                            .frame(width: 24, height: 24)
-                            .foregroundStyle(Pk.termInk)
-                            .frame(width: 48, height: 48)
-                            .background(Pk.termLine, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
+                        Group {
+                            if waited {
+                                ProgressView().tint(Pk.termInk)
+                            } else {
+                                (player.playing ? PkIcon.pause : PkIcon.play)
+                                    .opacity(player.ready ? 1 : 0.45)
+                            }
+                        }
+                        .frame(width: 24, height: 24)
+                        .foregroundStyle(Pk.termInk)
+                        .frame(width: 48, height: 48)
+                        .background(Pk.termLine, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
                     }
                     .buttonStyle(.plain)
                     .disabled(!player.ready)
-                    .opacity(player.ready ? 1 : 0.45)
-                    .accessibilityLabel(L(player.playing ? "pause" : "play"))
+                    .accessibilityLabel(L(waited ? "play_preparing" : player.playing ? "pause" : "play"))
+                    // a recording not yet ready a moment after it's asked
+                    // for spins in the button: iOS reads a long FLAC through
+                    // for exact seeks first (Player.load): AliceBench's 12
+                    // chapters as one FLAC (2:58:51) took 5.05 s from load to
+                    // ready on the iPhone 16e (Player's traces, 2026-11-02),
+                    // where a dim button alone looked hung (Peter); a short
+                    // file's wait is over before it would show
+                    .task(id: player.ready) {
+                        waited = false
+                        guard !player.ready else { return }
+                        try? await Task.sleep(for: .milliseconds(300))
+                        if !Task.isCancelled && !player.ready { waited = true }
+                    }
                     Spacer(minLength: 0)
                     SpeedMenu().disabled(!player.ready).opacity(player.ready ? 1 : 0.45)
                 }

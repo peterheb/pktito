@@ -43,6 +43,7 @@ final class Player {
     /// once AVFoundation has read it, or failed where it can't play it.
     func load(_ key: String, _ url: URL, failed: @escaping @MainActor () -> Void) {
         release()
+        trace("player: loading \(url.lastPathComponent)")
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio)
         scoped = url.startAccessingSecurityScopedResource()
         self.url = url
@@ -62,6 +63,7 @@ final class Player {
             Task { @MainActor in
                 guard let self, self.loaded == key else { return }
                 if s == .readyToPlay {
+                    trace("player: ready")
                     self.ready = true
                 } else if s == .failed {
                     self.ready = false

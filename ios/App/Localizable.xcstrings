@@ -1472,6 +1472,18 @@
         }
       }
     },
+    "play_preparing": {
+      "extractionState": "manual",
+      "comment": "the play button's spoken name while iOS reads through the recording, so that a time sought to is exactly that time (a long FLAC can take a few seconds)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Getting the recording ready to play"
+          }
+        }
+      }
+    },
     "prepare_cpu": {
       "extractionState": "manual",
       "comment": "a toast, where the Neural Engine couldn't run the model and the whole model file is downloaded instead",

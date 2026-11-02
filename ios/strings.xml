@@ -8,6 +8,8 @@
     <string name="prepare_cpu">This %1$s\'s Neural Engine can\'t run the model, so pktito uses its processor instead</string>
     <!-- the strip, where the recording found doesn't play (Android's play_cant names Android) -->
     <string name="play_cant_ios">iOS can\'t play this file</string>
+    <!-- the play button's spoken name while iOS reads through the recording, so that a time sought to is exactly that time (a long FLAC can take a few seconds) -->
+    <string name="play_preparing">Getting the recording ready to play</string>
     <!-- About's credits, what "Everything else" covers (Android's about_else_list names Jetpack Compose) -->
     <string name="about_else_list_ios">SwiftUI, Rust crates, typefaces, icons, etc.</string>
     <!-- the licenses' heading over the libraries (Android's notices_libraries says Android) -->
