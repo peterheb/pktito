@@ -311,8 +311,7 @@ pk_ane *pk_ane_open(const char *path, const pk_model *m, char *err, size_t errle
 /* feat [T0][n_mels] through length l, padded to it, in slot k's inputs:
  * x [Te][d], Te encoder frames, which it returns; 0 if Core ML failed, and
  * why in err if given. Calls in different slots run at once: Core ML's
- * predictions on one MLModel may, each with inputs and outputs of its own
- * (FluidAudio's workers share theirs so). */
+ * predictions on one MLModel may, each with inputs and outputs of its own. */
 static uint32_t len_run(pk_ane *a, ane_len *l, int k_slot, const float *feat, uint32_t T0, float *x,
                         char *err, size_t errlen) {
     pthread_mutex_lock(&a->load);
