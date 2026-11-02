@@ -7,7 +7,7 @@ use crate::model::{self, Ctl, Entry, Stop, Wanted};
 use crate::strings::Problem;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -36,12 +36,23 @@ pub struct Job {
     /// Try again now, not after the wait.
     now: AtomicBool,
     alive: AtomicBool,
+    /// the bytes of the files before the one under way, where a download
+    /// is of several (model::edition): its progress is the whole's
+    before: AtomicU64,
     state: Mutex<State>,
 }
 
 impl Job {
+    /// A job for e's download on this system (model::edition): one file, or
+    /// on a Mac the two of its Neural Engine edition, counted as one.
     pub fn new(e: &Entry, dir: &Path) -> Job {
-        Job::for_file(&Wanted::model(dir, e))
+        let files = model::edition(dir, e);
+        let job = Job::for_file(&files[0]);
+        job.set(|s| {
+            s.total = files.iter().map(|w| w.bytes).sum();
+            s.got = model::kept(dir, e);
+        });
+        job
     }
 
     /// A job for any file models.pktito.net serves (model::Wanted).
@@ -50,6 +61,7 @@ impl Job {
             ctl: Ctl::default(),
             now: AtomicBool::new(false),
             alive: AtomicBool::new(false),
+            before: AtomicU64::new(0),
             state: Mutex::new(State {
                 name: w.name.clone(),
                 step: "downloading",
@@ -97,7 +109,23 @@ impl Job {
         tell: impl Fn(&State) + Send + 'static,
         done: impl FnOnce(PathBuf) + Send + 'static,
     ) {
-        self.start_file(Wanted::model(&dir, e), tell, done)
+        self.alive.store(true, Ordering::Release);
+        self.ctl.pause.store(false, Ordering::Relaxed);
+        let job = self.clone();
+        struct Over(std::sync::Arc<Job>);
+        impl Drop for Over {
+            fn drop(&mut self) {
+                self.0.alive.store(false, Ordering::Release);
+            }
+        }
+        thread::spawn(move || {
+            let over = Over(job);
+            let job = &over.0;
+            if let Some(p) = job.run(e, &dir, &tell) {
+                done(p);
+            }
+            tell(&job.state());
+        });
     }
 
     /// start() for any file models.pktito.net serves.
@@ -136,7 +164,37 @@ impl Job {
     /// app on one of its own (android.rs, download), which a job or a
     /// service keeps alive for it.
     pub fn run(&self, e: &'static Entry, dir: &Path, tell: &impl Fn(&State)) -> Option<PathBuf> {
-        self.run_file(&Wanted::model(dir, e), tell)
+        let files = model::edition(dir, e);
+        let mut before = 0;
+        for w in &files {
+            if !w.here() {
+                self.before.store(before, Ordering::Relaxed);
+                if self.run_file(w, tell).is_none() {
+                    // cancelled: what it had of the files before goes too
+                    if self.state().step == "cancelled" {
+                        let _ = model::remove_parts(dir, e);
+                    }
+                    return None;
+                }
+            }
+            before += w.bytes;
+        }
+        self.before.store(0, Ordering::Relaxed);
+        // the Neural Engine's encoder out of its archive, said as the check
+        // is, in the while it takes (seconds)
+        if model::NEURAL && !model::have_encoder(dir, e) {
+            self.set(|s| s.step = "checking");
+            tell(&self.state());
+            if let Err(why) = model::unpack_encoder(&files[1].dst, &model::encoder_in(dir, e)) {
+                self.set(|s| {
+                    (s.step, s.speed, s.retry, s.trying) = ("failed", 0.0, false, false);
+                    s.problem = Some(Problem::new("download.damaged").detail(why));
+                });
+                return None;
+            }
+            self.set(|s| s.step = "done");
+        }
+        model::file_of(dir, e)
     }
 
     /// run() for any file models.pktito.net serves.
@@ -159,6 +217,7 @@ impl Job {
             let r = model::download_file(w, &self.ctl, |got, checking| {
                 let now = Instant::now();
                 let dt = now.duration_since(t0).as_secs_f64();
+                let got = self.before.load(Ordering::Relaxed) + got;
                 self.set(|s| {
                     s.got = got;
                     s.step = if checking { "checking" } else { "downloading" };
@@ -199,7 +258,7 @@ impl Job {
                     return None;
                 }
                 Err(Stop::Hard(p)) => {
-                    let got = w.partial();
+                    let got = self.before.load(Ordering::Relaxed) + w.partial();
                     self.set(|s| {
                         (s.step, s.got, s.speed, s.retry, s.trying) =
                             ("failed", got, 0.0, false, false);
@@ -208,7 +267,7 @@ impl Job {
                     return None;
                 }
                 Err(Stop::Net(p)) => {
-                    let got = w.partial();
+                    let got = self.before.load(Ordering::Relaxed) + w.partial();
                     if got > started {
                         // it was getting somewhere: the next wait starts short again
                         wait = Duration::from_secs(2);

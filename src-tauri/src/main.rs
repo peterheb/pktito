@@ -119,11 +119,14 @@ fn audio_dir(app: &AppHandle) -> Result<PathBuf, String> {
         .map_err(|e| e.to_string())
 }
 
+/// A catalog model as the window offers it: its entry, with `bytes` what it
+/// takes on this computer (model::bytes_of: on a Mac its Neural Engine
+/// edition's, unless the whole file is here).
 #[derive(Serialize)]
 struct Offer {
     #[serde(flatten)]
-    entry: &'static model::Entry,
-    /// Downloaded and on this computer.
+    entry: serde_json::Value,
+    /// Downloaded and on this computer, in either edition.
     have: bool,
     /// Bytes kept from a download that stopped.
     partial: u64,
@@ -175,7 +178,9 @@ fn ensure_engine<'a>(slot: &'a mut Option<Engine>, path: &Path) -> Result<&'a mu
     if slot.as_ref().map(|e| e.path != path).unwrap_or(true) {
         *slot = None;
         let model = pktito::Model::load(path)?;
-        let asr = pktito::Asr::new(&model, transcribe::threads_wanted())?;
+        #[allow(unused_mut)]
+        let mut asr = pktito::Asr::new(&model, transcribe::threads_wanted())?;
+        neural(&mut asr, &model, path)?;
         *slot = Some(Engine {
             model,
             asr,
@@ -183,6 +188,35 @@ fn ensure_engine<'a>(slot: &'a mut Option<Engine>, path: &Path) -> Result<&'a mu
         });
     }
     Ok(slot.as_mut().unwrap())
+}
+
+/// On a Mac, the encoder on the Neural Engine where the catalog model at
+/// path has its Core ML encoder beside it (model::encoder_for). Core ML
+/// compiles it for this Mac the first time the app loads it (about 10 s
+/// for v2 on the M4 Pro), once. Where the Neural Engine can't run it, a
+/// whole model file runs its own encoder on the CPU; the Neural Engine
+/// edition's file has none, and that is the error.
+#[cfg(target_os = "macos")]
+fn neural(asr: &mut pktito::Asr, m: &pktito::Model, path: &Path) -> Result<(), String> {
+    let Some(dir) = path.parent() else { return Ok(()) };
+    let Some(encoder) = model::encoder_for(dir, path) else { return Ok(()) };
+    match asr.use_ane(Some(&encoder)) {
+        Ok(()) => Ok(()),
+        Err(why) => {
+            let _ = asr.use_ane(None);
+            if m.has_encoder() {
+                eprintln!("pktito: the Neural Engine can't run the encoder ({why}); using the CPU");
+                Ok(())
+            } else {
+                Err(format!("the Neural Engine can't run the model's encoder: {why}"))
+            }
+        }
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn neural(_asr: &mut pktito::Asr, _m: &pktito::Model, _path: &Path) -> Result<(), String> {
+    Ok(())
 }
 
 #[tauri::command]
@@ -208,10 +242,14 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, Problem>
         model_file: s.model_file,
         catalog: model::CATALOG
             .iter()
-            .map(|e| Offer {
-                entry: e,
-                have: model::have(&dir, e),
-                partial: model::partial(&dir, e),
+            .map(|e| {
+                let mut entry = serde_json::to_value(e).unwrap_or_default();
+                entry["bytes"] = model::bytes_of(&dir, e).into();
+                Offer {
+                    entry,
+                    have: model::have_any(&dir, e),
+                    partial: model::kept(&dir, e),
+                }
             })
             .collect(),
         download,
@@ -239,7 +277,7 @@ fn set_prefs(app: AppHandle, prefs: model::Prefs) -> Result<(), Problem> {
 fn choose_model(app: AppHandle, name: String) -> Result<(), Problem> {
     let e = model::entry(&name).ok_or("no such model")?;
     let data = data_dir(&app)?;
-    if !model::have(&data.join("models"), e) {
+    if !model::have_any(&data.join("models"), e) {
         return Err(Problem::new("choose.not_downloaded"));
     }
     let mut s = model::load_settings(&data);
@@ -315,7 +353,7 @@ fn cancel(app: &AppHandle, j: &download::Job) -> Result<(), Problem> {
         return Ok(());
     }
     let e = model::entry(&j.name()).ok_or("no such model")?;
-    let _ = fs::remove_file(model::part_in(&data_dir(app)?.join("models"), e));
+    let _ = model::remove_parts(&data_dir(app)?.join("models"), e);
     j.set_step("cancelled");
     let _ = app.emit("download", j.state());
     Ok(())
@@ -346,27 +384,21 @@ fn delete_model(
                 return cancel(&app, j).map(|_| None);
             }
         }
-        let file = model::part_in(&data.join("models"), e);
-        return match fs::remove_file(&file) {
-            Err(err) if err.kind() != std::io::ErrorKind::NotFound => {
-                Err(cant(format!("{err}\n{}", file.display())))
-            }
-            _ => Ok(None),
-        };
+        return model::remove_parts(&data.join("models"), e).map(|_| None).map_err(cant);
     }
-    let file = model::file_in(&data.join("models"), e);
+    let dir = data.join("models");
+    // its files: the whole one, and on a Mac the Neural Engine edition's
+    let files = [model::file_in(&dir, e), model::slim_in(&dir, e)];
+    let used = |p: &Path| files.iter().any(|f| model::same_file(p, f));
     let using = state.transcribing.lock().unwrap().clone();
-    if using.is_some_and(|p| model::same_file(&p, &file)) {
+    if using.is_some_and(|p| used(&p)) {
         return Err(Problem::new("manage.busy"));
     }
     // held until the file is gone, so that no transcription loads it
     // meanwhile; a transcription holding it has another model's file
     let mut engine = state.engine.try_lock();
     if let Ok(slot) = engine.as_mut() {
-        if slot
-            .as_ref()
-            .is_some_and(|en| model::same_file(&en.path, &file))
-        {
+        if slot.as_ref().is_some_and(|en| used(&en.path)) {
             **slot = None;
         }
     }
@@ -1417,6 +1449,7 @@ fn headless(args: &[String]) -> Result<(), String> {
     let t1 = Instant::now();
     let model = pktito::Model::load(&model_path)?;
     let mut asr = pktito::Asr::new(&model, transcribe::threads_wanted())?;
+    neural(&mut asr, &model, &model_path)?;
     let (segs, _) = transcribe::run(
         &model,
         &mut asr,

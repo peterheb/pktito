@@ -638,47 +638,17 @@ fn fetch(m: &str, cpu: bool) -> Result<i32, String> {
     Ok(0)
 }
 
-/// The Core ML encoder out of its Apple Archive (aa archive of the compiled
-/// model) into dst, with macOS's own aa: unpacked beside it first and
-/// renamed into place whole, so that an encoder in place is a whole one
-/// (model::have_encoder), and the archive deleted after, as the iOS app
-/// does (its Unpack.swift). Only an archive whose SHA-256 checked comes here.
+/// The Core ML encoder out of its archive (model::unpack_encoder), saying so.
 fn unpack(archive: &Path, dst: &Path) -> Result<(), String> {
     let show = std::io::stderr().is_terminal();
     if show {
         status("unpacking the Neural Engine's encoder");
     }
-    let mut work = dst.as_os_str().to_owned();
-    work.push(".unpacking");
-    let work = PathBuf::from(work);
-    let _ = fs::remove_dir_all(&work);
-    fs::create_dir_all(&work).map_err(|err| format!("couldn't make {}: {err}", work.display()))?;
-    let ran = std::process::Command::new("/usr/bin/aa")
-        .arg("extract")
-        .arg("-i")
-        .arg(archive)
-        .arg("-d")
-        .arg(&work)
-        .status();
+    let r = model::unpack_encoder(archive, dst);
     if show {
         status("");
     }
-    let fail = |why: String| {
-        let _ = fs::remove_dir_all(&work);
-        Err(why)
-    };
-    match ran {
-        Ok(s) if s.success() => {}
-        Ok(s) => return fail(format!("aa couldn't unpack {} ({s})", archive.display())),
-        Err(err) => return fail(format!("couldn't run aa to unpack {}: {err}", archive.display())),
-    }
-    if !work.join("model.mil").is_file() {
-        return fail(format!("{} holds no Core ML model", archive.display()));
-    }
-    let _ = fs::remove_dir_all(dst);
-    fs::rename(&work, dst).map_err(|err| format!("couldn't put {} in place: {err}", dst.display()))?;
-    let _ = fs::remove_file(archive);
-    Ok(())
+    r
 }
 
 /// One file downloaded and checked, saying how it goes; its path.

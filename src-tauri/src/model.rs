@@ -17,6 +17,15 @@ use std::time::Duration;
 
 pub const DEFAULT_BASE: &str = "https://models.pktito.net/";
 
+/// Whether this system downloads a model's edition for the Neural Engine
+/// (Coreml: the model file without its encoder, and its Core ML encoder)
+/// where it downloads one: the Mac's, every one of which has it (macOS 12
+/// on Apple silicon, the app's floor), at 3x the CPU's speed for v2 on an
+/// M4 Pro (AliceBench, 349x to 117x, WER 0.059% apart, 2026-11-02). The
+/// iOS app downloads its own, in Swift. A whole .pkf already here still
+/// runs, on the Neural Engine too once its encoder is beside it.
+pub const NEURAL: bool = cfg!(target_os = "macos");
+
 #[derive(Clone, Copy, Serialize)]
 pub struct Entry {
     pub name: &'static str,
@@ -156,8 +165,125 @@ pub fn usable(data: &Path, s: &Settings) -> Option<PathBuf> {
         return Some(p.clone());
     }
     let e = entry(s.model.as_deref()?)?;
-    let dir = data.join("models");
-    have(&dir, e).then(|| file_in(&dir, e))
+    file_of(&data.join("models"), e)
+}
+
+/// e's model file in dir, if it is here: the whole one, else on a Mac its
+/// Neural Engine edition's, whose encoder is beside it.
+pub fn file_of(dir: &Path, e: &Entry) -> Option<PathBuf> {
+    if have(dir, e) {
+        Some(file_in(dir, e))
+    } else if NEURAL && have_neural(dir, e) {
+        Some(slim_in(dir, e))
+    } else {
+        None
+    }
+}
+
+/// Whether e is here to transcribe with, in either edition (file_of).
+pub fn have_any(dir: &Path, e: &Entry) -> bool {
+    file_of(dir, e).is_some()
+}
+
+/// The files a download of e fetches on this system, in order: on a Mac its
+/// Neural Engine edition (the slim model file, then the encoder's archive,
+/// unpacked once it checks), elsewhere the whole model.
+pub fn edition(dir: &Path, e: &Entry) -> Vec<Wanted> {
+    if NEURAL {
+        vec![Wanted::part(dir, e, &e.coreml.slim), Wanted::part(dir, e, &e.coreml.encoder)]
+    } else {
+        vec![Wanted::model(dir, e)]
+    }
+}
+
+/// The bytes of e on this computer once it is downloaded: what is here, or
+/// what a download of it fetches.
+pub fn bytes_of(dir: &Path, e: &Entry) -> u64 {
+    let whole = if have(dir, e) { e.bytes } else { 0 };
+    let neural = if NEURAL && have_neural(dir, e) {
+        e.coreml.slim.bytes + e.coreml.encoder.bytes
+    } else {
+        0
+    };
+    match whole + neural {
+        0 => edition(dir, e).iter().map(|w| w.bytes).sum(),
+        n => n,
+    }
+}
+
+/// The bytes a download of e that stopped has kept: its files done and the
+/// part of the one under way. None once it is here.
+pub fn kept(dir: &Path, e: &Entry) -> u64 {
+    if have_any(dir, e) {
+        return 0;
+    }
+    edition(dir, e)
+        .iter()
+        .map(|w| if w.here() { w.bytes } else { w.partial() })
+        .sum()
+}
+
+/// What a download of e that stopped kept, deleted.
+pub fn remove_parts(dir: &Path, e: &Entry) -> Result<(), String> {
+    for w in edition(dir, e) {
+        // a slim file checked but its encoder not yet: part of the download
+        let done = NEURAL && !have_encoder(dir, e) && w.here();
+        for f in [Some(&w.part), done.then_some(&w.dst)].into_iter().flatten() {
+            match fs::remove_file(f) {
+                Err(err) if err.kind() != io::ErrorKind::NotFound => {
+                    return Err(format!("{err}\n{}", f.display()))
+                }
+                _ => {}
+            }
+        }
+    }
+    Ok(())
+}
+
+/// The Core ML encoder beside the catalog model whose file path is (whole or
+/// slim), where it has one.
+pub fn encoder_for(dir: &Path, path: &Path) -> Option<PathBuf> {
+    if !NEURAL {
+        return None;
+    }
+    let e = CATALOG.iter().find(|e| same_file(&file_in(dir, e), path) || same_file(&slim_in(dir, e), path))?;
+    have_encoder(dir, e).then(|| encoder_in(dir, e))
+}
+
+/// The Core ML encoder out of its Apple Archive (`aa archive` of the
+/// compiled model) into dst, with macOS's own aa: unpacked beside it first
+/// and renamed into place whole, so that an encoder in place is a whole one
+/// (have_encoder), and the archive deleted after, as the iOS app does (its
+/// Unpack.swift). Only an archive whose SHA-256 checked comes here.
+pub fn unpack_encoder(archive: &Path, dst: &Path) -> Result<(), String> {
+    let mut work = dst.as_os_str().to_owned();
+    work.push(".unpacking");
+    let work = PathBuf::from(work);
+    let _ = fs::remove_dir_all(&work);
+    fs::create_dir_all(&work).map_err(|err| format!("couldn't make {}: {err}", work.display()))?;
+    let ran = std::process::Command::new("/usr/bin/aa")
+        .arg("extract")
+        .arg("-i")
+        .arg(archive)
+        .arg("-d")
+        .arg(&work)
+        .status();
+    let fail = |why: String| {
+        let _ = fs::remove_dir_all(&work);
+        Err(why)
+    };
+    match ran {
+        Ok(s) if s.success() => {}
+        Ok(s) => return fail(format!("aa couldn't unpack {} ({s})", archive.display())),
+        Err(err) => return fail(format!("couldn't run aa to unpack {}: {err}", archive.display())),
+    }
+    if !work.join("model.mil").is_file() {
+        return fail(format!("{} holds no Core ML model", archive.display()));
+    }
+    let _ = fs::remove_dir_all(dst);
+    fs::rename(&work, dst).map_err(|err| format!("couldn't put {} in place: {err}", dst.display()))?;
+    let _ = fs::remove_file(archive);
+    Ok(())
 }
 
 /// What the app remembers between runs: the catalog model in use, or a
@@ -282,10 +408,19 @@ pub fn partial(dir: &Path, e: &Entry) -> u64 {
 /// the user's own, set, stays in use instead).
 pub fn delete(data: &Path, e: &Entry) -> Result<Option<&'static Entry>, String> {
     let dir = data.join("models");
-    let file = file_in(&dir, e);
-    match fs::remove_file(&file) {
+    // the whole file, and on a Mac the Neural Engine edition beside it
+    for file in [file_in(&dir, e), slim_in(&dir, e)] {
+        match fs::remove_file(&file) {
+            Err(err) if err.kind() != io::ErrorKind::NotFound => {
+                return Err(format!("{err}\n{}", file.display()))
+            }
+            _ => {}
+        }
+    }
+    let encoder = encoder_in(&dir, e);
+    match fs::remove_dir_all(&encoder) {
         Err(err) if err.kind() != io::ErrorKind::NotFound => {
-            return Err(format!("{err}\n{}", file.display()))
+            return Err(format!("{err}\n{}", encoder.display()))
         }
         _ => {}
     }
@@ -293,7 +428,7 @@ pub fn delete(data: &Path, e: &Entry) -> Result<Option<&'static Entry>, String> 
     if s.model.as_deref() != Some(e.name) {
         return Ok(None);
     }
-    let next = CATALOG.iter().find(|x| x.name != e.name && have(&dir, x));
+    let next = CATALOG.iter().find(|x| x.name != e.name && have_any(&dir, x));
     s.model = next.map(|x| x.name.to_string());
     save_settings(data, &s)?;
     Ok(next.filter(|_| s.model_file.is_none()))
