@@ -18,6 +18,16 @@
  * fast kind (core/encoder.c, layers): the second */
 #define PK_TUNE_AT 2
 
+/* A chunk keeps few of many threads busy: each pass is a job over the
+ * pool, and each job waits for its slowest item. Several transcriptions
+ * at once, each on its share of the threads, keep more of them busy; but
+ * a Pi 5's four cores gave its one transcriber's rate as two of two
+ * threads and 0.91 of it as four of one (backend/avx2/CLIMB.md,
+ * 2026-11-02). So a lane for each PK_LANE_THREADS threads, PK_LANES_MAX
+ * at most (core/asr.c, run_lanes). */
+#define PK_LANE_THREADS 4
+#define PK_LANES_MAX    16
+
 /* make PROFILE=1: wall time in each stage of a transcription, read on the
  * calling thread around whole passes, never inside a kernel, and printed by
  * `pktito-c bench`. */
@@ -57,6 +67,20 @@ struct pk_asr {
     /* The encoder on the Neural Engine, where the caller gave a Core ML
      * model (pk_asr_use_ane; make ANE=1): core/ane.h */
     struct pk_ane *ane;
+    /* the Neural Engine's calls in flight (asr.c, ane_chunks): each slot's
+     * features in and encoder frames out, ane_cap feature frames each */
+    float *ane_feat[4], *ane_x[4];
+    size_t ane_cap;
+    /* A recording's chunks several at once (core/asr.c, run_lanes): at
+     * most `lanes`, lane j > 0 a transcriber of its own on this one's
+     * model, made the first time a run needs it, lane 0 this one; `drive`
+     * the threads that run them, one a lane. */
+    int lanes;
+    pk_asr **lane;
+    pk_pool *drive;
+    /* pk_asr_transcribe's VAD, made the first time it runs and kept, with
+     * a block's activations for each of the pool's threads */
+    pk_vad *vad;
 
     size_t cap;                      /* feature frames the buffers below hold */
     void  *mem;
@@ -99,9 +123,10 @@ void pk_joint_frames(pk_asr *a, uint32_t Te, float *f);
 long pk_decode(pk_asr *a, uint32_t Te, const float *f, int split);
 
 /* pk_asr_run_chunks with a hook that can stop it: each(arg, i, toks,
- * count, spare) has chunk i's tokens and returns nonzero to stop there
- * (which the call returns). spare is the joint buffer chunk i used, free
- * until each returns, while the other holds chunk i + 1's encoder output:
+ * count, spare) has chunk i's tokens, on the calling thread, and returns
+ * nonzero to stop there (which the call returns). spare is a joint buffer
+ * of a's free until each returns, the one chunk i used where one chunk
+ * runs at a time, while the other holds chunk i + 1's encoder output:
  * pk_retry_run may use it then, and only it (core/transcribe.c). */
 typedef int (*pk_each_fn)(void *arg, size_t i, const pk_tok *toks, long count, float *spare);
 int pk_run_chunks_with(pk_asr *a, const float *x, const pk_seg *c, size_t n,
@@ -110,6 +135,20 @@ int pk_run_chunks_with(pk_asr *a, const float *x, const pk_seg *c, size_t n,
 /* pk_asr_run on n samples no longer than the longest chunk of the run in
  * progress, its joint half in spare: a->toks, the count, or -1. */
 long pk_retry_run(pk_asr *a, const float *x, size_t n, float *spare);
+
+/* pk_vad_probs with Silero's encoder over the pool's active threads, a run
+ * of blocks at a time, and the LSTM on the calling thread after each run:
+ * the same bits, since a block's encoder needs only its own samples and the
+ * 64 before them (core/vad.c). pk_vad_probs itself where the pool is one
+ * thread, or the threads' memory cannot be had. */
+void pk_vad_probs_on(pk_vad *v, pk_pool *pool, const float *x, size_t n, float *probs);
+
+/* pk_chunks, with what each chunk is heard in (core/transcribe.c): win[k]
+ * is out[k] and, where out[k]'s cut falls in a silence shorter than pause,
+ * ctx of the recording past it, room left for that in its max_len. With
+ * ctx 0, out is pk_chunks', and win NULL is allowed. */
+size_t pk_chunks_past(const float *x, const pk_seg *s, size_t n, int64_t total, int64_t max_len,
+                      int64_t ctx, int64_t pause, pk_seg *out, pk_seg *win);
 
 /* Encoder frames T0 feature frames make: three halvings, each rounding up. */
 static inline uint32_t pk_enc_frames(uint32_t T0) {

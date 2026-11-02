@@ -5,7 +5,7 @@
 //! same bytes. It comes with the app, beside the window's program: the
 //! bundles carry every program in src/bin.
 
-use pktito_app::{awake, decode, download, format, model, pktito, transcribe};
+use pktito_app::{awake, decode, download, format, model, pktito, score, transcribe};
 use std::fs;
 use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
@@ -18,7 +18,9 @@ usage: pktito-cli [options] FILE...    transcribe audio or video: one file's
                                       transcript on the terminal, several's
                                       each beside its file
        pktito-cli models               the models, which are here, which is in use
-       pktito-cli download MODEL       a model, for the app and pktito-cli both
+       pktito-cli download MODEL       a model, for the app and pktito-cli both:
+                                      on a Mac its edition for the Neural
+                                      Engine, with --cpu the one for any CPU
        pktito-cli bench PATH...        how fast this computer transcribes: each
                                       file, or a folder's audio and video,
                                       timed, and the whole as times real time
@@ -30,9 +32,13 @@ usage: pktito-cli [options] FILE...    transcribe audio or video: one file's
   -o, --output PATH    one file's transcript to PATH; several's into the
                        folder PATH
   -t, --threads N      threads (default: one a core)
+      --cpu            the encoder on the CPU, on a Mac whose model has its
+                       Neural Engine encoder (which it uses otherwise)
   -q, --quiet          no progress
-bench takes -m, -t, -q and --json (its results as JSON, each file's with a
-SHA-256 of its transcript).
+bench takes -m, -t, -q, --cpu, --json (its results as JSON, each file's with a
+SHA-256 of its transcript) and --ref DIR: each file's transcript against
+DIR/NAME.txt, its reference (NAME the file's without its extension), as
+the same or by its word error rate and its character edits.
 ";
 
 fn main() {
@@ -60,6 +66,10 @@ struct Opts {
     output: Option<PathBuf>,
     threads: i32,
     quiet: bool,
+    /// the encoder on the CPU even where the Neural Engine's is here
+    cpu: bool,
+    /// bench's references, a folder of NAME.txt
+    reference: Option<PathBuf>,
 }
 
 fn run(args: &[String]) -> Result<i32, String> {
@@ -74,10 +84,12 @@ fn run(args: &[String]) -> Result<i32, String> {
         }
         Some("models") => return models(),
         Some("download") => {
-            return fetch(
-                args.get(1)
-                    .ok_or("download needs a model name (pktito-cli models shows the list)")?,
-            )
+            let cpu = args[1..].iter().any(|a| a == "--cpu");
+            let name = args[1..]
+                .iter()
+                .find(|a| *a != "--cpu")
+                .ok_or("download needs a model name (pktito-cli models shows the list)")?;
+            return fetch(name, cpu || !cfg!(target_os = "macos"));
         }
         _ => {}
     }
@@ -91,6 +103,8 @@ fn run(args: &[String]) -> Result<i32, String> {
         output: None,
         threads: transcribe::threads_wanted(),
         quiet: false,
+        cpu: false,
+        reference: None,
     };
     let mut it = args.iter();
     while let Some(a) = it.next() {
@@ -107,6 +121,8 @@ fn run(args: &[String]) -> Result<i32, String> {
                     .map_err(|_| format!("{a} needs a number"))?
             }
             "-q" | "--quiet" => o.quiet = true,
+            "--cpu" => o.cpu = true,
+            "--ref" if bench => o.reference = Some(PathBuf::from(value(a)?)),
             "-" => return Err("reads files, not standard input".into()),
             f if f.starts_with('-') => return Err(format!("no option {f}\n{USAGE}")),
             f => o.files.push(f.into()),
@@ -132,6 +148,7 @@ fn transcribe_all(o: &Opts) -> Result<i32, String> {
     let path = model_path(o.model.as_deref())?;
     let model = pktito::Model::load(&path)?;
     let mut asr = pktito::Asr::new(&model, o.threads)?;
+    encoder(&mut asr, &model, &path, o)?;
     let name = model.name();
     let show = !o.quiet && std::io::stderr().is_terminal();
     let mut failed = 0;
@@ -146,7 +163,7 @@ fn transcribe_all(o: &Opts) -> Result<i32, String> {
                 status(&format!("{label}: reading the audio"));
             }
             let x = decode::decode(file).map_err(|e| e.message())?;
-            let (segs, _) = transcribe::run(
+            let (segs, windows, _) = transcribe::run_windows(
                 &model,
                 &mut asr,
                 &x,
@@ -163,7 +180,8 @@ fn transcribe_all(o: &Opts) -> Result<i32, String> {
                 model: Some(name.as_str()),
                 segments: &segs,
             };
-            let text = format::text(&t, &o.ext, o.times)?;
+            // json with pktito's chunks, for measuring its cuts
+            let text = format::text_windows(&t, &o.ext, o.times, &windows)?;
             let to = destination(o, file);
             if show {
                 status("");
@@ -236,6 +254,7 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
     let path = model_path(o.model.as_deref())?;
     let model = pktito::Model::load(&path)?;
     let mut asr = pktito::Asr::new(&model, o.threads)?;
+    let encoder = encoder(&mut asr, &model, &path, o)?;
     let json = o.ext == "json";
     let show = !o.quiet && std::io::stderr().is_terminal();
     let (version, name, backend, compiler, threads) = (
@@ -247,16 +266,19 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
     );
     if !json {
         println!(
-            "pktito-cli {version}\nmodel    {name}\nbackend  {backend}\ncompiler {compiler}\nthreads  {threads}"
+            "pktito-cli {version}\nmodel    {name}\nencoder  {encoder}\nbackend  {backend}\ncompiler {compiler}\nthreads  {threads}"
         );
     }
     let (mut audio, mut took, mut failed, mut results) = (0.0, 0.0, 0, Vec::new());
+    // the scored files' reference words, word errors, character edits,
+    // those identical, and how many
+    let mut total = (0usize, 0usize, 0usize, 0usize, 0usize);
     for file in &files {
         let label = file
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_default();
-        let done = (|| -> Result<(f64, f64, String), String> {
+        let done = (|| -> Result<(f64, f64, String, String), String> {
             if show {
                 status(&format!("{label}: reading the audio"));
             }
@@ -275,21 +297,44 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
             )?;
             let secs = start.elapsed().as_secs_f64();
             let words = serde_json::to_string(&segs).map_err(|e| e.to_string())?;
+            let text: Vec<&str> = segs.iter().map(|s| s.text.as_str()).collect();
             Ok((
                 x.len() as f64 / decode::RATE as f64,
                 secs,
                 sha256_hex(words.as_bytes()),
+                text.join("\n"),
             ))
         })();
         if show {
             status("");
         }
         match done {
-            Ok((a, t, sha)) => {
+            Ok((a, t, sha, text)) => {
+                // against its reference, where there is a folder of them
+                let scored = o.reference.as_ref().map(|dir| {
+                    let stem = file.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+                    fs::read_to_string(dir.join(format!("{stem}.txt"))).ok().map(|r| score::score(&text, &r))
+                });
                 if !json {
-                    println!("{:>9}  {:>9.2} s  {:>7.1}x  {label}", clock(a), t, a / t);
+                    let said = match &scored {
+                        None => String::new(),
+                        Some(None) => "  no reference".into(),
+                        Some(Some(s)) => format!("  {}", said(s)),
+                    };
+                    println!("{:>9}  {:>9.2} s  {:>7.1}x  {label}{said}", clock(a), t, a / t);
                 }
-                results.push(serde_json::json!({ "file": label, "audio_s": a, "seconds": t, "x_real_time": a / t, "transcript_sha256": sha }));
+                let mut r = serde_json::json!({ "file": label, "audio_s": a, "seconds": t, "x_real_time": a / t, "transcript_sha256": sha });
+                if let Some(s) = &scored {
+                    r["reference"] = serde_json::to_value(s).map_err(|e| e.to_string())?;
+                }
+                if let Some(Some(s)) = scored {
+                    total.0 += s.words;
+                    total.1 += s.word_errors;
+                    total.2 += s.char_edits;
+                    total.3 += usize::from(s.identical);
+                    total.4 += 1;
+                }
+                results.push(r);
                 audio += a;
                 took += t;
             }
@@ -303,11 +348,17 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
         return Ok(1);
     }
     if json {
-        let all = serde_json::json!({
-            "pktito_cli": version, "model": name, "backend": backend, "compiler": compiler,
+        let mut all = serde_json::json!({
+            "pktito_cli": version, "model": name, "encoder": encoder, "backend": backend, "compiler": compiler,
             "threads": threads,
             "files": results, "audio_s": audio, "seconds": took, "x_real_time": audio / took,
         });
+        if total.4 > 0 {
+            all["reference"] = serde_json::json!({
+                "files": total.4, "identical": total.3, "words": total.0,
+                "word_errors": total.1, "wer": wer(total.1, total.0), "char_edits": total.2,
+            });
+        }
         println!(
             "{}",
             serde_json::to_string_pretty(&all).map_err(|e| e.to_string())?
@@ -321,8 +372,93 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
             audio / took,
             if n == 1 { "" } else { "s" }
         );
+        if total.4 > 0 {
+            let (words, errors, edits, same, scored) = total;
+            if same == scored {
+                println!("{scored} of {scored} transcripts identical to their references");
+            } else {
+                println!(
+                    "{same} of {scored} transcripts identical to their references; WER {:.3}% ({errors} of {words} words), {edits} character edit{}",
+                    wer(errors, words),
+                    if edits == 1 { "" } else { "s" }
+                );
+            }
+        }
     }
     Ok(if failed > 0 { 1 } else { 0 })
+}
+
+/// A transcript's distance from its reference, in a few words.
+fn said(s: &score::Score) -> String {
+    if s.identical {
+        "identical".into()
+    } else {
+        format!(
+            "WER {:.3}%, {} character edit{}",
+            s.wer,
+            s.char_edits,
+            if s.char_edits == 1 { "" } else { "s" }
+        )
+    }
+}
+
+/// Word errors over words, in percent.
+fn wer(errors: usize, words: usize) -> f64 {
+    if words == 0 { 0.0 } else { 100.0 * errors as f64 / words as f64 }
+}
+
+/// The encoder a transcription runs: on a Mac, the Neural Engine's where the
+/// model is a catalog one whose Core ML encoder is beside it (the ane fork,
+/// core/ane.m) and --cpu doesn't say otherwise, else the CPU's, pktito's
+/// own. Core ML compiles the encoder for this Mac the first time this
+/// program loads it, which takes a while, once (about 10 s for v2 on the
+/// M4 Pro). Where the Neural Engine can't run it, Core ML's reason is said
+/// and the CPU's runs, if the model file has one: the slim file, the
+/// Neural Engine edition's, has none, and says what to download. "Neural
+/// Engine" or "CPU", for bench to say.
+#[cfg(target_os = "macos")]
+fn encoder(asr: &mut pktito::Asr, model: &pktito::Model, path: &Path, o: &Opts) -> Result<&'static str, String> {
+    let whole = model.has_encoder();
+    let cpu_or = |why: String| if whole { Ok("CPU") } else { Err(why) };
+    let Some(data) = model::data_dir() else { return cpu_or("no data folder for the app on this system".into()) };
+    let dir = data.join("models");
+    let e = model::CATALOG.iter().find(|e| {
+        model::same_file(&model::file_in(&dir, e), path) || model::same_file(&model::slim_in(&dir, e), path)
+    });
+    let Some(e) = e else {
+        return cpu_or(format!("{} has no encoder of its own and isn't a catalog model's", path.display()));
+    };
+    let again = format!("pktito-cli download {} --cpu downloads the one for the CPU", e.name);
+    if o.cpu {
+        return cpu_or(format!("{} here is the Neural Engine's edition, with no encoder for the CPU: {again}", e.name));
+    }
+    if !model::have_encoder(&dir, e) {
+        return cpu_or(format!("{}'s Core ML encoder isn't here: pktito-cli download {}", e.name, e.name));
+    }
+    let show = !o.quiet && std::io::stderr().is_terminal();
+    if show {
+        status("loading the Neural Engine's encoder (the first time, Core ML compiles it for this Mac)");
+    }
+    let r = asr.use_ane(Some(&model::encoder_in(&dir, e)));
+    if show {
+        status("");
+    }
+    match r {
+        Ok(()) => Ok("Neural Engine"),
+        Err(why) => {
+            // the model's own encoder again
+            let _ = asr.use_ane(None);
+            if whole {
+                eprintln!("pktito-cli: the Neural Engine can't run the encoder here ({why}); using the CPU");
+            }
+            cpu_or(format!("the Neural Engine can't run the encoder here ({why}): {again}"))
+        }
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn encoder(_asr: &mut pktito::Asr, _model: &pktito::Model, _path: &Path, _o: &Opts) -> Result<&'static str, String> {
+    Ok("CPU")
 }
 
 /// Seconds as h:mm:ss, or m:ss under an hour
@@ -381,24 +517,39 @@ fn destination(o: &Opts, file: &Path) -> Option<PathBuf> {
 /// downloaded; else the one the app uses (model::usable)
 fn model_path(arg: Option<&str>) -> Result<PathBuf, String> {
     let data = model::data_dir().ok_or("no data folder for the app on this system")?;
+    let dir = data.join("models");
     let Some(m) = arg else {
-        return model::usable(&data, &model::load_settings(&data)).ok_or_else(|| {
-            "no model yet: choose one in the app, or pktito-cli download parakeet-tdt-0.6b-v2"
-                .into()
-        });
+        let s = model::load_settings(&data);
+        return model::usable(&data, &s)
+            .or_else(|| {
+                // the app's model as its Neural Engine edition, where only that is here
+                let e = model::entry(s.model.as_deref()?)?;
+                neural(&dir, e).then(|| model::slim_in(&dir, e))
+            })
+            .ok_or_else(|| {
+                "no model yet: choose one in the app, or pktito-cli download parakeet-tdt-0.6b-v2"
+                    .into()
+            });
     };
     if Path::new(m).is_file() {
         return Ok(PathBuf::from(m));
     }
     let e = entry(m)?;
-    let dir = data.join("models");
-    if !model::have(&dir, e) {
-        return Err(format!(
-            "{} isn't downloaded: pktito-cli download {}",
-            e.name, e.name
-        ));
+    if model::have(&dir, e) {
+        return Ok(model::file_in(&dir, e));
     }
-    Ok(model::file_in(&dir, e))
+    if neural(&dir, e) {
+        return Ok(model::slim_in(&dir, e));
+    }
+    Err(format!(
+        "{} isn't downloaded: pktito-cli download {}",
+        e.name, e.name
+    ))
+}
+
+/// Whether e's Neural Engine edition is in dir, on a Mac, the one place it runs.
+fn neural(dir: &Path, e: &model::Entry) -> bool {
+    cfg!(target_os = "macos") && model::have_neural(dir, e)
 }
 
 /// A catalog model by its name, its label ("english", "multilingual") or its
@@ -419,13 +570,22 @@ fn models() -> Result<i32, String> {
     let using = model::usable(&data, &s);
     let dir = data.join("models");
     for e in model::CATALOG {
-        let here = model::have(&dir, e);
-        let state = if !here {
-            "not downloaded"
-        } else if using.as_deref() == Some(model::file_in(&dir, e).as_path()) {
-            "in use"
+        let (whole, ne) = (model::have(&dir, e), neural(&dir, e));
+        let editions = match (whole, ne) {
+            (true, true) => " (Neural Engine and CPU)",
+            (false, true) => " (Neural Engine)",
+            (true, false) if cfg!(target_os = "macos") => " (CPU)",
+            _ => "",
+        };
+        let in_use = using.as_deref().is_some_and(|u| {
+            model::same_file(u, &model::file_in(&dir, e)) || model::same_file(u, &model::slim_in(&dir, e))
+        }) || (using.is_none() && ne && s.model.as_deref() == Some(e.name));
+        let state = if !whole && !ne {
+            "not downloaded".to_string()
+        } else if in_use {
+            format!("in use{editions}")
         } else {
-            "downloaded"
+            format!("downloaded{editions}")
         };
         println!(
             "{:<22}{:<14}{:<24}{:>4} MB  {state}",
@@ -444,20 +604,56 @@ fn models() -> Result<i32, String> {
 /// A model downloaded into the app's models folder, as the window does it:
 /// resuming what a stopped one kept, trying again, and checked against its
 /// size and SHA-256. The app then uses it if it had none.
-fn fetch(m: &str) -> Result<i32, String> {
+fn fetch(m: &str, cpu: bool) -> Result<i32, String> {
     let e = entry(m)?;
     let data = model::data_dir().ok_or("no data folder for the app on this system")?;
     let dir = data.join("models");
-    if model::have(&dir, e) {
-        // here already, from the window or a copy: in use, too, if none is,
-        // as one just downloaded is (with no settings, the model there was
-        // "no model yet" after a download of it said where it was)
-        use_if_none(&data, e)?;
-        println!("{}", model::file_in(&dir, e).display());
-        return Ok(0);
+    // on a Mac, as the iOS app has it: the model file without its encoder
+    // and its Core ML encoder, 589 MB for v2 where the whole is 624, the
+    // encoder on the Neural Engine (3x the CPU's speed on an M4 Pro,
+    // AliceBench); --cpu, or anywhere else, the whole model
+    let here = if cpu { model::have(&dir, e) } else { model::have_neural(&dir, e) };
+    let at = if cpu { model::file_in(&dir, e) } else { model::slim_in(&dir, e) };
+    if !here {
+        fs::create_dir_all(&dir).map_err(|err| format!("couldn't make {}: {err}", dir.display()))?;
+        if cpu {
+            fetch_file(&model::Wanted::model(&dir, e))?;
+        } else {
+            let slim = model::Wanted::part(&dir, e, &e.coreml.slim);
+            if !slim.here() {
+                fetch_file(&slim)?;
+            }
+            let archive = model::Wanted::part(&dir, e, &e.coreml.encoder);
+            if !model::have_encoder(&dir, e) {
+                let got = fetch_file(&archive)?;
+                unpack(&got, &model::encoder_in(&dir, e))?;
+            }
+        }
     }
-    fs::create_dir_all(&dir).map_err(|err| format!("couldn't make {}: {err}", dir.display()))?;
-    let job = Arc::new(download::Job::new(e, &dir));
+    // here already, from the window or a copy: in use, too, if none is, as
+    // one just downloaded is (with no settings, the model there was "no
+    // model yet" after a download of it said where it was)
+    use_if_none(&data, e)?;
+    println!("{}", at.display());
+    Ok(0)
+}
+
+/// The Core ML encoder out of its archive (model::unpack_encoder), saying so.
+fn unpack(archive: &Path, dst: &Path) -> Result<(), String> {
+    let show = std::io::stderr().is_terminal();
+    if show {
+        status("unpacking the Neural Engine's encoder");
+    }
+    let r = model::unpack_encoder(archive, dst);
+    if show {
+        status("");
+    }
+    r
+}
+
+/// One file downloaded and checked, saying how it goes; its path.
+fn fetch_file(w: &model::Wanted) -> Result<PathBuf, String> {
+    let job = Arc::new(download::Job::for_file(w));
     let (tx, rx) = std::sync::mpsc::channel();
     let show = std::io::stderr().is_terminal();
     // The window tries again for as long as it is open, where a person sees
@@ -469,9 +665,8 @@ fn fetch(m: &str) -> Result<i32, String> {
     const TRIES: u32 = 5;
     let failed = Arc::new(AtomicU32::new(0));
     let (fails, stop) = (failed.clone(), job.clone());
-    job.start(
-        e,
-        dir.clone(),
+    job.start_file(
+        w.clone(),
         move |s| match s.step {
             // each failure once, not again as its next try starts
             "failed" if !s.trying => {
@@ -528,15 +723,13 @@ fn fetch(m: &str) -> Result<i32, String> {
             format!(
                 "{line}\n{TRIES} tries in a row failed; `pktito-cli download {}` again \
                  goes on from where this stopped",
-                e.name
+                w.name
             )
         } else {
             line
         }
     })?;
-    use_if_none(&data, e)?;
-    println!("{}", path.display());
-    Ok(0)
+    Ok(path)
 }
 
 /// The app's model from now on, if it has none.

@@ -8,6 +8,16 @@ rewrite. Which of these the site shows is decided there, not here.
 "All 12" means every chapter's transcript matched the reference, so the
 build computes what every other build does.
 
+From 0.9.5 the transcripts are scored, not matched: each chapter's text
+against its reference (scripts/alicebench/ref, the CPU engine's), as
+identical or by its word error rate and its character edits, its split
+into sentences aside (pktito-cli bench --ref). An engine that isn't the
+CPU engine bit for bit, the Neural Engine's, is then measured by how far
+it is, not failed. The references come with 0.9.5's chunking, whose
+sentences run across the 30 s cuts and whose cuts hear the far side as
+context; rows from 0.9.5 on are against them, and every machine is run
+again for it.
+
 From 0.9.3, chapters 1, 2, 7, 8, 9, 10 and 12 have new references: 0.9.3
 transcribes again the speech the English model wrote no words for, which
 gives those chapters back the LibriVox notices, credits and titles it

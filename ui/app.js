@@ -483,9 +483,12 @@ function modelMenu(anchor, keys) {
         `<span>${esc(baseName(st.model_file))}</span><small title="${esc(st.model_file)}">${esc(st.model_file)}</small>${ICON.check}</button>`,
     );
   }
-  // where the models are: about 620 MB each, and the files the CLI takes
-  // with -m. The Store edition's are in its package, which Explorer can't
-  // show: there the window lists them itself, to delete (openManage).
+  // Manage models in every edition: each model's size and Delete, and on a
+  // Mac the Neural Engine encoder offered for a whole model file (Peter,
+  // 2026-11-02), beside Open a model file, the two that open a window; then
+  // where the models are, about 620 MB each and the files the CLI takes with
+  // -m, except in the Store edition, whose are in its package, which
+  // Explorer can't show.
   const show = esc(revealLabel());
   const file = st.model_file
     ? baseName(st.model_file)
@@ -495,9 +498,10 @@ function modelMenu(anchor, keys) {
   items.push(
     `<div class="pk-menu-sep" aria-hidden="true"></div>` +
       `<button class="pk-mi" type="button" role="menuitem" data-own="1"><span>${esc(t("models.open_file"))}</span></button>` +
+      `<button class="pk-mi" type="button" role="menuitem" data-manage="1"><span>${esc(t("models.manage"))}</span></button>` +
       (st.reveal
         ? `<button class="pk-mi" type="button" role="menuitem" data-reveal="1"${file ? ` title="${esc(file)}"` : ""}><span>${show}</span></button>`
-        : `<button class="pk-mi" type="button" role="menuitem" data-manage="1"><span>${esc(t("models.manage"))}</span></button>`),
+        : ""),
   );
   openMenu(anchor, keys, items.join(""), "down right", (m) => {
     m.onclick = async (e) => {
@@ -523,10 +527,10 @@ function modelMenu(anchor, keys) {
 
 /* -------------------------------------------------------------- manage -- */
 
-/* Manage models, in the model menu where the file manager can't show the
-   models' folder (st.reveal; the Store edition's is in its package): each
-   catalog model downloaded and what a stopped download of one kept, with
-   their sizes, each to delete, and their total. The model in use says so,
+/* Manage models, in every edition's model menu: each catalog model
+   downloaded and what a stopped download of one kept, with their sizes,
+   each to delete, and their total; on a Mac, the Neural Engine encoder
+   offered for a whole model file here without one (fasterRow). The model in use says so,
    and its Delete and the transcription's own wait while one runs (held). A
    download under way has the window to itself (setup), so none is listed
    here. Delete asks first, saying what it frees and what follows: the
@@ -585,6 +589,9 @@ function renderManage() {
       rows.push(row(m, esc(t("manage.paused", got)), true));
     }
   }
+  // on a Mac, a whole model file here without its Core ML encoder: the
+  // encoder offered, which runs it on the Neural Engine (main.rs get_encoder)
+  for (const m of st.catalog.filter((x) => x.faster)) rows.push(fasterRow(m));
   const total =
     used >= 1e9
       ? t("manage.used_gb", { gb: num(used / 1e9, 2) })
@@ -592,6 +599,45 @@ function renderManage() {
   $("manage-body").innerHTML = rows.length
     ? `<ul class="pk-kept">${rows.join("")}</ul><p class="pk-small pk-kept-total">${esc(total)}</p>`
     : `<p class="pk-small">${esc(t("manage.none"))}</p>`;
+}
+
+/* The encoder's download, in its row alone: a model's download (dl) is the
+   setup screen's. */
+let enc = null;
+
+function fasterRow(m) {
+  const id = `faster-${m.key}`;
+  const e = enc && enc.name === m.name ? enc : null;
+  const sizes = { got: num(mb(e ? e.got : 0)), total: num(mb(m.faster)) };
+  const sub = !e
+    ? t("manage.faster_text", { label: labelOf(m), mb: num(mb(m.faster)) })
+    : e.step === "checking"
+      ? t("download.checking")
+      : e.step === "failed"
+        ? t("download.stopped_at", sizes)
+        : t("download.progress", sizes);
+  const going = e && e.step !== "failed";
+  const button = going
+    ? `<button class="pk-btn" type="button" data-encoder-cancel="1" aria-describedby="${id}">${esc(t("download.cancel"))}</button>`
+    : `<button class="pk-btn" type="button" data-encoder="${m.name}" aria-describedby="${id}">${esc(t(e ? "download.try_again" : "manage.get"))}</button>`;
+  return (
+    `<li><div class="pk-kept-text"><span class="pk-ui" id="${id}">${esc(t("manage.faster"))}</span><small class="pk-small">${esc(sub)}</small></div>` +
+    `${button}</li>`
+  );
+}
+
+async function getEncoder(name) {
+  const m = st.catalog.find((x) => x.name === name);
+  if (!m) return;
+  enc = { name, step: "downloading", got: 0, total: m.faster };
+  renderManage();
+  try {
+    await invoke("get_encoder", { name });
+  } catch (e) {
+    enc = null;
+    renderManage();
+    toastErr(e);
+  }
 }
 
 /* While a transcription runs, the Deletes of the model in use and of the
@@ -661,6 +707,10 @@ async function deleteKept(b) {
 $("manage-body").onclick = (e) => {
   const b = e.target.closest("[data-delete]");
   if (b && !b.disabled) deleteKept(b);
+  const g = e.target.closest("[data-encoder]");
+  if (g) getEncoder(g.dataset.encoder);
+  if (e.target.closest("[data-encoder-cancel]"))
+    invoke("cancel_download").catch(toastErr);
 };
 $("manage-close").onclick = () => closeManage();
 $("manage").addEventListener("click", (e) => {
@@ -893,6 +943,18 @@ function updateDownload() {
 
 listen("download", async (e) => {
   const s = e.payload;
+  // the encoder's, for Manage models' row
+  if (enc && enc.name === s.name) {
+    const over = s.step === "done" || s.step === "cancelled";
+    enc = over ? null : s;
+    if (over) await refresh();
+    if (!$("manage").hidden) renderManage();
+    if (s.step === "done") {
+      const m = st.catalog.find((x) => x.name === s.name);
+      toast(t("models.ready", { label: m ? labelOf(m) : s.name }));
+    }
+    return;
+  }
   if (s.step === "done" || s.step === "cancelled") {
     dl = null;
     setupKey = "";

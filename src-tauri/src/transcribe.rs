@@ -42,54 +42,125 @@ pub struct Segment {
 /// just finished) after each chunk; stop(), before the first and after each
 /// but the last, says whether to stop there. The segments, and whether they
 /// are all of it.
+///
+/// A sentence a chunk ends in the middle of is carried into the next: a
+/// chunk's last word ends a segment only where a sentence ends or the
+/// recording does, as any other word does. pktito cuts its chunks at the
+/// silences, of at most 30 s, so about half of them fall inside a sentence
+/// (long40: 150 of 310 cuts with v2, 133 with v3, libpktito's count), and
+/// each became a sentence's end on the screen; with the far side of a cut
+/// heard as context (libpktito's stitch) the model rarely punctuates one
+/// (the 26 English test clips: false sentence ends at the cuts, v2 37% to
+/// 1%, v3 19% to 4%), so a chunk that ends with no . ? or ! is almost
+/// always one still in mid-sentence.
 pub fn run(
+    model: &Model,
+    asr: &mut Asr,
+    x: &[f32],
+    progress: impl FnMut(f64, &[Segment]),
+    stop: impl Fn() -> bool,
+) -> Result<(Vec<Segment>, bool), String> {
+    run_windows(model, asr, x, progress, stop).map(|(segs, _, whole)| (segs, whole))
+}
+
+/// A chunk pktito transcribed, for measuring its cuts (pktito-cli's -f
+/// json): the stretch of the recording whose words are its own (pk_chunk_out.at),
+/// in seconds, and how many of the transcript's words are its, in order.
+#[derive(Clone, Copy)]
+pub struct Window {
+    pub start: f64,
+    pub end: f64,
+    pub words: usize,
+}
+
+/// run(), and each chunk's window.
+pub fn run_windows(
     model: &Model,
     asr: &mut Asr,
     x: &[f32],
     mut progress: impl FnMut(f64, &[Segment]),
     stop: impl Fn() -> bool,
-) -> Result<(Vec<Segment>, bool), String> {
+) -> Result<(Vec<Segment>, Vec<Window>, bool), String> {
     let rate = model.rate() as f64;
     let frame = model.frame_seconds();
     let mut all = Vec::new();
+    let mut windows = Vec::new();
     if stop() {
-        return Ok((all, false));
+        return Ok((all, windows, false));
     }
+    let mut open = Open::default();
+    let mut done = 0.0;
     let whole = asr.transcribe(x, |c| {
-        let segs = sentences(model, c.toks, c.start as f64 / rate, frame);
-        progress(c.done as f64 / c.total.max(1) as f64, &segs);
+        let stopping = !c.last && stop();
+        let held = open.words.len();
+        let mut segs = sentences(model, c.toks, c.start as f64 / rate, frame, &mut open);
+        // its words: those it ended in sentences and those it left open,
+        // less the ones open from before it
+        let words = segs.iter().map(|s| s.words.len()).sum::<usize>() + open.words.len() - held;
+        windows.push(Window { start: c.start as f64 / rate, end: c.end as f64 / rate, words });
+        // the recording's end, or where it stops: the sentence still open ends
+        if c.last || stopping {
+            segs.extend(open.close(model));
+        }
+        done = c.done as f64 / c.total.max(1) as f64;
+        progress(done, &segs);
         all.extend(segs);
-        !c.last && stop()
+        stopping
     })?;
-    Ok((all, whole))
+    // a sentence still open where pktito ended with no last chunk to close it
+    let rest: Vec<Segment> = open.close(model).into_iter().collect();
+    if !rest.is_empty() {
+        progress(done, &rest);
+        all.extend(rest);
+    }
+    Ok((all, windows, whole))
 }
 
-fn sentences(model: &Model, toks: &[Tok], offset: f64, frame: f64) -> Vec<Segment> {
+/// The sentence a chunk ended in the middle of: its tokens, for its text
+/// across the cut (the model's tokens detokenized whole, as within a
+/// chunk), its words, timed, and when it began.
+#[derive(Default)]
+struct Open {
+    toks: Vec<Tok>,
+    words: Vec<Word>,
+    start: f64,
+}
+
+impl Open {
+    /// The open sentence as a segment, if there is one, and none open after.
+    fn close(&mut self, model: &Model) -> Option<Segment> {
+        if self.words.is_empty() {
+            return None;
+        }
+        let words = std::mem::take(&mut self.words);
+        Some(Segment {
+            start: self.start,
+            end: words.last().map_or(self.start, |w| w.end),
+            text: model.text(&std::mem::take(&mut self.toks)),
+            words,
+        })
+    }
+}
+
+/// A chunk's tokens as sentences, after the one open before it: a segment
+/// ends at a word ending in . ? or !, or once it runs MAX_SEGMENT_S; the
+/// words after the last such end are left open, for the next chunk.
+fn sentences(model: &Model, toks: &[Tok], offset: f64, frame: f64, open: &mut Open) -> Vec<Segment> {
     let words = model.words(toks);
     let mut out = Vec::new();
-    let mut first = 0usize;
-    let mut timed = Vec::new();
-    for (i, w) in words.iter().enumerate() {
-        let span = |a: usize| (words[a].tok as usize, (w.tok + w.ntok) as usize);
-        let word = model.text(&toks[w.tok as usize..(w.tok + w.ntok) as usize]);
-        let start = offset + words[first].start as f64 * frame;
+    for w in &words {
+        let run = &toks[w.tok as usize..(w.tok + w.ntok) as usize];
+        let text = model.text(run);
+        let start = offset + w.start as f64 * frame;
         let end = offset + w.end as f64 * frame;
-        let last = i + 1 == words.len();
-        let cut = last || word.ends_with(['.', '?', '!']) || end - start >= MAX_SEGMENT_S;
-        timed.push(Word {
-            start: offset + w.start as f64 * frame,
-            end,
-            text: word,
-        });
+        if open.words.is_empty() {
+            open.start = start;
+        }
+        let cut = text.ends_with(['.', '?', '!']) || end - open.start >= MAX_SEGMENT_S;
+        open.toks.extend_from_slice(run);
+        open.words.push(Word { start, end, text });
         if cut {
-            let (a, b) = span(first);
-            out.push(Segment {
-                start,
-                end,
-                text: model.text(&toks[a..b]),
-                words: std::mem::take(&mut timed),
-            });
-            first = i + 1;
+            out.extend(open.close(model));
         }
     }
     out

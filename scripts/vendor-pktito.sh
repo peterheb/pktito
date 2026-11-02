@@ -5,14 +5,14 @@
 #
 #   scripts/vendor-pktito.sh [PKTITO_CHECKOUT [DEST]]
 #
-# The checkout defaults to ../libpktito, then ../pkito. DEST, by default
-# vendor/pktito, is vendor/pktito-ane for the iOS app's copy of the ane
+# The checkout defaults to ../libpktito, then ../pktito. DEST, by default
+# vendor/pktito, is vendor/pktito-ane for the Apple apps' copy of the ane
 # fork (its branch ane: the encoder on Apple's Neural Engine, core/ane.m).
 set -eu
 here=$(cd "$(dirname "$0")/.." && pwd)
 src=${1:-}
 if [ -z "$src" ]; then
-  for d in "$here/../libpktito" "$here/../pkito"; do
+  for d in "$here/../libpktito" "$here/../pktito"; do
     [ -f "$d/core/pktito.h" ] && src=$d && break
   done
 fi

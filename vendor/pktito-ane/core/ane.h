@@ -32,6 +32,11 @@ void pk_ane_free(pk_ane *e);
  * or -1 if one can't be, and Core ML's why in err. */
 int pk_ane_warm(pk_ane *e, char *err, size_t errlen);
 
+/* Calls that can run at once: PK_ANE_SLOTS - 1 for the chunks of a run
+ * (asr.c's pipeline, slots 0 on), and the last for every other call
+ * (pk_ane_encode: the retry's, the warming's). */
+#define PK_ANE_SLOTS 5
+
 /* The feature frames its longest function takes */
 uint32_t pk_ane_frames(const pk_ane *e);
 
@@ -41,5 +46,9 @@ uint32_t pk_ane_frames(const pk_ane *e);
  * frames would): x [Te][d_model], Te encoder frames, which it returns; 0 if
  * no length takes T0 or Core ML failed. */
 uint32_t pk_ane_encode(pk_ane *e, const float *feat, uint32_t T0, float *x);
+
+/* pk_ane_encode in slot (0 to PK_ANE_SLOTS - 1) of its own: calls in other
+ * slots may run at the same time, from other threads */
+uint32_t pk_ane_encode_in(pk_ane *e, int slot, const float *feat, uint32_t T0, float *x);
 
 #endif

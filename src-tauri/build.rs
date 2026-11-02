@@ -4,9 +4,10 @@
 //! set, so one binary runs on every CPU of the family and picks the fastest
 //! backend it can (pktito's backend/kernels.c). Then the platform's decoder
 //! (AVFoundation on macOS and iOS, Media Foundation on Windows) and the mix
-//! that every decoder hands its samples to (native/mix.h). On iOS pktito is
-//! its ane fork (vendor/pktito-ane), whose encoder runs on the Neural
-//! Engine through Core ML (core/ane.m).
+//! that every decoder hands its samples to (native/mix.h). On the Mac and
+//! iOS pktito is its ane fork (vendor/pktito-ane), whose encoder can run on
+//! the Neural Engine through Core ML (core/ane.m), and runs on the CPU as
+//! pktito's does where it isn't given one.
 //!
 //! Everything goes into one archive, and the system's libraries come after
 //! it. GNU ld reads each archive once, left to right, taking only what
@@ -50,10 +51,7 @@ fn base(os: &str, root: &PathBuf) -> cc::Build {
         .include(root.join("core"))
         .include(root.join("backend"));
     match os {
-        "macos" => {
-            b.define("_DARWIN_C_SOURCE", None);
-        }
-        "ios" => {
+        "macos" | "ios" => {
             b.define("_DARWIN_C_SOURCE", None).define("PK_ANE", None);
         }
         "windows" => {
@@ -72,7 +70,7 @@ fn main() {
     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let os = env::var("CARGO_CFG_TARGET_OS").unwrap();
     let arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap();
-    let root = manifest.join(if os == "ios" { "../vendor/pktito-ane" } else { "../vendor/pktito" });
+    let root = manifest.join(if os == "macos" || os == "ios" { "../vendor/pktito-ane" } else { "../vendor/pktito" });
     println!("cargo:rerun-if-changed=../vendor/pktito");
     println!("cargo:rerun-if-changed=../vendor/pktito-ane");
     println!("cargo:rerun-if-changed=native");
@@ -139,16 +137,9 @@ fn main() {
             .compile_intermediates(),
     );
     match os.as_str() {
-        "macos" => objects.extend(
-            cc::Build::new()
-                .file(manifest.join("native/decode_macos.m"))
-                .flag("-fobjc-arc")
-                .opt_level(2)
-                .compile_intermediates(),
-        ),
         // the Mac's decoder, which iOS's AVFoundation runs as it is, and the
         // ane fork's encoder on the Neural Engine
-        "ios" => {
+        "macos" | "ios" => {
             objects.extend(
                 cc::Build::new()
                     .file(manifest.join("native/decode_macos.m"))
@@ -192,13 +183,7 @@ fn main() {
 
     // after the archive, for the same reason
     let system: &[&str] = match os.as_str() {
-        "macos" => &[
-            "framework=AVFoundation",
-            "framework=AudioToolbox",
-            "framework=CoreMedia",
-            "framework=Foundation",
-        ],
-        "ios" => &[
+        "macos" | "ios" => &[
             "framework=AVFoundation",
             "framework=AudioToolbox",
             "framework=CoreMedia",

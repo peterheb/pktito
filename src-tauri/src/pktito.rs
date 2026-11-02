@@ -93,7 +93,8 @@ extern "C" {
     fn pk_model_frame_seconds(m: *const RawModel) -> f64;
     fn pk_asr_new(m: *const RawModel, threads: c_int) -> *mut RawAsr;
     fn pk_asr_free(a: *mut RawAsr);
-    // o NULL: pktito's defaults, chunks of 30 s at most and the retry
+    // o NULL: pktito's defaults (pk_transcribe_defaults): chunks of 30.72 s at
+    // most, the far side of a cut in mid-sentence heard, and the retry
     fn pk_asr_transcribe(
         a: *mut RawAsr,
         x: *const f32,
@@ -116,9 +117,10 @@ extern "C" {
     ) -> c_long;
 }
 
-// the ane fork's (vendor/pktito-ane), which iOS builds: the encoder on the
-// Neural Engine, and the slim model file whose only encoder it is
-#[cfg(target_os = "ios")]
+// the ane fork's (vendor/pktito-ane), which the Apple builds take: the
+// encoder on the Neural Engine, and the slim model file whose only encoder
+// it is
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 extern "C" {
     fn pk_model_has_encoder(m: *const RawModel) -> c_int;
     fn pk_asr_use_ane(a: *mut RawAsr, path: *const c_char, err: *mut c_char, errlen: usize) -> c_int;
@@ -256,7 +258,7 @@ impl Model {
 
     /// Whether the file holds the encoder: not a slim one (model.rs,
     /// Coreml), which transcribes only with a Core ML encoder (Asr::use_ane).
-    #[cfg(target_os = "ios")]
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
     pub fn has_encoder(&self) -> bool {
         unsafe { pk_model_has_encoder(self.raw) != 0 }
     }
@@ -349,13 +351,11 @@ impl Asr {
         }
     }
 
-    /// The threads its passes run on: one a core, or on a chip of two kinds
-    /// the fast kind alone once a recording has timed it faster.
     /// The encoder on the Neural Engine: the compiled Core ML model at path,
     /// made from the model's own checkpoint, loaded and run once on silence,
     /// so that a device that can't run it says so here, with Core ML's
     /// reason; None for the model's own encoder again.
-    #[cfg(target_os = "ios")]
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
     pub fn use_ane(&mut self, path: Option<&Path>) -> Result<(), String> {
         let c = match path {
             Some(p) => Some(CString::new(p.to_string_lossy().as_bytes()).map_err(|_| "bad path".to_string())?),
@@ -378,6 +378,8 @@ impl Asr {
         Ok(())
     }
 
+    /// The threads its passes run on: one a core, or on a chip of two kinds
+    /// the fast kind alone once a recording has timed it faster.
     pub fn threads(&self) -> i32 {
         unsafe { pk_asr_threads(self.raw) }
     }
