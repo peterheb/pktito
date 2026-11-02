@@ -40,7 +40,12 @@ final class Player {
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio)
         scoped = url.startAccessingSecurityScopedResource()
         self.url = url
-        let item = AVPlayerItem(url: url)
+        // precise, so that a time sought to is that time's audio: without
+        // it AVFoundation guesses where a time is in a file with no index of
+        // its frames, as a FLAC without a seek table: in AliceBench's 12
+        // chapters as one FLAC (2:58:51) a read at 1 h was 86.5 s late and
+        // one at 2.5 h 219.6 s early, and exact with it (the Mac, 2026-11-01)
+        let item = AVPlayerItem(asset: AVURLAsset(url: url, options: [AVURLAssetPreferPreciseDurationAndTimingKey: true]))
         item.audioTimePitchAlgorithm = .timeDomain
         let p = AVPlayer(playerItem: item)
         p.volume = Float(muted ? 0 : volume)
