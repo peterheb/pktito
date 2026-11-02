@@ -192,7 +192,7 @@ fun Strip(
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(gap)) {
             val at = scrub ?: if (review) (if (duration > 0) position / duration else 0.0) else done
             Waveform(
-                peaks, at,
+                peaks, at, duration,
                 Modifier
                     .testTag("wave")
                     .alpha(if (review && !playable && !silent) 0.45f else 1f)
@@ -602,25 +602,47 @@ private fun Ring(done: Double, side: Dp) {
 }
 
 /**
+ * The range a waveform draws an outline in (ui/app.js, rangeOf), its slices
+ * 0 to 255 over the 48 dB under the loudest (audio.rs): from the outline's
+ * own 10th percentile to its 99.5th, which even narration leaves room
+ * between, and 16 (3 dB) at the least. A recording quieter for minutes at
+ * a time put more than a tenth of it under that floor, where it drew as
+ * silence: AliceBench's 12 chapters as one file (2:58:51) have chapter 4,
+ * 11% of it, 13 dB under the rest (Peter, 2026-11-01). So the floor goes
+ * 3 dB under the quietest stretch of the file where that is lower: each
+ * stretch a tenth of the file or 5 minutes of a recording seconds long,
+ * whichever is longer, by its median, leaving out stretches more than 36
+ * dB under the top (64), which are silence and drew right. A file at one
+ * level keeps its floor (chapter 1 alone, 10:40, as before).
+ */
+internal fun rangeOf(peaks: ByteArray, seconds: Double): Pair<Double, Double> {
+    val v = IntArray(peaks.size) { peaks[it].toInt() and 0xff }
+    val s = v.sorted()
+    var lo = s[(s.size * 0.1).toInt()].toDouble()
+    val hi = s[minOf(s.size - 1, (s.size * 0.995).toInt())].toDouble()
+    val n = v.size
+    val half = maxOf(n / 20.0, if (seconds > 0) 150.0 * n / seconds else 0.0).toInt()
+    var c = half
+    while (half > 0 && 2 * half < n && c + half <= n) {
+        val median = v.copyOfRange(c - half, c + half).apply { sort() }[half]
+        if (median > 64) lo = minOf(lo, median - 16.0)
+        c += maxOf(1, half / 5)
+    }
+    return lo to maxOf(hi, lo + 16)
+}
+
+/**
  * The waveform the strip's width (ui/app.js, drawWave): bars 2 dp wide a dp
- * apart, each the mean of the outline's slices under it, between the
- * outline's own 10th percentile and its 99.5th, which even narration
- * leaves room between; the bars before the playhead in the played colour,
- * the playhead the beak's, a dp wider each side and alone reaching the top.
+ * apart, each the mean of the outline's slices under it, in its range for
+ * a recording seconds long (rangeOf), kept while the outline is as the
+ * playhead moves; the bars before the playhead in the played colour, the
+ * playhead the beak's, a dp wider each side and alone reaching the top.
  * No outline yet: the empty strip's bars, 3 dp each.
  */
 @Composable
-fun Waveform(peaks: ByteArray?, at: Double, modifier: Modifier = Modifier, height: Dp = 64.dp) {
+fun Waveform(peaks: ByteArray?, at: Double, seconds: Double, modifier: Modifier = Modifier, height: Dp = 64.dp) {
     val p = pk
-    val range = remember(peaks) {
-        if (peaks == null || peaks.isEmpty()) 0.0 to 255.0
-        else {
-            val s = peaks.map { it.toInt() and 0xff }.sorted()
-            val lo = s[(s.size * 0.1).toInt()].toDouble()
-            val hi = s[minOf(s.size - 1, (s.size * 0.995).toInt())].toDouble()
-            lo to maxOf(hi, lo + 16)
-        }
-    }
+    val range = remember(peaks, seconds) { if (peaks == null || peaks.isEmpty()) 0.0 to 255.0 else rangeOf(peaks, seconds) }
     Canvas(modifier.fillMaxWidth().height(height)) {
         val bar = 2.dp.toPx()
         val gap = 1.dp.toPx()
