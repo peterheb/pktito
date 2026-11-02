@@ -13,6 +13,7 @@
 #import <CoreML/CoreML.h>
 
 #include <math.h>
+#include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,7 +35,8 @@ typedef struct {
 typedef struct {
     uint32_t frames, nparts;
     uint8_t fn[PK_ANE_MAX_PARTS];    /* each part's function, 1 + its index in pk_ane's; 0 none */
-    void *mel, *mask;                /* the first part's inputs, NULL until first needed */
+    int loaded;
+    void *mel[PK_ANE_SLOTS], *mask[PK_ANE_SLOTS];  /* the first part's inputs, a slot's each */
     void *pe, *cos, *sin;            /* the position tables, where its functions take them */
 } ane_len;
 
@@ -45,6 +47,7 @@ struct pk_ane {
     void *url;                       /* NSURL */
     ane_fn fn[PK_ANE_MAX_FNS];
     ane_len len[PK_ANE_MAX_LENS];    /* shortest first */
+    pthread_mutex_t load;            /* a length's first load, once, whichever slot asks */
 };
 
 /* PK_ANE_TRACE=1: each step of opening and loading on stderr, with the
@@ -143,18 +146,21 @@ static int len_load(pk_ane *a, ane_len *l, char *err, size_t errlen) {
             }
             f->model = (void *)CFBridgingRetain(m);
         }
-        MLMultiArray *mel = array16(@[ @1, @1, @(a->n_mels), @(l->frames) ], &e);
-        MLMultiArray *mask = array16(@[ @1, @1, @1, @(l->frames) ], &e);
-        if (!mel || !mask) {
-            say(err, errlen, @"out of memory", e);
-            return -1;
+        for (int k = 0; k < PK_ANE_SLOTS; k++) {
+            MLMultiArray *mel = array16(@[ @1, @1, @(a->n_mels), @(l->frames) ], &e);
+            MLMultiArray *mask = array16(@[ @1, @1, @1, @(l->frames) ], &e);
+            if (!mel || !mask) {
+                say(err, errlen, @"out of memory", e);
+                return -1;
+            }
+            l->mel[k] = (void *)CFBridgingRetain(mel);
+            l->mask[k] = (void *)CFBridgingRetain(mask);
         }
         if (tables && len_tables(a, l, &e)) {
             say(err, errlen, @"out of memory", e);
             return -1;
         }
-        l->mel = (void *)CFBridgingRetain(mel);
-        l->mask = (void *)CFBridgingRetain(mask);
+        l->loaded = 1;
         return 0;
     }
 }
@@ -200,6 +206,7 @@ pk_ane *pk_ane_open(const char *path, const pk_model *m, char *err, size_t errle
             say(err, errlen, @"out of memory", nil);
             return NULL;
         }
+        pthread_mutex_init(&a->load, NULL);
         a->n_mels = n_mels;
         a->d = d_model;
         a->url = (void *)CFBridgingRetain(url);
@@ -301,19 +308,27 @@ pk_ane *pk_ane_open(const char *path, const pk_model *m, char *err, size_t errle
     }
 }
 
-/* feat [T0][n_mels] through length l, padded to it: x [Te][d], Te encoder
- * frames, which it returns; 0 if Core ML failed, and why in err if given */
-static uint32_t len_run(pk_ane *a, ane_len *l, const float *feat, uint32_t T0, float *x, char *err,
-                        size_t errlen) {
-    if (!l->mel && len_load(a, l, err, errlen))
+/* feat [T0][n_mels] through length l, padded to it, in slot k's inputs:
+ * x [Te][d], Te encoder frames, which it returns; 0 if Core ML failed, and
+ * why in err if given. Calls in different slots run at once: Core ML's
+ * predictions on one MLModel may, each with inputs and outputs of its own
+ * (FluidAudio's workers share theirs so). */
+static uint32_t len_run(pk_ane *a, ane_len *l, int k_slot, const float *feat, uint32_t T0, float *x,
+                        char *err, size_t errlen) {
+    pthread_mutex_lock(&a->load);
+    const int bad = !l->loaded && len_load(a, l, err, errlen);
+    pthread_mutex_unlock(&a->load);
+    if (bad)
         return 0;
+    /* calls at once each set it, and a model of one length (encoder.py's
+     * default, 3072 frames) chooses that one whatever it is */
     a->last = (uint32_t)(l - a->len) + 1;
     const uint32_t T = l->frames, M = a->n_mels, D = a->d;
     uint32_t Te = T0;
     for (int i = 0; i < 3; i++)
         Te = (Te + 1) / 2;
     @autoreleasepool {
-        MLMultiArray *mel = (__bridge MLMultiArray *)l->mel, *mask = (__bridge MLMultiArray *)l->mask;
+        MLMultiArray *mel = (__bridge MLMultiArray *)l->mel[k_slot], *mask = (__bridge MLMultiArray *)l->mask[k_slot];
         /* the features transposed to [n_mels][T], zero past T0 */
         [mel getMutableBytesWithHandler:^(void *bytes, NSInteger size, NSArray<NSNumber *> *strides) {
             (void)size;
@@ -391,7 +406,7 @@ int pk_ane_warm(pk_ane *a, char *err, size_t errlen) {
     if (rc)
         say(err, errlen, @"out of memory", nil);
     for (uint32_t i = 0; i < a->n && rc == 0; i++)
-        if (!len_run(a, &a->len[i], feat, a->len[i].frames, x, err, errlen))
+        if (!len_run(a, &a->len[i], PK_ANE_SLOTS - 1, feat, a->len[i].frames, x, err, errlen))
             rc = -1;
     free(feat);
     free(x);
@@ -409,10 +424,12 @@ void pk_ane_free(pk_ane *a) {
     }
     for (uint32_t i = 0; i < a->n; i++) {
         ane_len *l = &a->len[i];
-        if (l->mel)
-            CFBridgingRelease(l->mel);
-        if (l->mask)
-            CFBridgingRelease(l->mask);
+        for (int k = 0; k < PK_ANE_SLOTS; k++) {
+            if (l->mel[k])
+                CFBridgingRelease(l->mel[k]);
+            if (l->mask[k])
+                CFBridgingRelease(l->mask[k]);
+        }
         if (l->pe) {
             CFBridgingRelease(l->pe);
             CFBridgingRelease(l->cos);
@@ -421,6 +438,7 @@ void pk_ane_free(pk_ane *a) {
     }
     if (a->url)
         CFBridgingRelease(a->url);
+    pthread_mutex_destroy(&a->load);
     free(a->freq);
     free(a);
 }
@@ -428,6 +446,10 @@ void pk_ane_free(pk_ane *a) {
 uint32_t pk_ane_frames(const pk_ane *a) { return a->n ? a->len[a->n - 1].frames : 0; }
 
 uint32_t pk_ane_encode(pk_ane *a, const float *feat, uint32_t T0, float *x) {
+    return pk_ane_encode_in(a, PK_ANE_SLOTS - 1, feat, T0, x);
+}
+
+uint32_t pk_ane_encode_in(pk_ane *a, int slot, const float *feat, uint32_t T0, float *x) {
     /* the shortest length that holds T0; but the one run last while it
      * holds T0 too and is less than 1536 frames longer: running a length
      * after another costs the Neural Engine about 40 ms more, where 1536
@@ -444,5 +466,5 @@ uint32_t pk_ane_encode(pk_ane *a, const float *feat, uint32_t T0, float *x) {
     }
     if (!l || !T0)
         return 0;
-    return len_run(a, l, feat, T0, x, NULL, 0);
+    return len_run(a, l, slot, feat, T0, x, NULL, 0);
 }

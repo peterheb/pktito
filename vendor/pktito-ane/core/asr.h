@@ -57,6 +57,10 @@ struct pk_asr {
     /* The encoder on the Neural Engine, where the caller gave a Core ML
      * model (pk_asr_use_ane; make ANE=1): core/ane.h */
     struct pk_ane *ane;
+    /* the Neural Engine's calls in flight (asr.c, ane_chunks): each slot's
+     * features in and encoder frames out, ane_cap feature frames each */
+    float *ane_feat[4], *ane_x[4];
+    size_t ane_cap;
 
     size_t cap;                      /* feature frames the buffers below hold */
     void  *mem;
