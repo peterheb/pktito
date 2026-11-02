@@ -483,9 +483,12 @@ function modelMenu(anchor, keys) {
         `<span>${esc(baseName(st.model_file))}</span><small title="${esc(st.model_file)}">${esc(st.model_file)}</small>${ICON.check}</button>`,
     );
   }
-  // where the models are: about 620 MB each, and the files the CLI takes
-  // with -m. The Store edition's are in its package, which Explorer can't
-  // show: there the window lists them itself, to delete (openManage).
+  // Manage models in every edition: each model's size and Delete, and on a
+  // Mac the Neural Engine encoder offered for a whole model file (Peter,
+  // 2026-11-02), beside Open a model file, the two that open a window; then
+  // where the models are, about 620 MB each and the files the CLI takes with
+  // -m, except in the Store edition, whose are in its package, which
+  // Explorer can't show.
   const show = esc(revealLabel());
   const file = st.model_file
     ? baseName(st.model_file)
@@ -495,9 +498,10 @@ function modelMenu(anchor, keys) {
   items.push(
     `<div class="pk-menu-sep" aria-hidden="true"></div>` +
       `<button class="pk-mi" type="button" role="menuitem" data-own="1"><span>${esc(t("models.open_file"))}</span></button>` +
+      `<button class="pk-mi" type="button" role="menuitem" data-manage="1"><span>${esc(t("models.manage"))}</span></button>` +
       (st.reveal
         ? `<button class="pk-mi" type="button" role="menuitem" data-reveal="1"${file ? ` title="${esc(file)}"` : ""}><span>${show}</span></button>`
-        : `<button class="pk-mi" type="button" role="menuitem" data-manage="1"><span>${esc(t("models.manage"))}</span></button>`),
+        : ""),
   );
   openMenu(anchor, keys, items.join(""), "down right", (m) => {
     m.onclick = async (e) => {
@@ -523,10 +527,10 @@ function modelMenu(anchor, keys) {
 
 /* -------------------------------------------------------------- manage -- */
 
-/* Manage models, in the model menu where the file manager can't show the
-   models' folder (st.reveal; the Store edition's is in its package): each
-   catalog model downloaded and what a stopped download of one kept, with
-   their sizes, each to delete, and their total. The model in use says so,
+/* Manage models, in every edition's model menu: each catalog model
+   downloaded and what a stopped download of one kept, with their sizes,
+   each to delete, and their total; on a Mac, the Neural Engine encoder
+   offered for a whole model file here without one (fasterRow). The model in use says so,
    and its Delete and the transcription's own wait while one runs (held). A
    download under way has the window to itself (setup), so none is listed
    here. Delete asks first, saying what it frees and what follows: the

@@ -157,9 +157,8 @@ struct Status {
     /// Running from the Microsoft Store's package (store_edition).
     store: bool,
     /// The file manager can show the models' folder, which the model menu
-    /// offers: not from the Store's package, whose storage Explorer outside
-    /// it does not show. Where it can't, the menu offers Manage models, the
-    /// app's own list of them to delete (delete_model).
+    /// offers beside Manage models: not from the Store's package, whose
+    /// storage Explorer outside it does not show.
     reveal: bool,
     media: &'static [&'static str],
     video: &'static [&'static str],
@@ -397,7 +396,7 @@ fn cancel(app: &AppHandle, j: &download::Job) -> Result<(), Problem> {
     Ok(())
 }
 
-/// Manage models' Delete (status.reveal): a catalog model's downloaded file,
+/// Manage models' Delete: a catalog model's downloaded file,
 /// or with part what a download of it that stopped kept, as Cancel deletes
 /// it. Deleting the model in use puts another downloaded one in its place,
 /// whose name comes back for the window to say so, or none, and the window
