@@ -33,6 +33,33 @@ pub struct Entry {
     pub accuracy: &'static str,
     pub bytes: u64,
     pub sha256: &'static str,
+    /// Its edition for Apple's Neural Engine, which the iOS app downloads
+    /// where the device can run it (ios.rs).
+    pub coreml: Coreml,
+}
+
+/// A file models.pktito.net serves beside a .pkf, under the first twelve
+/// digits of its SHA-256 as one is (part_url): file is its name with its
+/// extension.
+#[derive(Clone, Copy, Serialize)]
+pub struct Part {
+    pub file: &'static str,
+    pub bytes: u64,
+    pub sha256: &'static str,
+}
+
+/// A model's edition for Apple's Neural Engine, from pktito's ane fork: the
+/// model file without its encoder (`pktito-tools slim`), which only the
+/// fork loads, and the encoder as a compiled Core ML model, int8, in an
+/// Apple Archive (tools/ane/encoder.py, then `aa archive`), made from the
+/// same checkpoint, whose SHA-256 each names and the fork holds them to.
+/// For v2 589 MB in all where its .pkf is 624; the same transcript as the
+/// .pkf with that encoder, which runs at 254x on an M1 iPad (the fork's
+/// tools/ane/CLIMB.md).
+#[derive(Clone, Copy, Serialize)]
+pub struct Coreml {
+    pub slim: Part,
+    pub encoder: Part,
 }
 
 /// The models models.pktito.net serves: pktito-tools' conversions of NVIDIA's
@@ -48,6 +75,18 @@ pub const CATALOG: &[Entry] = &[
         accuracy: "",
         bytes: 624_480_196,
         sha256: "8bfa6750b83cd7c447bad82057c7a12473563b72b3d35487fcca6da0786d83c7",
+        coreml: Coreml {
+            slim: Part {
+                file: "parakeet-tdt-0.6b-v2-slim.pkf",
+                bytes: 12_115_524,
+                sha256: "e582eb76db19e9fba4d9e15d45ce041dd9a230bac3c2970643aa6808bf966acb",
+            },
+            encoder: Part {
+                file: "parakeet-tdt-0.6b-v2-encoder.mlmodelc.aar",
+                bytes: 577_037_560,
+                sha256: "8a11f959618e9463386ca9ff5234bec82d535c6a0b1e1b2101cd507c8549297c",
+            },
+        },
     },
     Entry {
         name: "parakeet-tdt-0.6b-v3",
@@ -62,6 +101,18 @@ pub const CATALOG: &[Entry] = &[
         accuracy: "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3#multilingual-asr",
         bytes: 647_552_644,
         sha256: "35a59c9a433d4da2289640db93e73c42478b576e49a293090ef61b4ae595152a",
+        coreml: Coreml {
+            slim: Part {
+                file: "parakeet-tdt-0.6b-v3-slim.pkf",
+                bytes: 35_187_972,
+                sha256: "169ead8b6b98c67676d13c40bd592614f9d1a3b3783da027fe03967cd559b100",
+            },
+            encoder: Part {
+                file: "parakeet-tdt-0.6b-v3-encoder.mlmodelc.aar",
+                bytes: 575_464_480,
+                sha256: "64cf1a407ada158ee22450e8f258258373fe8e2ba3ac4ba0f482a91f0c122cdc",
+            },
+        },
     },
 ];
 
@@ -181,6 +232,18 @@ pub fn file_in(dir: &Path, e: &Entry) -> PathBuf {
     dir.join(format!("{}.pkf", e.name))
 }
 
+/// Where e's Core ML encoder lives once it is unpacked into dir (a
+/// directory, as Core ML compiles it), named as the iOS app names it.
+pub fn encoder_in(dir: &Path, e: &Entry) -> PathBuf {
+    dir.join(format!("{}-encoder.mlmodelc", e.name))
+}
+
+/// Whether e's Core ML encoder is in dir: put in place whole, after it was
+/// unpacked, so its model file is enough to tell.
+pub fn have_encoder(dir: &Path, e: &Entry) -> bool {
+    encoder_in(dir, e).join("model.mil").is_file()
+}
+
 /// Where its download gathers until it checks.
 pub fn part_in(dir: &Path, e: &Entry) -> PathBuf {
     dir.join(format!("{}.pkf.part", e.name))
@@ -229,13 +292,21 @@ pub fn delete(data: &Path, e: &Entry) -> Result<Option<&'static Entry>, String> 
 /// forever, and a model converted again gets a new address instead of a
 /// cached copy of the old one that fails the check.
 pub fn download_url(e: &Entry) -> String {
+    format!("{}{}/{}.pkf", base(), &e.sha256[..12], e.name)
+}
+
+/// The same for a Core ML edition's file.
+pub fn part_url(p: &Part) -> String {
+    format!("{}{}/{}", base(), &p.sha256[..12], p.file)
+}
+
+fn base() -> String {
     let base = std::env::var("PKTITO_MODEL_BASE").unwrap_or_else(|_| DEFAULT_BASE.to_string());
-    let base = if base.ends_with('/') {
+    if base.ends_with('/') {
         base
     } else {
         base + "/"
-    };
-    format!("{base}{}/{}.pkf", &e.sha256[..12], e.name)
+    }
 }
 
 /// The program user_agent names: the window's "pktito" (Android's too)

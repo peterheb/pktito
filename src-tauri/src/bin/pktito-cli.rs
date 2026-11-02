@@ -30,8 +30,10 @@ usage: pktito-cli [options] FILE...    transcribe audio or video: one file's
   -o, --output PATH    one file's transcript to PATH; several's into the
                        folder PATH
   -t, --threads N      threads (default: one a core)
+      --cpu            the encoder on the CPU, on a Mac whose model has its
+                       Neural Engine encoder (which it uses otherwise)
   -q, --quiet          no progress
-bench takes -m, -t, -q, --json (its results as JSON, each file's with a
+bench takes -m, -t, -q, --cpu, --json (its results as JSON, each file's with a
 SHA-256 of its transcript) and --ref DIR: each file's transcript against
 DIR/NAME.txt, its reference (NAME the file's without its extension), as
 the same or by its word error rate and its character edits.
@@ -62,6 +64,8 @@ struct Opts {
     output: Option<PathBuf>,
     threads: i32,
     quiet: bool,
+    /// the encoder on the CPU even where the Neural Engine's is here
+    cpu: bool,
     /// bench's references, a folder of NAME.txt
     reference: Option<PathBuf>,
 }
@@ -95,6 +99,7 @@ fn run(args: &[String]) -> Result<i32, String> {
         output: None,
         threads: transcribe::threads_wanted(),
         quiet: false,
+        cpu: false,
         reference: None,
     };
     let mut it = args.iter();
@@ -112,6 +117,7 @@ fn run(args: &[String]) -> Result<i32, String> {
                     .map_err(|_| format!("{a} needs a number"))?
             }
             "-q" | "--quiet" => o.quiet = true,
+            "--cpu" => o.cpu = true,
             "--ref" if bench => o.reference = Some(PathBuf::from(value(a)?)),
             "-" => return Err("reads files, not standard input".into()),
             f if f.starts_with('-') => return Err(format!("no option {f}\n{USAGE}")),
@@ -138,6 +144,7 @@ fn transcribe_all(o: &Opts) -> Result<i32, String> {
     let path = model_path(o.model.as_deref())?;
     let model = pktito::Model::load(&path)?;
     let mut asr = pktito::Asr::new(&model, o.threads)?;
+    encoder(&mut asr, &path, o);
     let name = model.name();
     let show = !o.quiet && std::io::stderr().is_terminal();
     let mut failed = 0;
@@ -243,6 +250,7 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
     let path = model_path(o.model.as_deref())?;
     let model = pktito::Model::load(&path)?;
     let mut asr = pktito::Asr::new(&model, o.threads)?;
+    let encoder = encoder(&mut asr, &path, o);
     let json = o.ext == "json";
     let show = !o.quiet && std::io::stderr().is_terminal();
     let (version, name, backend, compiler, threads) = (
@@ -254,7 +262,7 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
     );
     if !json {
         println!(
-            "pktito-cli {version}\nmodel    {name}\nbackend  {backend}\ncompiler {compiler}\nthreads  {threads}"
+            "pktito-cli {version}\nmodel    {name}\nencoder  {encoder}\nbackend  {backend}\ncompiler {compiler}\nthreads  {threads}"
         );
     }
     let (mut audio, mut took, mut failed, mut results) = (0.0, 0.0, 0, Vec::new());
@@ -337,7 +345,7 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
     }
     if json {
         let mut all = serde_json::json!({
-            "pktito_cli": version, "model": name, "backend": backend, "compiler": compiler,
+            "pktito_cli": version, "model": name, "encoder": encoder, "backend": backend, "compiler": compiler,
             "threads": threads,
             "files": results, "audio_s": audio, "seconds": took, "x_real_time": audio / took,
         });
@@ -393,6 +401,47 @@ fn said(s: &score::Score) -> String {
 /// Word errors over words, in percent.
 fn wer(errors: usize, words: usize) -> f64 {
     if words == 0 { 0.0 } else { 100.0 * errors as f64 / words as f64 }
+}
+
+/// The encoder a transcription runs: on a Mac, the Neural Engine's where the
+/// model is a catalog one whose Core ML encoder is beside it (the ane fork,
+/// core/ane.m) and --cpu doesn't say otherwise, else the CPU's, pktito's
+/// own. Core ML compiles the encoder for this Mac the first time this
+/// program loads it, which takes a while, once. Where the Neural Engine
+/// can't run it, Core ML's reason is said and the CPU's runs. "Neural
+/// Engine" or "CPU", for bench to say.
+#[cfg(target_os = "macos")]
+fn encoder(asr: &mut pktito::Asr, path: &Path, o: &Opts) -> &'static str {
+    let Some(data) = model::data_dir() else { return "CPU" };
+    let dir = data.join("models");
+    let Some(e) = model::CATALOG.iter().find(|e| model::same_file(&model::file_in(&dir, e), path)) else {
+        return "CPU";
+    };
+    if o.cpu || !model::have_encoder(&dir, e) {
+        return "CPU";
+    }
+    let show = !o.quiet && std::io::stderr().is_terminal();
+    if show {
+        status("loading the Neural Engine's encoder (the first time, Core ML compiles it for this Mac)");
+    }
+    let r = asr.use_ane(Some(&model::encoder_in(&dir, e)));
+    if show {
+        status("");
+    }
+    match r {
+        Ok(()) => "Neural Engine",
+        Err(why) => {
+            // the model's own encoder again
+            let _ = asr.use_ane(None);
+            eprintln!("pktito-cli: the Neural Engine can't run the encoder here ({why}); using the CPU");
+            "CPU"
+        }
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn encoder(_asr: &mut pktito::Asr, _path: &Path, _o: &Opts) -> &'static str {
+    "CPU"
 }
 
 /// Seconds as h:mm:ss, or m:ss under an hour
