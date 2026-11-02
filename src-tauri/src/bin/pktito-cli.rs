@@ -146,7 +146,7 @@ fn transcribe_all(o: &Opts) -> Result<i32, String> {
                 status(&format!("{label}: reading the audio"));
             }
             let x = decode::decode(file).map_err(|e| e.message())?;
-            let (segs, _) = transcribe::run(
+            let (segs, windows, _) = transcribe::run_windows(
                 &model,
                 &mut asr,
                 &x,
@@ -163,7 +163,8 @@ fn transcribe_all(o: &Opts) -> Result<i32, String> {
                 model: Some(name.as_str()),
                 segments: &segs,
             };
-            let text = format::text(&t, &o.ext, o.times)?;
+            // json with pktito's chunks, for measuring its cuts
+            let text = format::text_windows(&t, &o.ext, o.times, &windows)?;
             let to = destination(o, file);
             if show {
                 status("");

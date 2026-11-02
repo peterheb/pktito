@@ -57,20 +57,47 @@ pub fn run(
     model: &Model,
     asr: &mut Asr,
     x: &[f32],
-    mut progress: impl FnMut(f64, &[Segment]),
+    progress: impl FnMut(f64, &[Segment]),
     stop: impl Fn() -> bool,
 ) -> Result<(Vec<Segment>, bool), String> {
+    run_windows(model, asr, x, progress, stop).map(|(segs, _, whole)| (segs, whole))
+}
+
+/// A chunk pktito transcribed, for measuring its cuts (pktito-cli's -f
+/// json): the stretch of the recording whose words are its own (pk_chunk_out.at),
+/// in seconds, and how many of the transcript's words are its, in order.
+#[derive(Clone, Copy)]
+pub struct Window {
+    pub start: f64,
+    pub end: f64,
+    pub words: usize,
+}
+
+/// run(), and each chunk's window.
+pub fn run_windows(
+    model: &Model,
+    asr: &mut Asr,
+    x: &[f32],
+    mut progress: impl FnMut(f64, &[Segment]),
+    stop: impl Fn() -> bool,
+) -> Result<(Vec<Segment>, Vec<Window>, bool), String> {
     let rate = model.rate() as f64;
     let frame = model.frame_seconds();
     let mut all = Vec::new();
+    let mut windows = Vec::new();
     if stop() {
-        return Ok((all, false));
+        return Ok((all, windows, false));
     }
     let mut open = Open::default();
     let mut done = 0.0;
     let whole = asr.transcribe(x, |c| {
         let stopping = !c.last && stop();
+        let held = open.words.len();
         let mut segs = sentences(model, c.toks, c.start as f64 / rate, frame, &mut open);
+        // its words: those it ended in sentences and those it left open,
+        // less the ones open from before it
+        let words = segs.iter().map(|s| s.words.len()).sum::<usize>() + open.words.len() - held;
+        windows.push(Window { start: c.start as f64 / rate, end: c.end as f64 / rate, words });
         // the recording's end, or where it stops: the sentence still open ends
         if c.last || stopping {
             segs.extend(open.close(model));
@@ -86,7 +113,7 @@ pub fn run(
         progress(done, &rest);
         all.extend(rest);
     }
-    Ok((all, whole))
+    Ok((all, windows, whole))
 }
 
 /// The sentence a chunk ended in the middle of: its tokens, for its text

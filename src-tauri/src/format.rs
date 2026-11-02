@@ -6,7 +6,7 @@
 
 use crate::model;
 use crate::pktito;
-use crate::transcribe::Segment;
+use crate::transcribe::{Segment, Window};
 use std::path::{Path, PathBuf};
 
 /// The formats, by the extension each is saved under
@@ -51,6 +51,12 @@ pub struct Transcript<'a> {
 
 /// t in a format: times before each sentence of .txt and .md if asked.
 pub fn text(t: &Transcript, ext: &str, times: bool) -> Result<String, String> {
+    text_windows(t, ext, times, &[])
+}
+
+/// text(), and in json the chunks pktito transcribed, where windows has
+/// them (pktito-cli, for measuring the cuts; the apps' files leave them out).
+pub fn text_windows(t: &Transcript, ext: &str, times: bool, windows: &[Window]) -> Result<String, String> {
     let segs = t.segments;
     Ok(match ext {
         "txt" => {
@@ -108,7 +114,7 @@ pub fn text(t: &Transcript, ext: &str, times: bool) -> Result<String, String> {
                 .collect();
             format!("WEBVTT\n\n{body}")
         }
-        "json" => json(t, &cues(t)?),
+        "json" => json(t, &cues(t)?, windows),
         _ => return Err(format!("No such format: {ext}")),
     })
 }
@@ -173,7 +179,7 @@ pub fn cues(t: &Transcript) -> Result<Vec<Cue>, String> {
 }
 
 /// A segment to a few lines, a word to a line, the cues as their lines
-fn json(t: &Transcript, cues: &[Cue]) -> String {
+fn json(t: &Transcript, cues: &[Cue], windows: &[Window]) -> String {
     let j = |s: &str| serde_json::to_string(s).unwrap();
     let seg = |s: &Segment| {
         let words: Vec<String> = s
@@ -207,13 +213,40 @@ fn json(t: &Transcript, cues: &[Cue]) -> String {
     };
     let segs: Vec<String> = t.segments.iter().map(seg).collect();
     let cues: Vec<String> = cues.iter().map(cue).collect();
+    // each chunk: its stretch, the silence to the next, and its words as
+    // the first of the transcript's words (counted across the segments) and
+    // how many; a sentence carried across a cut has words in two
+    let mut first = 0;
+    let windows: Vec<String> = windows
+        .iter()
+        .enumerate()
+        .map(|(i, w)| {
+            let gap = windows.get(i + 1).map_or("null".into(), |n| r3(n.start - w.end).to_string());
+            let line = format!(
+                "    {{\"start\": {}, \"end\": {}, \"gap\": {}, \"first_word\": {}, \"words\": {}}}",
+                r3(w.start),
+                r3(w.end),
+                gap,
+                first,
+                w.words
+            );
+            first += w.words;
+            line
+        })
+        .collect();
+    let windows = if windows.is_empty() {
+        String::new()
+    } else {
+        format!(",\n  \"windows\": [\n{}\n  ]", windows.join(",\n"))
+    };
     format!(
-        "{{\n  \"file\": {},\n  \"duration\": {},\n  \"model\": {},\n  \"segments\": [\n{}\n  ],\n  \"captions\": [\n{}\n  ]\n}}\n",
+        "{{\n  \"file\": {},\n  \"duration\": {},\n  \"model\": {},\n  \"segments\": [\n{}\n  ],\n  \"captions\": [\n{}\n  ]{}\n}}\n",
         j(t.name),
         r3(t.duration),
         t.model.filter(|m| !m.is_empty()).map(j).unwrap_or_else(|| "null".into()),
         segs.join(",\n"),
-        cues.join(",\n")
+        cues.join(",\n"),
+        windows
     )
 }
 
