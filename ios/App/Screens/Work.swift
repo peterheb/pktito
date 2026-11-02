@@ -525,7 +525,11 @@ private struct Rows: View {
     /// Row at the list's top, where it isn't in sight above the list's last
     /// row (which shows only in part), and followed until it shows.
     private func bring(_ row: Int, _ list: ScrollViewProxy) {
-        guard !seen.dropLast().contains(row) else { return }
+        // in sight: nothing to chase, not even a row asked for before
+        guard !seen.dropLast().contains(row) else {
+            chasing = nil
+            return
+        }
         chasing = row
         tries = 0
         withAnimation { list.scrollTo(row, anchor: .top) }

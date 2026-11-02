@@ -26,6 +26,12 @@ final class Player {
     private var observer: Any?
     private var ended: NSObjectProtocol?
     private var status: NSKeyValueObservation?
+    /// the seeks asked of AVPlayer and not yet done: until the last is, its
+    /// clock can still tell the time before it (an exact seek in a FLAC with
+    /// no seek table takes a while), and a row that time is in would take
+    /// the rows back there (Peter's 16e, 2026-11-02: a tap at 4:52 while
+    /// 1:40 played, and the list went back to 1:34)
+    private var seeking = 0
 
     private init() {
         let d = UserDefaults.standard
@@ -64,7 +70,10 @@ final class Player {
             }
         }
         observer = p.addPeriodicTimeObserver(forInterval: CMTime(value: 1, timescale: 30), queue: .main) { [weak self] t in
-            MainActor.assumeIsolated { self?.position = t.seconds.isFinite ? t.seconds : 0 }
+            MainActor.assumeIsolated {
+                guard let self, self.seeking == 0 else { return }
+                self.position = t.seconds.isFinite ? t.seconds : 0
+            }
         }
         ended = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.playing = false }
@@ -84,6 +93,7 @@ final class Player {
         scoped = false
         url = nil
         loaded = nil
+        seeking = 0
         ready = false
         playing = false
         position = 0
@@ -110,7 +120,15 @@ final class Player {
     func seek(_ t: Double, play: Bool) {
         guard let player else { return }
         position = t
-        player.seek(to: CMTime(seconds: t, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
+        seeking += 1
+        let key = loaded
+        // done, or given up for the next seek: each is called once
+        player.seek(to: CMTime(seconds: t, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, self.loaded == key, self.seeking > 0 else { return }
+                self.seeking -= 1
+            }
+        }
         if play && !playing { toggle() }
     }
 
