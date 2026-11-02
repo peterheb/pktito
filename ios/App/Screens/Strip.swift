@@ -199,7 +199,7 @@ struct Waveform: View {
         let n = peaks.count
         let half = Int(max(Double(n) / 20, seconds > 0 ? 150 * Double(n) / seconds : 0))
         var c = half
-        while 2 * half < n && c + half <= n {
+        while half > 0 && 2 * half < n && c + half <= n {
             let median = Double(peaks[(c - half)..<(c + half)].sorted()[half])
             if median > 64 { lo = min(lo, median - 16) }
             c += max(1, half / 5)
