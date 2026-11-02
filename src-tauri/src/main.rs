@@ -24,6 +24,9 @@ struct Engine {
     model: pktito::Model,
     asr: pktito::Asr,
     path: PathBuf,
+    /// its encoder the Neural Engine's: one loaded before its Core ML
+    /// encoder came (Manage models' offer) is loaded again
+    neural: bool,
 }
 
 #[derive(Default)]
@@ -130,6 +133,9 @@ struct Offer {
     have: bool,
     /// Bytes kept from a download that stopped.
     partial: u64,
+    /// On a Mac, the bytes of its Core ML encoder, which Manage models
+    /// offers where a whole file of it is here without one.
+    faster: Option<u64>,
 }
 
 #[derive(Serialize)]
@@ -173,40 +179,43 @@ fn file_dialog(app: &AppHandle) -> FileDialogBuilder<tauri::Wry> {
 }
 
 /// Load the model at path into the engine, unless it is the one there, on
-/// PKTITO_THREADS's threads (transcribe::threads_wanted).
-fn ensure_engine<'a>(slot: &'a mut Option<Engine>, path: &Path) -> Result<&'a mut Engine, String> {
-    if slot.as_ref().map(|e| e.path != path).unwrap_or(true) {
+/// PKTITO_THREADS's threads (transcribe::threads_wanted); on a Mac with its
+/// Core ML encoder where it has one (model::encoder_of, neural).
+fn ensure_engine<'a>(slot: &'a mut Option<Engine>, data: &Path, path: &Path) -> Result<&'a mut Engine, String> {
+    let encoder = model::encoder_of(data, path);
+    let stale = |e: &Engine| e.path != path || (encoder.is_some() && !e.neural);
+    if slot.as_ref().map(stale).unwrap_or(true) {
         *slot = None;
         let model = pktito::Model::load(path)?;
         #[allow(unused_mut)]
         let mut asr = pktito::Asr::new(&model, transcribe::threads_wanted())?;
-        neural(&mut asr, &model, path)?;
+        let neural = neural(&mut asr, &model, encoder.as_deref())?;
         *slot = Some(Engine {
             model,
             asr,
             path: path.to_path_buf(),
+            neural,
         });
     }
     Ok(slot.as_mut().unwrap())
 }
 
-/// On a Mac, the encoder on the Neural Engine where the catalog model at
-/// path has its Core ML encoder beside it (model::encoder_for). Core ML
-/// compiles it for this Mac the first time the app loads it (about 10 s
-/// for v2 on the M4 Pro), once. Where the Neural Engine can't run it, a
-/// whole model file runs its own encoder on the CPU; the Neural Engine
-/// edition's file has none, and that is the error.
+/// On a Mac, the encoder on the Neural Engine, the Core ML model at
+/// encoder (model::encoder_of); whether it runs there. Core ML compiles it
+/// for this Mac the first time the app loads it (about 10 s for v2 on the
+/// M4 Pro), once. Where the Neural Engine can't run it, a whole model file
+/// runs its own encoder on the CPU; the Neural Engine edition's file has
+/// none, and that is the error.
 #[cfg(target_os = "macos")]
-fn neural(asr: &mut pktito::Asr, m: &pktito::Model, path: &Path) -> Result<(), String> {
-    let Some(dir) = path.parent() else { return Ok(()) };
-    let Some(encoder) = model::encoder_for(dir, path) else { return Ok(()) };
-    match asr.use_ane(Some(&encoder)) {
-        Ok(()) => Ok(()),
+fn neural(asr: &mut pktito::Asr, m: &pktito::Model, encoder: Option<&Path>) -> Result<bool, String> {
+    let Some(encoder) = encoder else { return Ok(false) };
+    match asr.use_ane(Some(encoder)) {
+        Ok(()) => Ok(true),
         Err(why) => {
             let _ = asr.use_ane(None);
             if m.has_encoder() {
                 eprintln!("pktito: the Neural Engine can't run the encoder ({why}); using the CPU");
-                Ok(())
+                Ok(false)
             } else {
                 Err(format!("the Neural Engine can't run the model's encoder: {why}"))
             }
@@ -215,8 +224,8 @@ fn neural(asr: &mut pktito::Asr, m: &pktito::Model, path: &Path) -> Result<(), S
 }
 
 #[cfg(not(target_os = "macos"))]
-fn neural(_asr: &mut pktito::Asr, _m: &pktito::Model, _path: &Path) -> Result<(), String> {
-    Ok(())
+fn neural(_asr: &mut pktito::Asr, _m: &pktito::Model, _encoder: Option<&Path>) -> Result<bool, String> {
+    Ok(false)
 }
 
 #[tauri::command]
@@ -249,6 +258,7 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, Problem>
                     entry,
                     have: model::have_any(&dir, e),
                     partial: model::kept(&dir, e),
+                    faster: model::encoder_offer(&data, e),
                 }
             })
             .collect(),
@@ -324,6 +334,34 @@ fn download_model(app: AppHandle, state: State<'_, AppState>, name: String) -> R
                 let _ = model::save_settings(&data, &s);
             }
         },
+    );
+    Ok(())
+}
+
+/// Manage models' offer on a Mac: name's Core ML encoder alone, for its
+/// whole model file here (or the user's own copy of it), which then runs
+/// on the Neural Engine. "download" events say how it goes, as a model's.
+#[tauri::command]
+fn get_encoder(app: AppHandle, state: State<'_, AppState>, name: String) -> Result<(), Problem> {
+    let e = model::entry(&name).ok_or("no such model")?;
+    let data = data_dir(&app)?;
+    if model::encoder_offer(&data, e).is_none() {
+        return Ok(());
+    }
+    let mut slot = state.download.lock().unwrap();
+    if let Some(j) = slot.as_ref().filter(|j| j.alive()) {
+        return Err(Problem::new("download.busy").with("name", j.name()));
+    }
+    let job = Arc::new(download::Job::encoder(e, &data.join("models")));
+    *slot = Some(job.clone());
+    let tell = app.clone();
+    job.start_encoder(
+        e,
+        data.join("models"),
+        move |s| {
+            let _ = tell.emit("download", s);
+        },
+        |_| {},
     );
     Ok(())
 }
@@ -441,7 +479,7 @@ async fn open_model(
 fn use_file(app: &AppHandle, state: &AppState, path: &Path) -> Result<(), Problem> {
     {
         let mut slot = state.engine.lock().unwrap();
-        ensure_engine(&mut slot, path)
+        ensure_engine(&mut slot, &data_dir(app)?, path)
             .map_err(|why| Problem::new(model::trouble(&why)).detail(why))?;
     }
     Ok(model::choose_file(&data_dir(app)?, path)?)
@@ -622,7 +660,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
         fps,
         ..Default::default()
     });
-    let Engine { model, asr, .. } = match ensure_engine(&mut slot, &model_path) {
+    let Engine { model, asr, .. } = match ensure_engine(&mut slot, &data, &model_path) {
         Ok(e) => e,
         Err(why) => return fail(trouble("transcribe.cant_load_model", why.to_string())),
     };
@@ -1449,7 +1487,9 @@ fn headless(args: &[String]) -> Result<(), String> {
     let t1 = Instant::now();
     let model = pktito::Model::load(&model_path)?;
     let mut asr = pktito::Asr::new(&model, transcribe::threads_wanted())?;
-    neural(&mut asr, &model, &model_path)?;
+    if let Some(data) = model::data_dir() {
+        neural(&mut asr, &model, model::encoder_of(&data, &model_path).as_deref())?;
+    }
     let (segs, _) = transcribe::run(
         &model,
         &mut asr,
@@ -1885,6 +1925,7 @@ fn main() {
             set_prefs,
             choose_model,
             download_model,
+            get_encoder,
             pause_download,
             cancel_download,
             delete_model,

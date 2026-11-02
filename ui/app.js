@@ -585,6 +585,9 @@ function renderManage() {
       rows.push(row(m, esc(t("manage.paused", got)), true));
     }
   }
+  // on a Mac, a whole model file here without its Core ML encoder: the
+  // encoder offered, which runs it on the Neural Engine (main.rs get_encoder)
+  for (const m of st.catalog.filter((x) => x.faster)) rows.push(fasterRow(m));
   const total =
     used >= 1e9
       ? t("manage.used_gb", { gb: num(used / 1e9, 2) })
@@ -592,6 +595,45 @@ function renderManage() {
   $("manage-body").innerHTML = rows.length
     ? `<ul class="pk-kept">${rows.join("")}</ul><p class="pk-small pk-kept-total">${esc(total)}</p>`
     : `<p class="pk-small">${esc(t("manage.none"))}</p>`;
+}
+
+/* The encoder's download, in its row alone: a model's download (dl) is the
+   setup screen's. */
+let enc = null;
+
+function fasterRow(m) {
+  const id = `faster-${m.key}`;
+  const e = enc && enc.name === m.name ? enc : null;
+  const sizes = { got: num(mb(e ? e.got : 0)), total: num(mb(m.faster)) };
+  const sub = !e
+    ? t("manage.faster_text", { label: labelOf(m), mb: num(mb(m.faster)) })
+    : e.step === "checking"
+      ? t("download.checking")
+      : e.step === "failed"
+        ? t("download.stopped_at", sizes)
+        : t("download.progress", sizes);
+  const going = e && e.step !== "failed";
+  const button = going
+    ? `<button class="pk-btn" type="button" data-encoder-cancel="1" aria-describedby="${id}">${esc(t("download.cancel"))}</button>`
+    : `<button class="pk-btn" type="button" data-encoder="${m.name}" aria-describedby="${id}">${esc(t(e ? "download.try_again" : "manage.get"))}</button>`;
+  return (
+    `<li><div class="pk-kept-text"><span class="pk-ui" id="${id}">${esc(t("manage.faster"))}</span><small class="pk-small">${esc(sub)}</small></div>` +
+    `${button}</li>`
+  );
+}
+
+async function getEncoder(name) {
+  const m = st.catalog.find((x) => x.name === name);
+  if (!m) return;
+  enc = { name, step: "downloading", got: 0, total: m.faster };
+  renderManage();
+  try {
+    await invoke("get_encoder", { name });
+  } catch (e) {
+    enc = null;
+    renderManage();
+    toastErr(e);
+  }
 }
 
 /* While a transcription runs, the Deletes of the model in use and of the
@@ -661,6 +703,10 @@ async function deleteKept(b) {
 $("manage-body").onclick = (e) => {
   const b = e.target.closest("[data-delete]");
   if (b && !b.disabled) deleteKept(b);
+  const g = e.target.closest("[data-encoder]");
+  if (g) getEncoder(g.dataset.encoder);
+  if (e.target.closest("[data-encoder-cancel]"))
+    invoke("cancel_download").catch(toastErr);
 };
 $("manage-close").onclick = () => closeManage();
 $("manage").addEventListener("click", (e) => {
@@ -893,6 +939,18 @@ function updateDownload() {
 
 listen("download", async (e) => {
   const s = e.payload;
+  // the encoder's, for Manage models' row
+  if (enc && enc.name === s.name) {
+    const over = s.step === "done" || s.step === "cancelled";
+    enc = over ? null : s;
+    if (over) await refresh();
+    if (!$("manage").hidden) renderManage();
+    if (s.step === "done") {
+      const m = st.catalog.find((x) => x.name === s.name);
+      toast(t("models.ready", { label: m ? labelOf(m) : s.name }));
+    }
+    return;
+  }
   if (s.step === "done" || s.step === "cancelled") {
     dl = null;
     setupKey = "";

@@ -146,10 +146,52 @@ pub fn choose_file(data: &Path, path: &Path) -> Result<(), String> {
     let mut s = load_settings(data);
     let dir = data.join("models");
     match CATALOG.iter().find(|e| same_file(&file_in(&dir, e), path)) {
-        Some(e) => (s.model, s.model_file) = (Some(e.name.to_string()), None),
-        None => s.model_file = Some(path.to_path_buf()),
+        Some(e) => (s.model, s.model_file, s.model_file_is) = (Some(e.name.to_string()), None, None),
+        None => {
+            s.model_file = Some(path.to_path_buf());
+            // a copy of a catalog model, downloaded by hand: on a Mac its
+            // Core ML encoder serves it too (encoder_of), and Manage models
+            // offers it (Peter, 2026-11-02)
+            s.model_file_is = if NEURAL { copy_of(path).map(|e| e.name.to_string()) } else { None };
+        }
     }
     save_settings(data, &s)
+}
+
+/// The catalog model the file at path is, byte for byte: its size, then its
+/// SHA-256 (a second or two for 624 MB, once, when it is chosen).
+pub fn copy_of(path: &Path) -> Option<&'static Entry> {
+    let size = fs::metadata(path).ok()?.len();
+    let e = CATALOG.iter().find(|e| e.bytes == size)?;
+    let mut file = File::open(path).ok()?;
+    (sha256(&mut file, &Ctl::default()).ok()? == e.sha256).then_some(e)
+}
+
+/// The Core ML encoder for the model file at path, on a Mac: a catalog
+/// model's beside it (encoder_for), or for a file of the user's own that is
+/// a catalog model's copy (Settings::model_file_is), that model's.
+pub fn encoder_of(data: &Path, path: &Path) -> Option<PathBuf> {
+    let dir = data.join("models");
+    if let Some(enc) = encoder_for(&dir, path) {
+        return Some(enc);
+    }
+    let s = load_settings(data);
+    let own = s.model_file.as_deref().is_some_and(|f| same_file(f, path));
+    let e = entry(s.model_file_is.as_deref().filter(|_| NEURAL && own)?)?;
+    have_encoder(&dir, e).then(|| encoder_in(&dir, e))
+}
+
+/// On a Mac, the bytes of e's Core ML encoder where a whole model file of
+/// e is here without it, to offer (Manage models): one in the models
+/// folder, or the user's own file that is e's copy. None otherwise.
+pub fn encoder_offer(data: &Path, e: &Entry) -> Option<u64> {
+    if !NEURAL {
+        return None;
+    }
+    let dir = data.join("models");
+    let s = load_settings(data);
+    let own = s.model_file_is.as_deref() == Some(e.name) && s.model_file.as_ref().is_some_and(|f| f.is_file());
+    ((have(&dir, e) || own) && !have_encoder(&dir, e)).then_some(e.coreml.encoder.bytes)
 }
 
 /// Whether a and b are one file: the same path, or the same once each is
@@ -200,11 +242,10 @@ pub fn edition(dir: &Path, e: &Entry) -> Vec<Wanted> {
 /// what a download of it fetches.
 pub fn bytes_of(dir: &Path, e: &Entry) -> u64 {
     let whole = if have(dir, e) { e.bytes } else { 0 };
-    let neural = if NEURAL && have_neural(dir, e) {
-        e.coreml.slim.bytes + e.coreml.encoder.bytes
-    } else {
-        0
-    };
+    // the edition's files, or an encoder fetched for a whole file alone
+    let slim = if NEURAL && Wanted::part(dir, e, &e.coreml.slim).here() { e.coreml.slim.bytes } else { 0 };
+    let encoder = if NEURAL && have_encoder(dir, e) { e.coreml.encoder.bytes } else { 0 };
+    let neural = if whole > 0 || slim > 0 { slim + encoder } else { 0 };
     match whole + neural {
         0 => edition(dir, e).iter().map(|w| w.bytes).sum(),
         n => n,
@@ -294,6 +335,8 @@ pub fn unpack_encoder(archive: &Path, dst: &Path) -> Result<(), String> {
 pub struct Settings {
     pub model: Option<String>,
     pub model_file: Option<PathBuf>,
+    /// The catalog model model_file is a copy of, where it is one (copy_of).
+    pub model_file_is: Option<String>,
     pub prefs: Prefs,
     pub window: Option<[f64; 2]>,
 }

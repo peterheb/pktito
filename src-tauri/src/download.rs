@@ -128,6 +128,39 @@ impl Job {
         });
     }
 
+    /// A job for e's Core ML encoder alone, for a whole model file that is
+    /// here without it (model::encoder_offer).
+    pub fn encoder(e: &Entry, dir: &Path) -> Job {
+        Job::for_file(&Wanted::part(dir, e, &e.coreml.encoder))
+    }
+
+    /// Run encoder()'s download on a thread: the archive, then unpacked;
+    /// `done` gets the encoder.
+    pub fn start_encoder(
+        self: &std::sync::Arc<Job>,
+        e: &'static Entry,
+        dir: PathBuf,
+        tell: impl Fn(&State) + Send + 'static,
+        done: impl FnOnce(PathBuf) + Send + 'static,
+    ) {
+        let archive = Wanted::part(&dir, e, &e.coreml.encoder);
+        let dst = model::encoder_in(&dir, e);
+        let job = self.clone();
+        self.start_file(archive, tell, move |got| {
+            job.set(|s| s.step = "checking");
+            match model::unpack_encoder(&got, &dst) {
+                Ok(()) => {
+                    job.set(|s| s.step = "done");
+                    done(dst);
+                }
+                Err(why) => job.set(|s| {
+                    (s.step, s.speed, s.retry, s.trying) = ("failed", 0.0, false, false);
+                    s.problem = Some(Problem::new("download.damaged").detail(why));
+                }),
+            }
+        });
+    }
+
     /// start() for any file models.pktito.net serves.
     pub fn start_file(
         self: &std::sync::Arc<Job>,
