@@ -2031,7 +2031,7 @@ function rangeOf(peaks, seconds) {
     const hi = s[Math.min(s.length - 1, Math.floor(s.length * 0.995))];
     const n = peaks.length;
     const half = Math.max(n / 20, seconds ? (150 * n) / seconds : 0) | 0;
-    for (let c = half; 2 * half < n && c + half <= n; c += Math.max(1, (half / 5) | 0)) {
+    for (let c = half; half > 0 && 2 * half < n && c + half <= n; c += Math.max(1, (half / 5) | 0)) {
       const w = Float64Array.from(peaks.slice(c - half, c + half)).sort();
       const median = w[w.length >> 1];
       if (median > 64) lo = Math.min(lo, median - 16);
