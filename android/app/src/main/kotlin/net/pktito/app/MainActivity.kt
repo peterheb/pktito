@@ -41,6 +41,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
@@ -57,9 +58,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.pktito.app.ui.About
 import net.pktito.app.ui.Finder
+import net.pktito.app.ui.Follow
 import net.pktito.app.ui.Manage
 import net.pktito.app.ui.ManageActions
 import net.pktito.app.ui.ModelButton
@@ -235,6 +238,9 @@ class MainActivity : ComponentActivity() {
     private fun App() {
         val t = Transcriber
         val list = rememberLazyListState()
+        // what moves the list besides the reader, and their hand on it
+        val follow = remember(list) { Follow(list) }
+        val scope = rememberCoroutineScope()
         // a finger's strip has no speaker or slider: the device's volume keys alone (Player.keysOnly)
         val finger = byFinger()
         SideEffect { Player.keysOnly = finger }
@@ -291,24 +297,14 @@ class MainActivity : ComponentActivity() {
         }
         // the match to be on once the matches or the search change, the
         // playhead taken to it where the search was typed at rest
-        // (Finder.settle), and each move to one brought into sight, its row a
-        // third of the way down (app.js, goHit). Keyed on the search too: two
-        // searches that find nothing have the same matches, none, and without
-        // a settle between them the other view's, found next, would count as
-        // typed
+        // (Finder.settle). Keyed on the search too: two searches that find
+        // nothing have the same matches, none, and without a settle between
+        // them the other view's, found next, would count as typed
         LaunchedEffect(hits, finder.query) {
             finder.settle(hits, Player.position, if (Player.playing) null else { s -> seek(s, false) })
         }
         // the match playback passes, the reader with it (Finder.follow)
         LaunchedEffect(hits) { snapshotFlow { Player.position }.collect { finder.follow(hits, it, false) } }
-        LaunchedEffect(finder.moved) {
-            val h = hits.getOrNull(finder.at) ?: return@LaunchedEffect
-            val info = list.layoutInfo
-            val row = info.visibleItemsInfo.firstOrNull { it.index == h.row }
-            if (row == null || row.offset < info.viewportStartOffset || row.offset + row.size > info.viewportEndOffset)
-                list.animateScrollToItem(h.row, -info.viewportSize.height / 3)
-            finder.show()
-        }
         // the cues, the first time the transcript is shown as captions
         LaunchedEffect(captions, t.transcript) {
             val tr = t.transcript
@@ -317,21 +313,31 @@ class MainActivity : ComponentActivity() {
                     .onFailure { Log.w(TAG, "captions", it) }
                     .getOrDefault(emptyList())
         }
-        // the transcript's end followed as it comes, for a reader who is there;
-        // finished, it starts at its top (ui/app.js, buildMain)
+        // the transcript's end followed as it comes, for a reader who is there
+        // and has no hand on the list (Follow); finished, it starts at its top
+        // (ui/app.js, buildMain)
         LaunchedEffect(t.segments.size) {
             val last = list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            if (t.running && t.segments.isNotEmpty() && last >= t.segments.size - 3)
-                list.animateScrollToItem(t.segments.size - 1)
+            if (t.running && t.segments.isNotEmpty() && last >= t.segments.size - 3 && !follow.hands)
+                follow.scroll { animateScrollToItem(t.segments.size - 1) }
         }
         LaunchedEffect(review, t.id) {
             if (review) list.scrollToItem(0)
         }
-        // the row playing kept in sight
+        // the row playing kept in sight, for a reader still with it (Follow.playing)
         val current = if (Player.playing) rows.indexOfLast { it.start <= Player.position + 1e-3 } else -1
-        LaunchedEffect(current) {
-            val seen = list.layoutInfo.visibleItemsInfo.map { it.index }
-            if (current >= 0 && current !in seen.dropLast(1)) list.animateScrollToItem(current)
+        LaunchedEffect(current) { follow.playing(current) }
+        // each move to a match brought into sight, its row a third of the way
+        // down (app.js, goHit). After the row playing's: a step or a tick
+        // while it plays moves both, and this scroll, the later, takes the
+        // list from that one, which would have left the row at the top
+        LaunchedEffect(finder.moved) {
+            val h = hits.getOrNull(finder.at) ?: return@LaunchedEffect
+            val info = list.layoutInfo
+            val row = info.visibleItemsInfo.firstOrNull { it.index == h.row }
+            if (row == null || row.offset < info.viewportStartOffset || row.offset + row.size > info.viewportEndOffset)
+                follow.scroll { animateScrollToItem(h.row, -info.viewportSize.height / 3) }
+            finder.show()
         }
         LaunchedEffect(toast) {
             if (toast != null) {
@@ -406,7 +412,7 @@ class MainActivity : ComponentActivity() {
                 playable = Player.ready,
                 playing = Player.playing,
                 position = Player.position,
-                list = list,
+                follow = follow,
                 chosen = base.copy(video = t.fps),
                 find = finder,
                 hits = hits,
@@ -441,6 +447,11 @@ class MainActivity : ComponentActivity() {
                     },
                     play = { Player.toggle(this@MainActivity) },
                     seek = seek,
+                    jump = { s ->
+                        seek(s, false)
+                        val row = rows.indexOfLast { it.start <= s + 1e-3 }
+                        scope.launch { follow.bring(row) }
+                    },
                     setBase = {
                         base = it
                         prefs.edit()
