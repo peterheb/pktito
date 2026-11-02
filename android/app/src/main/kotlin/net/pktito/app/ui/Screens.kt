@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -583,6 +582,8 @@ class WorkActions(
     val setCaptions: (Boolean) -> Unit,
     val play: () -> Unit,
     val seek: (seconds: Double, play: Boolean) -> Unit,
+    /** a seek on the waveform, whose row the list brings wherever the reader is (Follow) */
+    val jump: (seconds: Double) -> Unit,
     val setBase: (Timebase) -> Unit,
 )
 
@@ -635,7 +636,7 @@ fun Work(
     playable: Boolean,
     playing: Boolean,
     position: Double,
-    list: LazyListState,
+    follow: Follow,
     sound: Sound,
     chosen: Timebase,
     find: Finder,
@@ -710,7 +711,7 @@ fun Work(
                     right = if (duration > 0) base.length() else "",
                     playLabel = stringResource(if (playing) R.string.pause else R.string.play),
                     onPlay = a.play,
-                    onSeek = { a.seek(it * duration, false) },
+                    onSeek = { a.jump(it * duration) },
                     sound = sound,
                     base = base,
                     onBase = a.setBase,
@@ -751,7 +752,7 @@ fun Work(
                     if (bad) Icon(Icons.alert, null, tint = p.err, modifier = Modifier.size(16.dp))
                     Text(msg, style = Type.body.copy(fontSize = 15.sp), color = if (bad) p.err else p.inkMuted)
                 }
-            Rows(rows, review, captions, playing, position, stats, base, hits, find.at, find.shown, list, a, edge, Modifier.weight(1f))
+            Rows(rows, review, captions, playing, position, stats, base, hits, find.at, find.shown, follow, a, edge, Modifier.weight(1f))
         }
     }
 }
@@ -892,7 +893,8 @@ private fun ShareAs(name: String, times: Boolean, a: WorkActions) {
  * the file's longest time needs more at a larger text size; a cue's two
  * times a range there. The row playing on the surface, the beak's square after
  * its time and the word playing underlined in it; a row, tapped anywhere,
- * plays from its time.
+ * plays from its time. The fingers on the list are counted for what moves it
+ * besides the reader (Follow).
  */
 @Composable
 private fun Rows(
@@ -906,7 +908,7 @@ private fun Rows(
     hits: List<Hit>,
     at: Int,
     shown: Int,
-    list: LazyListState,
+    follow: Follow,
     a: WorkActions,
     /** the work's edge (Work): the rows' boxes stand on it */
     edge: Dp,
@@ -935,7 +937,7 @@ private fun Rows(
         // further out as the time's column grows with the text
         val column = maxOf(112.dp, times).takeIf { maxWidth >= 508.dp + it }
         SelectionContainer(selection) {
-            LazyColumn(state = list, contentPadding = PaddingValues(start = edge, end = edge, bottom = 16.dp)) {
+            LazyColumn(Modifier.hands(follow), state = follow.list, contentPadding = PaddingValues(start = edge, end = edge, bottom = 16.dp)) {
                 itemsIndexed(rows) { i, s ->
                     val now = i == current
                     val word = if (now) s.words.indexOfLast { it.start <= position + 1e-3 } else -1

@@ -35,6 +35,7 @@ import androidx.compose.ui.test.performTouchInput
 import java.io.File
 import net.pktito.app.ui.About
 import net.pktito.app.ui.Finder
+import net.pktito.app.ui.Follow
 import net.pktito.app.ui.findIn
 import net.pktito.app.ui.Manage
 import net.pktito.app.ui.ManageActions
@@ -80,7 +81,7 @@ class Shots {
     private val segments = Transcriber.parse(String(resource("alice-segments.json")))
     private val cues = Transcriber.parseCues(String(resource("alice-cues.json")), segments.flatMap { it.words })
     private val peaks = resource("alice-peaks.bin")
-    private val actions = WorkActions({}, {}, {}, {}, {}, {}, {}, { _, _ -> }, {})
+    private val actions = WorkActions({}, {}, {}, {}, {}, {}, {}, { _, _ -> }, {}, {})
 
     /**
      * The screen, or what act leads to on it (a menu, its own window); with
@@ -166,7 +167,7 @@ class Shots {
             stats = if (step == "done") "Transcribed in 0:11, 58.2x real-time" else null,
             pace = if (step == "transcribing") "57.9x real-time" else null,
             captions = captions, times = false, playable = step == "done" && why == null, playing = playing,
-            position = position, list = rememberLazyListState(),
+            position = position, follow = Follow(rememberLazyListState()),
             sound = Sound(speed, Player.SPEEDS, volume, muted, {}, { _, _ -> }, {}), chosen = base,
             find = find, hits = if (step == "done") findIn(rows, find.query) else emptyList(), a = actions,
         )

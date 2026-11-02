@@ -88,6 +88,13 @@ object Player {
     private var then: Double? = null
     /** The playhead moved before the player was ready, which then follows it. */
     private var stale = false
+    /**
+     * A seek of mp's own under way (a file played as it is), whose time tick
+     * leaves until it is done: Android promises no new time before the seek
+     * completes, and one from before it put the rows back on the row left
+     * (iOS's player did, Peter's iPhone 16e, 2026-11-01).
+     */
+    private var seeking = false
     private var focus: AudioFocusRequest? = null
     /** The application's, for the focus given back from a player's own listeners, which have no screen at hand. */
     private var audio: AudioManager? = null
@@ -132,6 +139,7 @@ object Player {
                 seek(context, position)
             }
         }
+        p.setOnSeekCompleteListener { if (mp === p) seeking = false }
         p.setOnErrorListener { _, what, extra ->
             Log.w(TAG, "playing $key: error $what, $extra")
             if (mp === p) {
@@ -172,6 +180,7 @@ object Player {
         }
         val on = playing || play
         if (index == 0L) {
+            seeking = true
             p.seekTo((s * 1000).toLong(), MediaPlayer.SEEK_CLOSEST)
             if (on && !playing) play(context)
             return
@@ -277,9 +286,9 @@ object Player {
         abandon()
     }
 
-    /** Where it has got to, read while it plays; not while a seek's view is prepared, whose place the playhead has. */
+    /** Where it has got to, read while it plays; not while a seek is under way or its view prepared, whose place the playhead has. */
     fun tick() {
-        if (next != null) return
+        if (next != null || seeking) return
         mp?.takeIf { it.isPlaying }?.let { position = (start + it.currentPosition / 1000.0).coerceAtLeast(0.0) }
     }
 
@@ -294,6 +303,7 @@ object Player {
         nextSource = null
         then = null
         stale = false
+        seeking = false
         start = 0.0
         if (index != 0L) Engine.viewIndexFree(index)
         index = 0L
