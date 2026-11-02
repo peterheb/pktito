@@ -64,7 +64,7 @@ struct Strip: View {
             VStack(spacing: gap) {
                 GeometryReader { g in
                     let x = { (v: DragGesture.Value) in min(max(v.location.x / max(g.size.width, 1), 0), 1) }
-                    Waveform(peaks: t.peaks, at: at, height: wave)
+                    Waveform(peaks: t.peaks, seconds: duration, at: at, height: wave)
                         .opacity(review && !player.ready && !silent ? 0.45 : 1)
                         .contentShape(Rectangle())
                         .gesture(review ? DragGesture(minimumDistance: 0)
@@ -141,17 +141,19 @@ extension Timebase {
 }
 
 /// The waveform the strip's width (ui/app.js, drawWave): bars 2 wide 1
-/// apart, each the mean of the outline's slices under it, between the
-/// outline's own 10th percentile and its 99.5th; the bars before the
-/// playhead in the played color, the playhead the beak's, a point wider each
-/// side and alone reaching the top. No outline yet: the empty strip's bars.
+/// apart, each the mean of the outline's slices under it, within the
+/// outline's own range (range); the bars before the playhead in the played
+/// color, the playhead the beak's, a point wider each side and alone
+/// reaching the top. No outline yet: the empty strip's bars.
 struct Waveform: View {
     let peaks: [UInt8]?
+    /// the recording's length, for how long a stretch of it the range weighs
+    let seconds: Double
     let at: Double
     var height: CGFloat = 64
 
     var body: some View {
-        let range = Waveform.range(peaks)
+        let range = Waveform.range(peaks, seconds)
         Canvas { ctx, size in
             let bar: CGFloat = 2, gap: CGFloat = 1
             let n = max(1, Int((size.width + gap) / (bar + gap)))
@@ -180,12 +182,31 @@ struct Waveform: View {
         .accessibilityHidden(true)
     }
 
-    private static func range(_ peaks: [UInt8]?) -> (Double, Double) {
+    /// The last outline's range, which a body drawn at each move of the
+    /// playhead would otherwise work out again every time.
+    @MainActor private static var last: (peaks: [UInt8], seconds: Double, range: (Double, Double))?
+
+    /// The outline's range as the desktop's (ui/app.js, rangeOf, which says
+    /// why): its 10th percentile to its 99.5th, the floor 3 dB under the
+    /// quietest stretch of a tenth of it or 5 minutes, by its median, where
+    /// that is lower and not silence (more than 36 dB under the top).
+    @MainActor private static func range(_ peaks: [UInt8]?, _ seconds: Double) -> (Double, Double) {
         guard let peaks, !peaks.isEmpty else { return (0, 255) }
+        if let last, last.seconds == seconds, last.peaks == peaks { return last.range }
         let s = peaks.sorted()
-        let lo = Double(s[Int(Double(s.count) * 0.1)])
+        var lo = Double(s[Int(Double(s.count) * 0.1)])
         let hi = Double(s[min(s.count - 1, Int(Double(s.count) * 0.995))])
-        return (lo, max(hi, lo + 16))
+        let n = peaks.count
+        let half = Int(max(Double(n) / 20, seconds > 0 ? 150 * Double(n) / seconds : 0))
+        var c = half
+        while 2 * half < n && c + half <= n {
+            let median = Double(peaks[(c - half)..<(c + half)].sorted()[half])
+            if median > 64 { lo = min(lo, median - 16) }
+            c += max(1, half / 5)
+        }
+        let range = (lo, max(hi, lo + 16))
+        last = (peaks, seconds, range)
+        return range
     }
 }
 
