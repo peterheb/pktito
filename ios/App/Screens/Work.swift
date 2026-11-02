@@ -31,6 +31,8 @@ struct Work: View {
     /// its own width 600 or more: its edges 24, as the desktop's wide work
     /// and Material's; 16 under that, a phone's (the layout audit, 2026-11-01)
     @State private var roomy = false
+    /// the waveform's seeks, each a jump the rows bring into sight (Rows)
+    @State private var jumped = 0
 
     /// What the matches are found anew for.
     private struct Sought: Equatable {
@@ -63,7 +65,10 @@ struct Work: View {
                             seek(hits[k].time)
                             s.finder.go(hits, k)
                         },
-                        seek: { seek($0 * t.duration) })
+                        seek: {
+                            seek($0 * t.duration)
+                            jumped += 1
+                        })
                         // 16 under the header's buttons: their 11 and 5
                         .padding(.horizontal, edge)
                         .padding(.top, 5)
@@ -92,7 +97,7 @@ struct Work: View {
             .fixedSize(horizontal: false, vertical: true)
             // what the rows' room is reckoned from while the rest makes room
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { if !room { above = $0 } }
-            Rows(rows: rows, review: review, marks: marks, hits: hits, stats: stats(review), edge: edge) { time, play in
+            Rows(rows: rows, review: review, marks: marks, hits: hits, stats: stats(review), edge: edge, jump: jumped) { time, play in
                 seek(time, play: play)
             }
         }
@@ -389,12 +394,19 @@ struct Marked: Equatable {
 /// underlined in it; a row, tapped anywhere, plays from its time.
 ///
 /// The list follows: the transcript's end as it comes, for a reader who is
-/// there; finished, it starts at its top; the row playing is kept in sight,
-/// and each move to a match brings the match's own line into sight, by the
-/// least scroll that shows it: a long row's match can be in a line the
-/// list under the keyboard doesn't show (Android's app as well,
-/// 2026-11-01). A row out of sight comes a third of the way down first
-/// (app.js, goHit), which draws its match.
+/// there; finished, it starts at its top; the row playing is kept in sight
+/// for a reader still with it, and each move to a match brings the match's
+/// own line into sight, by the least scroll that shows it: a long row's
+/// match can be in a line the list under the keyboard doesn't show
+/// (Android's app as well, 2026-11-01). A row out of sight comes a third of
+/// the way down first (app.js, goHit), which draws its match.
+///
+/// None of it while a finger or a fling moves the list: the list pulled to
+/// the row playing at each new one, under a reader scrolling to a row to
+/// tap, lost the playhead after a few such taps (Peter, the iPhone 16e,
+/// 2026-11-01). Playback takes along only a reader whose row before is in
+/// sight, as the desktop's does (app.js, showTime); a reader who has
+/// scrolled away is left there, and the waveform's seeks bring their row.
 private struct Rows: View {
     let rows: [Segment]
     let review: Bool
@@ -403,10 +415,20 @@ private struct Rows: View {
     let stats: String?
     /// the screen's edge, 16 or 24 (Work)
     let edge: CGFloat
+    /// the waveform's seeks so far, each a jump to bring into sight (Work)
+    let jump: Int
     let seek: (Double, Bool) -> Void
     /// the id of the current match's view in its row (Sentence)
     static let match = "match"
     @State private var seen: [Int] = []
+    /// what moves the list: a hand (tracking, interacting, a fling's
+    /// decelerating), an animated scroll of ours, or nothing
+    @State private var phase: ScrollPhase = .idle
+    /// a row a follow scrolled to, until it shows: a far scroll in a lazy
+    /// list lands by the heights of the rows not yet drawn, and can stop a
+    /// row or more short of it; tried again once the list is still
+    @State private var chasing: Int?
+    @State private var tries = 0
     /// a move to a match not yet brought into sight
     @State private var revealing = false
     @State private var width: CGFloat = 0
@@ -451,15 +473,32 @@ private struct Rows: View {
                 .padding(.bottom, 16)
             }
             .onScrollTargetVisibilityChange(idType: Int.self) { seen = $0.sorted() }
-            // the row playing kept in sight
-            .onChange(of: p.playing ? current : -1) { _, now in
-                if now >= 0 && !seen.dropLast().contains(now) {
-                    withAnimation { list.scrollTo(now, anchor: .top) }
+            .onScrollPhaseChange { _, now in
+                phase = now
+                if hands { chasing = nil }
+                // a follow that stopped short, once the list is still: twice more at most
+                if now == .idle, let r = chasing {
+                    if seen.dropLast().contains(r) || tries >= 2 {
+                        chasing = nil
+                    } else {
+                        tries += 1
+                        withAnimation { list.scrollTo(r, anchor: .top) }
+                    }
                 }
+            }
+            // the row playing kept in sight, for a reader still with it: the
+            // row before in sight, or playback just begun or followed to now
+            .onChange(of: p.playing ? current : -1) { was, now in
+                guard now >= 0, !hands else { return }
+                if was < 0 || chasing != nil || seen.contains(was) { bring(now, list) }
+            }
+            // a seek on the waveform: its row, wherever the reader is
+            .onChange(of: jump) {
+                if current >= 0 && !hands { bring(current, list) }
             }
             // the transcript's end followed as it comes, for a reader who is there
             .onChange(of: t.segments.count) { _, n in
-                if t.running && n > 0 && (seen.last ?? 0) >= n - 4 {
+                if t.running && n > 0 && (seen.last ?? 0) >= n - 4 && !hands {
                     withAnimation { list.scrollTo(n - 1, anchor: .bottom) }
                 }
             }
@@ -478,6 +517,18 @@ private struct Rows: View {
         }
         .padding(.top, 16)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+    }
+
+    /// A finger on the list, or its fling: the reader moving it.
+    private var hands: Bool { phase == .tracking || phase == .interacting || phase == .decelerating }
+
+    /// Row at the list's top, where it isn't in sight above the list's last
+    /// row (which shows only in part), and followed until it shows.
+    private func bring(_ row: Int, _ list: ScrollViewProxy) {
+        guard !seen.dropLast().contains(row) else { return }
+        chasing = row
+        tries = 0
+        withAnimation { list.scrollTo(row, anchor: .top) }
     }
 
     /// The current match into sight: once its row has drawn it, its line,
