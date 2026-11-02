@@ -2572,7 +2572,9 @@ function wordAt(s, offset) {
   return found;
 }
 
-function runFind() {
+/* The search as the field has it, the transcript marked again; sought when
+   the reader typed it, rather than the transcript drawn anew under it */
+function runFind(sought) {
   const f = current();
   if (!f || modeOf(f) !== "review") return;
   // the time of the match the reader is on, before the search changes
@@ -2602,7 +2604,16 @@ function runFind() {
   hitAt = -1;
   passed = passedAt(f.pos);
   const kept = hitTimes.indexOf(was);
-  if (hits.length) goHit(kept >= 0 ? kept : Math.max(0, passed));
+  if (hits.length) {
+    const k = kept >= 0 ? kept : Math.max(0, passed);
+    // typed at rest, the playhead to the match the reader goes to, so that
+    // Play starts where the transcript went: a search typed is a place
+    // sought (Peter, 2026-11-01); playing, it stays with the listener, and
+    // the reader follows it (followHit). Before goHit, as in stepHit: the
+    // seek's follow would take the reader to the last of matches in one word
+    if (sought && !playing) seek(hitTimes[k], false);
+    goHit(k);
+  }
   findCount();
 }
 
@@ -2619,14 +2630,16 @@ function followHit(t, jump) {
   goHit(Math.max(0, k), false);
 }
 
-/* A step (Enter, the arrows) while it plays takes the playhead to its match,
-   as a tick does: the reader follows the playhead then, and would be taken
-   back at the next match passed. At rest a step only reads, and the
-   playhead keeps the listener's place (Peter, 2026-10-27). */
+/* A step (Enter, the arrows) takes the playhead to its match, as a tick
+   does: while it plays, because the reader follows the playhead and would
+   be taken back at the next match passed; at rest, so that Play starts at
+   the word the transcript went to. A step at rest once only read, keeping
+   the listener's place (2026-10-27), but with the transcript at the match
+   a Play from elsewhere felt like a mistake (Peter, 2026-11-01). */
 function stepHit(d) {
   if (!hits.length) return;
   const k = (hitAt + d + hits.length) % hits.length;
-  if (playing) seek(hitTimes[k], false);
+  seek(hitTimes[k], false);
   goHit(k);
 }
 
@@ -2680,7 +2693,7 @@ function openFind() {
   $("find").select();
 }
 
-$("find").addEventListener("input", runFind);
+$("find").addEventListener("input", () => runFind(true));
 $("find-prev").onclick = (e) => {
   e.preventDefault();
   stepHit(-1);

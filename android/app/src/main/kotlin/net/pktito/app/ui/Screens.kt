@@ -730,9 +730,9 @@ fun Work(
                     locate = locate,
                 )
             if (review && rows.isNotEmpty())
-                // a step while it plays takes the playhead to its match (Finder.step)
+                // a step takes the playhead to its match (Finder.step)
                 Views(
-                    captions, a.setCaptions, find, hits, if (playing) ({ t: Double -> a.seek(t, false) }) else null, makeRoom,
+                    captions, a.setCaptions, find, hits, { t: Double -> a.seek(t, false) }, makeRoom,
                     Modifier.onSizeChanged { if (!makeRoom) line = it.height }.padding(start = edge, end = edge, top = 16.dp),
                 )
             val msg = when {
@@ -828,7 +828,7 @@ private fun Head(back: (@Composable () -> Unit)?, name: @Composable () -> Unit, 
  * keyboard stays up as it moves.
  */
 @Composable
-private fun Views(captions: Boolean, setCaptions: (Boolean) -> Unit, find: Finder, hits: List<Hit>, seek: ((Double) -> Unit)?, alone: Boolean, modifier: Modifier) {
+private fun Views(captions: Boolean, setCaptions: (Boolean) -> Unit, find: Finder, hits: List<Hit>, seek: (Double) -> Unit, alone: Boolean, modifier: Modifier) {
     val first = stringResource(R.string.sentences)
     val second = stringResource(R.string.captions)
     val label = stringResource(R.string.find_label)

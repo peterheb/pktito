@@ -160,10 +160,7 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) File(cacheDir, SHARED).deleteRecursively()
         about = savedInstanceState?.getBoolean("about") ?: false
         managing = savedInstanceState?.getBoolean("managing") ?: false
-        savedInstanceState?.getString("find")?.let {
-            finder.query = it
-            finder.open = it.isNotEmpty()
-        }
+        savedInstanceState?.getString("find")?.let(finder::restore)
         waiting = savedInstanceState?.let { BundleCompat.getParcelable(it, "waiting", Uri::class.java) }
         Models.refresh(this)
         Recents.refresh(this)
@@ -286,9 +283,22 @@ class MainActivity : ComponentActivity() {
                 Player.tick()
             }
         }
-        // the match to be on once the matches change, and each move to one
-        // brought into sight, its row a third of the way down (app.js, goHit)
-        LaunchedEffect(hits) { finder.settle(hits, Player.position) }
+        // the playhead to s, playing on if it was or if play, and the reader
+        // with it (Finder.follow)
+        val seek = { s: Double, play: Boolean ->
+            Player.seek(this@MainActivity, s, play)
+            finder.follow(hits, Player.position, true)
+        }
+        // the match to be on once the matches or the search change, the
+        // playhead taken to it where the search was typed at rest
+        // (Finder.settle), and each move to one brought into sight, its row a
+        // third of the way down (app.js, goHit). Keyed on the search too: two
+        // searches that find nothing have the same matches, none, and without
+        // a settle between them the other view's, found next, would count as
+        // typed
+        LaunchedEffect(hits, finder.query) {
+            finder.settle(hits, Player.position, if (Player.playing) null else { s -> seek(s, false) })
+        }
         // the match playback passes, the reader with it (Finder.follow)
         LaunchedEffect(hits) { snapshotFlow { Player.position }.collect { finder.follow(hits, it, false) } }
         LaunchedEffect(finder.moved) {
@@ -430,10 +440,7 @@ class MainActivity : ComponentActivity() {
                         prefs.edit().putBoolean("captions", it).apply()
                     },
                     play = { Player.toggle(this@MainActivity) },
-                    seek = { s, play ->
-                        Player.seek(this@MainActivity, s, play)
-                        finder.follow(hits, Player.position, true)
-                    },
+                    seek = seek,
                     setBase = {
                         base = it
                         prefs.edit()
