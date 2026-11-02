@@ -93,7 +93,8 @@ extern "C" {
     fn pk_model_frame_seconds(m: *const RawModel) -> f64;
     fn pk_asr_new(m: *const RawModel, threads: c_int) -> *mut RawAsr;
     fn pk_asr_free(a: *mut RawAsr);
-    // o NULL: pktito's defaults, chunks of 30 s at most and the retry
+    // o NULL: pktito's defaults (pk_transcribe_defaults): chunks of 30.72 s at
+    // most, the far side of a cut in mid-sentence heard, and the retry
     fn pk_asr_transcribe(
         a: *mut RawAsr,
         x: *const f32,
