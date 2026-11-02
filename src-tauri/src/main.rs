@@ -195,8 +195,9 @@ struct Status {
     /// The data folder is that package's own (data_in_package).
     data_in_package: bool,
     /// The file manager can show the models' folder, which the model menu
-    /// offers beside Manage models: not from the Store's package, whose
-    /// storage Explorer outside it does not show.
+    /// offers beside Manage models: not where the data is the Store
+    /// package's own (data_in_package), which Explorer outside the package
+    /// does not show.
     reveal: bool,
     media: &'static [&'static str],
     video: &'static [&'static str],
@@ -275,6 +276,7 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, Problem>
         model::save_settings(&data, &s)?;
     }
     let dir = data.join("models");
+    let in_package = data_in_package(&data);
     let download = state
         .download
         .lock()
@@ -305,8 +307,8 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, Problem>
         backend: pktito::backend(),
         platform: std::env::consts::OS,
         store: store_edition(),
-        data_in_package: data_in_package(&data),
-        reveal: !store_edition(),
+        data_in_package: in_package,
+        reveal: !in_package,
         media: decode::MEDIA,
         video: VIDEO,
     })
