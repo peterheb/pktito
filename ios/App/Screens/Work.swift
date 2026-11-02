@@ -354,8 +354,10 @@ private struct Views: View {
             } else {
                 IconButton(icon: .search, label: L("find_label"), kind: .ghost) { f.open = true }
             }
-            Spacer(minLength: 0)
         }
+        // to the start by its frame, not a spacer after it: the line's 12
+        // between the field across it and a spacer left the field 12 short
+        // of the strip's edge above it (Peter, the iPhone 16e, 2026-11-01)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(alignment: .leading) {
             Switch2(first: L("sentences"), second: L("captions"), onSecond: .constant(s.captions))
