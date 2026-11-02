@@ -5,7 +5,7 @@
 //! same bytes. It comes with the app, beside the window's program: the
 //! bundles carry every program in src/bin.
 
-use pktito_app::{awake, decode, download, format, model, pktito, transcribe};
+use pktito_app::{awake, decode, download, format, model, pktito, score, transcribe};
 use std::fs;
 use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
@@ -31,8 +31,10 @@ usage: pktito-cli [options] FILE...    transcribe audio or video: one file's
                        folder PATH
   -t, --threads N      threads (default: one a core)
   -q, --quiet          no progress
-bench takes -m, -t, -q and --json (its results as JSON, each file's with a
-SHA-256 of its transcript).
+bench takes -m, -t, -q, --json (its results as JSON, each file's with a
+SHA-256 of its transcript) and --ref DIR: each file's transcript against
+DIR/NAME.txt, its reference (NAME the file's without its extension), as
+the same or by its word error rate and its character edits.
 ";
 
 fn main() {
@@ -60,6 +62,8 @@ struct Opts {
     output: Option<PathBuf>,
     threads: i32,
     quiet: bool,
+    /// bench's references, a folder of NAME.txt
+    reference: Option<PathBuf>,
 }
 
 fn run(args: &[String]) -> Result<i32, String> {
@@ -91,6 +95,7 @@ fn run(args: &[String]) -> Result<i32, String> {
         output: None,
         threads: transcribe::threads_wanted(),
         quiet: false,
+        reference: None,
     };
     let mut it = args.iter();
     while let Some(a) = it.next() {
@@ -107,6 +112,7 @@ fn run(args: &[String]) -> Result<i32, String> {
                     .map_err(|_| format!("{a} needs a number"))?
             }
             "-q" | "--quiet" => o.quiet = true,
+            "--ref" if bench => o.reference = Some(PathBuf::from(value(a)?)),
             "-" => return Err("reads files, not standard input".into()),
             f if f.starts_with('-') => return Err(format!("no option {f}\n{USAGE}")),
             f => o.files.push(f.into()),
@@ -252,12 +258,15 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
         );
     }
     let (mut audio, mut took, mut failed, mut results) = (0.0, 0.0, 0, Vec::new());
+    // the scored files' reference words, word errors, character edits,
+    // those identical, and how many
+    let mut total = (0usize, 0usize, 0usize, 0usize, 0usize);
     for file in &files {
         let label = file
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_default();
-        let done = (|| -> Result<(f64, f64, String), String> {
+        let done = (|| -> Result<(f64, f64, String, String), String> {
             if show {
                 status(&format!("{label}: reading the audio"));
             }
@@ -276,21 +285,44 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
             )?;
             let secs = start.elapsed().as_secs_f64();
             let words = serde_json::to_string(&segs).map_err(|e| e.to_string())?;
+            let text: Vec<&str> = segs.iter().map(|s| s.text.as_str()).collect();
             Ok((
                 x.len() as f64 / decode::RATE as f64,
                 secs,
                 sha256_hex(words.as_bytes()),
+                text.join("\n"),
             ))
         })();
         if show {
             status("");
         }
         match done {
-            Ok((a, t, sha)) => {
+            Ok((a, t, sha, text)) => {
+                // against its reference, where there is a folder of them
+                let scored = o.reference.as_ref().map(|dir| {
+                    let stem = file.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+                    fs::read_to_string(dir.join(format!("{stem}.txt"))).ok().map(|r| score::score(&text, &r))
+                });
                 if !json {
-                    println!("{:>9}  {:>9.2} s  {:>7.1}x  {label}", clock(a), t, a / t);
+                    let said = match &scored {
+                        None => String::new(),
+                        Some(None) => "  no reference".into(),
+                        Some(Some(s)) => format!("  {}", said(s)),
+                    };
+                    println!("{:>9}  {:>9.2} s  {:>7.1}x  {label}{said}", clock(a), t, a / t);
                 }
-                results.push(serde_json::json!({ "file": label, "audio_s": a, "seconds": t, "x_real_time": a / t, "transcript_sha256": sha }));
+                let mut r = serde_json::json!({ "file": label, "audio_s": a, "seconds": t, "x_real_time": a / t, "transcript_sha256": sha });
+                if let Some(s) = &scored {
+                    r["reference"] = serde_json::to_value(s).map_err(|e| e.to_string())?;
+                }
+                if let Some(Some(s)) = scored {
+                    total.0 += s.words;
+                    total.1 += s.word_errors;
+                    total.2 += s.char_edits;
+                    total.3 += usize::from(s.identical);
+                    total.4 += 1;
+                }
+                results.push(r);
                 audio += a;
                 took += t;
             }
@@ -304,11 +336,17 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
         return Ok(1);
     }
     if json {
-        let all = serde_json::json!({
+        let mut all = serde_json::json!({
             "pktito_cli": version, "model": name, "backend": backend, "compiler": compiler,
             "threads": threads,
             "files": results, "audio_s": audio, "seconds": took, "x_real_time": audio / took,
         });
+        if total.4 > 0 {
+            all["reference"] = serde_json::json!({
+                "files": total.4, "identical": total.3, "words": total.0,
+                "word_errors": total.1, "wer": wer(total.1, total.0), "char_edits": total.2,
+            });
+        }
         println!(
             "{}",
             serde_json::to_string_pretty(&all).map_err(|e| e.to_string())?
@@ -322,8 +360,39 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
             audio / took,
             if n == 1 { "" } else { "s" }
         );
+        if total.4 > 0 {
+            let (words, errors, edits, same, scored) = total;
+            if same == scored {
+                println!("{scored} of {scored} transcripts identical to their references");
+            } else {
+                println!(
+                    "{same} of {scored} transcripts identical to their references; WER {:.3}% ({errors} of {words} words), {edits} character edit{}",
+                    wer(errors, words),
+                    if edits == 1 { "" } else { "s" }
+                );
+            }
+        }
     }
     Ok(if failed > 0 { 1 } else { 0 })
+}
+
+/// A transcript's distance from its reference, in a few words.
+fn said(s: &score::Score) -> String {
+    if s.identical {
+        "identical".into()
+    } else {
+        format!(
+            "WER {:.3}%, {} character edit{}",
+            s.wer,
+            s.char_edits,
+            if s.char_edits == 1 { "" } else { "s" }
+        )
+    }
+}
+
+/// Word errors over words, in percent.
+fn wer(errors: usize, words: usize) -> f64 {
+    if words == 0 { 0.0 } else { 100.0 * errors as f64 / words as f64 }
 }
 
 /// Seconds as h:mm:ss, or m:ss under an hour

@@ -18,6 +18,7 @@ pub mod mp3;
 pub mod mp4;
 pub mod pktito;
 pub mod recent;
+pub mod score;
 #[cfg(unix)]
 pub mod serve;
 pub mod strings;
