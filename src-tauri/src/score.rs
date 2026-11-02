@@ -5,7 +5,7 @@
 //! reference's words, with case and punctuation set aside. And the
 //! character edits, on the text as it is, which cost what a reader sees: a
 //! comma is one, "tonight" for "to night" one (a word error rate counts it
-//! as two words), a word heard wrong several. Both read the text alone,
+//! as two words), a word in other case one, a word heard wrong several. Both read the text alone,
 //! not how it is split into sentences or lines, so a change to the
 //! sentences moves neither (Peter, 2026-11-02: an engine that differs from
 //! the reference by a comma here and there costs a comma's worth).
@@ -59,9 +59,14 @@ pub fn score(got: &str, reference: &str) -> Score {
         // words added or removed take a space with them, where there is a
         // word beside them to have been spaced from
         let space = usize::from((y.is_empty() && j - i < a.len()) || (x.is_empty() && l - k < b.len()));
-        let xc: Vec<char> = x.chars().collect();
-        let yc: Vec<char> = y.chars().collect();
-        char_edits += distance(&xc, &yc) + space;
+        // case aside, then a word whose case alone changed one edit, as a
+        // comma is: each letter of it, a title read in capitals by one
+        // engine and not the other cost more than a word heard wrong
+        // (AliceBench, the Neural Engine against the CPU, 2026-11-02: 141
+        // edits so, 81 this way; chapter 2's 51 now 17)
+        let xc: Vec<char> = x.chars().flat_map(char::to_lowercase).collect();
+        let yc: Vec<char> = y.chars().flat_map(char::to_lowercase).collect();
+        char_edits += distance(&xc, &yc) + space + recased(&a[i..j], &b[k..l]);
         if diffs.len() < DIFFS_KEPT {
             // the place's words marked as one, a word either side
             let around = |w: &[&str], s: usize, e: usize| {
@@ -86,6 +91,20 @@ pub fn score(got: &str, reference: &str) -> Score {
         char_edits,
         diffs,
     }
+}
+
+/// The words of a whose case alone changed in b: each matched to a word of
+/// b that is it but for case, once.
+fn recased(a: &[&str], b: &[&str]) -> usize {
+    let mut used = vec![false; b.len()];
+    a.iter()
+        .filter(|w| {
+            let at = b.iter().enumerate().position(|(n, v)| {
+                !used[n] && v != *w && v.to_lowercase() == w.to_lowercase()
+            });
+            at.map(|n| used[n] = true).is_some()
+        })
+        .count()
 }
 
 /// The edit distance between two sequences (Levenshtein's): the fewest
@@ -221,6 +240,16 @@ mod tests {
     fn a_place_of_several_words_is_marked_as_one() {
         let s = score("or surface breathing animals", "or surface-breathing animals");
         assert_eq!(s.diffs, vec![("or »surface-breathing« animals".into(), "or »surface breathing« animals".into())]);
+    }
+
+    #[test]
+    fn a_word_in_other_case_is_one_edit() {
+        let s = score("BRAD BUSH ALICE'S ADVENTURES BY LOWIS CARROL", "Brad Bush Alice's Adventures by Lewis Carroll");
+        // five words recased, "Lewis" and "Carroll" a letter each
+        assert_eq!(s.char_edits, 5 + 2);
+        assert_eq!(s.word_errors, 2);
+        let s = score("the King had", "the king had");
+        assert_eq!(s.char_edits, 1);
     }
 
     #[test]
