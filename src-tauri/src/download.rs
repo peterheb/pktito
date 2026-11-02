@@ -3,7 +3,7 @@
 //! (2 s after it went, then twice as long each time, 30 s at most), and
 //! paused, resumed or cancelled from the window.
 
-use crate::model::{self, Ctl, Entry, Stop};
+use crate::model::{self, Ctl, Entry, Stop, Wanted};
 use crate::strings::Problem;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -41,17 +41,22 @@ pub struct Job {
 
 impl Job {
     pub fn new(e: &Entry, dir: &Path) -> Job {
+        Job::for_file(&Wanted::model(dir, e))
+    }
+
+    /// A job for any file models.pktito.net serves (model::Wanted).
+    pub fn for_file(w: &Wanted) -> Job {
         Job {
             ctl: Ctl::default(),
             now: AtomicBool::new(false),
             alive: AtomicBool::new(false),
             state: Mutex::new(State {
-                name: e.name.into(),
+                name: w.name.clone(),
                 step: "downloading",
-                got: model::partial(dir, e),
-                total: e.bytes,
+                got: w.partial(),
+                total: w.bytes,
                 speed: 0.0,
-                host: model::host(&model::download_url(e)).into(),
+                host: model::host(&w.url).into(),
                 problem: None,
                 retry: false,
                 trying: false,
@@ -92,6 +97,16 @@ impl Job {
         tell: impl Fn(&State) + Send + 'static,
         done: impl FnOnce(PathBuf) + Send + 'static,
     ) {
+        self.start_file(Wanted::model(&dir, e), tell, done)
+    }
+
+    /// start() for any file models.pktito.net serves.
+    pub fn start_file(
+        self: &std::sync::Arc<Job>,
+        w: Wanted,
+        tell: impl Fn(&State) + Send + 'static,
+        done: impl FnOnce(PathBuf) + Send + 'static,
+    ) {
         self.alive.store(true, Ordering::Release);
         self.ctl.pause.store(false, Ordering::Relaxed);
         let job = self.clone();
@@ -108,7 +123,7 @@ impl Job {
         thread::spawn(move || {
             let over = Over(job);
             let job = &over.0;
-            if let Some(p) = job.run(e, &dir, &tell) {
+            if let Some(p) = job.run_file(&w, &tell) {
                 done(p);
             }
             tell(&job.state());
@@ -121,6 +136,11 @@ impl Job {
     /// app on one of its own (android.rs, download), which a job or a
     /// service keeps alive for it.
     pub fn run(&self, e: &'static Entry, dir: &Path, tell: &impl Fn(&State)) -> Option<PathBuf> {
+        self.run_file(&Wanted::model(dir, e), tell)
+    }
+
+    /// run() for any file models.pktito.net serves.
+    pub fn run_file(&self, w: &Wanted, tell: &impl Fn(&State)) -> Option<PathBuf> {
         let mut wait = Duration::from_secs(2);
         loop {
             let started = self.state.lock().unwrap().got;
@@ -136,7 +156,7 @@ impl Job {
                 }
             });
             tell(&self.state());
-            let r = model::download(e, dir, &self.ctl, |got, checking| {
+            let r = model::download_file(w, &self.ctl, |got, checking| {
                 let now = Instant::now();
                 let dt = now.duration_since(t0).as_secs_f64();
                 self.set(|s| {
@@ -174,12 +194,12 @@ impl Job {
                     return None;
                 }
                 Err(Stop::Cancelled) => {
-                    let _ = std::fs::remove_file(model::part_in(dir, e));
+                    let _ = std::fs::remove_file(&w.part);
                     self.set(|s| s.step = "cancelled");
                     return None;
                 }
                 Err(Stop::Hard(p)) => {
-                    let got = model::partial(dir, e);
+                    let got = w.partial();
                     self.set(|s| {
                         (s.step, s.got, s.speed, s.retry, s.trying) =
                             ("failed", got, 0.0, false, false);
@@ -188,7 +208,7 @@ impl Job {
                     return None;
                 }
                 Err(Stop::Net(p)) => {
-                    let got = model::partial(dir, e);
+                    let got = w.partial();
                     if got > started {
                         // it was getting somewhere: the next wait starts short again
                         wait = Duration::from_secs(2);
@@ -202,7 +222,7 @@ impl Job {
                     let until = Instant::now() + wait;
                     while Instant::now() < until && !self.now.swap(false, Ordering::Relaxed) {
                         if self.ctl.cancel.load(Ordering::Relaxed) {
-                            let _ = std::fs::remove_file(model::part_in(dir, e));
+                            let _ = std::fs::remove_file(&w.part);
                             self.set(|s| s.step = "cancelled");
                             return None;
                         }

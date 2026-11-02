@@ -238,6 +238,18 @@ pub fn encoder_in(dir: &Path, e: &Entry) -> PathBuf {
     dir.join(format!("{}-encoder.mlmodelc", e.name))
 }
 
+/// Where e's model file without its encoder lives (Coreml's slim), which
+/// transcribes only with its Core ML encoder.
+pub fn slim_in(dir: &Path, e: &Entry) -> PathBuf {
+    Wanted::part(dir, e, &e.coreml.slim).dst
+}
+
+/// Whether e's edition for the Neural Engine is in dir: its slim model file
+/// and its Core ML encoder, unpacked.
+pub fn have_neural(dir: &Path, e: &Entry) -> bool {
+    Wanted::part(dir, e, &e.coreml.slim).here() && have_encoder(dir, e)
+}
+
 /// Whether e's Core ML encoder is in dir: put in place whole, after it was
 /// unpacked, so its model file is enough to tell.
 pub fn have_encoder(dir: &Path, e: &Entry) -> bool {
@@ -298,6 +310,57 @@ pub fn download_url(e: &Entry) -> String {
 /// The same for a Core ML edition's file.
 pub fn part_url(p: &Part) -> String {
     format!("{}{}/{}", base(), &p.sha256[..12], p.file)
+}
+
+/// A file to download from models.pktito.net into a folder: a model's
+/// .pkf, or a part of its Core ML edition (Coreml). It gathers in part,
+/// and is renamed to dst once its size and SHA-256 are the published ones.
+#[derive(Clone)]
+pub struct Wanted {
+    /// what a download of it is called: its model's name
+    pub name: String,
+    pub url: String,
+    pub bytes: u64,
+    pub sha256: &'static str,
+    pub part: PathBuf,
+    pub dst: PathBuf,
+}
+
+impl Wanted {
+    /// e's .pkf, the whole model, which runs on any CPU.
+    pub fn model(dir: &Path, e: &Entry) -> Wanted {
+        Wanted {
+            name: e.name.into(),
+            url: download_url(e),
+            bytes: e.bytes,
+            sha256: e.sha256,
+            part: part_in(dir, e),
+            dst: file_in(dir, e),
+        }
+    }
+
+    /// A part of e's Core ML edition, into dir under its own name.
+    pub fn part(dir: &Path, e: &Entry, p: &Part) -> Wanted {
+        Wanted {
+            name: e.name.into(),
+            url: part_url(p),
+            bytes: p.bytes,
+            sha256: p.sha256,
+            part: dir.join(format!("{}.part", p.file)),
+            dst: dir.join(p.file),
+        }
+    }
+
+    /// The bytes of it a download that stopped has kept.
+    pub fn partial(&self) -> u64 {
+        fs::metadata(&self.part).map(|m| m.len().min(self.bytes)).unwrap_or(0)
+    }
+
+    /// Whether it is here, checked: renamed into place only after its
+    /// SHA-256 checked, so the size is enough to tell.
+    pub fn here(&self) -> bool {
+        fs::metadata(&self.dst).map(|m| m.len() == self.bytes).unwrap_or(false)
+    }
 }
 
 fn base() -> String {
@@ -441,9 +504,15 @@ pub fn download(
     e: &Entry,
     dir: &Path,
     ctl: &Ctl,
-    mut progress: impl FnMut(u64, bool),
+    progress: impl FnMut(u64, bool),
 ) -> Result<PathBuf, Stop> {
-    let part = part_in(dir, e);
+    download_file(&Wanted::model(dir, e), ctl, progress)
+}
+
+/// download() for any file models.pktito.net serves.
+pub fn download_file(w: &Wanted, ctl: &Ctl, mut progress: impl FnMut(u64, bool)) -> Result<PathBuf, Stop> {
+    let part = w.part.clone();
+    let dir = part.parent().unwrap_or(Path::new("."));
     let write_err = |err: io::Error| written(&part, err);
     fs::create_dir_all(dir).map_err(write_err)?;
     let mut file = OpenOptions::new()
@@ -454,11 +523,11 @@ pub fn download(
         .open(&part)
         .map_err(write_err)?;
     let mut got = file.metadata().map_err(write_err)?.len();
-    if got > e.bytes {
+    if got > w.bytes {
         got = 0;
     }
-    if got < e.bytes {
-        got = match fetch(e, &part, &mut file, got, ctl, &mut progress) {
+    if got < w.bytes {
+        got = match fetch(w, &part, &mut file, got, ctl, &mut progress) {
             Ok(got) => got,
             Err(stop) => {
                 // nothing kept, nothing to leave behind
@@ -474,29 +543,29 @@ pub fn download(
     file.sync_all().map_err(write_err)?;
     let digest = sha256(&mut file, ctl)?;
     drop(file);
-    if digest != e.sha256 {
+    if digest != w.sha256 {
         let _ = fs::remove_file(&part);
         return Err(Stop::Hard(
             Problem::new("download.damaged")
-                .detail(format!("SHA-256 {digest}\nexpected {}", e.sha256)),
+                .detail(format!("SHA-256 {digest}\nexpected {}", w.sha256)),
         ));
     }
-    let dst = file_in(dir, e);
+    let dst = w.dst.clone();
     fs::rename(&part, &dst).map_err(|err| written(&dst, err))?;
     Ok(dst)
 }
 
-/// The rest of e into file, which holds its first `got` bytes; how many it
+/// The rest of w into file, which holds its first `got` bytes; how many it
 /// holds once the server has sent them all.
 fn fetch(
-    e: &Entry,
+    w: &Wanted,
     part: &Path,
     file: &mut File,
     mut got: u64,
     ctl: &Ctl,
     progress: &mut impl FnMut(u64, bool),
 ) -> Result<u64, Stop> {
-    let url = download_url(e);
+    let url = w.url.clone();
     let host = host(&url).to_string();
     // a connection that goes quiet is a connection lost: without a read
     // timeout, a network that goes away mid-download leaves it waiting
@@ -526,7 +595,7 @@ fn fetch(
         // what the part holds is not the start of this file: start again
         Err(ureq::Error::Status(416, _)) if got > 0 => {
             file.set_len(0).map_err(|err| written(part, err))?;
-            return fetch(e, part, file, 0, ctl, progress);
+            return fetch(w, part, file, 0, ctl, progress);
         }
         Err(ureq::Error::Status(code, r)) => {
             let what = format!("{code} {}", r.status_text());
@@ -590,13 +659,13 @@ fn fetch(
         if k == 0 {
             break;
         }
-        if got + k as u64 > e.bytes {
+        if got + k as u64 > w.bytes {
             // a server that sends more than the file would fill the disk
             file.set_len(0).map_err(|err| written(part, err))?;
             return Err(Stop::Hard(
                 Problem::new("download.too_much")
                     .with("host", host.clone())
-                    .detail(request(&format!("more than {} bytes", e.bytes))),
+                    .detail(request(&format!("more than {} bytes", w.bytes))),
             ));
         }
         file.write_all(&buf[..k])
@@ -604,9 +673,9 @@ fn fetch(
         got += k as u64;
         progress(got, false);
     }
-    if got < e.bytes {
+    if got < w.bytes {
         return Err(Stop::Net(Problem::new("download.connection_lost").detail(
-            request(&format!("it ended at {got} of {} bytes", e.bytes)),
+            request(&format!("it ended at {got} of {} bytes", w.bytes)),
         )));
     }
     Ok(got)
