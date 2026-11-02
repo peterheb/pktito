@@ -92,15 +92,20 @@ final class Finder {
     }
 
     /// Once the matches have changed: on the same match, where it still is
-    /// one; else on the one the playhead last passed (app.js, runFind).
-    func settle(_ hits: [Hit], position: Double) {
+    /// one; else on the one the playhead last passed (app.js, runFind); the
+    /// playhead taken to it first where a search was typed at rest (seek),
+    /// before go, since the seek's follow would take the reader to the last
+    /// of the matches in one word.
+    func settle(_ hits: [Hit], position: Double, seek: ((Double) -> Void)? = nil) {
         passed = passedAt(hits, position)
         if hits.isEmpty {
             at = -1
             return
         }
         let same = time >= 0 ? hits.firstIndex { abs($0.time - time) < 1e-9 } : nil
-        go(hits, same ?? max(0, passed))
+        let k = same ?? max(0, passed)
+        seek?(hits[k].time)
+        go(hits, k)
     }
 
     private func passedAt(_ hits: [Hit], _ position: Double) -> Int {
@@ -123,8 +128,8 @@ final class Finder {
         moved += 1
     }
 
-    /// The next match, or the one before, round the end (app.js, stepHit):
-    /// while it plays, with the playhead taken to it (seek).
+    /// The next match, or the one before, round the end (app.js, stepHit),
+    /// the playhead taken to it (seek), playing or at rest.
     func step(_ hits: [Hit], _ d: Int, seek: ((Double) -> Void)? = nil) {
         guard !hits.isEmpty else { return }
         let k = (at + d + hits.count) % hits.count

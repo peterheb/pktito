@@ -69,8 +69,8 @@ struct Work: View {
                         .padding(.top, 5)
                 }
                 if review && !rows.isEmpty {
-                    // a step while it plays takes the playhead to its match (Finder.step)
-                    Views(hits: hits, seek: Player.shared.playing ? { seek($0) } : nil, alone: room)
+                    // a step takes the playhead to its match, at rest too (Finder.step)
+                    Views(hits: hits, seek: { seek($0) }, alone: room)
                         .padding(.horizontal, edge)
                         // alone, the search where the header's buttons were
                         .padding(.top, room ? 11 : 16)
@@ -107,10 +107,14 @@ struct Work: View {
         }
         .onChange(of: room) { trace("room for the keyboard: \(room); \(height) of \(whole), \(above) above the rows") }
         .onChange(of: Sought(query: s.finder.query, captions: s.captions, review: review, id: t.id, count: rows.count),
-                  initial: true) {
+                  initial: true) { was, now in
             hits = review ? findIn(rows, s.finder.query) : []
             marks = Dictionary(grouping: hits.indices.map { Marked(k: $0, hit: hits[$0]) }, by: \.hit.row)
-            s.finder.settle(hits, position: Player.shared.position)
+            // a search typed at rest takes the playhead to its match, so that
+            // Play starts where the rows went (app.js, runFind); the rows
+            // marked anew for the views or the list leave it where it is
+            let typed = was.query != now.query && !Player.shared.playing
+            s.finder.settle(hits, position: Player.shared.position, seek: typed ? { seek($0) } : nil)
         }
     }
 
