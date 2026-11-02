@@ -138,24 +138,41 @@ class Finder {
     private var time = -1.0
     /** The match the playhead last passed when the reader was last put by it (follow); -1 for none. */
     private var passed = -1
+    /** The search the matches were last settled for (settle), to tell a search typed from the same one's matches marked anew. */
+    private var settled = ""
 
     val searching: Boolean
         get() = open || query.isNotEmpty()
 
+    /** The search kept through a turn of the screen, the field open with it: not one typed, so the playhead stays (settle). */
+    fun restore(q: String) {
+        query = q
+        open = q.isNotEmpty()
+        settled = q
+    }
+
     /**
-     * Once the matches have changed: on the same match, where it still is
-     * one; else on the one the playhead last passed, so that a search typed
-     * as it plays or rests starts where the listener is, the first where it
-     * has passed none (app.js, runFind).
+     * Once the matches or the search have changed: on the same match, where
+     * it still is one; else on the one the playhead last passed, so that a
+     * search typed as it plays or rests starts where the listener is, the
+     * first where it has passed none (app.js, runFind). A search typed at
+     * rest (seek, not null) takes the playhead to that match, as a step
+     * does: typing it says the listener means to go where it is (Peter,
+     * 2026-11-01). The same search's matches marked anew, the other view's,
+     * leave the playhead where it is. The seek first, as a step's.
      */
-    fun settle(hits: List<Hit>, position: Double) {
+    fun settle(hits: List<Hit>, position: Double, seek: ((Double) -> Unit)? = null) {
+        val typed = query != settled
+        settled = query
         passed = passedAt(hits, position)
         if (hits.isEmpty()) {
             at = -1
             return
         }
         val same = if (time >= 0) hits.indexOfFirst { abs(it.time - time) < 1e-9 } else -1
-        go(hits, if (same >= 0) same else maxOf(0, passed))
+        val k = if (same >= 0) same else maxOf(0, passed)
+        if (typed) seek?.invoke(hits[k].time)
+        go(hits, k)
     }
 
     // as the rows find the one playing (Screens.kt, Rows)
@@ -188,17 +205,18 @@ class Finder {
     }
 
     /**
-     * The next match, or the one before, round the end (app.js, stepHit):
-     * while it plays (seek, not null) with the playhead taken to it, as a
-     * tick takes it, so that the reader follows the playhead from there; at
-     * rest only the reader moves, and the playhead keeps the listener's
-     * place (Peter, 2026-10-27). The seek first, which puts the reader on the
-     * match it last passed, then this one, where two share its time.
+     * The next match, or the one before, round the end (app.js, stepHit),
+     * with the playhead taken to it, as a tick takes it, so that the reader
+     * follows the playhead from there: at rest too, where a transcript
+     * brought to a match looks ready to play from it, and Play from the old
+     * place read as a jump (Peter, 2026-11-01). The seek first, which puts
+     * the reader on the match it last passed, then this one, where two share
+     * its time.
      */
-    fun step(hits: List<Hit>, d: Int, seek: ((Double) -> Unit)? = null) {
+    fun step(hits: List<Hit>, d: Int, seek: (Double) -> Unit) {
         if (hits.isEmpty()) return
         val k = (at + d + hits.size) % hits.size
-        seek?.invoke(hits[k].time)
+        seek(hits[k].time)
         go(hits, k)
     }
 
@@ -227,11 +245,11 @@ class Finder {
  * something: a search, or the field the glass opened (Views); one resting
  * beside the views has none, as the desktop's hasn't. Enter is the next
  * match and Shift+Enter the one before, as is the keyboard's search key;
- * Esc closes it from the screen's keys (MainActivity), as Back does. While
- * the recording plays, a step takes the playhead with it (seek: Finder.step).
+ * Esc closes it from the screen's keys (MainActivity), as Back does. A step
+ * takes the playhead with it (seek: Finder.step).
  */
 @Composable
-fun FindField(f: Finder, hits: List<Hit>, seek: ((Double) -> Unit)?, onClose: () -> Unit, modifier: Modifier = Modifier) {
+fun FindField(f: Finder, hits: List<Hit>, seek: (Double) -> Unit, onClose: () -> Unit, modifier: Modifier = Modifier) {
     val p = pk
     val focus = remember { FocusRequester() }
     val manager = LocalFocusManager.current
