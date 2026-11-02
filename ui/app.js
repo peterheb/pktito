@@ -2015,24 +2015,40 @@ const barsIn = (el) => Math.max(1, Math.floor((el.clientWidth + 1) / BAR));
    below the loudest (src-tauri/src/audio.rs), and narration as even as
    most is within a few dB of its top throughout: drawn on all 48 dB its
    bars were a solid block, its pauses lost (Peter's file, 2026-10-21).
+   A recording quieter for minutes at a time puts more than a tenth of it
+   under that floor, where it drew as silence: AliceBench's 12 chapters
+   as one file (2:58:51) have chapter 4, 11% of it, 13 dB under the rest.
+   So the floor goes 3 dB under the quietest stretch of the file where
+   that is lower: each stretch a tenth of the file or 5 minutes long,
+   whichever is longer, by its median, leaving out stretches more than
+   36 dB under the top, which are silence and drew right. A file at one
+   level keeps its floor (chapter 1 alone, 10:40, draws as before).
    Kept on the array, which its file keeps. */
-function rangeOf(peaks) {
+function rangeOf(peaks, seconds) {
   if (!peaks._range) {
     const s = Float64Array.from(peaks).sort();
-    const lo = s[Math.floor(s.length * 0.1)],
-      hi = s[Math.min(s.length - 1, Math.floor(s.length * 0.995))];
+    let lo = s[Math.floor(s.length * 0.1)];
+    const hi = s[Math.min(s.length - 1, Math.floor(s.length * 0.995))];
+    const n = peaks.length;
+    const half = Math.max(n / 20, seconds ? (150 * n) / seconds : 0) | 0;
+    for (let c = half; 2 * half < n && c + half <= n; c += Math.max(1, (half / 5) | 0)) {
+      const w = Float64Array.from(peaks.slice(c - half, c + half)).sort();
+      const median = w[w.length >> 1];
+      if (median > 64) lo = Math.min(lo, median - 16);
+    }
     peaks._range = [lo, Math.max(hi, lo + 16)];
   }
   return peaks._range;
 }
 
-/* Bars across el from the outline (0-255 a slice), the playhead at bar k;
-   no outline draws the empty strip. A bar is the mean of the slices under
-   it: their loudest hid every pause shorter than a bar. */
-function drawWave(el, peaks, k) {
+/* Bars across el from the outline (0-255 a slice) of a recording seconds
+   long, the playhead at bar k; no outline draws the empty strip. A bar is
+   the mean of the slices under it: their loudest hid every pause shorter
+   than a bar. */
+function drawWave(el, peaks, k, seconds) {
   const n = barsIn(el);
   const top = el.clientHeight || 64;
-  const [lo, hi] = peaks && peaks.length ? rangeOf(peaks) : [0, 255];
+  const [lo, hi] = peaks && peaks.length ? rangeOf(peaks, seconds) : [0, 255];
   const h = [];
   for (let i = 0; i < n; i++) {
     let v = 0;
@@ -2082,7 +2098,7 @@ function drawMainWave() {
       : f.step === "transcribing"
         ? f.done
         : 0;
-  drawWave(wave, mode === "waiting" ? null : f.peaks, Math.floor(at * n));
+  drawWave(wave, mode === "waiting" ? null : f.peaks, Math.floor(at * n), f.duration);
 }
 
 /* The drop's strip: a made-up phrase, louder in the middle */
