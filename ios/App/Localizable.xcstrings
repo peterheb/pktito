@@ -1022,13 +1022,80 @@
         }
       }
     },
+    "manage_faster_computer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faster on this computer"
+          }
+        }
+      }
+    },
+    "manage_faster_phone": {
+      "extractionState": "manual",
+      "comment": "the NPU's edition offered for a model downloaded for the processor (manage.faster, manage.faster_text, manage.get), the device by its kind, as iOS's name an iPhone or an iPad: a computer where Android says it is one, a tablet from 600 dp, else a phone. Its megabytes are its download's: the edition takes the place of the processor's file once the NPU runs it, so they are not that much more kept",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faster on this phone"
+          }
+        }
+      }
+    },
+    "manage_faster_tablet": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faster on this tablet"
+          }
+        }
+      }
+    },
+    "manage_faster_text_computer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The %1$@ model on this computer's NPU · %2$@ MB download"
+          }
+        }
+      }
+    },
+    "manage_faster_text_phone": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The %1$@ model on this phone's NPU · %2$@ MB download"
+          }
+        }
+      }
+    },
+    "manage_faster_text_tablet": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The %1$@ model on this tablet's NPU · %2$@ MB download"
+          }
+        }
+      }
+    },
     "manage_free_gb": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ GB free"
+            "value": "%1$@ GB free"
           }
         }
       }
@@ -1040,7 +1107,18 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ MB free"
+            "value": "%1$@ MB free"
+          }
+        }
+      }
+    },
+    "manage_get": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download"
           }
         }
       }
@@ -1107,7 +1185,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ GB used"
+            "value": "%1$@ GB used"
           }
         }
       }
@@ -1118,7 +1196,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ MB used"
+            "value": "%1$@ MB used"
           }
         }
       }
@@ -1169,11 +1247,12 @@
     },
     "models_download_size": {
       "extractionState": "manual",
+      "comment": "a size and the words after it as one, so that a line breaks before the size, not inside it: the model menu on the Galaxy S24 broke \"753 MB\" from \"download\" (2026-11-03), as Faster's line did \"more\"",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ MB download"
+            "value": "%1$@ MB download"
           }
         }
       }
@@ -1354,6 +1433,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Typefaces and icons"
+          }
+        }
+      }
+    },
+    "npu_cpu_computer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This computer's NPU can't run the model, so pktito uses its processor instead"
+          }
+        }
+      }
+    },
+    "npu_cpu_phone": {
+      "extractionState": "manual",
+      "comment": "the NPU refused the model, which goes on with the processor, as iOS's prepare_cpu says it of the Neural Engine",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This phone's NPU can't run the model, so pktito uses its processor instead"
+          }
+        }
+      }
+    },
+    "npu_cpu_tablet": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This tablet's NPU can't run the model, so pktito uses its processor instead"
           }
         }
       }
@@ -1896,7 +2009,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Download the %1$@ model · %2$@ MB to go"
+            "value": "Download the %1$@ model · %2$@ MB to go"
           }
         }
       }
