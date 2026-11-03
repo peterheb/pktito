@@ -11,8 +11,13 @@
 use crate::pktito::{Asr, Model, Tok};
 use serde::{Deserialize, Serialize};
 
-/// A segment with no sentence end in this long is cut at a word anyway.
-const MAX_SEGMENT_S: f64 = 20.0;
+/// A line is a sentence, up to this long; a longer one is broken into parts
+/// of PART_MIN_S to PART_MAX_S. Cutting at whichever word crossed 20 s, as
+/// before, left 16 tails under 5 s on AliceBench's whole book with v2 ("of
+/// the mock turtle's heavy sobs."); 15 of its 1,687 sentences run past 30 s.
+const SENTENCE_MAX_S: f64 = 30.0;
+const PART_MIN_S: f64 = 10.0;
+const PART_MAX_S: f64 = 20.0;
 
 /// PKTITO_THREADS, for finding out what a machine does on fewer threads (the
 /// engine CLI's -t); unset, 0: one a core, and pktito's choice among them.
@@ -123,6 +128,8 @@ pub fn run_windows(
 struct Open {
     toks: Vec<Tok>,
     words: Vec<Word>,
+    // each word's count of toks, to break the sentence between two words
+    ntoks: Vec<usize>,
     start: f64,
 }
 
@@ -133,6 +140,7 @@ impl Open {
             return None;
         }
         let words = std::mem::take(&mut self.words);
+        self.ntoks.clear();
         Some(Segment {
             start: self.start,
             end: words.last().map_or(self.start, |w| w.end),
@@ -140,11 +148,57 @@ impl Open {
             words,
         })
     }
+
+    /// The open sentence's first n words as a segment; the rest stay open.
+    fn close_part(&mut self, model: &Model, n: usize) -> Segment {
+        let nt: usize = self.ntoks[..n].iter().sum();
+        let words: Vec<Word> = self.words.drain(..n).collect();
+        self.ntoks.drain(..n);
+        let toks: Vec<Tok> = self.toks.drain(..nt).collect();
+        let seg = Segment {
+            start: self.start,
+            end: words.last().map_or(self.start, |w| w.end),
+            text: model.text(&toks),
+            words,
+        };
+        self.start = self.words.first().map_or(seg.end, |w| w.start);
+        seg
+    }
+
+    /// Where to break a sentence that ran past SENTENCE_MAX_S: after the
+    /// last word ending in , ; : or a dash whose part would run PART_MIN_S
+    /// to PART_MAX_S; with none, at the longest pause between two words in
+    /// that span (or, with no word ending in it, anywhere). How many words
+    /// go in the first part.
+    fn part_end(&self) -> usize {
+        let last = self.words.len() - 1;
+        let span = |i: usize| {
+            let t = self.words[i].end - self.start;
+            (PART_MIN_S..=PART_MAX_S).contains(&t)
+        };
+        let pause = |i: usize| self.words[i + 1].start - self.words[i].end;
+        if let Some(i) = (0..last).rev().find(|&i| span(i) && ends(&self.words[i].text, &[',', ';', ':', '—', '–'])) {
+            return i + 1;
+        }
+        let mut cands: Vec<usize> = (0..last).filter(|&i| span(i)).collect();
+        if cands.is_empty() {
+            cands = (0..last).collect();
+        }
+        // the longest pause; the later of two the same
+        let i = cands.into_iter().fold(0, |b, i| if pause(i) >= pause(b) { i } else { b });
+        i + 1
+    }
+}
+
+/// Whether a word ends in one of these, before any closing quote or bracket.
+fn ends(text: &str, marks: &[char]) -> bool {
+    text.trim_end_matches(['"', '\'', '”', '’', ')', ']']).ends_with(marks)
 }
 
 /// A chunk's tokens as sentences, after the one open before it: a segment
-/// ends at a word ending in . ? or !, or once it runs MAX_SEGMENT_S; the
-/// words after the last such end are left open, for the next chunk.
+/// ends at a word ending in . ? or !, and one that runs past SENTENCE_MAX_S
+/// first is broken (Open::part_end); the words after the last end are left
+/// open, for the next chunk.
 fn sentences(model: &Model, toks: &[Tok], offset: f64, frame: f64, open: &mut Open) -> Vec<Segment> {
     let words = model.words(toks);
     let mut out = Vec::new();
@@ -156,11 +210,15 @@ fn sentences(model: &Model, toks: &[Tok], offset: f64, frame: f64, open: &mut Op
         if open.words.is_empty() {
             open.start = start;
         }
-        let cut = text.ends_with(['.', '?', '!']) || end - open.start >= MAX_SEGMENT_S;
+        let sentence_end = ends(&text, &['.', '?', '!']);
         open.toks.extend_from_slice(run);
+        open.ntoks.push(run.len());
         open.words.push(Word { start, end, text });
-        if cut {
+        if sentence_end {
             out.extend(open.close(model));
+        } else if end - open.start > SENTENCE_MAX_S && open.words.len() > 1 {
+            let n = open.part_end();
+            out.push(open.close_part(model, n));
         }
     }
     out
