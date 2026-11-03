@@ -116,7 +116,7 @@
     <string name="catalog_multilingual_about">[25 Ęűřőpęąń łąńgűągęș ······]</string>
     <string name="models_named">[%1$s mőďęł ···]</string>
     <string name="models_downloaded">[Ďőwńłőąďęď ····· ·]</string>
-    <string name="models_download_size">[%1$s&#160;MB ďőwńłőąď ····]</string>
+    <string name="models_download_size">[%1$s&#160;MB&#160;ďőwńłőąď ····· ·]</string>
     <string name="models_languages_among">[%1$s, %2$s ąmőńg țhęm ·····]</string>
     <string name="models_open_file">[Őpęń ą mőďęł fįłę… ····· ··]</string>
     <string name="models_using">[Űșįńg țhę %1$s mőďęł ····· ·]</string>
@@ -128,8 +128,8 @@
     <string name="manage_in_use">[Įń űșę ···]</string>
     <string name="manage_delete">[Ďęłęțę ···]</string>
     <string name="manage_paused">[Pąűșęď ďőwńłőąď&#160;· %1$s őf %2$s&#160;MB ····· ·]</string>
-    <string name="manage_used_mb">[%1$s&#160;MB űșęď ····]</string>
-    <string name="manage_used_gb">[%1$s&#160;GB űșęď ····]</string>
+    <string name="manage_used_mb">[%1$s&#160;MB&#160;űșęď ···]</string>
+    <string name="manage_used_gb">[%1$s&#160;GB&#160;űșęď ···]</string>
     <string name="manage_none">[Ńő mőďęłș ďőwńłőąďęď ····· ···]</string>
     <string name="manage_ask_title">[Ďęłęțę țhę %1$s mőďęł? ····· ··]</string>
     <string name="manage_ask_text">[Țhįș fřęęș %1$s&#160;MB. Ýőű čąń ďőwńłőąď įț ągąįń. ····· ····· ··]</string>
@@ -148,8 +148,8 @@
     <string name="npu_cpu_phone">[Țhįș phőńę\'ș ŃPŰ čąń\'ț řűń țhę mőďęł, șő pkțįțő űșęș įțș přőčęșșőř įńșțęąď ····· ····· ····· ·]</string>
     <string name="npu_cpu_tablet">[Țhįș țąbłęț\'ș ŃPŰ čąń\'ț řűń țhę mőďęł, șő pkțįțő űșęș įțș přőčęșșőř įńșțęąď ····· ····· ····· ·]</string>
     <string name="npu_cpu_computer">[Țhįș čőmpűțęř\'ș ŃPŰ čąń\'ț řűń țhę mőďęł, șő pkțįțő űșęș įțș přőčęșșőř įńșțęąď ····· ····· ····· ··]</string>
-    <string name="manage_free_mb">[%1$s&#160;MB fřęę ····]</string>
-    <string name="manage_free_gb">[%1$s&#160;GB fřęę ····]</string>
+    <string name="manage_free_mb">[%1$s&#160;MB&#160;fřęę ···]</string>
+    <string name="manage_free_gb">[%1$s&#160;GB&#160;fřęę ···]</string>
     <string name="manage_downloading">[Ďőwńłőąďįńg&#160;· %1$s őf %2$s&#160;MB ····· ···]</string>
     <string name="manage_ask_own_title">[Ďęłęțę țhę čőpý őf %1$s? ····· ···]</string>
     <string name="manage_ask_own_switch">[Țhįș fřęęș %1$s&#160;MB, ąńď pkțįțő șwįțčhęș țő țhę %2$s mőďęł. Țhę fįłę ýőű őpęńęď įș ńőț ąffęčțęď. ····· ····· ····· ·····]</string>
@@ -167,7 +167,7 @@
     </plurals>
     <string name="setup_use">[Űșę țhę %1$s mőďęł ······]</string>
     <string name="setup_download">[Ďőwńłőąď țhę %1$s mőďęł&#160;· %2$s&#160;MB ····· ·]</string>
-    <string name="setup_download_rest">[Ďőwńłőąď țhę %1$s mőďęł&#160;· %2$s&#160;MB țő gő ····· ···]</string>
+    <string name="setup_download_rest">[Ďőwńłőąď țhę %1$s mőďęł&#160;· %2$s&#160;MB&#160;țő&#160;gő ····· ··]</string>
     <string name="download_title">[Ďőwńłőąďįńg țhę %1$s mőďęł ······]</string>
     <string name="download_from">[%1$s fřőm %2$s ···]</string>
     <string name="download_bar">[Mőďęł ďőwńłőąď ······]</string>

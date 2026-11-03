@@ -146,7 +146,10 @@
     <string name="catalog_multilingual_about">25 European languages</string>
     <string name="models_named">%1$s model</string>
     <string name="models_downloaded">Downloaded</string>
-    <string name="models_download_size">%1$s&#160;MB download</string>
+    <!-- a size and the words after it as one, so that a line breaks before
+         the size, not inside it: the model menu on the Galaxy S24 broke "753 MB"
+         from "download" (2026-11-03), as Faster's line did "more" -->
+    <string name="models_download_size">%1$s&#160;MB&#160;download</string>
     <!-- a model of several's languages, %1$s ("25 European languages"), and the system's language among them, %2$s, as one sentence (models.languages_among) -->
     <string name="models_languages_among">%1$s, %2$s among them</string>
     <string name="models_open_file">Open a model file…</string>
@@ -161,8 +164,8 @@
     <string name="manage_in_use">In use</string>
     <string name="manage_delete">Delete</string>
     <string name="manage_paused">Paused download&#160;· %1$s of %2$s&#160;MB</string>
-    <string name="manage_used_mb">%1$s&#160;MB used</string>
-    <string name="manage_used_gb">%1$s&#160;GB used</string>
+    <string name="manage_used_mb">%1$s&#160;MB&#160;used</string>
+    <string name="manage_used_gb">%1$s&#160;GB&#160;used</string>
     <string name="manage_none">No models downloaded</string>
     <string name="manage_ask_title">Delete the %1$s model?</string>
     <string name="manage_ask_text">This frees %1$s&#160;MB. You can download it again.</string>
@@ -189,8 +192,8 @@
     <string name="npu_cpu_tablet">This tablet\'s NPU can\'t run the model, so pktito uses its processor instead</string>
     <string name="npu_cpu_computer">This computer\'s NPU can\'t run the model, so pktito uses its processor instead</string>
     <!-- Android's own: the room left, a download under way, the copy of a model file opened -->
-    <string name="manage_free_mb">%1$s&#160;MB free</string>
-    <string name="manage_free_gb">%1$s&#160;GB free</string>
+    <string name="manage_free_mb">%1$s&#160;MB&#160;free</string>
+    <string name="manage_free_gb">%1$s&#160;GB&#160;free</string>
     <string name="manage_downloading">Downloading&#160;· %1$s of %2$s&#160;MB</string>
     <string name="manage_ask_own_title">Delete the copy of %1$s?</string>
     <string name="manage_ask_own_switch">This frees %1$s&#160;MB, and pktito switches to the %2$s model. The file you opened is not affected.</string>
@@ -208,7 +211,7 @@
     </plurals>
     <string name="setup_use">Use the %1$s model</string>
     <string name="setup_download">Download the %1$s model&#160;· %2$s&#160;MB</string>
-    <string name="setup_download_rest">Download the %1$s model&#160;· %2$s&#160;MB to go</string>
+    <string name="setup_download_rest">Download the %1$s model&#160;· %2$s&#160;MB&#160;to&#160;go</string>
     <string name="download_title">Downloading the %1$s model</string>
     <string name="download_from">%1$s from %2$s</string><!-- download.from_html -->
     <string name="download_bar">Model download</string>

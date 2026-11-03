@@ -262,7 +262,7 @@ class Shots {
 
     // npu: in the edition of a phone whose NPU the catalog has a graph for
     // (the Galaxy S24's), nothing downloaded; faster: the English model here
-    // on the CPU, its graph offered
+    // on the CPU, its NPU's edition offered
     private fun offers(
         have: Boolean = false,
         both: Boolean = false,
@@ -278,7 +278,7 @@ class Shots {
                 "",
                 624_480_196,
                 12_115_524,
-                717_939_192,
+                717_939_304,
                 have,
                 0,
                 npu,
@@ -291,7 +291,7 @@ class Shots {
                 "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3#multilingual-asr",
                 647_552_644,
                 35_187_972,
-                717_939_192,
+                717_939_304,
                 both,
                 if (both) 0 else partial,
                 npu,
@@ -301,7 +301,8 @@ class Shots {
 
     /**
      * A catalog model: its whole file here (have) or partial bytes of it kept; with npu, nothing
-     * here and the NPU's edition its; with faster, its graph offered.
+     * here and the NPU's edition its; with faster, the NPU's edition offered, the slim file and the
+     * graph.
      */
     private fun offer(
         name: String,
@@ -329,7 +330,7 @@ class Shots {
             g,
             if (g != null) Edition.NPU else Edition.CPU,
             if (have) Edition.CPU else null,
-            if (faster && have) graph else 0,
+            if (faster && have) slim + graph else 0,
         )
     }
 
@@ -448,10 +449,17 @@ class Shots {
     fun modelMenuDark() =
         shot("models", true, act = modelMenu) { Ready(emptyList(), readyActions, models) }
 
+    // where a size and its word could part, as the S24's menu did (models_download_size)
+    @Test
+    fun modelMenuNarrow() =
+        shot("models-360", false, narrow = true, act = modelMenu) {
+            Ready(emptyList(), readyActions, models)
+        }
+
     // Manage models: the English model in use and the Multilingual's download
     // stopped at 312 MB, on a phone; both downloaded, on the tablet on its side;
     // and there with a transcription running, and a delete's question; the
-    // English model's graph for the NPU offered, and coming
+    // English model's NPU edition offered, and coming
     @Composable
     private fun manageModels(
         both: Boolean = false,
@@ -573,7 +581,7 @@ class Shots {
                         "parakeet-tdt-0.6b-v2",
                         "downloading",
                         262_144_000,
-                        717_939_192,
+                        730_054_828,
                         11.8e6,
                         "models.pktito.net",
                         null,
