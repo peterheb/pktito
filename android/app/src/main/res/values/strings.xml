@@ -174,13 +174,15 @@
     <!-- the NPU's edition offered for a model downloaded for the processor
          (manage.faster, manage.faster_text, manage.get), the device by its
          kind, as iOS's name an iPhone or an iPad: a computer where Android
-         says it is one, a tablet from 600 dp, else a phone -->
+         says it is one, a tablet from 600 dp, else a phone. Its megabytes are
+         its download's: the edition takes the place of the processor's file
+         once the NPU runs it, so they are not that much more kept -->
     <string name="manage_faster_phone">Faster on this phone</string>
     <string name="manage_faster_tablet">Faster on this tablet</string>
     <string name="manage_faster_computer">Faster on this computer</string>
-    <string name="manage_faster_text_phone">The %1$s model on this phone\'s NPU&#160;· %2$s&#160;MB&#160;more</string>
-    <string name="manage_faster_text_tablet">The %1$s model on this tablet\'s NPU&#160;· %2$s&#160;MB&#160;more</string>
-    <string name="manage_faster_text_computer">The %1$s model on this computer\'s NPU&#160;· %2$s&#160;MB&#160;more</string>
+    <string name="manage_faster_text_phone">The %1$s model on this phone\'s NPU&#160;· %2$s&#160;MB&#160;download</string>
+    <string name="manage_faster_text_tablet">The %1$s model on this tablet\'s NPU&#160;· %2$s&#160;MB&#160;download</string>
+    <string name="manage_faster_text_computer">The %1$s model on this computer\'s NPU&#160;· %2$s&#160;MB&#160;download</string>
     <string name="manage_get">Download</string>
     <!-- the NPU refused the model, which goes on with the processor, as iOS's prepare_cpu says it of the Neural Engine -->
     <string name="npu_cpu_phone">This phone\'s NPU can\'t run the model, so pktito uses its processor instead</string>

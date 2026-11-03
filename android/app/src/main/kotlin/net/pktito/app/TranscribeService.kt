@@ -164,6 +164,8 @@ class TranscribeService : Service() {
                     "${o.getJSONArray("segments").length()} segments in %.1f s".format(secs) +
                     if (video > 0) ", video at %.3f fps".format(video) else "",
             )
+            // the NPU's edition proven, the whole file it takes the place of goes
+            if (complete && o.getJSONArray("segments").length() > 0) Transcriber.ran(this)
             // finished, it goes on the recent list, as the desktop's does;
             // a list that cannot be written leaves it on the screen alone
             if (complete)

@@ -71,6 +71,11 @@ object Transcriber {
     private var loadedFrom: String? = null
     /** That file and its graph for the NPU, if it was given one: what loaded compares. */
     private var loadedAs: String? = null
+    /**
+     * The model whose whole file goes once the NPU has run its graph through a transcription (ran):
+     * the slim file loaded, the whole one still here.
+     */
+    private var dropping: Offer? = null
 
     /** block on the main thread, where the screen reads this state. */
     fun post(block: Transcriber.() -> Unit) {
@@ -200,6 +205,7 @@ object Transcriber {
         handle = 0L
         loadedFrom = null
         loadedAs = null
+        dropping = null
     }
 
     /**
@@ -231,6 +237,9 @@ object Transcriber {
                             context.applicationInfo.nativeLibraryDir,
                         )
                     Log.i(TAG, "the NPU's graph for ${o.name} in %.2f s".format(s))
+                    // the whole file, which the CPU's edition alone needs,
+                    // deleted once the NPU has run the graph (ran)
+                    if (use.file == o.slim.file && o.whole.here) dropping = o
                 } catch (e: IOException) {
                     val refused = npuFailed(context, o, e.message ?: "")
                     // the whole model's encoder runs it, as its CPU's edition,
@@ -239,10 +248,43 @@ object Transcriber {
                         free()
                         throw IOException(failed(context, refused))
                     }
-                    loadedAs = use.file.path
+                    if (use.file != o.whole.file) {
+                        free()
+                        handle = Engine.load(o.whole.file.path)
+                        loadedFrom = o.whole.file.path
+                    }
+                    loadedAs = o.whole.file.path
                 }
         }
         return handle
+    }
+
+    /**
+     * A transcription finished with words, on its thread: with the slim file loaded, which has no
+     * encoder of its own, the NPU ran the graph through it, and the whole file of a model waiting
+     * for that goes (dropWhole). The NPU failing a chunk before then, the whole file is still here
+     * for the CPU's edition to go on with (npuFailed). Not the whole file loaded instead: its
+     * encoder runs a chunk the NPU fails without saying so (core/encoder.c), so a transcription
+     * with it proves nothing.
+     */
+    @Synchronized
+    fun ran(context: Context) {
+        val o = dropping ?: return
+        dropping = null
+        if (handle != 0L && loadedFrom == o.slim.file.path) dropWhole(context, o)
+    }
+
+    /**
+     * o's whole file deleted (ran): 624 MB of English, which only the CPU's edition needs. Should a
+     * later system's NPU refuse the graph, that edition downloads the file again (npuFailed). The
+     * models' state anew, on the main thread.
+     */
+    private fun dropWhole(context: Context, o: Offer) {
+        val app = context.applicationContext
+        o.whole.file.delete()
+        o.whole.part.delete()
+        Log.i(TAG, "${o.name}: the whole file deleted, the NPU's edition in its place")
+        main.post { Models.refresh(app) }
     }
 
     /**

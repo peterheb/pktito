@@ -67,8 +67,10 @@ class Offer(
     val edition: Edition,
     val usable: Edition?,
     /**
-     * The graph alone, for a whole model here without it (Manage models, Faster): its bytes, 0
-     * where none is offered.
+     * The NPU's edition for a whole model here (Manage models, Faster): the bytes of its files not
+     * here yet, the slim one and the graph, which take the whole file's place once the NPU has run
+     * the graph through a transcription (Transcriber.ran): 728 MB of English on the Googlebook,
+     * where the whole file and the graph kept 1341. 0 where none is offered.
      */
     val faster: Long,
 ) {
@@ -78,6 +80,12 @@ class Offer(
     /** The files a download of edition fetches, in order. */
     val parts: List<Part>
         get() = if (edition == Edition.NPU && graph != null) listOf(slim, graph) else listOf(whole)
+
+    /** The files Faster fetches (faster): the NPU's edition's not here yet. */
+    val fasterParts: List<Part>
+        get() =
+            if (faster > 0 && graph != null) listOf(slim, graph).filterNot { it.here }
+            else emptyList()
 
     /** The bytes a download of edition fetches, all of them. */
     val bytes: Long
@@ -91,11 +99,15 @@ class Offer(
         get() = if (usable == edition) 0 else parts.sumOf { it.kept }
 
     /**
-     * The file the engine loads: the whole model where it is here, whose encoder runs what the
-     * NPU's can't, else the slim one.
+     * The file the engine loads: in the NPU's edition the slim one where it is here, whose
+     * transcriptions are the NPU's alone, the whole file deleted once one has finished
+     * (Transcriber.ran); else the whole model where it is here, whose encoder is the CPU's; else
+     * the slim one.
      */
     val file: File
-        get() = if (whole.here || graph == null) whole.file else slim.file
+        get() =
+            if (usable == Edition.NPU && slim.here || !whole.here && graph != null) slim.file
+            else whole.file
 
     /**
      * What its files take here, either edition's, the parts of them and an older graph: what Manage
@@ -164,12 +176,8 @@ object Models {
             }
             val whole = Part(File(o.getString("file")), o.getLong("bytes"), o.getString("sha256"))
             val slim = part(o.getJSONObject("coreml").getJSONObject("slim"))
-            val graphs = o.getJSONArray("qnn")
             val graph =
-                (0 until graphs.length())
-                    .map { graphs.getJSONObject(it) }
-                    .find { !chip.isNullOrEmpty() && it.getString("chip") == chip }
-                    ?.let { part(it.getJSONObject("part")) }
+                graphFor(o.getJSONArray("qnn"), chip)?.let { part(it.getJSONObject("part")) }
             val npu = graph != null && Editions.failure(context, name, graph) == null
             val usable =
                 when {
@@ -187,10 +195,37 @@ object Models {
                 graph,
                 if (npu) Edition.NPU else Edition.CPU,
                 usable,
-                faster = if (npu && usable == Edition.CPU) graph!!.bytes else 0,
+                faster =
+                    if (npu && usable == Edition.CPU)
+                        listOf(slim, graph!!).filterNot { it.here }.sumOf { it.bytes }
+                    else 0,
             )
         }
     }
+
+    /**
+     * The catalog's graph (model.rs, Graph) for chip, in QNN's words for it
+     * (soc,arch,vtcm,dlbc,signed: Engine.npuChip): the one compiled for it, else one compiled for
+     * another SoC of its Hexagon with no more VTCM than it has, which QNN may run or refuse -
+     * untried, each Hexagon here being one SoC's (v73 the X1E80100's, v75 the SM8650's, v79 the
+     * SM8750's). A refusal is remembered and the model goes to its CPU's edition, its whole file
+     * downloaded where it isn't here (Transcriber.npuFailed): a new SoC's phone tries its NPU at
+     * the cost of that download. Null for none, and while the chip isn't known.
+     */
+    internal fun graphFor(graphs: JSONArray, chip: String?): JSONObject? {
+        if (chip.isNullOrEmpty()) return null
+        val all = (0 until graphs.length()).map { graphs.getJSONObject(it) }
+        val mine = numbers(chip)
+        return all.find { it.getString("chip") == chip }
+            ?: all.find { g ->
+                val theirs = numbers(g.getString("chip"))
+                mine != null && theirs != null && theirs[1] == mine[1] && theirs[2] <= mine[2]
+            }
+    }
+
+    /** A chip's five numbers in QNN's words (soc,arch,vtcm,dlbc,signed); null for any other. */
+    private fun numbers(chip: String): List<Int>? =
+        chip.split(",").map { it.toIntOrNull() ?: return null }.takeIf { it.size == 5 }
 
     /**
      * What to transcribe with: the person's own file, else the catalog model in use where it is
@@ -289,13 +324,15 @@ object Models {
     /**
      * What a download that stopped kept, deleted where no download is under way for it
      * (Downloads.cancel is for one that is): every file of a model not here, none of which it can
-     * run without the rest, or the graph of one here on the CPU (Faster).
+     * run without the rest, or the NPU's edition's of one here on the CPU (Faster), the slim file
+     * and the graph, which that edition alone loads.
      */
     fun deletePart(context: Context, o: Offer): String? {
         val files =
             when {
                 !o.have -> o.files
-                o.usable == Edition.CPU -> o.graph?.let { listOf(it.file, it.part) }.orEmpty()
+                o.usable == Edition.CPU && o.graph != null ->
+                    listOf(o.slim, o.graph).flatMap { listOf(it.file, it.part) }
                 else -> emptyList()
             }
         if (!files.all(::gone)) return context.getString(R.string.manage_cant_delete)

@@ -118,19 +118,18 @@ object Downloads {
         @Synchronized get() = worker?.isAlive == true
 
     /**
-     * Whether the download shown is of a model here, which can only be its graph for the NPU
-     * (Manage models, Faster): Manage models shows it, not the setup screen, and the model in use
-     * stays in use.
+     * Whether the download shown is of a model here, which can only be its NPU's edition (Manage
+     * models, Faster): Manage models shows it, not the setup screen, and the model in use stays in
+     * use.
      */
     val faster: Boolean
         get() = state?.let { d -> Models.offers.find { it.name == d.name }?.have } == true
 
     /**
-     * The files a download of o fetches: its edition's, or for a model here on the CPU, the graph
-     * that makes it faster.
+     * The files a download of o fetches: its edition's, or for a model here on the CPU, the NPU's
+     * edition's that make it faster (Offer.fasterParts).
      */
-    fun parts(o: Offer): List<Part> =
-        if (o.have) listOfNotNull(o.graph.takeIf { o.faster > 0 }) else o.parts
+    fun parts(o: Offer): List<Part> = if (o.have) o.fasterParts else o.parts
 
     /**
      * The files of the model of that name downloaded (parts), or their download gone on with from
@@ -238,7 +237,7 @@ object Downloads {
             Engine.retryDownload()
             return true
         }
-        // a graph for a model here, which leaves the one in use as it is
+        // the NPU's edition for a model here, which leaves the one in use as it is
         val faster = o.have
         worker = thread(name = "download") { download(app, name, files, parts, faster) }
         return true

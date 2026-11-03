@@ -62,7 +62,7 @@ class ManageActions(
      * screen's Cancel does.
      */
     val stop: () -> Unit,
-    /** A model here on the CPU made faster, its graph for the NPU downloaded (Downloads.parts). */
+    /** A model here on the CPU made faster, its NPU's edition downloaded (Downloads.parts). */
     val faster: (Offer) -> Unit,
     val close: () -> Unit,
 )
@@ -301,11 +301,11 @@ fun Manage(
 }
 
 /**
- * The offer of a model here on the CPU in the NPU's edition, which takes its graph alone
- * (Downloads.parts): Faster on this phone (or tablet, or computer: Editions.kind), and its
- * megabytes to come, then how its download goes, with Stop, as the downloads under way above; what
- * a download of it that stopped kept is the model row's, counted and deleted with the rest of the
- * model's files.
+ * The offer of a model here on the CPU in the NPU's edition, the slim file and the graph, which
+ * take the whole file's place once the NPU runs the graph (Offer.faster): Faster on this phone (or
+ * tablet, or computer: Editions.kind), and its download's megabytes, then how the download goes,
+ * with Stop, as the downloads under way above; what a download of it that stopped kept is the model
+ * row's, counted and deleted with the rest of the model's files.
  */
 private fun faster(
     context: Context,
@@ -324,7 +324,7 @@ private fun faster(
                 R.string.manage_faster_computer,
             )
         )
-    val kept = o.graph?.kept ?: 0
+    val kept = o.fasterParts.sumOf { it.kept }
     val key = "faster:${o.name}"
     val get = { a.faster(o) }
     return when {
