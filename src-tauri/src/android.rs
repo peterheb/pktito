@@ -30,6 +30,8 @@ struct Loaded {
     // declared first, so dropped first: it reads the model
     asr: pktito::Asr,
     model: pktito::Model,
+    /// its encoder on the NPU (Engine.npu)
+    npu: bool,
 }
 
 /// A transcript as Kotlin gets it, in JSON, and gives back to format() and
@@ -70,7 +72,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_load<'a>(
             let path = path.try_to_string(env)?;
             let loaded = pktito::Model::load(Path::new(&path)).and_then(|model| {
                 let asr = pktito::Asr::new(&model, transcribe::threads_wanted())?;
-                Ok(Loaded { asr, model })
+                Ok(Loaded { asr, model, npu: false })
             });
             match loaded {
                 Ok(l) => Ok(Box::into_raw(Box::new(l)) as jlong),
@@ -103,12 +105,50 @@ pub extern "system" fn Java_net_pktito_app_Engine_about<'a>(
         .with_env(|env| -> jni::errors::Result<JObject<'a>> {
             let l = unsafe { &*(handle as *const Loaded) };
             let about = format!(
-                "{}, {}, {} threads",
+                "{}, {}{}, {} threads",
                 l.model.name(),
                 pktito::backend(),
+                if l.npu { ", the encoder on the NPU" } else { "" },
                 l.asr.threads()
             );
             Ok(env.new_string(about)?.into())
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.npu(handle, cache, libs): handle's encoder on the phone's NPU
+/// (pktito::Asr::use_qnn), where the build has Qualcomm's libraries, in
+/// libs, the app's native library folder, and the phone a Snapdragon that
+/// takes them; its compiled graph kept at cache. What came of it, for the
+/// log.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_npu<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    handle: jlong,
+    cache: JString<'a>,
+    libs: JString<'a>,
+) -> JObject<'a> {
+    unowned
+        .with_env(|env| -> jni::errors::Result<JObject<'a>> {
+            let l = unsafe { &mut *(handle as *mut Loaded) };
+            let cache = cache.try_to_string(env)?;
+            let libs = libs.try_to_string(env)?;
+            // where the NPU's half of QNN (its skel library) is read from:
+            // the app's own folder, then the system's
+            std::env::set_var(
+                "ADSP_LIBRARY_PATH",
+                format!("{libs};/vendor/dsp/cdsp;/vendor/lib/rfsa/adsp;/system/lib/rfsa/adsp;/dsp"),
+            );
+            let t = std::time::Instant::now();
+            let said = match l.asr.use_qnn(Path::new(&cache)) {
+                Ok(()) => {
+                    l.npu = true;
+                    format!("on, ready in {:.1} s", t.elapsed().as_secs_f64())
+                }
+                Err(why) => format!("off: {why}"),
+            };
+            Ok(env.new_string(said)?.into())
         })
         .resolve::<ThrowRuntimeExAndDefault>()
 }

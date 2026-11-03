@@ -112,6 +112,19 @@ int     pk_asr_threads(const pk_asr *a);
  * computes the same bits in either mode. */
 void    pk_asr_set_fast_mode(pk_asr *a, int on);
 
+/* The encoder on Qualcomm's Hexagon NPU (a build with QNN=1; Android on a
+ * Snapdragon), on: a graph built from the model's own weights
+ * (core/qnn.h), which QNN compiles now, in a minute or two (94 to 114 s
+ * on a Galaxy S24 Ultra, tools/qnn/CLIMB.md); with cache a path, the
+ * compiled graph is kept there and read back the next time, in a second
+ * or two.
+ * Off (on 0) the CPU's again. An input longer than its 30.72 s still
+ * takes the CPU's encoder. Its arithmetic is fp16 against the model's
+ * int8 weights, not the int8 every backend computes the same bits of: a
+ * transcript can differ from pktito's, and from one chip's to another's.
+ * 0, or -1 with why in err. */
+int     pk_asr_use_qnn(pk_asr *a, int on, const char *cache, char *err, size_t errlen);
+
 /* One token of a transcript: a piece of the vocabulary, the encoder frame
  * it was emitted at, and the number of frames TDT says it lasts. */
 typedef struct {

@@ -71,6 +71,17 @@ android {
     buildFeatures {
         compose = true
     }
+    // Qualcomm's QNN libraries beside libpktito_app.so, where a QNN build
+    // put them (the encoder on a Snapdragon's NPU): extracted on install,
+    // as the NPU reads its half (the skel) from a file in the app's native
+    // library folder, and packaged as Qualcomm built them, the Hexagon ones
+    // not being Arm code for the NDK's strip
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+            keepDebugSymbols += "**/libQnn*.so"
+        }
+    }
     // the screens drawn on the JVM (src/test, Shots), with the app's fonts
     testOptions {
         unitTests.isIncludeAndroidResources = true

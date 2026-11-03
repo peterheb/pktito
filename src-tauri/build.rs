@@ -74,6 +74,14 @@ fn main() {
     println!("cargo:rerun-if-changed=../vendor/pktito");
     println!("cargo:rerun-if-changed=../vendor/pktito-ane");
     println!("cargo:rerun-if-changed=native");
+    println!("cargo:rerun-if-env-changed=QNN_SDK");
+    // Qualcomm's AI Runtime SDK, where QNN_SDK names it: the encoder on a
+    // Snapdragon's NPU too (core/qnn.c), on Android's Arm64. Only its
+    // headers are read here; its libraries are loaded at run time (dlopen)
+    // from the app's own native ones
+    let qnn = env::var_os("QNN_SDK")
+        .filter(|_| os == "android" && arch == "aarch64")
+        .map(PathBuf::from);
 
     let family: Vec<(&str, Vec<&str>)> = match arch.as_str() {
         "aarch64" => vec![
@@ -173,6 +181,11 @@ fn main() {
     }
     core.file(root.join("backend/ref/kernels.c"))
         .file(root.join("backend/kernels.c"));
+    if let Some(sdk) = &qnn {
+        core.file(root.join("core/qnn.c"))
+            .define("PK_QNN", None)
+            .include(sdk.join("include/QNN"));
+    }
     for name in &built {
         core.define(&format!("PK_HAVE_{}", name.replace('-', "_")), None);
     }
@@ -201,6 +214,9 @@ fn main() {
     };
     for lib in system {
         println!("cargo:rustc-link-lib={lib}");
+    }
+    if qnn.is_some() {
+        println!("cargo:rustc-link-lib=dl");
     }
     // the engine's pool runs on pthreads, which Rust's std brings along on
     // the GNU targets and not on the LLVM ones (the Arm64 build's

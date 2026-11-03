@@ -35,6 +35,14 @@ object Engine {
 
     @JvmStatic external fun free(handle: Long)
 
+    /**
+     * handle's encoder on the phone's NPU, where this build has Qualcomm's
+     * libraries (libs, the app's native library folder) and the phone a
+     * Snapdragon that takes them: its graph compiled now, a minute or two,
+     * and kept at cache for the next time. What came of it, for the log.
+     */
+    @JvmStatic external fun npu(handle: Long, cache: String, libs: String): String
+
     /** The model, the backend and the threads it runs on. */
     @JvmStatic external fun about(handle: Long): String
 

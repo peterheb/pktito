@@ -4,10 +4,12 @@ import android.content.Context
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import java.io.File
 import java.io.IOException
 import org.json.JSONArray
 import org.json.JSONObject
@@ -197,7 +199,14 @@ object Transcriber {
         if (handle == 0L) {
             handle = Engine.load(pkf.path)
             loadedFrom = pkf.path
+            // the encoder on the NPU where the build and the phone have one:
+            // the first time its graph compiles, a minute or two
+            val npu = Engine.npu(handle, File(context.cacheDir, pkf.nameWithoutExtension + ".qnn").path,
+                context.applicationInfo.nativeLibraryDir)
+            Log.i(TAG, "the NPU: $npu")
         }
         return handle
     }
+
+    private const val TAG = "pktito"
 }

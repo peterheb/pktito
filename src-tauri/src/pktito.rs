@@ -127,6 +127,13 @@ extern "C" {
     fn pk_asr_ane_warm(a: *mut RawAsr, err: *mut c_char, errlen: usize) -> c_int;
 }
 
+// Android's: the encoder on a Snapdragon's NPU (core/qnn.h), in a build
+// with QNN_SDK set (build.rs); without, it says so
+#[cfg(target_os = "android")]
+extern "C" {
+    fn pk_asr_use_qnn(a: *mut RawAsr, on: c_int, cache: *const c_char, err: *mut c_char, errlen: usize) -> c_int;
+}
+
 /// The cues of a subtitle track for words and their times in milliseconds,
 /// as the CLI's --srt has them (core/captions.c): English's rules for
 /// english 1, punctuation and pauses alone for 0, and for -1 English's if
@@ -373,6 +380,21 @@ impl Asr {
             }
         };
         if rc != 0 {
+            return Err(unsafe { CStr::from_ptr(err.as_ptr()) }.to_string_lossy().into_owned());
+        }
+        Ok(())
+    }
+
+    /// The encoder on the phone's NPU (a Snapdragon's Hexagon, through
+    /// Qualcomm's QNN: core/qnn.h), its graph compiled from the model now, a
+    /// minute or two, and kept at cache, from which the next time reads it
+    /// back in a second or two; the CPU's encoder where it can't be, with
+    /// why.
+    #[cfg(target_os = "android")]
+    pub fn use_qnn(&mut self, cache: &Path) -> Result<(), String> {
+        let c = CString::new(cache.to_string_lossy().as_bytes()).map_err(|_| "bad path".to_string())?;
+        let mut err = [0 as c_char; 1024];
+        if unsafe { pk_asr_use_qnn(self.raw, 1, c.as_ptr(), err.as_mut_ptr(), err.len()) } != 0 {
             return Err(unsafe { CStr::from_ptr(err.as_ptr()) }.to_string_lossy().into_owned());
         }
         Ok(())

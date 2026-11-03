@@ -13,6 +13,9 @@
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef PK_QNN
+#include "qnn.h"
+#endif
 
 static size_t up16z(size_t x) { return (x + 15) & ~(size_t)15; }
 
@@ -141,6 +144,24 @@ int pk_asr_threads(const pk_asr *a) { return a->wide; }
 
 void pk_asr_set_fast_mode(pk_asr *a, int on) { a->qb64 = on != 0; }
 
+int pk_asr_use_qnn(pk_asr *a, int on, const char *cache, char *err, size_t errlen) {
+#ifdef PK_QNN
+    pk_qnn *e = NULL;
+    if (on && !(e = pk_qnn_open(a->m, 0, cache, err, errlen)))
+        return -1;
+    pk_qnn_free(a->qnn);
+    a->qnn = e;
+    return 0;
+#else
+    (void)a;
+    (void)on;
+    (void)cache;
+    if (err && errlen)
+        snprintf(err, errlen, "this pktito was built without QNN=1");
+    return -1;
+#endif
+}
+
 void pk_asr_free(pk_asr *a) {
     if (!a)
         return;
@@ -150,6 +171,9 @@ void pk_asr_free(pk_asr *a) {
     free(a->lane);
     pk_vad_free(a->vad);
     pk_pool_free(a->pool);
+#ifdef PK_QNN
+    pk_qnn_free(a->qnn);
+#endif
     free(a->tws);
     free(a->mem);
     free(a->dh);
@@ -403,7 +427,9 @@ int pk_run_chunks_with(pk_asr *a, const float *x, const pk_seg *c, size_t n,
         return -1;
     if (n == 0)
         return 0;
-    int k = lanes_for(a, c, n);
+    /* one lane with the NPU: a lane's transcriber has the CPU's encoder,
+     * so a chunk's bits would be the lane's it fell to */
+    int k = a->qnn ? 1 : lanes_for(a, c, n);
     if (k > 1 && (k = lanes_ready(a, k, most)) > 1)
         return run_lanes(a, x, c, n, k, each, arg);
     pk_os_throttle was = pk_os_unthrottle();  /* this thread runs a share of every job */
