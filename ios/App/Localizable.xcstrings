@@ -1,0 +1,2312 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "about_copyright": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copyright (c) 2026 Peter Hebert, under the [MIT license](https://github.com/peterheb/pktito/blob/main/LICENSE)"
+          }
+        }
+      }
+    },
+    "about_docs": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documentation"
+          }
+        }
+      }
+    },
+    "about_else": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Everything else"
+          }
+        }
+      }
+    },
+    "about_else_list": {
+      "extractionState": "manual",
+      "comment": "about.else_list: no Tauri on Android",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetpack Compose, Rust crates, typefaces, icons, etc."
+          }
+        }
+      }
+    },
+    "about_else_list_ios": {
+      "extractionState": "manual",
+      "comment": "About's credits, what \"Everything else\" covers (Android's about_else_list names Jetpack Compose)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SwiftUI, Rust crates, typefaces, icons, etc."
+          }
+        }
+      }
+    },
+    "about_licenses": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open source licenses"
+          }
+        }
+      }
+    },
+    "about_mascot": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pktito's mascot, a budgie beside a speech bubble and a transcript"
+          }
+        }
+      }
+    },
+    "about_models": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NVIDIA's [parakeet-tdt-0.6b-v2](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) and [-v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), modified by pktito (partly quantized to int8). Provided as is, without warranties. pktito is not affiliated with or endorsed by NVIDIA."
+          }
+        }
+      }
+    },
+    "about_open": {
+      "extractionState": "manual",
+      "comment": "About (about.*); the strings in CDATA are HTML, as the desktop's *_html are, for AnnotatedString.fromHtml",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About pktito"
+          }
+        }
+      }
+    },
+    "about_privacy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy"
+          }
+        }
+      }
+    },
+    "about_silero": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voice activity detection, [MIT](https://github.com/snakers4/silero-vad/blob/master/LICENSE)\nCopyright (c) 2020-present Silero Team"
+          }
+        }
+      }
+    },
+    "about_tagline": {
+      "extractionState": "manual",
+      "comment": "the name's sound in one piece, a word joiner (&#8288;) after each of its hyphens: the desktop's broke \"pick-a-\" from \"tito\" at one width (the layout audit, 2026-11-01). Its space can still break: at twice the text size the whole of it is 310 dp (Archivo's advances, 15 sp at 27 dp), and a folded phone's cover has 305 for the words",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A compact Parakeet implementation *(pronounced “pick-⁠a-⁠tito”)*\nSpeech to text on this device."
+          }
+        }
+      }
+    },
+    "about_version": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "app_name": {
+      "extractionState": "manual",
+      "comment": "The desktop's words where the screen is the desktop's (ui/locales/en.json, by the key in each comment); Android's own where it differs.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pktito"
+          }
+        }
+      }
+    },
+    "ask_cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "ask_clear": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear"
+          }
+        }
+      }
+    },
+    "ask_clear_text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All recent transcripts will be permanently deleted. Your original audio and video files, and any transcripts you saved, are not affected."
+          }
+        }
+      }
+    },
+    "ask_clear_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear the recent list?"
+          }
+        }
+      }
+    },
+    "back": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back"
+          }
+        }
+      }
+    },
+    "captions": {
+      "extractionState": "manual",
+      "comment": "work.sentences",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Captions"
+          }
+        }
+      }
+    },
+    "catalog_english": {
+      "extractionState": "manual",
+      "comment": "The models: the catalog's words (catalog.*), the model menu (models.*), the setup screen (setup.*), a download (download.*), a model file of one's own (model_file.*)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "English"
+          }
+        }
+      }
+    },
+    "catalog_english_about": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "English only"
+          }
+        }
+      }
+    },
+    "catalog_multilingual": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Multilingual"
+          }
+        }
+      }
+    },
+    "catalog_multilingual_about": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "25 European languages"
+          }
+        }
+      }
+    },
+    "channel": {
+      "extractionState": "manual",
+      "comment": "the notification channels' names, in the system's settings",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribing"
+          }
+        }
+      }
+    },
+    "channel_download": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model download"
+          }
+        }
+      }
+    },
+    "choose": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a file…"
+          }
+        }
+      }
+    },
+    "copied": {
+      "extractionState": "manual",
+      "comment": "copy.captions",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied"
+          }
+        }
+      }
+    },
+    "copied_captions": {
+      "extractionState": "manual",
+      "comment": "copy.done",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied captions"
+          }
+        }
+      }
+    },
+    "copy_captions": {
+      "extractionState": "manual",
+      "comment": "copy.text",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy captions (SRT)"
+          }
+        }
+      }
+    },
+    "copy_text": {
+      "extractionState": "manual",
+      "comment": "work.stop",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy text"
+          }
+        }
+      }
+    },
+    "copy_title": {
+      "extractionState": "manual",
+      "comment": "Android's own: a document is copied in, then checked, where the desktop uses a file where it is",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opening the model file"
+          }
+        }
+      }
+    },
+    "date_today": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today"
+          }
+        }
+      }
+    },
+    "date_yesterday": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yesterday"
+          }
+        }
+      }
+    },
+    "decode_cant_convert": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't convert this audio"
+          }
+        }
+      }
+    },
+    "decode_no_audio": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No audio track"
+          }
+        }
+      }
+    },
+    "decode_not_found": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File not found"
+          }
+        }
+      }
+    },
+    "decode_not_media": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not audio or video"
+          }
+        }
+      }
+    },
+    "decode_unreadable": {
+      "extractionState": "manual",
+      "comment": "a recording that can't be read, the desktop's decode.* (the core's keys: words, in Models.kt; Words.swift); a phone has no ffmpeg to suggest",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't read this file"
+          }
+        }
+      }
+    },
+    "download_bar": {
+      "extractionState": "manual",
+      "comment": "download.from_html",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model download"
+          }
+        }
+      }
+    },
+    "download_bar_stopped": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model download, stopped"
+          }
+        }
+      }
+    },
+    "download_cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "download_cant_check": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't check the download"
+          }
+        }
+      }
+    },
+    "download_cant_reach": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't reach %1$@"
+          }
+        }
+      }
+    },
+    "download_cant_save": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't save the model"
+          }
+        }
+      }
+    },
+    "download_checking": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking"
+          }
+        }
+      }
+    },
+    "download_connection_lost": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connection lost"
+          }
+        }
+      }
+    },
+    "download_damaged": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The download was damaged"
+          }
+        }
+      }
+    },
+    "download_details": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Details"
+          }
+        }
+      }
+    },
+    "download_disk_full": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not enough disk space"
+          }
+        }
+      }
+    },
+    "download_from": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ from %2$@"
+          }
+        }
+      }
+    },
+    "download_not_answering": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ isn't answering"
+          }
+        }
+      }
+    },
+    "download_not_found": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model not found"
+          }
+        }
+      }
+    },
+    "download_nothing_yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing downloaded yet"
+          }
+        }
+      }
+    },
+    "download_pause": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause"
+          }
+        }
+      }
+    },
+    "download_progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ of %2$@ MB"
+          }
+        }
+      }
+    },
+    "download_progress_paused": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ of %2$@ MB · paused"
+          }
+        }
+      }
+    },
+    "download_progress_speed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ of %2$@ MB · %3$@ MB/s · %4$@"
+          }
+        }
+      }
+    },
+    "download_resume": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume"
+          }
+        }
+      }
+    },
+    "download_retrying": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retrying automatically"
+          }
+        }
+      }
+    },
+    "download_stopped_at": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopped at %1$@ of %2$@ MB"
+          }
+        }
+      }
+    },
+    "download_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading the %1$@ model"
+          }
+        }
+      }
+    },
+    "download_too_much": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ sent too much"
+          }
+        }
+      }
+    },
+    "download_try_again": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try again"
+          }
+        }
+      }
+    },
+    "download_trying": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trying…"
+          }
+        }
+      }
+    },
+    "download_use_file": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use a model file…"
+          }
+        }
+      }
+    },
+    "find_close": {
+      "extractionState": "manual",
+      "comment": "find.next",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close find"
+          }
+        }
+      }
+    },
+    "find_label": {
+      "extractionState": "manual",
+      "comment": "find.placeholder",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find in transcript"
+          }
+        }
+      }
+    },
+    "find_next": {
+      "extractionState": "manual",
+      "comment": "find.previous",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next match"
+          }
+        }
+      }
+    },
+    "find_placeholder": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find"
+          }
+        }
+      }
+    },
+    "find_previous": {
+      "extractionState": "manual",
+      "comment": "find.label",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous match"
+          }
+        }
+      }
+    },
+    "format_json": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JSON with word timings"
+          }
+        }
+      }
+    },
+    "format_md": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Markdown"
+          }
+        }
+      }
+    },
+    "format_md_times": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Markdown with times"
+          }
+        }
+      }
+    },
+    "format_srt": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subtitles"
+          }
+        }
+      }
+    },
+    "format_txt": {
+      "extractionState": "manual",
+      "comment": "save.failed",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text"
+          }
+        }
+      }
+    },
+    "format_txt_times": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text with times"
+          }
+        }
+      }
+    },
+    "format_vtt": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Web subtitles"
+          }
+        }
+      }
+    },
+    "link_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't open %1$@"
+          }
+        }
+      }
+    },
+    "manage_ask_own_last": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This frees %1$@ MB. It's the only model here, so you'll choose a model again before transcribing. The file you opened is not affected."
+          }
+        }
+      }
+    },
+    "manage_ask_own_switch": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This frees %1$@ MB, and pktito switches to the %2$@ model. The file you opened is not affected."
+          }
+        }
+      }
+    },
+    "manage_ask_own_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the copy of %1$@?"
+          }
+        }
+      }
+    },
+    "manage_ask_part_text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This frees %1$@ MB. Downloading the %2$@ model again starts over."
+          }
+        }
+      }
+    },
+    "manage_ask_part_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the paused download?"
+          }
+        }
+      }
+    },
+    "manage_ask_text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This frees %1$@ MB. You can download it again."
+          }
+        }
+      }
+    },
+    "manage_ask_text_last": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This frees %1$@ MB. It's the only model downloaded, so you'll choose a model again before transcribing."
+          }
+        }
+      }
+    },
+    "manage_ask_text_switch": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This frees %1$@ MB, and pktito switches to the %2$@ model. You can download it again."
+          }
+        }
+      }
+    },
+    "manage_ask_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the %1$@ model?"
+          }
+        }
+      }
+    },
+    "manage_cant_delete": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't delete the model"
+          }
+        }
+      }
+    },
+    "manage_delete": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
+          }
+        }
+      }
+    },
+    "manage_downloading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading · %1$@ of %2$@ MB"
+          }
+        }
+      }
+    },
+    "manage_free_gb": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ GB free"
+          }
+        }
+      }
+    },
+    "manage_free_mb": {
+      "extractionState": "manual",
+      "comment": "Android's own: the room left, a download under way, the copy of a model file opened",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ MB free"
+          }
+        }
+      }
+    },
+    "manage_in_use": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In use"
+          }
+        }
+      }
+    },
+    "manage_none": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No models downloaded"
+          }
+        }
+      }
+    },
+    "manage_paused": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused download · %1$@ of %2$@ MB"
+          }
+        }
+      }
+    },
+    "manage_size": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ MB"
+          }
+        }
+      }
+    },
+    "manage_title": {
+      "extractionState": "manual",
+      "comment": "Manage models (manage.*), which the desktop's Store edition has where the others show the folder; the Android-only ones say so",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage models"
+          }
+        }
+      }
+    },
+    "manage_used_gb": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ GB used"
+          }
+        }
+      }
+    },
+    "manage_used_mb": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ MB used"
+          }
+        }
+      }
+    },
+    "model_file_cant_open": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't open the model file"
+          }
+        }
+      }
+    },
+    "model_file_damaged": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model file incomplete or damaged"
+          }
+        }
+      }
+    },
+    "model_file_newer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needs a newer version of pktito"
+          }
+        }
+      }
+    },
+    "model_file_not_model": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not a pktito model"
+          }
+        }
+      }
+    },
+    "models_download_size": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ MB download"
+          }
+        }
+      }
+    },
+    "models_downloaded": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloaded"
+          }
+        }
+      }
+    },
+    "models_languages_among": {
+      "extractionState": "manual",
+      "comment": "a model of several's languages, %1$s (\"25 European languages\"), and the system's language among them, %2$s, as one sentence (models.languages_among)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@ among them"
+          }
+        }
+      }
+    },
+    "models_manage": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage models…"
+          }
+        }
+      }
+    },
+    "models_named": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ model"
+          }
+        }
+      }
+    },
+    "models_open_file": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open a model file…"
+          }
+        }
+      }
+    },
+    "models_ready": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ model ready"
+          }
+        }
+      }
+    },
+    "models_using": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Using the %1$@ model"
+          }
+        }
+      }
+    },
+    "models_using_file": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Using %1$@"
+          }
+        }
+      }
+    },
+    "no_model": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No speech model yet"
+          }
+        }
+      }
+    },
+    "no_speech": {
+      "extractionState": "manual",
+      "comment": "transcribe.failed",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No speech in this file"
+          }
+        }
+      }
+    },
+    "notices_intro": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This build of pktito includes the following open-source software and libraries:"
+          }
+        }
+      }
+    },
+    "notices_libraries": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Libraries (Android)"
+          }
+        }
+      }
+    },
+    "notices_libraries_ios": {
+      "extractionState": "manual",
+      "comment": "the licenses' heading over the libraries (Android's notices_libraries says Android)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Libraries"
+          }
+        }
+      }
+    },
+    "notices_texts": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "License texts"
+          }
+        }
+      }
+    },
+    "notices_title": {
+      "extractionState": "manual",
+      "comment": "the licenses (notices.*), from assets/notices.json (android/notices.py)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open source licenses"
+          }
+        }
+      }
+    },
+    "notices_type": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Typefaces and icons"
+          }
+        }
+      }
+    },
+    "pause": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause"
+          }
+        }
+      }
+    },
+    "play": {
+      "extractionState": "manual",
+      "comment": "work.captions",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play"
+          }
+        }
+      }
+    },
+    "play_cant": {
+      "extractionState": "manual",
+      "comment": "why a finished transcript's recording does not play, in the strip's times' place, and Locate…, which picks the file again (the proposal Peter took, 2026-10-26)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Android can't play this file"
+          }
+        }
+      }
+    },
+    "play_cant_ios": {
+      "extractionState": "manual",
+      "comment": "the strip, where the recording found doesn't play (Android's play_cant names Android)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS can't play this file"
+          }
+        }
+      }
+    },
+    "play_changed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Original changed since transcribing"
+          }
+        }
+      }
+    },
+    "play_from": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play from %1$@"
+          }
+        }
+      }
+    },
+    "play_locate": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Locate…"
+          }
+        }
+      }
+    },
+    "play_moved": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Original not found"
+          }
+        }
+      }
+    },
+    "play_no_access": {
+      "extractionState": "manual",
+      "comment": "Android's own: a share's or Open with's access ends with its task, where the transcript is from before pktito kept a copy of a share",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared file, no longer available"
+          }
+        }
+      }
+    },
+    "play_not_it": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That's not the file transcribed: its size is different"
+          }
+        }
+      }
+    },
+    "play_preparing": {
+      "extractionState": "manual",
+      "comment": "the play button's spoken name while iOS reads through the recording, so that a time sought to is exactly that time (a long FLAC can take a few seconds)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Getting the recording ready to play"
+          }
+        }
+      }
+    },
+    "prepare_cpu": {
+      "extractionState": "manual",
+      "comment": "a toast, where the Neural Engine couldn't run the model and the whole model file is downloaded instead",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This %1$@'s Neural Engine can't run the model, so pktito uses its processor instead"
+          }
+        }
+      }
+    },
+    "prepare_title": {
+      "extractionState": "manual",
+      "comment": "the setup screen while Core ML compiles the Neural Engine's encoder, the first time after an install or an update; %1$s is the device's kind, \"iPhone\" or \"iPad\"",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing pktito for this %1$@…"
+          }
+        }
+      }
+    },
+    "prepare_why": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compiling the speech model for the Neural Engine."
+          }
+        }
+      }
+    },
+    "privacy_ask": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask by email, at [peter.hebert@pktito.net](mailto:peter.hebert@pktito.net), or on [GitHub](https://github.com/peterheb/pktito/issues). The full policy is at [pktito.net/privacy](https://pktito.net/privacy)."
+          }
+        }
+      }
+    },
+    "privacy_choice_file": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To skip the download, use a model file you already have: choose “Open a model file…”."
+          }
+        }
+      }
+    },
+    "privacy_choice_uninstall": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uninstalling pktito deletes its settings, its models and its recent transcripts from this device."
+          }
+        }
+      }
+    },
+    "privacy_choice_uninstall_ios": {
+      "extractionState": "manual",
+      "comment": "Privacy, Your choices (Android's privacy_choice_uninstall says uninstalling): what deleting the app deletes from the iPhone or iPad; what iOS keeps in its own backups is iOS's to say",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleting pktito deletes its settings, its models and its recent transcripts from this device."
+          }
+        }
+      }
+    },
+    "privacy_choices": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your choices"
+          }
+        }
+      }
+    },
+    "privacy_download": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Downloading a model.** pktito downloads AI models from models.pktito.net, hosted on a content delivery network. The server logs your IP address, the time, the file requested and a standard user-agent string, but no name, account or device identifier. These logs are used to keep the service secure and to count downloads in aggregate. We don't use them to identify you, combine them with other data, or sell or share them."
+          }
+        }
+      }
+    },
+    "privacy_files": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your files"
+          }
+        }
+      }
+    },
+    "privacy_files_text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pktito opens only the recordings you choose, open with it or share to it, and saves only where you choose. It asks for no access to your storage. A transcript you share goes to the app you pick."
+          }
+        }
+      }
+    },
+    "privacy_internet": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What reaches the internet"
+          }
+        }
+      }
+    },
+    "privacy_intro": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pktito is local transcription software — it turns speech into text on this device. Your media files are not uploaded to cloud servers, and pktito has no accounts, ads or tracking."
+          }
+        }
+      }
+    },
+    "privacy_links": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Links.** Links in pktito open in your browser, and each site's own privacy policy applies there."
+          }
+        }
+      }
+    },
+    "privacy_questions": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questions"
+          }
+        }
+      }
+    },
+    "privacy_title": {
+      "extractionState": "manual",
+      "comment": "Privacy (privacy.*), as Android has it: a device, the system's pickers, the app's data deleted from it with the app, and nothing promised about Android's own backup, which takes the settings and the recent list (AndroidManifest.xml); pktito-site's policy (pktito.net/privacy) says the same",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy"
+          }
+        }
+      }
+    },
+    "privacy_updated": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last updated November 1, 2026"
+          }
+        }
+      }
+    },
+    "problem_memory": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not enough memory. Close other apps and try again."
+          }
+        }
+      }
+    },
+    "problem_unexpected": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Something went wrong"
+          }
+        }
+      }
+    },
+    "ready_lead": {
+      "extractionState": "manual",
+      "comment": "a phone has nothing to drop: ready.drop's place says what the zone is for",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribe audio or video"
+          }
+        }
+      }
+    },
+    "real_time": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@x real-time"
+          }
+        }
+      }
+    },
+    "recent_clear": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear"
+          }
+        }
+      }
+    },
+    "recent_clear_label": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear the recent list"
+          }
+        }
+      }
+    },
+    "recent_remove": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the transcript of %1$@"
+          }
+        }
+      }
+    },
+    "recent_remove_item": {
+      "extractionState": "manual",
+      "comment": "recent.remove_tip, as a long press's menu has it: the saved transcript goes for good, and pktito's copy of a shared recording with it, but never the original (Peter, 2026-10-31)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete transcript"
+          }
+        }
+      }
+    },
+    "recent_remove_note": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your original file isn't deleted"
+          }
+        }
+      }
+    },
+    "recent_title": {
+      "extractionState": "manual",
+      "comment": "The recent list (recent.*, ask.*, date.*) and its audio (play.*)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recent"
+          }
+        }
+      }
+    },
+    "recent_unreadable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't read this transcript"
+          }
+        }
+      }
+    },
+    "save_failed": {
+      "extractionState": "manual",
+      "comment": "save.saved",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't save %1$@"
+          }
+        }
+      }
+    },
+    "save_file": {
+      "extractionState": "manual",
+      "comment": "the share sheet's first choice, under the app's name: the format shared, saved instead; \"Save to device\" was cut to \"Save to devi…\" there (Android 13 and 16)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save file"
+          }
+        }
+      }
+    },
+    "save_times": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timestamps in .txt and .md"
+          }
+        }
+      }
+    },
+    "saved": {
+      "extractionState": "manual",
+      "comment": "save.times",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved %1$@"
+          }
+        }
+      }
+    },
+    "sentences": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sentences"
+          }
+        }
+      }
+    },
+    "setup_accuracy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accuracy varies by language."
+          }
+        }
+      }
+    },
+    "setup_details": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Details"
+          }
+        }
+      }
+    },
+    "setup_download": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download the %1$@ model · %2$@ MB"
+          }
+        }
+      }
+    },
+    "setup_download_rest": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download the %1$@ model · %2$@ MB to go"
+          }
+        }
+      }
+    },
+    "setup_have_file": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I already have a model file…"
+          }
+        }
+      }
+    },
+    "setup_legend": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speech model"
+          }
+        }
+      }
+    },
+    "setup_on_device": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "on this device"
+          }
+        }
+      }
+    },
+    "setup_size": {
+      "extractionState": "manual",
+      "comment": "setup.on_computer",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ MB"
+          }
+        }
+      }
+    },
+    "setup_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a speech model"
+          }
+        }
+      }
+    },
+    "setup_use": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the %1$@ model"
+          }
+        }
+      }
+    },
+    "setup_waiting": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld file waiting"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld files waiting"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "share": {
+      "extractionState": "manual",
+      "comment": "copy.done_captions",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share"
+          }
+        }
+      }
+    },
+    "share_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't share %1$@"
+          }
+        }
+      }
+    },
+    "sheet_close": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        }
+      }
+    },
+    "speed_faster": {
+      "extractionState": "manual",
+      "comment": "speed.slower",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faster"
+          }
+        }
+      }
+    },
+    "speed_group": {
+      "extractionState": "manual",
+      "comment": "speed.label",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback speed"
+          }
+        }
+      }
+    },
+    "speed_label": {
+      "extractionState": "manual",
+      "comment": "seg.play_from",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback speed, %1$@ times"
+          }
+        }
+      }
+    },
+    "speed_slower": {
+      "extractionState": "manual",
+      "comment": "speed.group",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slower"
+          }
+        }
+      }
+    },
+    "stats_transcribed": {
+      "extractionState": "manual",
+      "comment": "time.real_time",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribed in %1$@, %2$@"
+          }
+        }
+      }
+    },
+    "status_done": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "status_failed": {
+      "extractionState": "manual",
+      "comment": "status.done",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't transcribe"
+          }
+        }
+      }
+    },
+    "status_loading": {
+      "extractionState": "manual",
+      "comment": "times.video_rate",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading the model"
+          }
+        }
+      }
+    },
+    "status_reading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading the audio"
+          }
+        }
+      }
+    },
+    "status_stopped_at": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopped at %1$lld%%"
+          }
+        }
+      }
+    },
+    "status_transcribing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribing %1$lld%%"
+          }
+        }
+      }
+    },
+    "stop": {
+      "extractionState": "manual",
+      "comment": "nav.back",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop"
+          }
+        }
+      }
+    },
+    "time_left_minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "about %1$lld min left"
+          }
+        }
+      }
+    },
+    "time_left_seconds": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "about %1$lld s left"
+          }
+        }
+      }
+    },
+    "times_frames": {
+      "extractionState": "manual",
+      "comment": "times.seconds",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frames"
+          }
+        }
+      }
+    },
+    "times_frames_at": {
+      "extractionState": "manual",
+      "comment": "times.frames",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ at %2$@ fps"
+          }
+        }
+      }
+    },
+    "times_frames_at_video": {
+      "extractionState": "manual",
+      "comment": "times.frames_at",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ at %2$@ fps, the video's"
+          }
+        }
+      }
+    },
+    "times_rates": {
+      "extractionState": "manual",
+      "comment": "times.frames_at_video",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frames a second"
+          }
+        }
+      }
+    },
+    "times_seconds": {
+      "extractionState": "manual",
+      "comment": "times.tip",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seconds"
+          }
+        }
+      }
+    },
+    "times_tip": {
+      "extractionState": "manual",
+      "comment": "volume.unmute",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seconds or frames"
+          }
+        }
+      }
+    },
+    "times_video_rate": {
+      "extractionState": "manual",
+      "comment": "times.rates",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video · %1$@"
+          }
+        }
+      }
+    },
+    "volume_label": {
+      "extractionState": "manual",
+      "comment": "speed.faster",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volume"
+          }
+        }
+      }
+    },
+    "volume_mute": {
+      "extractionState": "manual",
+      "comment": "volume.label",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mute"
+          }
+        }
+      }
+    },
+    "volume_unmute": {
+      "extractionState": "manual",
+      "comment": "volume.mute",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unmute"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

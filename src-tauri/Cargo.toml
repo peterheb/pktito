@@ -23,8 +23,9 @@ ureq = { version = "2", features = ["socks-proxy"] }
 dirs = "7"
 
 # the window's. Android's window is the Kotlin app's (android/), which takes
-# the library alone, as a shared library (src/android.rs)
-[target.'cfg(not(target_os = "android"))'.dependencies]
+# the library alone, as a shared library (src/android.rs), and iOS's the
+# Swift app's (ios/), as a static library (src/ios.rs)
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-dialog = "2"
 

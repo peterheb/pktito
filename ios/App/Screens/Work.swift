@@ -1,0 +1,800 @@
+import SwiftUI
+import UIKit
+
+/// One file at work and then its transcript (ui/index.html, #work; Android's
+/// Work): the header with the way back, the name, and what can be done with
+/// it (at work only Stop; Copy and Share once it is done), the strip, the
+/// choice of sentences or captions, a line for what went wrong, and the rows.
+///
+/// Where the keyboard leaves the rows under `least` below the header, the
+/// strip and the views line, as on a phone on its side, those make room
+/// while it is up: the search takes the top line, its words, count and
+/// steps, and the rows the rest, the match in sight. The keyboard put away
+/// brings them back with the search kept; the field's × closes the search
+/// as it always does. Peter asked for what is most usable (2026-11-01);
+/// the same in Android's app.
+struct Work: View {
+    /// a search's matches in the rows shown, a finished transcript's only,
+    /// and each row's of them
+    @State private var hits: [Hit] = []
+    @State private var marks: [Int: [Marked]] = [:]
+    /// the screen's height above the keyboard, and as if there were none
+    @State private var height: CGFloat = 0
+    @State private var whole: CGFloat = 0
+    /// the header's, strip's, views line's and message's height as last
+    /// shown, which the rows' room is reckoned from while they make room
+    @State private var above: CGFloat = 0
+    /// the least of the rows worth the header and the strip with the
+    /// keyboard up: 160 at the default text size, scaled as the text is
+    /// (Android's 160 dp, Dp.withText)
+    @ScaledMetric(relativeTo: .body) private var least: CGFloat = 160
+    /// its own width 600 or more: its edges 24, as the desktop's wide work
+    /// and Material's; 16 under that, a phone's (the layout audit, 2026-11-01)
+    @State private var roomy = false
+    /// the waveform's seeks, each a jump the rows bring into sight (Rows)
+    @State private var jumped = 0
+
+    /// What the matches are found anew for.
+    private struct Sought: Equatable {
+        let query: String
+        let captions: Bool
+        let review: Bool
+        let id: String
+        let count: Int
+    }
+
+    var body: some View {
+        let t = Transcriber.shared
+        let s = AppState.shared
+        let review = t.step == .done || t.step == .stopped
+        let rows = s.rows
+        let room = makesRoom(review: review, rows: rows)
+        let edge: CGFloat = roomy ? 24 : 16
+        VStack(spacing: 0) {
+            VStack(spacing: 0) {
+                if !room { Header(review: review, edge: edge, shown: !rows.isEmpty) }
+                if t.step != .error && !room {
+                    Strip(
+                        review: review, left: left, why: t.why,
+                        locate: t.locate ? { s.pick = .locate } : nil,
+                        hits: hits, tickAt: s.finder.at,
+                        // a tick: its match, and the playhead there (app.js,
+                        // #ticks); after the seek, which puts the reader on the
+                        // match it last passed, a tick's own, where two share its time
+                        onTick: { k in
+                            seek(hits[k].time)
+                            s.finder.go(hits, k)
+                        },
+                        seek: {
+                            seek($0 * t.duration)
+                            jumped += 1
+                        })
+                        // 16 under the header's buttons: their 11 and 5
+                        .padding(.horizontal, edge)
+                        .padding(.top, 5)
+                }
+                if review && !rows.isEmpty {
+                    // a step takes the playhead to its match, at rest too (Finder.step)
+                    Views(hits: hits, seek: { seek($0) }, alone: room)
+                        .padding(.horizontal, edge)
+                        // alone, the search where the header's buttons were
+                        .padding(.top, room ? 11 : 16)
+                }
+                if let msg = message(rows), !room {
+                    HStack(spacing: 6) {
+                        if t.error != nil { PkIcon.alert.frame(width: 16, height: 16).foregroundStyle(Pk.err) }
+                        Text(msg).font(PkType.body.font(15)).foregroundStyle(t.error != nil ? Pk.err : Pk.inkMuted)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, edge)
+                    .padding(.top, 16)
+                }
+            }
+            // its whole height always, the rows giving way: a short window
+            // squeezed the header from its 98 to 62, its buttons pushed up
+            // to the window's top edge (Peter's iPad in a window at its least,
+            // 375 x 466, 2026-11-01)
+            .fixedSize(horizontal: false, vertical: true)
+            // what the rows' room is reckoned from while the rest makes room
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { if !room { above = $0 } }
+            Rows(rows: rows, review: review, marks: marks, hits: hits, stats: stats(review), edge: edge, jump: jumped) { time, play in
+                seek(time, play: play)
+            }
+        }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+        .onGeometryChange(for: Bool.self) { $0.size.width >= 600 } action: { roomy = $0 }
+        // the height as if the keyboard weren't up, which it makes room in
+        .background {
+            GeometryReader { g in
+                Color.clear.onChange(of: g.size.height, initial: true) { _, h in whole = h }
+            }
+            .ignoresSafeArea(.keyboard)
+        }
+        .onChange(of: room) { trace("room for the keyboard: \(room); \(height) of \(whole), \(above) above the rows") }
+        .onChange(of: Sought(query: s.finder.query, captions: s.captions, review: review, id: t.id, count: rows.count),
+                  initial: true) { was, now in
+            hits = review ? findIn(rows, s.finder.query) : []
+            marks = Dictionary(grouping: hits.indices.map { Marked(k: $0, hit: hits[$0]) }, by: \.hit.row)
+            // a search typed at rest takes the playhead to its match, so that
+            // Play starts where the rows went (app.js, runFind); the rows
+            // marked anew for the views or the list leave it where it is
+            let typed = was.query != now.query && !Player.shared.playing
+            s.finder.settle(hits, position: Player.shared.position, seek: typed ? { seek($0) } : nil)
+        }
+    }
+
+    /// Whether the header and the strip make room for the keyboard: it is
+    /// up, a transcript is searched, and under them and the views line, 16
+    /// over the rows, the rows would keep less than `least`. Reckoned from
+    /// their height as last shown, so that making room doesn't undo itself;
+    /// a hardware keyboard's bar leaves the room it finds.
+    private func makesRoom(review: Bool, rows: [Segment]) -> Bool {
+        review && !rows.isEmpty && whole > height && height - above - 16 < least
+    }
+
+    /// The playhead at time, and the reader on the match it last passed.
+    private func seek(_ time: Double, play: Bool = false) {
+        Player.shared.seek(time, play: play)
+        AppState.shared.finder.follow(hits, position: time, jump: true)
+    }
+
+    /// At work, the strip's time's place: the step, then the pace.
+    private var left: String {
+        let t = Transcriber.shared
+        switch t.step {
+        case .loading: return L("status_loading")
+        case .reading: return L("status_reading")
+        case .transcribing where t.done > 0 && t.transcribed > 0: return pace(t.done * t.duration, t.transcribed)
+        default: return ""
+        }
+    }
+
+    private func message(_ rows: [Segment]) -> String? {
+        let t = Transcriber.shared
+        if let e = t.error { return e }
+        if t.step == .stopped { return L("status_stopped_at", percent(t.done)) }
+        if t.step == .done && rows.isEmpty { return L("no_speech") }
+        return nil
+    }
+
+    private func stats(_ review: Bool) -> String? {
+        let t = Transcriber.shared
+        guard review && !t.segments.isEmpty && t.transcribed > 0 else { return nil }
+        return L("stats_transcribed", clock(t.transcribed), pace(t.done * t.duration, t.transcribed))
+    }
+}
+
+/// The header's buttons in the middle of its 62 (app.css, .pk-head), the way
+/// back's arrow on the cards' line, 16 from the screen's edge, its button's
+/// padding outside it: the arrow's ink is 14 into its 40, so the button is
+/// at 2.
+private struct Header: View {
+    let review: Bool
+    /// the screen's edge, 16 or 24 (Work)
+    let edge: CGFloat
+    /// whether there are rows to copy and share
+    let shown: Bool
+    /// what the name keeps beside the buttons before it goes under them:
+    /// 160 at the default text size, about twenty characters, and as many
+    /// at any other
+    @ScaledMetric(relativeTo: .subheadline) private var floor: CGFloat = 160
+    /// past the window's controls, where they are in its corner (Clearance)
+    @State private var clear = Clearance()
+
+    var body: some View {
+        let t = Transcriber.shared
+        // where the name would keep under its floor beside the buttons, the way
+        // back and the buttons keep the bar's line and the name goes under
+        // them, as a large title does on both platforms (agreed with
+        // Android's app, 2026-10-31)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                back
+                name.frame(minWidth: floor, idealWidth: floor, maxWidth: .infinity, alignment: .leading)
+                buttons
+            }
+            .padding(.leading, clear.leading)
+            // the name 16 under the buttons, the screen's one step, as in
+            // Android's app (2026-10-31)
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 8) {
+                    back
+                    Spacer(minLength: 0)
+                    buttons
+                }
+                .padding(.leading, clear.leading)
+                // on the cards' edge
+                name.padding(.leading, Transcriber.shared.running ? 0 : 14)
+            }
+        }
+        .padding(.leading, t.running ? edge : edge - 14)
+        .padding(.trailing, edge)
+        .padding(.vertical, 11)
+        .frame(minHeight: 62)
+        .windowControls($clear)
+    }
+
+    @ViewBuilder private var back: some View {
+        if !Transcriber.shared.running {
+            IconButton(icon: .back, label: L("back"), kind: .ghost) { AppState.shared.back() }
+        }
+    }
+
+    private var name: some View {
+        let t = Transcriber.shared
+        return HStack(spacing: 10) {
+            // a file's name: one line, cut in the middle, which keeps its extension
+            Text(t.name).pk(PkType.ui).foregroundStyle(Pk.ink).lineLimit(1).truncationMode(.middle)
+            // until the ring has progress: reading, the model loading, the first chunk
+            if t.running && !(t.step == .transcribing && t.done > 0) { Spinner() }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Stop, or Copy and Share, each its words' whole width
+    @ViewBuilder private var buttons: some View {
+        let t = Transcriber.shared
+        let s = AppState.shared
+        if t.running {
+            PkButton(text: L("stop"), kind: .ghost) { t.stop() }.fixedSize()
+        }
+        if review && shown {
+            IconButton(icon: .copy, label: L(s.captions ? "copy_captions" : "copy_text")) { s.copy() }
+            ShareAs().fixedSize()
+        }
+    }
+}
+
+/// Share, the plume button a finished transcript is for, and its menu of
+/// formats, the desktop's Save as's: each sends the transcript as a file of
+/// its kind to the app picked in the share sheet, which has Save to Files
+/// too. Where the desktop's button saves, a phone's shares: on one a
+/// transcript goes to another app, a chat or mail, far more often than to a
+/// folder (Android's ShareAs).
+private struct ShareAs: View {
+    @State private var anchor = Anchor()
+
+    var body: some View {
+        let s = AppState.shared
+        let name = Transcriber.shared.name
+        let bare = (name as NSString).deletingPathExtension
+        let stem = bare.isEmpty ? name : bare
+        Menu {
+            ForEach(Format.all) { f in
+                Button {
+                    if let url = s.file(f.ext) { share(url, from: anchor.view) }
+                } label: {
+                    Text(L(s.times ? f.withTimes : f.label))
+                    Text(verbatim: "\(stem).\(f.ext)")
+                }
+            }
+            Divider()
+            Toggle(L("save_times"), isOn: Binding(get: { s.times }, set: { s.times = $0 }))
+                .menuActionDismissBehavior(.disabled)
+        } label: {
+            HStack(spacing: 6) {
+                Text(L("share")).font(PkType.ui.font(14)).lineLimit(1)
+                PkIcon.down.frame(width: 16, height: 16)
+            }
+            .foregroundStyle(Pk.onPlume)
+            .padding(.horizontal, 12)
+            .frame(minHeight: 40)
+            .background(Pk.plume, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
+        }
+        .background(AnchorView(anchor: anchor))
+    }
+}
+
+/// A view's UIKit view, kept for a popover to point at: the share sheet's,
+/// on an iPad, at the button it came from.
+final class Anchor {
+    weak var view: UIView?
+}
+
+struct AnchorView: UIViewRepresentable {
+    let anchor: Anchor
+
+    func makeUIView(context: Context) -> UIView {
+        let v = UIView()
+        v.isUserInteractionEnabled = false
+        anchor.view = v
+        return v
+    }
+
+    func updateUIView(_ v: UIView, context: Context) { anchor.view = v }
+}
+
+/// The share sheet for url, from the view it came from.
+@MainActor
+func share(_ url: URL, from view: UIView?) {
+    let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+    guard var top = (view?.window ?? scene?.keyWindow)?.rootViewController else { return }
+    while let p = top.presentedViewController { top = p }
+    let vc = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+    if let pop = vc.popoverPresentationController {
+        pop.sourceView = view ?? top.view
+        pop.sourceRect = view?.bounds ?? CGRect(x: top.view.bounds.midX, y: top.view.bounds.midY, width: 0, height: 0)
+    }
+    top.present(vc, animated: true)
+}
+
+/// The views line: Sentences or Captions, and Find beside them, the one
+/// group of the transcript's controls (app.css, .pk-views-line): a field
+/// that says "Find", 200 wide and 280 with a search in it, where it fits
+/// beside the views, else the glass, which opens the field across the line
+/// until the search is let go, as a phone's find in page does. Not at the
+/// line's far end, nearly alone, where a reader might not see that the
+/// transcript can be searched (Peter, 2026-10-31).
+private struct Views: View {
+    let hits: [Hit]
+    let seek: ((Double) -> Void)?
+    /// the search alone on the line, while the rest makes room for the
+    /// keyboard (Work)
+    let alone: Bool
+    /// the line's width, and the views' at their own, from a hidden copy,
+    /// so that it is known where they are not shown: a line drawn anew with
+    /// the search open across it, as an iPad turned or its window resized
+    /// past the side's 840 makes it, kept them away until the search closed
+    @State private var width: CGFloat = 0
+    @State private var viewsWidth: CGFloat = 0
+    /// the field's 200 and 280, scaled as its text is: Android's app at
+    /// twice the text size left a search 53 of a fixed 280 (2026-10-31)
+    @ScaledMetric(relativeTo: .subheadline) private var narrow: CGFloat = 200
+    @ScaledMetric(relativeTo: .subheadline) private var searching: CGFloat = 280
+
+    var body: some View {
+        let s = AppState.shared
+        let f = s.finder
+        let wide = f.query.trimmingCharacters(in: .whitespaces).isEmpty ? narrow : searching
+        let room = { (w: CGFloat) in viewsWidth > 0 && viewsWidth + 12 + w <= width }
+        let field: CGFloat? = room(wide) ? wide : room(narrow) ? narrow : nil
+        let across = alone || (field == nil && f.open)
+        HStack(spacing: 12) {
+            if !across {
+                Switch2(first: L("sentences"), second: L("captions"),
+                        onSecond: Binding(get: { s.captions }, set: { s.captions = $0 }))
+            }
+            // one field, beside the views or across the line, so that it
+            // keeps the keyboard from one to the other
+            if field != nil || across {
+                FindField(finder: f, hits: hits, seek: seek, opened: across)
+                    .frame(width: across ? nil : field)
+                    .frame(maxWidth: across ? .infinity : nil)
+            } else {
+                IconButton(icon: .search, label: L("find_label"), kind: .ghost) { f.open = true }
+            }
+        }
+        // to the start by its frame, not a spacer after it: the line's 12
+        // between the field across it and a spacer left the field 12 short
+        // of the strip's edge above it (Peter, the iPhone 16e, 2026-11-01)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .leading) {
+            Switch2(first: L("sentences"), second: L("captions"), onSecond: .constant(s.captions))
+                .fixedSize()
+                .hidden()
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { viewsWidth = $0 }
+        }
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+    }
+}
+
+/// A match in a row: its place among all of them, and where it is.
+struct Marked: Equatable {
+    let k: Int
+    let hit: Hit
+}
+
+/// The transcript's rows (app.css, .pk-seg): each sentence's time, or a
+/// cue's start and end, then its text, at most 560 wide; under 620 the time
+/// above the text, as the desktop's window has it, where its 112 column
+/// left too little of the line, a cue's two times a range. The row playing
+/// on the surface, the beak's square after its time and the word playing
+/// underlined in it; a row, tapped anywhere, plays from its time.
+///
+/// The list follows: the transcript's end as it comes, for a reader who is
+/// there; finished, it starts at its top; the row playing is kept in sight
+/// for a reader still with it, and each move to a match brings the match's
+/// own line into sight, by the least scroll that shows it: a long row's
+/// match can be in a line the list under the keyboard doesn't show
+/// (Android's app as well, 2026-11-01). A row out of sight comes a third of
+/// the way down first (app.js, goHit), which draws its match.
+///
+/// None of it while a finger or a fling moves the list: the list pulled to
+/// the row playing at each new one, under a reader scrolling to a row to
+/// tap, lost the playhead after a few such taps (Peter, the iPhone 16e,
+/// 2026-11-01). Playback takes along only a reader whose row before is in
+/// sight, as the desktop's does (app.js, showTime); a reader who has
+/// scrolled away is left there, and the waveform's seeks bring their row.
+private struct Rows: View {
+    let rows: [Segment]
+    let review: Bool
+    let marks: [Int: [Marked]]
+    let hits: [Hit]
+    let stats: String?
+    /// the screen's edge, 16 or 24 (Work)
+    let edge: CGFloat
+    /// the waveform's seeks so far, each a jump to bring into sight (Work)
+    let jump: Int
+    let seek: (Double, Bool) -> Void
+    /// the id of the current match's view in its row (Sentence)
+    static let match = "match"
+    @State private var seen: [Int] = []
+    /// what moves the list: a hand (tracking, interacting, a fling's
+    /// decelerating), an animated scroll of ours, or nothing
+    @State private var phase: ScrollPhase = .idle
+    /// a row a follow scrolled to, until it shows: a far scroll in a lazy
+    /// list lands by the heights of the rows not yet drawn, and can stop a
+    /// row or more short of it; tried again once the list is still
+    @State private var chasing: Int?
+    @State private var tries = 0
+    /// a move to a match not yet brought into sight
+    @State private var revealing = false
+    @State private var width: CGFloat = 0
+    /// the time's column, which grows with the stamps in it at a larger
+    /// text size, and the row's text with it, 508 at the least
+    @ScaledMetric(relativeTo: .footnote) private var column: CGFloat = 112
+
+    var body: some View {
+        let t = Transcriber.shared
+        let s = AppState.shared
+        let p = Player.shared
+        let f = s.finder
+        let position = p.position
+        let base = s.base.with(duration: t.duration, video: t.fps)
+        let current = review && (p.playing || position > 0) ? rows.lastIndex { $0.start <= position + 1e-3 } ?? -1 : -1
+        let wide = width >= 508 + column
+        ScrollViewReader { list in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(rows.indices, id: \.self) { i in
+                        let now = i == current
+                        let mine = marks[i] ?? []
+                        SegRow(
+                            s: rows[i], now: now,
+                            word: now ? rows[i].words.lastIndex { $0.start <= position + 1e-3 } ?? -1 : -1,
+                            marks: mine, at: mine.contains { $0.k == f.at } ? f.at : -1,
+                            wide: wide, column: column, cue: s.captions && review, review: review, base: base
+                        ) { seek(rows[i].start, true) }
+                            .equatable()
+                    }
+                    if let stats {
+                        Text(stats)
+                            .font(PkType.small.font(12))
+                            .monospacedDigit()
+                            .foregroundStyle(Pk.inkMuted)
+                            .padding(.leading, wide ? 28 + column : 16)
+                            .padding(.top, 16)
+                    }
+                }
+                .scrollTargetLayout()
+                .padding(.horizontal, edge)
+                .padding(.bottom, 16)
+            }
+            .onScrollTargetVisibilityChange(idType: Int.self) { seen = $0.sorted() }
+            .onScrollPhaseChange { _, now in
+                phase = now
+                if hands { chasing = nil }
+                // a follow that stopped short, once the list is still: twice more at most
+                if now == .idle, let r = chasing {
+                    if seen.dropLast().contains(r) || tries >= 2 {
+                        chasing = nil
+                    } else {
+                        tries += 1
+                        withAnimation { list.scrollTo(r, anchor: .top) }
+                    }
+                }
+            }
+            // the row playing kept in sight, for a reader still with it: the
+            // row before in sight, or playback just begun or followed to now
+            .onChange(of: p.playing ? current : -1) { was, now in
+                guard now >= 0, !hands else { return }
+                if was < 0 || chasing != nil || seen.contains(was) { bring(now, list) }
+            }
+            // a seek on the waveform: its row, wherever the reader is
+            .onChange(of: jump) {
+                if current >= 0 && !hands { bring(current, list) }
+            }
+            // the transcript's end followed as it comes, for a reader who is there
+            .onChange(of: t.segments.count) { _, n in
+                if t.running && n > 0 && (seen.last ?? 0) >= n - 4 && !hands {
+                    withAnimation { list.scrollTo(n - 1, anchor: .bottom) }
+                }
+            }
+            // finished, it starts at its top
+            .onChange(of: review ? t.id : "") { _, id in
+                if !id.isEmpty { list.scrollTo(0, anchor: .top) }
+            }
+            .onChange(of: f.moved) {
+                revealing = true
+                reveal(list)
+            }
+            // the match drawn where it is
+            .onChange(of: f.spot) { if revealing { reveal(list) } }
+            // the match playback passes, the reader with it (Finder.follow)
+            .onChange(of: position) { f.follow(hits, position: position, jump: false) }
+        }
+        .padding(.top, 16)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+    }
+
+    /// A finger on the list, or its fling: the reader moving it.
+    private var hands: Bool { phase == .tracking || phase == .interacting || phase == .decelerating }
+
+    /// Row at the list's top, where it isn't in sight above the list's last
+    /// row (which shows only in part), and followed until it shows.
+    private func bring(_ row: Int, _ list: ScrollViewProxy) {
+        // in sight: nothing to chase, not even a row asked for before
+        guard !seen.dropLast().contains(row) else {
+            chasing = nil
+            return
+        }
+        chasing = row
+        tries = 0
+        withAnimation { list.scrollTo(row, anchor: .top) }
+    }
+
+    /// The current match into sight: once its row has drawn it, its line,
+    /// by the least scroll (none where it shows); until then, its row out
+    /// of sight a third of the way down.
+    private func reveal(_ list: ScrollViewProxy) {
+        let f = AppState.shared.finder
+        guard f.at >= 0 && f.at < hits.count else {
+            revealing = false
+            return
+        }
+        if f.spot?.k == f.at {
+            revealing = false
+            withAnimation { list.scrollTo(Rows.match) }
+        } else if !seen.contains(hits[f.at].row) {
+            withAnimation { list.scrollTo(hits[f.at].row, anchor: UnitPoint(x: 0, y: 1.0 / 3)) }
+        }
+    }
+}
+
+/// A row: its time, or a cue's start and end, and its text.
+private struct SegRow: View, Equatable {
+    let s: Segment
+    let now: Bool
+    let word: Int
+    let marks: [Marked]
+    let at: Int
+    let wide: Bool
+    let column: CGFloat
+    let cue: Bool
+    let review: Bool
+    let base: Timebase
+    let onTime: () -> Void
+
+    // the action aside, which is a new closure each frame and does the same
+    static func == (a: SegRow, b: SegRow) -> Bool {
+        a.s == b.s && a.now == b.now && a.word == b.word && a.marks == b.marks && a.at == b.at
+            && a.wide == b.wide && a.column == b.column && a.cue == b.cue && a.review == b.review && a.base == b.base
+    }
+
+    var body: some View {
+        Group {
+            if wide {
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    time.frame(width: column, alignment: .leading)
+                    Sentence(s: s, word: word, marks: marks, at: at).frame(maxWidth: .infinity, alignment: .leading)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 2) {
+                    time
+                    Sentence(s: s, word: word, marks: marks, at: at).frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .frame(maxWidth: 716, alignment: .leading)
+        .background(now ? Pk.surface : Color.clear, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
+        .contentShape(Rectangle())
+        // the whole row plays from its time, its words as well as the time,
+        // which a thumb is too broad to find (Peter, the S25, 2026-10-26)
+        .onTapGesture { if review { onTime() } }
+        .accessibilityElement(children: .combine)
+        .accessibilityAction(named: L("play_from", base.at(s.start))) { if review { onTime() } }
+    }
+
+    private var stamp: Font { PkType.stamp.font(13) }
+
+    /// The row playing: the beak's square after its time, its foot on the
+    /// time's baseline.
+    @ViewBuilder private var beak: some View {
+        if now {
+            Rectangle()
+                .fill(Pk.beak)
+                .frame(width: 7, height: 7)
+                .padding(.leading, 3)
+                .alignmentGuide(.firstTextBaseline) { $0[.bottom] }
+                .accessibilityHidden(true)
+        }
+    }
+
+    /// A cue's end under its start, or on a narrow screen after it as a
+    /// range, 00:02.88 – 00:05.60, the beak after the range: side by side, a
+    /// start with the beak after it and the end beside that read as two
+    /// times of their own (Peter, the S25, 2026-10-26).
+    @ViewBuilder private var time: some View {
+        if cue && !wide {
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                Text(verbatim: base.at(s.start) + " – " + base.at(s.end))
+                beak
+            }
+            .font(stamp)
+            .monospacedDigit()
+            .foregroundStyle(Pk.inkMuted)
+        } else {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    Text(verbatim: base.at(s.start))
+                    beak
+                }
+                if cue { Text(verbatim: base.at(s.end)) }
+            }
+            .font(stamp)
+            .monospacedDigit()
+            .foregroundStyle(Pk.inkMuted)
+        }
+    }
+}
+
+/// What a stretch of a row's text is: in the k-th match (-1: none), that
+/// the reader is on, and in the word playing.
+private struct Mark: TextAttribute {
+    var k = -1
+    var current = false
+    var word = false
+}
+
+/// A row's text in the transcript's type, the word playing underlined in
+/// the beak's colour, 2 thick, 4 below the line; and a search's matches
+/// marked (app.css, .pk-hit): each on plume mixed 45% into the ground, as
+/// tall as its letters and 2 round them, its corners 3; the one the reader
+/// is on in plume, its letters on-plume, an ink bar 2 under it, for a state
+/// shown by more than its colour (the tokens' contrast, 2026-10-22).
+private struct Sentence: View {
+    let s: Segment
+    let word: Int
+    let marks: [Marked]
+    let at: Int
+    @Environment(\.dynamicTypeSize) private var type
+
+    var body: some View {
+        marked
+            // the current match where its renderer drew it, a view of its
+            // own for the rows to scroll to (Rows.reveal)
+            .overlay(alignment: .topLeading) {
+                if at >= 0, let spot = AppState.shared.finder.spot, spot.k == at {
+                    Color.clear
+                        .frame(width: max(spot.rect.width, 1), height: spot.rect.height)
+                        .id(Rows.match)
+                        .padding(.leading, max(spot.rect.minX, 0))
+                        .padding(.top, max(spot.rect.minY, 0))
+                        .accessibilityHidden(true)
+                }
+            }
+            .pk(PkType.transcript)
+            .foregroundStyle(Pk.ink)
+            .textRenderer(Marks(em: PkType.transcript.scaled(type), spotted: at < 0 ? nil : { k, r in
+                Task { @MainActor in AppState.shared.finder.spotted(k, r) }
+            }))
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// The text cut where a match or the word playing begins or ends, each
+    /// stretch with what it is.
+    private var marked: Text {
+        let chars = Array(s.text)
+        let span = word >= 0 ? wordSpan(s, word) : nil
+        let ms = marks.filter { $0.hit.end <= chars.count && $0.hit.start < $0.hit.end }
+        if span == nil && ms.isEmpty { return Text(verbatim: s.text) }
+        var cuts: Set<Int> = [0, chars.count]
+        if let span { cuts.formUnion([span.0, span.1]) }
+        for m in ms { cuts.formUnion([m.hit.start, m.hit.end]) }
+        let at = cuts.sorted()
+        var out = Text(verbatim: "")
+        for (a, b) in zip(at, at.dropFirst()) where b > a {
+            let m = ms.first { $0.hit.start <= a && b <= $0.hit.end }
+            let w = span.map { $0.0 <= a && b <= $0.1 } ?? false
+            var piece = Text(verbatim: String(chars[a..<b]))
+            if m != nil || w {
+                let current = m?.k == self.at && m != nil
+                piece = piece.customAttribute(Mark(k: m?.k ?? -1, current: current, word: w))
+                if current { piece = piece.foregroundStyle(Pk.onPlume) }
+            }
+            out = out + piece
+        }
+        return out
+    }
+}
+
+/// Where the word-th word of s is in its text, in characters: the words,
+/// in order, each found after the last.
+private func wordSpan(_ s: Segment, _ word: Int) -> (Int, Int)? {
+    let text = Array(s.text)
+    var at = 0
+    for (i, w) in s.words.enumerated() {
+        let t = Array(w.text.trimmingCharacters(in: .whitespaces))
+        guard !t.isEmpty, let k = firstIndex(of: t, in: text, from: at) else { return nil }
+        if i == word { return (k, k + t.count) }
+        at = k + t.count
+    }
+    return nil
+}
+
+private func firstIndex(of q: [Character], in s: [Character], from: Int) -> Int? {
+    var i = from
+    while i + q.count <= s.count {
+        if s[i] == q[0] && Array(s[i..<(i + q.count)]) == q { return i }
+        i += 1
+    }
+    return nil
+}
+
+/// The marks behind a row's letters, then the letters, then the word
+/// playing's line: a match's mark is its letters' height, from Archivo's
+/// ascent to its descent (0.878 and 0.21 em, its hhea), and 2 round them,
+/// as an inline mark's box is drawn on the desktop; a match's stretches on
+/// a line drawn as one. The row with the current match is told where it
+/// drew it, both lines' where it breaks across two.
+private struct Marks: TextRenderer {
+    let em: CGFloat
+    var spotted: ((Int, CGRect) -> Void)? = nil
+
+    func draw(layout: Text.Layout, in ctx: inout GraphicsContext) {
+        let hl = Pk.matchFill
+        var spot: (k: Int, rect: CGRect)?
+        defer { if let spot, let spotted { spotted(spot.k, spot.rect) } }
+        for line in layout {
+            var spans: [(k: Int, current: Bool, x0: CGFloat, x1: CGFloat, y: CGFloat)] = []
+            for run in line {
+                guard let m = run[Mark.self], m.k >= 0 else { continue }
+                let b = run.typographicBounds
+                if let last = spans.last, last.k == m.k {
+                    spans[spans.count - 1].x1 = b.origin.x + b.width
+                } else {
+                    spans.append((m.k, m.current, b.origin.x, b.origin.x + b.width, b.origin.y))
+                }
+            }
+            for sp in spans {
+                let top = sp.y - 0.878 * em - 2
+                let bottom = sp.y + 0.21 * em + 2
+                let r = CGRect(x: sp.x0 - 2, y: top, width: sp.x1 - sp.x0 + 4, height: bottom - top)
+                ctx.fill(Path(roundedRect: r, cornerRadius: 3), with: .color(sp.current ? Pk.plume : hl))
+                if sp.current {
+                    ctx.fill(Path(CGRect(x: sp.x0, y: bottom, width: sp.x1 - sp.x0, height: 2)), with: .color(Pk.ink))
+                    // with its underline, and 4 clear of it either side
+                    let seen = CGRect(x: r.minX, y: r.minY - 4, width: r.width, height: r.height + 10)
+                    spot = (sp.k, spot.map { $0.rect.union(seen) } ?? seen)
+                }
+            }
+        }
+        for line in layout {
+            for run in line { ctx.draw(run) }
+        }
+        for line in layout {
+            for run in line {
+                guard let m = run[Mark.self], m.word else { continue }
+                let b = run.typographicBounds
+                ctx.fill(Path(CGRect(x: b.origin.x, y: b.origin.y + 3, width: b.width, height: 2)), with: .color(Pk.beak))
+            }
+        }
+    }
+}
+
+extension Pk {
+    /// a match's mark: plume mixed 45% into the ground (app.css, .pk-hit)
+    static let matchFill = Color(uiColor: UIColor { t in
+        func rgb(_ c: Color) -> (CGFloat, CGFloat, CGFloat) {
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+            UIColor(c).resolvedColor(with: t).getRed(&r, green: &g, blue: &b, alpha: &a)
+            return (r, g, b)
+        }
+        let (g, p) = (rgb(Pk.ground), rgb(Pk.plume))
+        return UIColor(red: g.0 * 0.55 + p.0 * 0.45, green: g.1 * 0.55 + p.1 * 0.45, blue: g.2 * 0.55 + p.2 * 0.45, alpha: 1)
+    })
+}

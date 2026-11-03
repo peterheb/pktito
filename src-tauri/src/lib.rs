@@ -4,10 +4,13 @@
 //! list's transcripts, the formats a transcript is saved in, and the
 //! window's words; and, the window's alone, the server its player gets the
 //! audio from on Linux. None of it knows of the window. The Android app
-//! (android/) takes it through android.rs.
+//! (android/) takes it through android.rs, the iOS app (ios/) through
+//! ios.rs.
 
 #[cfg(target_os = "android")]
 pub mod android;
+#[cfg(target_os = "ios")]
+pub mod ios;
 pub mod audio;
 pub mod awake;
 pub mod decode;
