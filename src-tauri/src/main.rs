@@ -180,7 +180,11 @@ fn file_dialog(app: &AppHandle) -> FileDialogBuilder<tauri::Wry> {
 /// Load the model at path into the engine, unless it is the one there, on
 /// PKTITO_THREADS's threads (transcribe::threads_wanted); on a Mac with its
 /// Core ML encoder where it has one (model::encoder_of, neural).
-fn ensure_engine<'a>(slot: &'a mut Option<Engine>, data: &Path, path: &Path) -> Result<&'a mut Engine, String> {
+fn ensure_engine<'a>(
+    slot: &'a mut Option<Engine>,
+    data: &Path,
+    path: &Path,
+) -> Result<&'a mut Engine, String> {
     let encoder = model::encoder_of(data, path);
     let stale = |e: &Engine| e.path != path || (encoder.is_some() && !e.neural);
     if slot.as_ref().map(stale).unwrap_or(true) {
@@ -206,8 +210,14 @@ fn ensure_engine<'a>(slot: &'a mut Option<Engine>, data: &Path, path: &Path) -> 
 /// runs its own encoder on the CPU; the Neural Engine edition's file has
 /// none, and that is the error.
 #[cfg(target_os = "macos")]
-fn neural(asr: &mut pktito::Asr, m: &pktito::Model, encoder: Option<&Path>) -> Result<bool, String> {
-    let Some(encoder) = encoder else { return Ok(false) };
+fn neural(
+    asr: &mut pktito::Asr,
+    m: &pktito::Model,
+    encoder: Option<&Path>,
+) -> Result<bool, String> {
+    let Some(encoder) = encoder else {
+        return Ok(false);
+    };
     match asr.use_ane(Some(encoder)) {
         Ok(()) => Ok(true),
         Err(why) => {
@@ -216,14 +226,20 @@ fn neural(asr: &mut pktito::Asr, m: &pktito::Model, encoder: Option<&Path>) -> R
                 eprintln!("pktito: the Neural Engine can't run the encoder ({why}); using the CPU");
                 Ok(false)
             } else {
-                Err(format!("the Neural Engine can't run the model's encoder: {why}"))
+                Err(format!(
+                    "the Neural Engine can't run the model's encoder: {why}"
+                ))
             }
         }
     }
 }
 
 #[cfg(not(target_os = "macos"))]
-fn neural(_asr: &mut pktito::Asr, _m: &pktito::Model, _encoder: Option<&Path>) -> Result<bool, String> {
+fn neural(
+    _asr: &mut pktito::Asr,
+    _m: &pktito::Model,
+    _encoder: Option<&Path>,
+) -> Result<bool, String> {
     Ok(false)
 }
 
@@ -421,7 +437,9 @@ fn delete_model(
                 return cancel(&app, j).map(|_| None);
             }
         }
-        return model::remove_parts(&data.join("models"), e).map(|_| None).map_err(cant);
+        return model::remove_parts(&data.join("models"), e)
+            .map(|_| None)
+            .map_err(cant);
     }
     let dir = data.join("models");
     // its files: the whole one, and on a Mac the Neural Engine edition's
@@ -1487,7 +1505,11 @@ fn headless(args: &[String]) -> Result<(), String> {
     let model = pktito::Model::load(&model_path)?;
     let mut asr = pktito::Asr::new(&model, transcribe::threads_wanted())?;
     if let Some(data) = model::data_dir() {
-        neural(&mut asr, &model, model::encoder_of(&data, &model_path).as_deref())?;
+        neural(
+            &mut asr,
+            &model,
+            model::encoder_of(&data, &model_path).as_deref(),
+        )?;
     }
     let (segs, _) = transcribe::run(
         &model,

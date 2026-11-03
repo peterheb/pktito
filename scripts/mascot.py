@@ -15,6 +15,7 @@ Colours were sampled from the reference illustrations. Everything is in "voxel
 units": 1 unit = 1 voxel, y is up, +z points at the camera in the default pose,
 the ground plane is y = 0.
 """
+
 import argparse
 import json
 import math
@@ -24,7 +25,9 @@ import sys
 import numpy as np
 
 # --------------------------------------------------------------------------- grid
-ORIGIN = np.array([-76.0, -4.0, -74.0])  # world coords of the min corner of cell (0,0,0)
+ORIGIN = np.array(
+    [-76.0, -4.0, -74.0]
+)  # world coords of the min corner of cell (0,0,0)
 DIMS = (176, 140, 124)
 
 
@@ -79,7 +82,7 @@ class Palette:
     def c(self, hexstr):
         h = hexstr.lstrip("#").upper()
         if h not in self.map:
-            self.cols.append(tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)))
+            self.cols.append(tuple(int(h[i : i + 2], 16) for i in (0, 2, 4)))
             self.map[h] = len(self.cols) - 1
         return self.map[h]
 
@@ -95,7 +98,11 @@ def hash01(X, Y, Z, seed=0):
     yi = np.floor(Y).astype(np.int64).astype(np.uint64)
     zi = np.floor(Z).astype(np.int64).astype(np.uint64)
     with np.errstate(over="ignore"):
-        h = xi * np.uint64(374761393) + yi * np.uint64(668265263) + zi * np.uint64(2147483647)
+        h = (
+            xi * np.uint64(374761393)
+            + yi * np.uint64(668265263)
+            + zi * np.uint64(2147483647)
+        )
         h = h + np.uint64(seed * 1013904223 + 12345)
         h = (h ^ (h >> np.uint64(13))) * np.uint64(1274126177)
         h = h ^ (h >> np.uint64(16))
@@ -113,7 +120,9 @@ def pick(ramp, t, X=None, Y=None, Z=None, seed=0, dither=0.8):
 
 # ------------------------------------------------------------------ shape helpers
 def sd_ell(x, y, z, c, r):
-    k = np.sqrt(((x - c[0]) / r[0]) ** 2 + ((y - c[1]) / r[1]) ** 2 + ((z - c[2]) / r[2]) ** 2)
+    k = np.sqrt(
+        ((x - c[0]) / r[0]) ** 2 + ((y - c[1]) / r[1]) ** 2 + ((z - c[2]) / r[2]) ** 2
+    )
     return (k - 1.0) * min(r)
 
 
@@ -128,13 +137,24 @@ def sd_capsule(x, y, z, a, b, r):
     ab = b - a
     t = ((x - a[0]) * ab[0] + (y - a[1]) * ab[1] + (z - a[2]) * ab[2]) / np.dot(ab, ab)
     t = np.clip(t, 0, 1)
-    return np.sqrt((x - a[0] - t * ab[0]) ** 2 + (y - a[1] - t * ab[1]) ** 2 + (z - a[2] - t * ab[2]) ** 2) - r
+    return (
+        np.sqrt(
+            (x - a[0] - t * ab[0]) ** 2
+            + (y - a[1] - t * ab[1]) ** 2
+            + (z - a[2] - t * ab[2]) ** 2
+        )
+        - r
+    )
 
 
 def sd_rrect(x, y, cx, cy, hw, hh, r):
     qx = np.abs(x - cx) - hw + r
     qy = np.abs(y - cy) - hh + r
-    return np.minimum(np.maximum(qx, qy), 0) + np.hypot(np.maximum(qx, 0), np.maximum(qy, 0)) - r
+    return (
+        np.minimum(np.maximum(qx, qy), 0)
+        + np.hypot(np.maximum(qx, 0), np.maximum(qy, 0))
+        - r
+    )
 
 
 def in_tri(x, y, A, B, C):
@@ -153,8 +173,8 @@ def norm(v):
 
 
 # --------------------------------------------------------------------- the budgie
-YAW = math.radians(32)            # the bird faces toward screen-right in the default pose
-HC = np.array([0.5, 88.0, 3.0])   # head centre (bird-local)
+YAW = math.radians(32)  # the bird faces toward screen-right in the default pose
+HC = np.array([0.5, 88.0, 3.0])  # head centre (bird-local)
 HEAD_R = (28.0, 22.5, 25.0)
 HP, HR = math.radians(9), math.radians(-5)  # head pitch up / roll
 _f = np.array([0, math.sin(HP), math.cos(HP)])
@@ -197,7 +217,9 @@ RAMP_COVERT_EDGE = PAL.ramp("#2F7D44", "#3F8F3A", "#55A23E", "#2E8B6A")
 RAMP_FLIGHT = PAL.ramp("#0A4F9E", "#0C63BF", "#117EBB", "#2A9DB8", "#3DB1B6")
 RAMP_FLIGHT_DARK = PAL.ramp("#08418A", "#0A4F9E")
 RAMP_TAIL = PAL.ramp("#0B5CA8", "#117EBB", "#1F93C4", "#2FA6B8")
-RAMP_FAR_WING = PAL.ramp("#C9E24E", "#8CCB4A", "#3FA39A", "#2A7AAC", "#1F66B5", "#144F9A")
+RAMP_FAR_WING = PAL.ramp(
+    "#C9E24E", "#8CCB4A", "#3FA39A", "#2A7AAC", "#1F66B5", "#144F9A"
+)
 RAMP_FEET = PAL.ramp("#E6806A", "#EE9178", "#F4A890", "#F8BCA6")
 C_WHITE = PAL.c("#FFFFFF")
 C_RING = PAL.c("#FFFBEA")
@@ -215,7 +237,13 @@ C_HL2 = PAL.c("#F4E8E8")
 
 def sp(az, el, R=HEAD_R):
     a, e = math.radians(az), math.radians(el)
-    return np.array([R[0] * math.sin(a) * math.cos(e), R[1] * math.sin(e), R[2] * math.cos(a) * math.cos(e)])
+    return np.array(
+        [
+            R[0] * math.sin(a) * math.cos(e),
+            R[1] * math.sin(e),
+            R[2] * math.cos(a) * math.cos(e),
+        ]
+    )
 
 
 def tangent(p, R=HEAD_R):
@@ -253,20 +281,42 @@ def build_bird(ch):
     ch.add(BIRD_LO, BIRD_HI, torso_inside, torso_color)
 
     # ---- tail & wings (blades) ----
-    tail = Blade((-3, 22, -22), (-40, 5, -52), (0, 1, 0.05),
-                 ([0, 0.3, 1], [9, 8.6, 5.6]), ([0, 1], [3.8, 2.4]), 4, 4)
-    near = Blade((-24, 62, 8), (-31, 12, -31), (-1, 0.2, 0.1),
-                 ([0, 0.2, 0.45, 0.75, 1], [8, 14, 15.5, 11, 4.5]), ([0, 0.4, 1], [5, 6.5, 3.2]), 6, 6)
+    tail = Blade(
+        (-3, 22, -22),
+        (-40, 5, -52),
+        (0, 1, 0.05),
+        ([0, 0.3, 1], [9, 8.6, 5.6]),
+        ([0, 1], [3.8, 2.4]),
+        4,
+        4,
+    )
+    near = Blade(
+        (-24, 62, 8),
+        (-31, 12, -31),
+        (-1, 0.2, 0.1),
+        ([0, 0.2, 0.45, 0.75, 1], [8, 14, 15.5, 11, 4.5]),
+        ([0, 0.4, 1], [5, 6.5, 3.2]),
+        6,
+        6,
+    )
     # raised beside the head, toward the bubble, 40 long: at 30 it read as a
     # stub beside the folded wing's 64 once the bird was turned (renders,
     # 2026-10-21)
-    far = Blade((23, 54, 2), (46, 86, -6), (1, 0, 0.3),
-                ([0, 0.3, 0.6, 1], [9, 14, 13, 5]), ([0, 0.5, 1], [5, 6, 3]), 6, 5)
+    far = Blade(
+        (23, 54, 2),
+        (46, 86, -6),
+        (1, 0, 0.3),
+        ([0, 0.3, 0.6, 1], [9, 14, 13, 5]),
+        ([0, 0.5, 1], [5, 6, 3]),
+        6,
+        5,
+    )
 
     def blade_inside(b):
         def fn(X, Y, Z):
             xl, yl, zl = to_local(X, Y, Z)
             return b.inside(xl, yl, zl)[0]
+
         return fn
 
     def tail_color(X, Y, Z):
@@ -274,7 +324,9 @@ def build_bird(ch):
         along, cw, cn = tail.coords(xl, yl, zl)
         t = along / tail.L
         wv = np.abs(cw) / 9.0
-        base = pick(RAMP_TAIL, 0.15 + wv * 0.85 + 0.12 * (cn > 0), X, Y, Z, seed=5, dither=0.7)
+        base = pick(
+            RAMP_TAIL, 0.15 + wv * 0.85 + 0.12 * (cn > 0), X, Y, Z, seed=5, dither=0.7
+        )
         ridge = (np.abs(cw) % 3.4) < 0.7
         dark = pick(RAMP_FLIGHT_DARK, np.full_like(t, 0.3), X, Y, Z, seed=6)
         out = np.where(ridge & (t > 0.1), dark, base)
@@ -293,11 +345,29 @@ def build_bird(ch):
         vc = vs - cell * 6.8 - 3.4
         dd = np.hypot(us, vc * 0.95)
         edge = (dd > 4.1) & (dd < 5.6)
-        cov_in = pick(RAMP_COVERT, 0.35 + 0.5 * np.clip(1 - t * 2, 0, 1), X, Y, Z, seed=7, dither=0.8)
-        cov_ed = pick(RAMP_COVERT_EDGE, np.clip(t * 2.2, 0, 1), X, Y, Z, seed=8, dither=0.6)
+        cov_in = pick(
+            RAMP_COVERT,
+            0.35 + 0.5 * np.clip(1 - t * 2, 0, 1),
+            X,
+            Y,
+            Z,
+            seed=7,
+            dither=0.8,
+        )
+        cov_ed = pick(
+            RAMP_COVERT_EDGE, np.clip(t * 2.2, 0, 1), X, Y, Z, seed=8, dither=0.6
+        )
         coverts = np.where(edge, cov_ed, cov_in)
         tt = np.clip((t - 0.38) / 0.62, 0, 1)
-        base = pick(RAMP_FLIGHT, 0.15 + 0.55 * tt + 0.3 * np.clip((cw + 10) / 20, 0, 1), X, Y, Z, seed=9, dither=0.8)
+        base = pick(
+            RAMP_FLIGHT,
+            0.15 + 0.55 * tt + 0.3 * np.clip((cw + 10) / 20, 0, 1),
+            X,
+            Y,
+            Z,
+            seed=9,
+            dither=0.8,
+        )
         ridge = ((cw + 40.0) % 4.4) < 0.9
         dark = pick(RAMP_FLIGHT_DARK, np.full_like(t, 0.5), X, Y, Z, seed=10)
         flight = np.where(ridge, dark, base)
@@ -309,7 +379,15 @@ def build_bird(ch):
         xl, yl, zl = to_local(X, Y, Z)
         along, cw, cn = far.coords(xl, yl, zl)
         t = along / far.L
-        base = pick(RAMP_FAR_WING, 0.05 + 0.95 * np.clip(t, 0, 1) ** 0.9, X, Y, Z, seed=11, dither=0.9)
+        base = pick(
+            RAMP_FAR_WING,
+            0.05 + 0.95 * np.clip(t, 0, 1) ** 0.9,
+            X,
+            Y,
+            Z,
+            seed=11,
+            dither=0.9,
+        )
         ridge = ((cw + 40.0) % 4.2) < 0.8
         dark = pick(RAMP_FLIGHT_DARK, np.full_like(t, 0.5), X, Y, Z, seed=12)
         return np.where(ridge & (t > 0.35), dark, base).astype(np.uint8)
@@ -321,13 +399,26 @@ def build_bird(ch):
         xl, yl, zl = to_local(X, Y, Z)
         d = np.full_like(xl, 99.0)
         for s in (-1, 1):
-            d = np.minimum(d, sd_capsule(xl, yl, zl, (s * 10, 1.5, 9), (s * 10, 11, 8), 2.8))
+            d = np.minimum(
+                d, sd_capsule(xl, yl, zl, (s * 10, 1.5, 9), (s * 10, 11, 8), 2.8)
+            )
             d = np.minimum(d, sd_ell(xl, yl, zl, (s * 10, 2.2, 12), (4.4, 2.4, 5.2)))
             for ang in (-30, 0, 30):
                 a = math.radians(ang)
-                d = np.minimum(d, sd_capsule(xl, yl, zl, (s * 10, 2.0, 13),
-                                             (s * 10 + 9.5 * math.sin(a), 1.9, 13 + 9.5 * math.cos(a)), 1.9))
-            d = np.minimum(d, sd_capsule(xl, yl, zl, (s * 10, 2.0, 8), (s * 10, 1.9, 3.5), 1.7))
+                d = np.minimum(
+                    d,
+                    sd_capsule(
+                        xl,
+                        yl,
+                        zl,
+                        (s * 10, 2.0, 13),
+                        (s * 10 + 9.5 * math.sin(a), 1.9, 13 + 9.5 * math.cos(a)),
+                        1.9,
+                    ),
+                )
+            d = np.minimum(
+                d, sd_capsule(xl, yl, zl, (s * 10, 2.0, 8), (s * 10, 1.9, 3.5), 1.7)
+            )
         return d < 0
 
     def feet_color(X, Y, Z):
@@ -337,8 +428,11 @@ def build_bird(ch):
 
     # ---- beak ----
     def beak_d(qx, qy, qz):
-        up = smin(sd_ell(qx, qy, qz, (0, -7.5, 25.5), (7.3, 6.2, 7.6)),
-                  sd_ell(qx, qy, qz, (0, -10.8, 31), (4.4, 4.4, 4.0)), 2.0)
+        up = smin(
+            sd_ell(qx, qy, qz, (0, -7.5, 25.5), (7.3, 6.2, 7.6)),
+            sd_ell(qx, qy, qz, (0, -10.8, 31), (4.4, 4.4, 4.0)),
+            2.0,
+        )
         low = sd_ell(qx, qy, qz, (0, -15.6, 25.5), (5.4, 3.4, 5.8))
         return up, low
 
@@ -389,7 +483,11 @@ def build_bird(ch):
 
         # head barring on the crown / nape (sides and back)
         az = np.degrees(np.arctan2(qx, qz))
-        el = np.degrees(np.arcsin(np.clip(qy / np.maximum(np.sqrt(qx ** 2 + qy ** 2 + qz ** 2), 1e-6), -1, 1)))
+        el = np.degrees(
+            np.arcsin(
+                np.clip(qy / np.maximum(np.sqrt(qx**2 + qy**2 + qz**2), 1e-6), -1, 1)
+            )
+        )
         phase = (qy + 2.0 * np.sin(np.radians(az) * 2.4) + 0.12 * qz) / 3.4
         stripe = ((phase % 1.0) < 0.27) & (el > 14) & (np.abs(az) > 72) & near_s
         out = np.where(stripe, C_STRIPE, out)
@@ -409,10 +507,22 @@ def build_bird(ch):
             eu = du * math.cos(ang) - dv * math.sin(ang)
             ev = du * math.sin(ang) + dv * math.cos(ang)
             patch = ((eu / 5.0) ** 2 + (ev / 7.6) ** 2 < 1) & near_s & (np.abs(dn) < 6)
-            out = np.where(patch, pick(RAMP_CHEEK, 0.5 + 0.35 * np.clip(ev / 7.6, -1, 1), X, Y, Z, seed=16, dither=0.8), out)
+            out = np.where(
+                patch,
+                pick(
+                    RAMP_CHEEK,
+                    0.5 + 0.35 * np.clip(ev / 7.6, -1, 1),
+                    X,
+                    Y,
+                    Z,
+                    seed=16,
+                    dither=0.8,
+                ),
+                out,
+            )
 
             # throat spots
-            for (a_, e_, r_) in ((50, -40, 1.8), (43, -51, 1.9), (31, -60, 1.7)):
+            for a_, e_, r_ in ((50, -40, 1.8), (43, -51, 1.9), (31, -60, 1.7)):
                 sc = sp(s * a_, e_)
                 du, dv, dn = frame_coords(sc)
                 spot = (np.hypot(du, dv) < r_) & near_s & (np.abs(dn) < 5)
@@ -423,13 +533,21 @@ def build_bird(ch):
             du, dv, dn = frame_coords(ec)
             rr = np.hypot(du, dv)
             ok = near_s & (np.abs(dn) < 6)
-            brow = ok & (np.abs(du) < 5.4) & (np.abs(dv - (9.4 - 0.09 * du ** 2 + 0.16 * du * (-s))) < 0.85)
+            brow = (
+                ok
+                & (np.abs(du) < 5.4)
+                & (np.abs(dv - (9.4 - 0.09 * du**2 + 0.16 * du * (-s))) < 0.85)
+            )
             out = np.where(brow, C_BROW, out)
             out = np.where(ok & (rr < 6.7), C_RING, out)
             tiris = np.clip(0.45 - dv * 0.05 + du * 0.03, 0, 1)
-            out = np.where(ok & (rr < 5.5), pick(RAMP_EYE, tiris, X, Y, Z, seed=17, dither=0.3), out)
-            h1 = ((du + 2.0) ** 2 + (dv - 2.4) ** 2) < 2.3 ** 2
-            h2 = ((du - 2.3) ** 2 + (dv + 2.6) ** 2) < 1.0 ** 2
+            out = np.where(
+                ok & (rr < 5.5),
+                pick(RAMP_EYE, tiris, X, Y, Z, seed=17, dither=0.3),
+                out,
+            )
+            h1 = ((du + 2.0) ** 2 + (dv - 2.4) ** 2) < 2.3**2
+            h2 = ((du - 2.3) ** 2 + (dv + 2.6) ** 2) < 1.0**2
             out = np.where(ok & (rr < 5.5) & h1, C_WHITE, out)
             out = np.where(ok & (rr < 5.5) & h2 & ~h1, C_HL2, out)
         return out
@@ -469,8 +587,12 @@ class Blade:
         t = np.clip(along / self.L, 0, 1)
         rw = np.interp(t, *self.rw)
         rt = np.interp(t, *self.rt)
-        ax = np.where(along < 0, along / self.r0, np.where(along > self.L, (along - self.L) / self.r1, 0.0))
-        f = (cw / rw) ** 2 + (cn / rt) ** 2 + ax ** 2
+        ax = np.where(
+            along < 0,
+            along / self.r0,
+            np.where(along > self.L, (along - self.L) / self.r1, 0.0),
+        )
+        f = (cw / rw) ** 2 + (cn / rt) ** 2 + ax**2
         return f < 1.0, along / self.L, cw, cn
 
 
@@ -495,12 +617,21 @@ def build_card(ch):
 
     ch.add(lo, hi, inside, color)
 
-    lines = ((73.6, 30.7, C_LINE_B), (66.4, 33.7, C_LINE_G), (59.3, 29.0, C_LINE_G), (52.3, 24.7, C_LINE_G))
-    for (yc, length, col) in lines:
+    lines = (
+        (73.6, 30.7, C_LINE_B),
+        (66.4, 33.7, C_LINE_G),
+        (59.3, 29.0, C_LINE_G),
+        (52.3, 24.7, C_LINE_G),
+    )
+    for yc, length, col in lines:
         x0 = 52.0
 
         def lin(X, Y, Z, yc=yc, length=length):
-            return (sd_rrect(X, Y, x0 + length / 2, yc, length / 2, 1.5, 1.5) < 0) & (Z > -7) & (Z < -1)
+            return (
+                (sd_rrect(X, Y, x0 + length / 2, yc, length / 2, 1.5, 1.5) < 0)
+                & (Z > -7)
+                & (Z < -1)
+            )
 
         ch.add(lo, hi, lin, lambda X, Y, Z, col=col: np.full(X.shape, col, np.uint8))
 
@@ -508,8 +639,19 @@ def build_card(ch):
 RAMP_BUB = PAL.ramp("#D3E8FB", "#DCEDFC", "#E6F3FE", "#EEF7FE")
 C_BUB_B = PAL.c("#BFD9F4")
 BUB_CX, BUB_CY, BUB_HW, BUB_HH = 62.0, 108.0, 29.0, 19.0
-BAR_COLORS = ["#12C8FF", "#14BEFD", "#1AB0FB", "#209FF6", "#2A93F0", "#2A8CEE", "#2582EA", "#2276E2",
-              "#2068D6", "#1D5BC4", "#1A4FB0"]
+BAR_COLORS = [
+    "#12C8FF",
+    "#14BEFD",
+    "#1AB0FB",
+    "#209FF6",
+    "#2A93F0",
+    "#2A8CEE",
+    "#2582EA",
+    "#2276E2",
+    "#2068D6",
+    "#1D5BC4",
+    "#1A4FB0",
+]
 BAR_BASE_H = [4, 7, 11, 18, 13, 26, 17, 10, 14, 8, 5]
 
 
@@ -527,7 +669,15 @@ def build_bubble(ch):
 
     def color(X, Y, Z):
         d = sd2(X, Y)
-        c = pick(RAMP_BUB, (Y - (BUB_CY - BUB_HH)) / (2 * BUB_HH), X, Y, Z, seed=50, dither=0.4)
+        c = pick(
+            RAMP_BUB,
+            (Y - (BUB_CY - BUB_HH)) / (2 * BUB_HH),
+            X,
+            Y,
+            Z,
+            seed=50,
+            dither=0.4,
+        )
         return np.where((d > -1.4) & (d < 0.5), C_BUB_B, c).astype(np.uint8)
 
     ch.add(lo, hi, inside, color)
@@ -552,8 +702,15 @@ def hide_interior(g):
     """Voxels buried under six solid neighbours are never drawn; give them one flat colour so RLE stays small."""
     m = g > 0
     p = np.pad(m, 1)
-    buried = (m & p[:-2, 1:-1, 1:-1] & p[2:, 1:-1, 1:-1] & p[1:-1, :-2, 1:-1] & p[1:-1, 2:, 1:-1]
-              & p[1:-1, 1:-1, :-2] & p[1:-1, 1:-1, 2:])
+    buried = (
+        m
+        & p[:-2, 1:-1, 1:-1]
+        & p[2:, 1:-1, 1:-1]
+        & p[1:-1, :-2, 1:-1]
+        & p[1:-1, 2:, 1:-1]
+        & p[1:-1, 1:-1, :-2]
+        & p[1:-1, 1:-1, 2:]
+    )
     out = g.copy()
     out[buried] = 1
     return out
@@ -570,7 +727,7 @@ def export_chunk(ch, pad=(0, 0, 0), force_lo=None, force_hi=None):
         hi = np.maximum(hi, np.ceil(np.array(force_hi) - ORIGIN).astype(int))
     lo = np.clip(lo - np.array(pad), 0, None)
     hi = np.minimum(hi + np.array(pad), DIMS)
-    sub = np.ascontiguousarray(ch.g[lo[0]:hi[0], lo[1]:hi[1], lo[2]:hi[2]])
+    sub = np.ascontiguousarray(ch.g[lo[0] : hi[0], lo[1] : hi[1], lo[2] : hi[2]])
     return {
         "o": [float(ORIGIN[i] + lo[i]) for i in range(3)],
         "d": [int(hi[i] - lo[i]) for i in range(3)],
@@ -597,8 +754,18 @@ def generate():
     }
 
     chunks, voxels = {}, 0
-    for name, ch, kw in (("bird", bird, {}), ("props", props, {}),
-                         ("bubble", bubble, {"force_lo": (BUB_CX - 33, BUB_CY - 28, -8), "force_hi": (BUB_CX + 33, BUB_CY + 22, 0)})):
+    for name, ch, kw in (
+        ("bird", bird, {}),
+        ("props", props, {}),
+        (
+            "bubble",
+            bubble,
+            {
+                "force_lo": (BUB_CX - 33, BUB_CY - 28, -8),
+                "force_hi": (BUB_CX + 33, BUB_CY + 22, 0),
+            },
+        ),
+    ):
         chunks[name], n = export_chunk(ch, **kw)
         voxels += n
     allnz = np.argwhere((bird.g | props.g | bubble.g) > 0)
@@ -623,12 +790,16 @@ def main():
     ap.add_argument("--out", default=os.path.join(root, "ui", "mascot-model.js"))
     args = ap.parse_args()
     data, voxels = generate()
-    js = ("/* The mascot's voxels, from scripts/mascot.py: each chunk's cells as runs of\n"
-          "   palette indices, for ui/mascot.js. */\n"
-          "const MASCOT = " + json.dumps(data, separators=(",", ":")) + ";\n")
+    js = (
+        "/* The mascot's voxels, from scripts/mascot.py: each chunk's cells as runs of\n"
+        "   palette indices, for ui/mascot.js. */\n"
+        "const MASCOT = " + json.dumps(data, separators=(",", ":")) + ";\n"
+    )
     with open(args.out, "w") as fh:
         fh.write(js)
-    print(f"{args.out}: {len(js) / 1024:.0f} KB, {voxels} voxels, {len(data['palette']) - 1} colours")
+    print(
+        f"{args.out}: {len(js) / 1024:.0f} KB, {voxels} voxels, {len(data['palette']) - 1} colours"
+    )
 
 
 if __name__ == "__main__":

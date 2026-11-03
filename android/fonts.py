@@ -5,6 +5,7 @@ resources take and woff2 they do not. The glyphs are the same; only the
 container changes. Their licences, the SIL OFL's, go with them, into the
 app's assets. Needs fontTools and brotli (pip install fonttools brotli);
 the TTFs are checked in, so a build does not."""
+
 import glob, json, os, re, shutil
 from fontTools.ttLib import TTFont
 

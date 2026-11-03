@@ -30,7 +30,8 @@ func stamp(_ s: Double, _ len: Double = 36000) -> String {
 /// m:ss, or h:mm:ss from an hour (ui/app.js, clock).
 func clock(_ s: Double) -> String {
     let t = max(0, Int64(s.rounded()))
-    let h = t / 3600, m = t / 60 % 60
+    let h = t / 3600
+    let m = t / 60 % 60
     return h > 0 ? "\(h):\(two(m)):\(two(t % 60))" : "\(m):\(two(t % 60))"
 }
 
@@ -63,7 +64,8 @@ func timecode(_ t: Double, _ rate: Double) -> String {
         frames += 9 * d * (frames / tens) + (rem >= d ? d * ((rem - d) / minute) : 0)
     }
     let s = frames / nominal
-    return two(s / 3600) + ":" + two(s / 60 % 60) + ":" + two(s % 60) + (drop ? ";" : ":") + two(frames % nominal)
+    return two(s / 3600) + ":" + two(s / 60 % 60) + ":" + two(s % 60) + (drop ? ";" : ":")
+        + two(frames % nominal)
 }
 
 /// A rate as the time menu writes it: 23.976, 24, 29.97 (app.js, rateLabel).

@@ -449,7 +449,12 @@ const ownLang = () => (navigator.language || "en").slice(0, 2).toLowerCase();
    what most who look want to know */
 const withOwn = (m, about) =>
   m.languages.length > 1 && m.languages.includes(ownLang())
-    ? esc(t("models.languages_among", { languages: "\u0001", lang: langName(ownLang()) })).replace("\u0001", about)
+    ? esc(
+        t("models.languages_among", {
+          languages: "\u0001",
+          lang: langName(ownLang()),
+        }),
+      ).replace("\u0001", about)
     : about;
 const langsOf = (m) =>
   m.languages
@@ -801,7 +806,10 @@ function chooseHtml() {
       const many = m.languages.length > 1;
       const about = !many
         ? esc(aboutOf(m))
-        : withOwn(m, `<button class="pk-linkbtn pk-linkbtn-sm" type="button" data-langs aria-expanded="false">${esc(aboutOf(m))}</button>`);
+        : withOwn(
+            m,
+            `<button class="pk-linkbtn pk-linkbtn-sm" type="button" data-langs aria-expanded="false">${esc(aboutOf(m))}</button>`,
+          );
       const list = !many
         ? ""
         : `<div class="pk-langs-box" hidden>` +
@@ -1816,16 +1824,24 @@ function placeFind() {
     line = $("views-line"),
     nameLine = $("head-name"),
     cs = getComputedStyle(head),
-    room = head.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
-    shown = ["back", "copy", "again", "save-as", "stop"].map($).filter((b) => b.offsetWidth > 0),
+    room =
+      head.clientWidth -
+      parseFloat(cs.paddingLeft) -
+      parseFloat(cs.paddingRight),
+    shown = ["back", "copy", "again", "save-as", "stop"]
+      .map($)
+      .filter((b) => b.offsetWidth > 0),
     gap = parseFloat(cs.columnGap) || 10,
     // the buttons, and a gap each between them, the name and the space that pushes them apart
-    buttons = shown.reduce((n, b) => n + b.offsetWidth, 0) + gap * (shown.length + 1),
+    buttons =
+      shown.reduce((n, b) => n + b.offsetWidth, 0) + gap * (shown.length + 1),
     under = buttons + gap + 200 + NAME_FLOOR > room,
     stacked = buttons + NAME_FLOOR > room;
   if (under && box.parentElement !== line) line.append(box);
-  else if (!under && box.parentElement === line) head.insertBefore(box, $("copy"));
-  if (stacked && $("title").parentElement !== nameLine) nameLine.append($("title"), $("spin"));
+  else if (!under && box.parentElement === line)
+    head.insertBefore(box, $("copy"));
+  if (stacked && $("title").parentElement !== nameLine)
+    nameLine.append($("title"), $("spin"));
   else if (!stacked && $("title").parentElement === nameLine) {
     head.insertBefore($("title"), head.querySelector(".pk-grow"));
     head.insertBefore($("spin"), head.querySelector(".pk-grow"));
@@ -1928,7 +1944,10 @@ function matchesIn(s) {
     const low = flat.toLowerCase();
     // a lowercase that changes the length would put the marks in the wrong
     // places: such a row is searched as written
-    l = low.length === s.text.length ? { low, as: false } : { low: flat, as: true };
+    l =
+      low.length === s.text.length
+        ? { low, as: false }
+        : { low: flat, as: true };
     lowered.set(s, l);
   }
   const q = l.as ? query : query.toLowerCase(),
@@ -2108,7 +2127,11 @@ function rangeOf(peaks, seconds) {
     const hi = s[Math.min(s.length - 1, Math.floor(s.length * 0.995))];
     const n = peaks.length;
     const half = Math.max(n / 20, seconds ? (150 * n) / seconds : 0) | 0;
-    for (let c = half; half > 0 && 2 * half < n && c + half <= n; c += Math.max(1, (half / 5) | 0)) {
+    for (
+      let c = half;
+      half > 0 && 2 * half < n && c + half <= n;
+      c += Math.max(1, (half / 5) | 0)
+    ) {
       const w = Float64Array.from(peaks.slice(c - half, c + half)).sort();
       const median = w[w.length >> 1];
       if (median > 64) lo = Math.min(lo, median - 16);
@@ -2175,7 +2198,12 @@ function drawMainWave() {
       : f.step === "transcribing"
         ? f.done
         : 0;
-  drawWave(wave, mode === "waiting" ? null : f.peaks, Math.floor(at * n), f.duration);
+  drawWave(
+    wave,
+    mode === "waiting" ? null : f.peaks,
+    Math.floor(at * n),
+    f.duration,
+  );
 }
 
 /* The drop's strip: a made-up phrase, louder in the middle */
@@ -2679,7 +2707,8 @@ function watchRows(rows) {
   stale.clear();
   inView.clear();
   marked = rows.map((s) => matchesIn(s).length > 0);
-  for (const el of $("transcript").querySelectorAll(".pk-seg")) sight.observe(el);
+  for (const el of $("transcript").querySelectorAll(".pk-seg"))
+    sight.observe(el);
 }
 
 /* row i drawn again for the search, if it is stale; the playhead's word and
@@ -2775,7 +2804,9 @@ function stepHit(d) {
 function hitPieces(k) {
   const { i, hi } = hits[k];
   markRow(i);
-  return $("transcript").children[i].querySelectorAll(`[data-hit="${i}.${hi}"]`);
+  return $("transcript").children[i].querySelectorAll(
+    `[data-hit="${i}.${hi}"]`,
+  );
 }
 
 function goHit(k, scroll = true) {
@@ -3292,9 +3323,14 @@ function loadMascot() {
 function fitStage() {
   const about = $("about");
   if (about.hidden) return;
-  const one = getComputedStyle(about).gridTemplateColumns.trim().split(/\s+/).length === 1,
+  const one =
+      getComputedStyle(about).gridTemplateColumns.trim().split(/\s+/).length ===
+      1,
     text = about.querySelector(".pk-about-text");
-  about.classList.toggle("short-stage", one && about.clientHeight - text.scrollHeight < 120);
+  about.classList.toggle(
+    "short-stage",
+    one && about.clientHeight - text.scrollHeight < 120,
+  );
 }
 new ResizeObserver(fitStage).observe($("about"));
 

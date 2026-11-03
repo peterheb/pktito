@@ -8,3 +8,10 @@ design/
 src-tauri/target/
 src-tauri/gen/
 vendor/
+# test fixtures, compared as written
+android/app/src/test/resources/
+# Xcode's and notices.py's
+ios/App/Assets.xcassets/
+ios/App/notices.json
+# android/notices.py's
+android/app/src/main/assets/notices.json

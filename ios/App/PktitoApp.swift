@@ -14,13 +14,13 @@ struct PktitoApp: App {
     var body: some Scene {
         WindowGroup {
             #if DEBUG
-            if CommandLine.arguments.contains("-bench") {
-                Bench()
-            } else {
-                Root().dynamicTypeSize(...PktitoApp.largest)
-            }
+                if CommandLine.arguments.contains("-bench") {
+                    Bench()
+                } else {
+                    Root().dynamicTypeSize(...PktitoApp.largest)
+                }
             #else
-            Root().dynamicTypeSize(...PktitoApp.largest)
+                Root().dynamicTypeSize(...PktitoApp.largest)
             #endif
         }
     }
@@ -30,8 +30,10 @@ struct PktitoApp: App {
 /// while the app was away (Downloader's background session), for which iOS
 /// woke it, or launched it again.
 final class AppDelegate: NSObject, UIApplicationDelegate {
-    func application(_ application: UIApplication, handleEventsForBackgroundURLSession identifier: String,
-                     completionHandler: @escaping () -> Void) {
+    func application(
+        _ application: UIApplication, handleEventsForBackgroundURLSession identifier: String,
+        completionHandler: @escaping () -> Void
+    ) {
         guard identifier == Downloader.sessionID else { return completionHandler() }
         Downloader.shared.wakeDone = completionHandler
         // the session made again, to hear what happened

@@ -60,24 +60,25 @@ final class AppState {
         let d = UserDefaults.standard
         times = d.bool(forKey: "times")
         captions = d.bool(forKey: "captions")
-        base = Timebase(frames: d.bool(forKey: "frames"), fps: d.object(forKey: "fps") as? Double ?? 24,
-                        videoRate: d.object(forKey: "video_rate") as? Bool ?? true)
+        base = Timebase(
+            frames: d.bool(forKey: "frames"), fps: d.object(forKey: "fps") as? Double ?? 24,
+            videoRate: d.object(forKey: "video_rate") as? Bool ?? true)
     }
 
     /// Whether the screen is the setup screen's: no model yet, or one
     /// coming, or Core ML compiling the one in use for this device.
     var setup: Bool {
         #if DEBUG
-        if pretendSetup { return true }
+            if pretendSetup { return true }
         #endif
         return !Models.shared.ready || Downloads.shared.state != nil || Models.shared.copying != nil
             || Transcriber.shared.preparing
     }
 
     #if DEBUG
-    /// the setup screen's choice with a model at hand, for the simulator's
-    /// screenshots (Root, -pretend setup)
-    var pretendSetup = false
+        /// the setup screen's choice with a model at hand, for the simulator's
+        /// screenshots (Root, -pretend setup)
+        var pretendSetup = false
     #endif
 
     func say(_ s: String, err: Bool = false) {
@@ -184,12 +185,16 @@ final class AppState {
         let out = String(decoding: json, as: UTF8.self).withCString { pkapp_captions($0) }
         guard let out else { return [] }
         defer { pkapp_free_string(out) }
-        guard let c = try? JSONDecoder().decode(Cues.self, from: Data(bytes: out, count: strlen(out))) else { return [] }
+        guard
+            let c = try? JSONDecoder().decode(Cues.self, from: Data(bytes: out, count: strlen(out)))
+        else { return [] }
         let words = t.segments.flatMap(\.words)
         return c.cues.map { q in
-            let first = q.first ?? 0, n = q.n ?? 0
-            return Segment(start: Double(q.start) / 1000, end: Double(q.end) / 1000, text: q.text,
-                           words: first + n <= words.count ? Array(words[first..<(first + n)]) : [])
+            let first = q.first ?? 0
+            let n = q.n ?? 0
+            return Segment(
+                start: Double(q.start) / 1000, end: Double(q.end) / 1000, text: q.text,
+                words: first + n <= words.count ? Array(words[first..<(first + n)]) : [])
         }
     }
 
@@ -209,9 +214,11 @@ final class AppState {
     func file(_ ext: String) -> URL? {
         let t = Transcriber.shared
         guard let tr = t.transcript,
-              let text = try? Core.format(tr, ext: ext, name: t.name, times: times) else { return nil }
+            let text = try? Core.format(tr, ext: ext, name: t.name, times: times)
+        else { return nil }
         let stem = (t.name as NSString).deletingPathExtension
-        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("shared", isDirectory: true)
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "shared", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let url = dir.appendingPathComponent((stem.isEmpty ? "transcript" : stem) + "." + ext)
         do {

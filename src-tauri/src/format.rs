@@ -56,7 +56,12 @@ pub fn text(t: &Transcript, ext: &str, times: bool) -> Result<String, String> {
 
 /// text(), and in json the chunks pktito transcribed, where windows has
 /// them (pktito-cli, for measuring the cuts; the apps' files leave them out).
-pub fn text_windows(t: &Transcript, ext: &str, times: bool, windows: &[Window]) -> Result<String, String> {
+pub fn text_windows(
+    t: &Transcript,
+    ext: &str,
+    times: bool,
+    windows: &[Window],
+) -> Result<String, String> {
     let segs = t.segments;
     Ok(match ext {
         "txt" => {

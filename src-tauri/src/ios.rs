@@ -50,7 +50,9 @@ fn arg(p: *const c_char) -> String {
 
 fn give(s: String) -> *mut c_char {
     // a NUL inside would end the string early: JSON escapes every one
-    CString::new(s.replace('\0', "")).unwrap_or_default().into_raw()
+    CString::new(s.replace('\0', ""))
+        .unwrap_or_default()
+        .into_raw()
 }
 
 /// f's JSON, or {"error": why}; a panic is an error too.
@@ -165,7 +167,11 @@ pub extern "C" fn pkapp_transcribe(
             Ok(x) => x,
             Err(e) => {
                 let p = e.problem();
-                let line = if name.is_empty() { p.line() } else { format!("{name}: {}", p.line()) };
+                let line = if name.is_empty() {
+                    p.line()
+                } else {
+                    format!("{name}: {}", p.line())
+                };
                 return Ok(json!({ "error": line, "key": p.key, "detail": p.detail }));
             }
         };
@@ -177,8 +183,12 @@ pub extern "C" fn pkapp_transcribe(
             &mut l.asr,
             &x,
             |done, segs| {
-                let segs = CString::new(serde_json::to_string(segs).unwrap_or_default().replace('\0', ""))
-                    .unwrap_or_default();
+                let segs = CString::new(
+                    serde_json::to_string(segs)
+                        .unwrap_or_default()
+                        .replace('\0', ""),
+                )
+                .unwrap_or_default();
                 update_fn(ctx, done, segs.as_ptr());
             },
             || STOP.load(Ordering::Relaxed),
@@ -272,7 +282,11 @@ pub extern "C" fn pkapp_keep(
     n: usize,
 ) -> *mut c_char {
     let (data, item) = (PathBuf::from(arg(data)), arg(item));
-    let peaks = if peaks.is_null() { Vec::new() } else { unsafe { std::slice::from_raw_parts(peaks, n) }.to_vec() };
+    let peaks = if peaks.is_null() {
+        Vec::new()
+    } else {
+        unsafe { std::slice::from_raw_parts(peaks, n) }.to_vec()
+    };
     answer(|| {
         let item: recent::Item = serde_json::from_str(&item).map_err(|e| e.to_string())?;
         let t = parse(transcript)?;

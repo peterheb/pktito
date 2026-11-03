@@ -58,7 +58,8 @@ pub fn score(got: &str, reference: &str) -> Score {
         let y = b[k..l].join(" ");
         // words added or removed take a space with them, where there is a
         // word beside them to have been spaced from
-        let space = usize::from((y.is_empty() && j - i < a.len()) || (x.is_empty() && l - k < b.len()));
+        let space =
+            usize::from((y.is_empty() && j - i < a.len()) || (x.is_empty() && l - k < b.len()));
         // case aside, then a word whose case alone changed one edit, as a
         // comma is: each letter of it, a title read in capitals by one
         // engine and not the other cost more than a word heard wrong
@@ -87,7 +88,11 @@ pub fn score(got: &str, reference: &str) -> Score {
         identical: a == b,
         words: pa.len(),
         word_errors,
-        wer: if pa.is_empty() { 0.0 } else { 100.0 * word_errors as f64 / pa.len() as f64 },
+        wer: if pa.is_empty() {
+            0.0
+        } else {
+            100.0 * word_errors as f64 / pa.len() as f64
+        },
         char_edits,
         diffs,
     }
@@ -99,9 +104,10 @@ fn recased(a: &[&str], b: &[&str]) -> usize {
     let mut used = vec![false; b.len()];
     a.iter()
         .filter(|w| {
-            let at = b.iter().enumerate().position(|(n, v)| {
-                !used[n] && v != *w && v.to_lowercase() == w.to_lowercase()
-            });
+            let at = b
+                .iter()
+                .enumerate()
+                .position(|(n, v)| !used[n] && v != *w && v.to_lowercase() == w.to_lowercase());
             at.map(|n| used[n] = true).is_some()
         })
         .count()
@@ -117,7 +123,11 @@ fn distance<T: PartialEq>(a: &[T], b: &[T]) -> usize {
         row[0] = i + 1;
         for (j, y) in b.iter().enumerate() {
             let up = row[j + 1];
-            row[j + 1] = if x == y { diag } else { 1 + diag.min(up).min(row[j]) };
+            row[j + 1] = if x == y {
+                diag
+            } else {
+                1 + diag.min(up).min(row[j])
+            };
             diag = up;
         }
     }
@@ -131,7 +141,12 @@ fn distance<T: PartialEq>(a: &[T], b: &[T]) -> usize {
 fn differing(a: &[&str], b: &[&str]) -> Vec<(usize, usize, usize, usize)> {
     // trim what they share at either end, which is most of it
     let pre = a.iter().zip(b).take_while(|(x, y)| x == y).count();
-    let suf = a[pre..].iter().rev().zip(b[pre..].iter().rev()).take_while(|(x, y)| x == y).count();
+    let suf = a[pre..]
+        .iter()
+        .rev()
+        .zip(b[pre..].iter().rev())
+        .take_while(|(x, y)| x == y)
+        .count();
     let (a2, b2) = (&a[pre..a.len() - suf], &b[pre..b.len() - suf]);
     let (n, m) = (a2.len(), b2.len());
     if n == 0 && m == 0 {
@@ -199,7 +214,10 @@ mod tests {
 
     #[test]
     fn the_same_text_split_differently_is_identical() {
-        let s = score("Alice was beginning.\nTo get very tired.", "Alice was beginning. To get\nvery tired.");
+        let s = score(
+            "Alice was beginning.\nTo get very tired.",
+            "Alice was beginning. To get\nvery tired.",
+        );
         assert!(s.identical);
         assert_eq!((s.word_errors, s.char_edits), (0, 0));
         assert!(s.diffs.is_empty());
@@ -210,7 +228,10 @@ mod tests {
         let s = score("Oh dear, oh dear!", "Oh dear oh dear!");
         assert!(!s.identical);
         assert_eq!((s.word_errors, s.char_edits), (0, 1));
-        assert_eq!(s.diffs, vec![("Oh »dear« oh".into(), "Oh »dear,« oh".into())]);
+        assert_eq!(
+            s.diffs,
+            vec![("Oh »dear« oh".into(), "Oh »dear,« oh".into())]
+        );
     }
 
     #[test]
@@ -233,18 +254,33 @@ mod tests {
         assert_eq!((s.word_errors, s.char_edits), (1, 5));
         let s = score("down the well", "down down the well");
         assert_eq!((s.word_errors, s.char_edits), (1, 5));
-        assert_eq!(s.diffs, vec![("down »down« the".into(), "down »« the".into())]);
+        assert_eq!(
+            s.diffs,
+            vec![("down »down« the".into(), "down »« the".into())]
+        );
     }
 
     #[test]
     fn a_place_of_several_words_is_marked_as_one() {
-        let s = score("or surface breathing animals", "or surface-breathing animals");
-        assert_eq!(s.diffs, vec![("or »surface-breathing« animals".into(), "or »surface breathing« animals".into())]);
+        let s = score(
+            "or surface breathing animals",
+            "or surface-breathing animals",
+        );
+        assert_eq!(
+            s.diffs,
+            vec![(
+                "or »surface-breathing« animals".into(),
+                "or »surface breathing« animals".into()
+            )]
+        );
     }
 
     #[test]
     fn a_word_in_other_case_is_one_edit() {
-        let s = score("BRAD BUSH ALICE'S ADVENTURES BY LOWIS CARROL", "Brad Bush Alice's Adventures by Lewis Carroll");
+        let s = score(
+            "BRAD BUSH ALICE'S ADVENTURES BY LOWIS CARROL",
+            "Brad Bush Alice's Adventures by Lewis Carroll",
+        );
         // five words recased, "Lewis" and "Carroll" a letter each
         assert_eq!(s.char_edits, 5 + 2);
         assert_eq!(s.word_errors, 2);

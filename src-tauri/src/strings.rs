@@ -182,9 +182,17 @@ mod tests {
     #[test]
     fn pseudo_language_is_current() {
         let keys = |s: &str| -> BTreeSet<String> {
-            serde_json::from_str::<Map<String, Value>>(s).unwrap().keys().cloned().collect()
+            serde_json::from_str::<Map<String, Value>>(s)
+                .unwrap()
+                .keys()
+                .cloned()
+                .collect()
         };
-        assert_eq!(keys(EN), keys(PSEUDO), "ui/locales/en-XA.json is stale: run scripts/pseudo.py");
+        assert_eq!(
+            keys(EN),
+            keys(PSEUDO),
+            "ui/locales/en-XA.json is stale: run scripts/pseudo.py"
+        );
     }
 
     /// Every key the page (ui/index.html, ui/app.js) and the app's Rust name

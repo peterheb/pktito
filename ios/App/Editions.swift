@@ -18,7 +18,8 @@ enum Editions {
     /// Core ML compiles the encoder again for a new build of the app.
     static func failure(_ e: CatalogEntry) -> String? {
         guard let s = UserDefaults.standard.string(forKey: "neuralEngineFailed." + e.name),
-              s.hasPrefix(here + ": ") else { return nil }
+            s.hasPrefix(here + ": ")
+        else { return nil }
         return String(s.dropFirst(here.count + 2))
     }
 
@@ -32,7 +33,8 @@ enum Editions {
     /// after an install or an update compiles it, which the setup screen
     /// says while it lasts.
     static func compiled(_ e: CatalogEntry) -> Bool {
-        UserDefaults.standard.string(forKey: "neuralEngineReady." + e.name) == here + " " + e.coreml.encoder.sha256
+        UserDefaults.standard.string(forKey: "neuralEngineReady." + e.name) == here + " "
+            + e.coreml.encoder.sha256
     }
 
     /// The Neural Engine edition of e can't run here.
@@ -59,7 +61,8 @@ enum Editions {
                 do {
                     let engine = try Engine(file: Store.file(e.coreml.slim))
                     try engine.useNeuralEngine(Store.encoder(e))
-                    UserDefaults.standard.set(here + " " + e.coreml.encoder.sha256, forKey: "neuralEngineReady." + e.name)
+                    UserDefaults.standard.set(
+                        here + " " + e.coreml.encoder.sha256, forKey: "neuralEngineReady." + e.name)
                     return (engine, .neuralEngine)
                 } catch {
                     why = error.localizedDescription

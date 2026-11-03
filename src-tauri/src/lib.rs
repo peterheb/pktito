@@ -9,13 +9,13 @@
 
 #[cfg(target_os = "android")]
 pub mod android;
-#[cfg(target_os = "ios")]
-pub mod ios;
 pub mod audio;
 pub mod awake;
 pub mod decode;
 pub mod download;
 pub mod format;
+#[cfg(target_os = "ios")]
+pub mod ios;
 pub mod model;
 pub mod mp3;
 pub mod mp4;

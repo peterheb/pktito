@@ -14,6 +14,7 @@ The SVG's 1024 units are the 72 dp a launcher shows of an adaptive icon's
 21 dp from the middle, well inside the 33 dp circle every shape keeps.
 Needs Pillow for the PNG; the files are checked in, so a build does not.
 """
+
 import os
 import xml.etree.ElementTree as ET
 
@@ -82,7 +83,17 @@ im = Image.new("RGB", (512, 512), ground["fill"])
 d = ImageDraw.Draw(im)
 for m in marks:
     x, y = float(m["x"]) * k, float(m["y"]) * k
-    d.rectangle([round(x), round(y), round(x + float(m["width"]) * k) - 1, round(y + float(m["height"]) * k) - 1], fill=m["fill"])
+    d.rectangle(
+        [
+            round(x),
+            round(y),
+            round(x + float(m["width"]) * k) - 1,
+            round(y + float(m["height"]) * k) - 1,
+        ],
+        fill=m["fill"],
+    )
 os.makedirs(os.path.join(here, "play"), exist_ok=True)
 im.save(os.path.join(here, "play", "icon-512.png"), optimize=True)
-print("res/mipmap-anydpi/ic_launcher.xml, res/drawable/ic_launcher_{foreground,monochrome}.xml, res/values/icon.xml, play/icon-512.png")
+print(
+    "res/mipmap-anydpi/ic_launcher.xml, res/drawable/ic_launcher_{foreground,monochrome}.xml, res/values/icon.xml, play/icon-512.png"
+)

@@ -80,7 +80,11 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
         // the OS's, where it has one, else ffmpeg, if it is there; asked
         // only then, since asking Windows loads Media Foundation
         let other = || {
-            if cfg!(any(target_os = "macos", target_os = "ios", target_os = "windows")) {
+            if cfg!(any(
+                target_os = "macos",
+                target_os = "ios",
+                target_os = "windows"
+            )) {
                 os_decoder()
             } else {
                 ffmpeg().is_some()
@@ -90,7 +94,13 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
             return read;
         }
     }
-    if forced == "ffmpeg" || !cfg!(any(target_os = "macos", target_os = "ios", target_os = "windows")) {
+    if forced == "ffmpeg"
+        || !cfg!(any(
+            target_os = "macos",
+            target_os = "ios",
+            target_os = "windows"
+        ))
+    {
         return match ffmpeg() {
             Some(ff) => decode_ffmpeg(&ff, path),
             None => Err(DecodeError::Unreadable(

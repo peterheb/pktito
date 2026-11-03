@@ -70,7 +70,11 @@ fn main() {
     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let os = env::var("CARGO_CFG_TARGET_OS").unwrap();
     let arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap();
-    let root = manifest.join(if os == "macos" || os == "ios" { "../vendor/pktito-ane" } else { "../vendor/pktito" });
+    let root = manifest.join(if os == "macos" || os == "ios" {
+        "../vendor/pktito-ane"
+    } else {
+        "../vendor/pktito"
+    });
     println!("cargo:rerun-if-changed=../vendor/pktito");
     println!("cargo:rerun-if-changed=../vendor/pktito-ane");
     println!("cargo:rerun-if-changed=native");

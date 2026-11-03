@@ -77,7 +77,8 @@ final class Models {
     }
 
     nonisolated static let ownDir: URL = {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[
+            0]
         let dir = base.appendingPathComponent("own", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         var v = URLResourceValues()
@@ -95,8 +96,9 @@ final class Models {
             let edition = Editions.preferred(e)
             let parts = edition == .cpu ? [e.pkf] : [e.coreml.slim, e.coreml.encoder]
             let bytes = parts.reduce(0) { $0 + $1.bytes }
-            return Offer(entry: e, edition: edition, usable: Models.usable(e), bytes: bytes,
-                         partial: Downloads.shared.kept(e))
+            return Offer(
+                entry: e, edition: edition, usable: Models.usable(e), bytes: bytes,
+                partial: Downloads.shared.kept(e))
         }
         let d = UserDefaults.standard
         model = d.string(forKey: "model")
@@ -132,7 +134,10 @@ final class Models {
     func use(_ name: String) {
         UserDefaults.standard.set(name, forKey: "model")
         UserDefaults.standard.removeObject(forKey: "model_file")
-        for f in (try? FileManager.default.contentsOfDirectory(at: Models.ownDir, includingPropertiesForKeys: nil)) ?? [] {
+        for f
+            in (try? FileManager.default.contentsOfDirectory(
+                at: Models.ownDir, includingPropertiesForKeys: nil)) ?? []
+        {
             try? FileManager.default.removeItem(at: f)
         }
         refresh()
@@ -182,7 +187,9 @@ final class Models {
 
     /// The room left where the models are, as Settings counts it.
     func free() -> Int64 {
-        let v = try? Store.models.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+        let v = try? Store.models.resourceValues(forKeys: [
+            .volumeAvailableCapacityForImportantUsageKey
+        ])
         return v?.volumeAvailableCapacityForImportantUsage ?? 0
     }
 
@@ -191,7 +198,9 @@ final class Models {
     /// what is wrong with it (false), and it is gone again. A copy that is
     /// a catalog model's .pkf, byte for byte, is that model's CPU edition.
     func open(_ url: URL, told: @escaping (String, Bool) -> Void) {
-        let name = url.lastPathComponent.hasPrefix(".") || url.lastPathComponent.isEmpty ? "model.pkf" : url.lastPathComponent
+        let name =
+            url.lastPathComponent.hasPrefix(".") || url.lastPathComponent.isEmpty
+            ? "model.pkf" : url.lastPathComponent
         let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
         stopCopy.set(false)
         copying = Copy(name: name, got: 0, total: size)
@@ -209,15 +218,20 @@ final class Models {
 
     func stopCopying() { stopCopy.set(true) }
 
-    nonisolated private static func copyIn(_ url: URL, name: String, size: Int64, catalog: [CatalogEntry],
-                                           stop: Flag) -> (String, Bool)? {
+    nonisolated private static func copyIn(
+        _ url: URL, name: String, size: Int64, catalog: [CatalogEntry],
+        stop: Flag
+    ) -> (String, Bool)? {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         let part = Models.ownDir.appendingPathComponent(".copying")
         let fm = FileManager.default
         try? fm.removeItem(at: part)
         do {
-            let free = (try? Models.ownDir.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
+            let free =
+                (try? Models.ownDir.resourceValues(forKeys: [
+                    .volumeAvailableCapacityForImportantUsageKey
+                ]))?
                 .volumeAvailableCapacityForImportantUsage ?? .max
             if size > 0 && size > free { return (L("download_disk_full"), false) }
             let sha = try copyHashing(url, to: part, name: name, size: size, stop: stop)
@@ -225,14 +239,17 @@ final class Models {
                 try? fm.removeItem(at: part)
                 return nil
             }
-            Task { @MainActor in Models.shared.copying = Copy(name: name, got: size, total: size, checking: true) }
+            Task { @MainActor in
+                Models.shared.copying = Copy(name: name, got: size, total: size, checking: true)
+            }
             do {
                 _ = try Engine(file: part)
             } catch {
                 try? fm.removeItem(at: part)
                 return (words(Core.trouble(error.localizedDescription)), false)
             }
-            let bytes = (try? part.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
+            let bytes =
+                (try? part.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
             if let same = catalog.first(where: { $0.sha256 == sha && $0.bytes == bytes }) {
                 let dst = Store.file(same.pkf)
                 try? fm.removeItem(at: dst)
@@ -240,7 +257,10 @@ final class Models {
                 Task { @MainActor in Models.shared.use(same.name) }
                 return (L("models_using", label(same.key)), true)
             }
-            for f in (try? fm.contentsOfDirectory(at: Models.ownDir, includingPropertiesForKeys: nil)) ?? [] where f != part {
+            for f
+                in (try? fm.contentsOfDirectory(at: Models.ownDir, includingPropertiesForKeys: nil))
+                ?? [] where f != part
+            {
                 try? fm.removeItem(at: f)
             }
             let file = Models.ownDir.appendingPathComponent(name)
@@ -255,8 +275,10 @@ final class Models {
 
     /// url's bytes into part, saying how far at most ten times a second:
     /// their SHA-256, or nil if the copy was stopped.
-    nonisolated private static func copyHashing(_ url: URL, to part: URL, name: String, size: Int64,
-                                                stop: Flag) throws -> String? {
+    nonisolated private static func copyHashing(
+        _ url: URL, to part: URL, name: String, size: Int64,
+        stop: Flag
+    ) throws -> String? {
         FileManager.default.createFile(atPath: part.path, contents: nil)
         let input = try FileHandle(forReadingFrom: url)
         let output = try FileHandle(forWritingTo: part)
@@ -276,7 +298,9 @@ final class Models {
                 shown = Date()
                 let at = got
                 Task { @MainActor in
-                    if Models.shared.copying != nil { Models.shared.copying = Copy(name: name, got: at, total: size) }
+                    if Models.shared.copying != nil {
+                        Models.shared.copying = Copy(name: name, got: at, total: size)
+                    }
                 }
             }
         }

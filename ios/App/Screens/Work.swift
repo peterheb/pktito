@@ -68,10 +68,11 @@ struct Work: View {
                         seek: {
                             seek($0 * t.duration)
                             jumped += 1
-                        })
-                        // 16 under the header's buttons: their 11 and 5
-                        .padding(.horizontal, edge)
-                        .padding(.top, 5)
+                        }
+                    )
+                    // 16 under the header's buttons: their 11 and 5
+                    .padding(.horizontal, edge)
+                    .padding(.top, 5)
                 }
                 if review && !rows.isEmpty {
                     // a step takes the playhead to its match, at rest too (Finder.step)
@@ -82,8 +83,11 @@ struct Work: View {
                 }
                 if let msg = message(rows), !room {
                     HStack(spacing: 6) {
-                        if t.error != nil { PkIcon.alert.frame(width: 16, height: 16).foregroundStyle(Pk.err) }
-                        Text(msg).font(PkType.body.font(15)).foregroundStyle(t.error != nil ? Pk.err : Pk.inkMuted)
+                        if t.error != nil {
+                            PkIcon.alert.frame(width: 16, height: 16).foregroundStyle(Pk.err)
+                        }
+                        Text(msg).font(PkType.body.font(15)).foregroundStyle(
+                            t.error != nil ? Pk.err : Pk.inkMuted)
                         Spacer(minLength: 0)
                     }
                     .padding(.horizontal, edge)
@@ -96,13 +100,28 @@ struct Work: View {
             // 375 x 466, 2026-11-01)
             .fixedSize(horizontal: false, vertical: true)
             // what the rows' room is reckoned from while the rest makes room
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { if !room { above = $0 } }
-            Rows(rows: rows, review: review, marks: marks, hits: hits, stats: stats(review), edge: edge, jump: jumped) { time, play in
+            .onGeometryChange(for: CGFloat.self) {
+                $0.size.height
+            } action: {
+                if !room { above = $0 }
+            }
+            Rows(
+                rows: rows, review: review, marks: marks, hits: hits, stats: stats(review),
+                edge: edge, jump: jumped
+            ) { time, play in
                 seek(time, play: play)
             }
         }
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
-        .onGeometryChange(for: Bool.self) { $0.size.width >= 600 } action: { roomy = $0 }
+        .onGeometryChange(for: CGFloat.self) {
+            $0.size.height
+        } action: {
+            height = $0
+        }
+        .onGeometryChange(for: Bool.self) {
+            $0.size.width >= 600
+        } action: {
+            roomy = $0
+        }
         // the height as if the keyboard weren't up, which it makes room in
         .background {
             GeometryReader { g in
@@ -110,16 +129,24 @@ struct Work: View {
             }
             .ignoresSafeArea(.keyboard)
         }
-        .onChange(of: room) { trace("room for the keyboard: \(room); \(height) of \(whole), \(above) above the rows") }
-        .onChange(of: Sought(query: s.finder.query, captions: s.captions, review: review, id: t.id, count: rows.count),
-                  initial: true) { was, now in
+        .onChange(of: room) {
+            trace("room for the keyboard: \(room); \(height) of \(whole), \(above) above the rows")
+        }
+        .onChange(
+            of: Sought(
+                query: s.finder.query, captions: s.captions, review: review, id: t.id,
+                count: rows.count),
+            initial: true
+        ) { was, now in
             hits = review ? findIn(rows, s.finder.query) : []
-            marks = Dictionary(grouping: hits.indices.map { Marked(k: $0, hit: hits[$0]) }, by: \.hit.row)
+            marks = Dictionary(
+                grouping: hits.indices.map { Marked(k: $0, hit: hits[$0]) }, by: \.hit.row)
             // a search typed at rest takes the playhead to its match, so that
             // Play starts where the rows went (app.js, runFind); the rows
             // marked anew for the views or the list leave it where it is
             let typed = was.query != now.query && !Player.shared.playing
-            s.finder.settle(hits, position: Player.shared.position, seek: typed ? { seek($0) } : nil)
+            s.finder.settle(
+                hits, position: Player.shared.position, seek: typed ? { seek($0) } : nil)
         }
     }
 
@@ -144,7 +171,8 @@ struct Work: View {
         switch t.step {
         case .loading: return L("status_loading")
         case .reading: return L("status_reading")
-        case .transcribing where t.done > 0 && t.transcribed > 0: return pace(t.done * t.duration, t.transcribed)
+        case .transcribing where t.done > 0 && t.transcribed > 0:
+            return pace(t.done * t.duration, t.transcribed)
         default: return ""
         }
     }
@@ -160,7 +188,8 @@ struct Work: View {
     private func stats(_ review: Bool) -> String? {
         let t = Transcriber.shared
         guard review && !t.segments.isEmpty && t.transcribed > 0 else { return nil }
-        return L("stats_transcribed", clock(t.transcribed), pace(t.done * t.duration, t.transcribed))
+        return L(
+            "stats_transcribed", clock(t.transcribed), pace(t.done * t.duration, t.transcribed))
     }
 }
 
@@ -190,7 +219,8 @@ private struct Header: View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 8) {
                 back
-                name.frame(minWidth: floor, idealWidth: floor, maxWidth: .infinity, alignment: .leading)
+                name.frame(
+                    minWidth: floor, idealWidth: floor, maxWidth: .infinity, alignment: .leading)
                 buttons
             }
             .padding(.leading, clear.leading)
@@ -239,7 +269,9 @@ private struct Header: View {
             PkButton(text: L("stop"), kind: .ghost) { t.stop() }.fixedSize()
         }
         if review && shown {
-            IconButton(icon: .copy, label: L(s.captions ? "copy_captions" : "copy_text")) { s.copy() }
+            IconButton(icon: .copy, label: L(s.captions ? "copy_captions" : "copy_text")) {
+                s.copy()
+            }
             ShareAs().fixedSize()
         }
     }
@@ -313,7 +345,9 @@ func share(_ url: URL, from view: UIView?) {
     let vc = UIActivityViewController(activityItems: [url], applicationActivities: nil)
     if let pop = vc.popoverPresentationController {
         pop.sourceView = view ?? top.view
-        pop.sourceRect = view?.bounds ?? CGRect(x: top.view.bounds.midX, y: top.view.bounds.midY, width: 0, height: 0)
+        pop.sourceRect =
+            view?.bounds
+            ?? CGRect(x: top.view.bounds.midX, y: top.view.bounds.midY, width: 0, height: 0)
     }
     top.present(vc, animated: true)
 }
@@ -351,8 +385,9 @@ private struct Views: View {
         let across = alone || (field == nil && f.open)
         HStack(spacing: 12) {
             if !across {
-                Switch2(first: L("sentences"), second: L("captions"),
-                        onSecond: Binding(get: { s.captions }, set: { s.captions = $0 }))
+                Switch2(
+                    first: L("sentences"), second: L("captions"),
+                    onSecond: Binding(get: { s.captions }, set: { s.captions = $0 }))
             }
             // one field, beside the views or across the line, so that it
             // keeps the keyboard from one to the other
@@ -374,9 +409,17 @@ private struct Views: View {
                 .hidden()
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
-                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { viewsWidth = $0 }
+                .onGeometryChange(for: CGFloat.self) {
+                    $0.size.width
+                } action: {
+                    viewsWidth = $0
+                }
         }
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+        .onGeometryChange(for: CGFloat.self) {
+            $0.size.width
+        } action: {
+            width = $0
+        }
     }
 }
 
@@ -443,7 +486,9 @@ private struct Rows: View {
         let f = s.finder
         let position = p.position
         let base = s.base.with(duration: t.duration, video: t.fps)
-        let current = review && (p.playing || position > 0) ? rows.lastIndex { $0.start <= position + 1e-3 } ?? -1 : -1
+        let current =
+            review && (p.playing || position > 0)
+            ? rows.lastIndex { $0.start <= position + 1e-3 } ?? -1 : -1
         let wide = width >= 508 + column
         ScrollViewReader { list in
             ScrollView {
@@ -453,11 +498,14 @@ private struct Rows: View {
                         let mine = marks[i] ?? []
                         SegRow(
                             s: rows[i], now: now,
-                            word: now ? rows[i].words.lastIndex { $0.start <= position + 1e-3 } ?? -1 : -1,
+                            word: now
+                                ? rows[i].words.lastIndex { $0.start <= position + 1e-3 } ?? -1
+                                : -1,
                             marks: mine, at: mine.contains { $0.k == f.at } ? f.at : -1,
-                            wide: wide, column: column, cue: s.captions && review, review: review, base: base
+                            wide: wide, column: column, cue: s.captions && review, review: review,
+                            base: base
                         ) { seek(rows[i].start, true) }
-                            .equatable()
+                        .equatable()
                     }
                     if let stats {
                         Text(stats)
@@ -516,11 +564,17 @@ private struct Rows: View {
             .onChange(of: position) { f.follow(hits, position: position, jump: false) }
         }
         .padding(.top, 16)
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+        .onGeometryChange(for: CGFloat.self) {
+            $0.size.width
+        } action: {
+            width = $0
+        }
     }
 
     /// A finger on the list, or its fling: the reader moving it.
-    private var hands: Bool { phase == .tracking || phase == .interacting || phase == .decelerating }
+    private var hands: Bool {
+        phase == .tracking || phase == .interacting || phase == .decelerating
+    }
 
     /// Row at the list's top, where it isn't in sight above the list's last
     /// row (which shows only in part), and followed until it shows.
@@ -570,7 +624,8 @@ private struct SegRow: View, Equatable {
     // the action aside, which is a new closure each frame and does the same
     static func == (a: SegRow, b: SegRow) -> Bool {
         a.s == b.s && a.now == b.now && a.word == b.word && a.marks == b.marks && a.at == b.at
-            && a.wide == b.wide && a.column == b.column && a.cue == b.cue && a.review == b.review && a.base == b.base
+            && a.wide == b.wide && a.column == b.column && a.cue == b.cue && a.review == b.review
+            && a.base == b.base
     }
 
     var body: some View {
@@ -578,19 +633,23 @@ private struct SegRow: View, Equatable {
             if wide {
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                     time.frame(width: column, alignment: .leading)
-                    Sentence(s: s, word: word, marks: marks, at: at).frame(maxWidth: .infinity, alignment: .leading)
+                    Sentence(s: s, word: word, marks: marks, at: at).frame(
+                        maxWidth: .infinity, alignment: .leading)
                 }
             } else {
                 VStack(alignment: .leading, spacing: 2) {
                     time
-                    Sentence(s: s, word: word, marks: marks, at: at).frame(maxWidth: .infinity, alignment: .leading)
+                    Sentence(s: s, word: word, marks: marks, at: at).frame(
+                        maxWidth: .infinity, alignment: .leading)
                 }
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .frame(maxWidth: 716, alignment: .leading)
-        .background(now ? Pk.surface : Color.clear, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
+        .background(
+            now ? Pk.surface : Color.clear, in: RoundedRectangle(cornerRadius: Radius.radiusUi)
+        )
         .contentShape(Rectangle())
         // the whole row plays from its time, its words as well as the time,
         // which a thumb is too broad to find (Peter, the S25, 2026-10-26)
@@ -679,9 +738,15 @@ private struct Sentence: View {
             }
             .pk(PkType.transcript)
             .foregroundStyle(Pk.ink)
-            .textRenderer(Marks(em: PkType.transcript.scaled(type), spotted: at < 0 ? nil : { k, r in
-                Task { @MainActor in AppState.shared.finder.spotted(k, r) }
-            }))
+            .textRenderer(
+                Marks(
+                    em: PkType.transcript.scaled(type),
+                    spotted: at < 0
+                        ? nil
+                        : { k, r in
+                            Task { @MainActor in AppState.shared.finder.spotted(k, r) }
+                        })
+            )
             .fixedSize(horizontal: false, vertical: true)
     }
 
@@ -764,11 +829,15 @@ private struct Marks: TextRenderer {
                 let top = sp.y - 0.878 * em - 2
                 let bottom = sp.y + 0.21 * em + 2
                 let r = CGRect(x: sp.x0 - 2, y: top, width: sp.x1 - sp.x0 + 4, height: bottom - top)
-                ctx.fill(Path(roundedRect: r, cornerRadius: 3), with: .color(sp.current ? Pk.plume : hl))
+                ctx.fill(
+                    Path(roundedRect: r, cornerRadius: 3), with: .color(sp.current ? Pk.plume : hl))
                 if sp.current {
-                    ctx.fill(Path(CGRect(x: sp.x0, y: bottom, width: sp.x1 - sp.x0, height: 2)), with: .color(Pk.ink))
+                    ctx.fill(
+                        Path(CGRect(x: sp.x0, y: bottom, width: sp.x1 - sp.x0, height: 2)),
+                        with: .color(Pk.ink))
                     // with its underline, and 4 clear of it either side
-                    let seen = CGRect(x: r.minX, y: r.minY - 4, width: r.width, height: r.height + 10)
+                    let seen = CGRect(
+                        x: r.minX, y: r.minY - 4, width: r.width, height: r.height + 10)
                     spot = (sp.k, spot.map { $0.rect.union(seen) } ?? seen)
                 }
             }
@@ -780,7 +849,9 @@ private struct Marks: TextRenderer {
             for run in line {
                 guard let m = run[Mark.self], m.word else { continue }
                 let b = run.typographicBounds
-                ctx.fill(Path(CGRect(x: b.origin.x, y: b.origin.y + 3, width: b.width, height: 2)), with: .color(Pk.beak))
+                ctx.fill(
+                    Path(CGRect(x: b.origin.x, y: b.origin.y + 3, width: b.width, height: 2)),
+                    with: .color(Pk.beak))
             }
         }
     }
@@ -788,13 +859,19 @@ private struct Marks: TextRenderer {
 
 extension Pk {
     /// a match's mark: plume mixed 45% into the ground (app.css, .pk-hit)
-    static let matchFill = Color(uiColor: UIColor { t in
-        func rgb(_ c: Color) -> (CGFloat, CGFloat, CGFloat) {
-            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-            UIColor(c).resolvedColor(with: t).getRed(&r, green: &g, blue: &b, alpha: &a)
-            return (r, g, b)
-        }
-        let (g, p) = (rgb(Pk.ground), rgb(Pk.plume))
-        return UIColor(red: g.0 * 0.55 + p.0 * 0.45, green: g.1 * 0.55 + p.1 * 0.45, blue: g.2 * 0.55 + p.2 * 0.45, alpha: 1)
-    })
+    static let matchFill = Color(
+        uiColor: UIColor { t in
+            func rgb(_ c: Color) -> (CGFloat, CGFloat, CGFloat) {
+                var r: CGFloat = 0
+                var g: CGFloat = 0
+                var b: CGFloat = 0
+                var a: CGFloat = 0
+                UIColor(c).resolvedColor(with: t).getRed(&r, green: &g, blue: &b, alpha: &a)
+                return (r, g, b)
+            }
+            let (g, p) = (rgb(Pk.ground), rgb(Pk.plume))
+            return UIColor(
+                red: g.0 * 0.55 + p.0 * 0.45, green: g.1 * 0.55 + p.1 * 0.45,
+                blue: g.2 * 0.55 + p.2 * 0.45, alpha: 1)
+        })
 }

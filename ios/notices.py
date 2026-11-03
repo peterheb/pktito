@@ -12,6 +12,7 @@ scripts/notices.py takes the desktop's. The rest of the app is its own Swift
 and Apple's frameworks, which iOS carries. The typefaces, the icons and
 Rust's standard library are the desktop's, listed by hand there.
 """
+
 import json
 import os
 import sys
@@ -35,16 +36,31 @@ def check(out):
     found = []
     for part in ("type", "libraries"):
         old, new = ({r[0]: r for r in x[part]} for x in (had, out))
-        found += [f"{part[:-1] if part == 'type' else 'library'} {what}: {n}" for what, names in
-                  (("added", new.keys() - old.keys()), ("removed", old.keys() - new.keys()),
-                   ("changed", {n for n in old.keys() & new.keys() if old[n] != new[n]})) for n in sorted(names)]
+        found += [
+            f"{part[:-1] if part == 'type' else 'library'} {what}: {n}"
+            for what, names in (
+                ("added", new.keys() - old.keys()),
+                ("removed", old.keys() - new.keys()),
+                ("changed", {n for n in old.keys() & new.keys() if old[n] != new[n]}),
+            )
+            for n in sorted(names)
+        ]
     old, new = had["texts"], out["texts"]
-    found += [f"text {what}: {k}" for what, keys in
-              (("added", new.keys() - old.keys()), ("removed", old.keys() - new.keys()),
-               ("changed", {k for k in old.keys() & new.keys() if old[k] != new[k]})) for k in sorted(keys)]
+    found += [
+        f"text {what}: {k}"
+        for what, keys in (
+            ("added", new.keys() - old.keys()),
+            ("removed", old.keys() - new.keys()),
+            ("changed", {k for k in old.keys() & new.keys() if old[k] != new[k]}),
+        )
+        for k in sorted(keys)
+    ]
     for f in found:
         print(f)
-    print(f"{os.path.relpath(PATH, root)}: " + ("stale, run ios/notices.py" if found else "current"))
+    print(
+        f"{os.path.relpath(PATH, root)}: "
+        + ("stale, run ios/notices.py" if found else "current")
+    )
     return 1 if found else 0
 
 
@@ -54,7 +70,9 @@ def main():
         # [name, license, notice, the keys of its texts]
         "type": [[e[1], e[3], e[2], e[5]] for e in data["extras"] if e[0] == "type"],
         # the same and whether its name is code: by hand, then Cargo's
-        "libraries": [[e[1], e[3], e[2], e[5], False] for e in data["extras"] if e[0] == "code"]
+        "libraries": [
+            [e[1], e[3], e[2], e[5], False] for e in data["extras"] if e[0] == "code"
+        ]
         + [[f"{c[0]} {c[1]}", c[2], c[3], c[5], True] for c in data["crates"]],
         "texts": {},
     }
@@ -65,8 +83,10 @@ def main():
     js = json.dumps(out, ensure_ascii=False, separators=(",", ":")) + "\n"
     with open(PATH, "w", encoding="utf-8") as fh:
         fh.write(js)
-    print(f"{os.path.relpath(PATH, root)}: {len(js.encode()) / 1024:.0f} KB, {len(data['crates'])} crates, "
-          f"{len(out['texts'])} texts")
+    print(
+        f"{os.path.relpath(PATH, root)}: {len(js.encode()) / 1024:.0f} KB, {len(data['crates'])} crates, "
+        f"{len(out['texts'])} texts"
+    )
     for u in unknown:
         print("  a license not in PREFER, check it:", u)
 

@@ -102,7 +102,11 @@ pub fn run_windows(
         // its words: those it ended in sentences and those it left open,
         // less the ones open from before it
         let words = segs.iter().map(|s| s.words.len()).sum::<usize>() + open.words.len() - held;
-        windows.push(Window { start: c.start as f64 / rate, end: c.end as f64 / rate, words });
+        windows.push(Window {
+            start: c.start as f64 / rate,
+            end: c.end as f64 / rate,
+            words,
+        });
         // the recording's end, or where it stops: the sentence still open ends
         if c.last || stopping {
             segs.extend(open.close(model));
@@ -177,7 +181,10 @@ impl Open {
             (PART_MIN_S..=PART_MAX_S).contains(&t)
         };
         let pause = |i: usize| self.words[i + 1].start - self.words[i].end;
-        if let Some(i) = (0..last).rev().find(|&i| span(i) && ends(&self.words[i].text, &[',', ';', ':', '—', '–'])) {
+        if let Some(i) = (0..last)
+            .rev()
+            .find(|&i| span(i) && ends(&self.words[i].text, &[',', ';', ':', '—', '–']))
+        {
             return i + 1;
         }
         let mut cands: Vec<usize> = (0..last).filter(|&i| span(i)).collect();
@@ -185,21 +192,30 @@ impl Open {
             cands = (0..last).collect();
         }
         // the longest pause; the later of two the same
-        let i = cands.into_iter().fold(0, |b, i| if pause(i) >= pause(b) { i } else { b });
+        let i = cands
+            .into_iter()
+            .fold(0, |b, i| if pause(i) >= pause(b) { i } else { b });
         i + 1
     }
 }
 
 /// Whether a word ends in one of these, before any closing quote or bracket.
 fn ends(text: &str, marks: &[char]) -> bool {
-    text.trim_end_matches(['"', '\'', '”', '’', ')', ']']).ends_with(marks)
+    text.trim_end_matches(['"', '\'', '”', '’', ')', ']'])
+        .ends_with(marks)
 }
 
 /// A chunk's tokens as sentences, after the one open before it: a segment
 /// ends at a word ending in . ? or !, and one that runs past SENTENCE_MAX_S
 /// first is broken (Open::part_end); the words after the last end are left
 /// open, for the next chunk.
-fn sentences(model: &Model, toks: &[Tok], offset: f64, frame: f64, open: &mut Open) -> Vec<Segment> {
+fn sentences(
+    model: &Model,
+    toks: &[Tok],
+    offset: f64,
+    frame: f64,
+    open: &mut Open,
+) -> Vec<Segment> {
     let words = model.words(toks);
     let mut out = Vec::new();
     for w in &words {

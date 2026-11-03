@@ -73,17 +73,17 @@ recommends over dataSync for a transfer the user asks for, and which is not
 a foreground service; on Android 10 to 13, which have no such jobs, it is a
 dataSync foreground service, so dataSync has a second use case:
 
-| | mediaProcessing | dataSync |
-|---|---|---|
-| Use case | Media transcoding | Local processing: Other |
+|             | mediaProcessing                                                                                                                                                                                                                                                                                                                                                                  | dataSync                                     |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| Use case    | Media transcoding                                                                                                                                                                                                                                                                                                                                                                | Local processing: Other                      |
 | Description | pktito transcribes an audio or video file the user chose, on the device: it turns its speech into text. An hour of audio takes about 50 seconds on a Snapdragon X Elite laptop (69.8 times real time, AliceBench), and longer on a phone. The user starts it with a tap and sees its progress in a notification, which opens the app, where Stop is. It never starts on its own. | The same transcription, on Android 10 to 14. |
-| If deferred | The user waits for a transcript they asked for. Interrupted, it ends where it got to, and finishing it means transcribing the recording again: the app keeps nothing to resume from. | The same. |
+| If deferred | The user waits for a transcript they asked for. Interrupted, it ends where it got to, and finishing it means transcribing the recording again: the app keeps nothing to resume from.                                                                                                                                                                                             | The same.                                    |
 
-| | dataSync, the model download (Android 10 to 13) |
-|---|---|
-| Use case | Network transfer: Upload or download |
+|             | dataSync, the model download (Android 10 to 13)                                                                                                                                                                                                                             |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Use case    | Network transfer: Upload or download                                                                                                                                                                                                                                        |
 | Description | pktito downloads the speech model the user chose (624 or 648 MB, once) from models.pktito.net, when they tap Download on the setup screen or choose a model in the model menu. Its progress is in a notification; the app has Pause and Cancel. It never starts on its own. |
-| If deferred | The app cannot transcribe until it has a model. Interrupted, the download keeps what it has and goes on from there. |
+| If deferred | The app cannot transcribe until it has a model. Interrupted, the download keeps what it has and goes on from there.                                                                                                                                                         |
 
 The videos: for the transcription, choose a recording, see the transcription
 start with its notification, switch to another app while the notification

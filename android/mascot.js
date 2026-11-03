@@ -17,15 +17,32 @@ const path = require("path");
 const { chromium } = require("playwright-core");
 
 const root = path.dirname(__dirname);
-const out = path.join(__dirname, "app", "src", "main", "res", "drawable-nodpi", "mascot.png");
+const out = path.join(
+  __dirname,
+  "app",
+  "src",
+  "main",
+  "res",
+  "drawable-nodpi",
+  "mascot.png",
+);
 const TALL = 1200;
 
 (async () => {
   // WebGL 2 without a GPU: SwiftShader, which Chromium uses only when asked
-  const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+  const browser = await chromium.launch({
+    args: [
+      "--use-gl=angle",
+      "--use-angle=swiftshader",
+      "--enable-unsafe-swiftshader",
+    ],
+  });
   // mascot.js draws at the stage's size times a pixel ratio of at most 2
-  const page = await browser.newPage({ viewport: { width: 1600, height: 1600 }, deviceScaleFactor: 2,
-    reducedMotion: "reduce" });
+  const page = await browser.newPage({
+    viewport: { width: 1600, height: 1600 },
+    deviceScaleFactor: 2,
+    reducedMotion: "reduce",
+  });
   page.on("pageerror", (e) => {
     console.error("mascot.js:", e.message);
     process.exit(1);

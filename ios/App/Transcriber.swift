@@ -74,17 +74,19 @@ final class Transcriber {
     }
 
     #if DEBUG
-    /// A state as it would be, for the simulator's screenshots, which no
-    /// one taps to (Root, -pretend): nothing is read or transcribed.
-    func pretend(preparing p: Bool) { preparing = p }
+        /// A state as it would be, for the simulator's screenshots, which no
+        /// one taps to (Root, -pretend): nothing is read or transcribed.
+        func pretend(preparing p: Bool) { preparing = p }
 
-    func pretend(_ step: Step, name: String, done: Double, duration: Double = 0, error: String? = nil) {
-        begin(name, nil)
-        self.step = step
-        self.done = done
-        self.duration = duration
-        self.error = error
-    }
+        func pretend(
+            _ step: Step, name: String, done: Double, duration: Double = 0, error: String? = nil
+        ) {
+            begin(name, nil)
+            self.step = step
+            self.done = done
+            self.duration = duration
+            self.error = error
+        }
     #endif
 
     /// The recording found again where it is now (Locate…), to play.
@@ -110,7 +112,8 @@ final class Transcriber {
         peaks = t.peaks
         segments = t.segments
         transcribed = t.item.transcribed
-        transcript = Transcript(duration: t.item.duration, complete: true, model: t.item.model, segments: t.segments)
+        transcript = Transcript(
+            duration: t.item.duration, complete: true, model: t.item.model, segments: t.segments)
         done = 1
         reopened = true
         step = .done
@@ -137,7 +140,8 @@ final class Transcriber {
     /// the screen after a download ended while the app was away.
     func prepareIfNew() {
         guard case .catalog(let name)? = Models.shared.usable(), let e = Models.shared.entry(name),
-              Models.usable(e) == .neuralEngine, !Editions.compiled(e) else { return }
+            Models.usable(e) == .neuralEngine, !Editions.compiled(e)
+        else { return }
         prepare()
     }
 
@@ -161,7 +165,9 @@ final class Transcriber {
             case .own(let url):
                 return (try Engine(file: url), .cpu)
             case .catalog(let name):
-                guard let e = await Models.shared.entry(name) else { throw CoreError(L("no_model")) }
+                guard let e = await Models.shared.entry(name) else {
+                    throw CoreError(L("no_model"))
+                }
                 return try Editions.engine(for: e)
             }
         }
@@ -205,7 +211,9 @@ final class Transcriber {
         trace("transcribe: \(name)")
         Task {
             defer {
-                trace("transcribe: \(step), \(String(format: "%.1f", transcribed)) s for \(String(format: "%.1f", duration)) s of audio")
+                trace(
+                    "transcribe: \(step), \(String(format: "%.1f", transcribed)) s for \(String(format: "%.1f", duration)) s of audio"
+                )
                 UIApplication.shared.isIdleTimerDisabled = false
                 Continued.end(done: step == .done)
             }
@@ -239,21 +247,28 @@ final class Transcriber {
                         Continued.update()
                     }
                 }
-                let (t, moved) = try await Task.detached(priority: .userInitiated) { () throws -> (Transcript, URL?) in
+                let (t, moved) = try await Task.detached(priority: .userInitiated) {
+                    () throws -> (Transcript, URL?) in
                     let scoped = url.startAccessingSecurityScopedResource()
                     defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-                    let v = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+                    let v = try? url.resourceValues(forKeys: [
+                        .fileSizeKey, .contentModificationDateKey,
+                    ])
                     // a copy sent to pktito is kept itself (Recents.keep)
                     let bookmark = Recents.held(url) ? nil : try? url.bookmarkData()
                     let t = try engine.transcribe(url, name: name, progress: progress)
                     if t.complete {
                         let item = RecentItem(
                             id: id, path: url.path, name: name, duration: t.duration,
-                            finished: UInt64(Date().timeIntervalSince1970), took: Date().timeIntervalSince(began),
+                            finished: UInt64(Date().timeIntervalSince1970),
+                            took: Date().timeIntervalSince(began),
                             transcribed: box.since(), model: t.model, fps: progress.fps,
                             size: UInt64(v?.fileSize ?? 0),
-                            modified: UInt64(v?.contentModificationDate?.timeIntervalSince1970 ?? 0))
-                        let moved = Recents.keep(item, transcript: t, peaks: progress.peaks, recording: url, bookmark: bookmark)
+                            modified: UInt64(v?.contentModificationDate?.timeIntervalSince1970 ?? 0)
+                        )
+                        let moved = Recents.keep(
+                            item, transcript: t, peaks: progress.peaks, recording: url,
+                            bookmark: bookmark)
                         return (t, moved)
                     }
                     return (t, nil)

@@ -123,7 +123,12 @@ extern "C" {
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 extern "C" {
     fn pk_model_has_encoder(m: *const RawModel) -> c_int;
-    fn pk_asr_use_ane(a: *mut RawAsr, path: *const c_char, err: *mut c_char, errlen: usize) -> c_int;
+    fn pk_asr_use_ane(
+        a: *mut RawAsr,
+        path: *const c_char,
+        err: *mut c_char,
+        errlen: usize,
+    ) -> c_int;
     fn pk_asr_ane_warm(a: *mut RawAsr, err: *mut c_char, errlen: usize) -> c_int;
 }
 
@@ -358,7 +363,9 @@ impl Asr {
     #[cfg(any(target_os = "macos", target_os = "ios"))]
     pub fn use_ane(&mut self, path: Option<&Path>) -> Result<(), String> {
         let c = match path {
-            Some(p) => Some(CString::new(p.to_string_lossy().as_bytes()).map_err(|_| "bad path".to_string())?),
+            Some(p) => Some(
+                CString::new(p.to_string_lossy().as_bytes()).map_err(|_| "bad path".to_string())?,
+            ),
             None => None,
         };
         let mut err = [0 as c_char; 1024];
@@ -373,7 +380,9 @@ impl Asr {
             }
         };
         if rc != 0 {
-            return Err(unsafe { CStr::from_ptr(err.as_ptr()) }.to_string_lossy().into_owned());
+            return Err(unsafe { CStr::from_ptr(err.as_ptr()) }
+                .to_string_lossy()
+                .into_owned());
         }
         Ok(())
     }

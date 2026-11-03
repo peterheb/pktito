@@ -11,7 +11,8 @@ import System
 enum Unpack {
     static func encoder(_ e: CatalogEntry, from archive: URL) throws {
         let dst = Store.encoder(e)
-        let work = dst.deletingLastPathComponent().appendingPathComponent(dst.lastPathComponent + ".unpacking")
+        let work = dst.deletingLastPathComponent().appendingPathComponent(
+            dst.lastPathComponent + ".unpacking")
         let fm = FileManager.default
         try? fm.removeItem(at: work)
         try fm.createDirectory(at: work, withIntermediateDirectories: true)
@@ -31,12 +32,15 @@ enum Unpack {
 
     private static func unpack(_ archive: URL, into dir: URL) throws {
         let failed = CoreError("\(archive.lastPathComponent) couldn't be unpacked")
-        guard let file = ArchiveByteStream.fileStream(path: FilePath(archive.path), mode: .readOnly,
-                                                      options: [], permissions: FilePermissions(rawValue: 0o644)),
-              let inflate = ArchiveByteStream.decompressionStream(readingFrom: file),
-              let decode = ArchiveStream.decodeStream(readingFrom: inflate),
-              let extract = ArchiveStream.extractStream(extractingTo: FilePath(dir.path),
-                                                        flags: [.ignoreOperationNotPermitted])
+        guard
+            let file = ArchiveByteStream.fileStream(
+                path: FilePath(archive.path), mode: .readOnly,
+                options: [], permissions: FilePermissions(rawValue: 0o644)),
+            let inflate = ArchiveByteStream.decompressionStream(readingFrom: file),
+            let decode = ArchiveStream.decodeStream(readingFrom: inflate),
+            let extract = ArchiveStream.extractStream(
+                extractingTo: FilePath(dir.path),
+                flags: [.ignoreOperationNotPermitted])
         else { throw failed }
         defer {
             try? extract.close()
