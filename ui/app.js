@@ -530,7 +530,7 @@ function modelMenu(anchor, keys) {
 /* Manage models, in every edition's model menu: each catalog model
    downloaded and what a stopped download of one kept, with their sizes,
    each to delete, and their total; on a Mac, the Neural Engine encoder
-   offered for a whole model file here without one (fasterRow). The model in use says so,
+   offered under a whole model file here without one (fasterRow). The model in use says so,
    and its Delete and the transcription's own wait while one runs (held). A
    download under way has the window to itself (setup), so none is listed
    here. Delete asks first, saying what it frees and what follows: the
@@ -588,10 +588,11 @@ function renderManage() {
       const got = { got: num(mb(m.partial)), total: num(mb(m.bytes)) };
       rows.push(row(m, esc(t("manage.paused", got)), true));
     }
+    // on a Mac, a whole model file here without its Core ML encoder: the
+    // encoder offered under its model, which it runs on the Neural Engine
+    // (main.rs get_encoder), as Android offers its NPU's
+    if (m.faster) rows.push(fasterRow(m));
   }
-  // on a Mac, a whole model file here without its Core ML encoder: the
-  // encoder offered, which runs it on the Neural Engine (main.rs get_encoder)
-  for (const m of st.catalog.filter((x) => x.faster)) rows.push(fasterRow(m));
   const total =
     used >= 1e9
       ? t("manage.used_gb", { gb: num(used / 1e9, 2) })
