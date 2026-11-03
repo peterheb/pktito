@@ -71,6 +71,7 @@ struct pk_qnn {
     uint32_t n_mels, d, T0, T1, T2, T3;
     uint32_t layers;             /* the encoder's layers it runs: all, but for checking */
     int other;                   /* compiled for another chip (PKTITO_QNN_TARGET): kept, not run */
+    char chip[32];               /* the NPU its graph is for, in PKTITO_QNN_TARGET's words; "" where QNN names none */
     Qnn_Tensor_t in[5], out;     /* mel, the three stages' masks, the keys' bias; x */
     float *buf[5], *x;           /* their data */
     char names[6][16];           /* in's and out's names and shapes, their own */
@@ -732,25 +733,41 @@ static int make_graph(pk_qnn *e, const pk_model *m, char *err, size_t errlen) {
 
 /* ---------------------------------------------------------- the cache --- */
 
-/* The compiled graph kept (pk_qnn_open's cache): this header, then QNN's
- * binary of the context. The key is what the binary was made of: the
- * model's checkpoint and conversion as its metadata names them
- * (source_sha256, converter), which a slim file (pktito-tools slim) has
- * byte for byte as the full file whose encoder the graph holds - or, in a
- * file without them, its own data's SHA-256, the .pkf header's - and the
- * length and layers built. The QNN that compiled it is kept beside the
- * key, not in it: QNN reads an older QNN's graph and not a newer one's
- * (QAIRT 2.51's HTP backend guide, its table of SDK 2.42's and 2.43's),
- * and contextCreateFromBinary says which. PK_QNN_CACHE changes with what
- * make_graph writes. */
-#define PK_QNN_CACHE "pktito-qnn 6"
+/* The compiled graph kept (pk_qnn_open's cache), a file the app downloads
+ * for its phone's NPU: this header, then QNN's binary of the context. The
+ * key is what the binary was made of: the model's checkpoint and
+ * conversion as its metadata names them (source_sha256, converter), which
+ * a slim file (pktito-tools slim) has byte for byte as the full file whose
+ * encoder the graph holds - or, in a file without them, its own data's
+ * SHA-256, the .pkf header's - and the length and layers built. The NPU
+ * it was compiled for is kept too, as PKTITO_QNN_TARGET names it, so that
+ * a file of another Hexagon's is refused saying both, before QNN, whose
+ * refusal names neither ("Request feature arch with value 79
+ * unsupported"); and the pktito and the QNN that made it. The QNN is kept
+ * beside the key, not in it: QNN reads an older QNN's graph and not a
+ * newer one's (QAIRT 2.51's HTP backend guide, its table of SDK 2.42's
+ * and 2.43's), and contextCreateFromBinary says which. PK_QNN_GRAPH's
+ * number changes with this header and with what make_graph writes; 1 is
+ * the first the app downloads, the development's having been "pktito-qnn
+ * 1" to "pktito-qnn 6". Little-endian, 616 bytes, as tools read it. */
+#define PK_QNN_GRAPH "pktito-qnn-graph 1"
+
+/* the commit the Makefile built qnn.o from, for the header's made */
+#ifndef PK_COMMIT
+#define PK_COMMIT ""
+#endif
 
 typedef struct {
-    char magic[16], key[176], built[64];
-    char names[6][16];
+    char magic[32];              /* PK_QNN_GRAPH */
+    char key[176];               /* cache_key's */
+    char chip[32];               /* the NPU it was compiled for: soc,arch,vtcm,dlbc,signed */
+    char made[64];               /* the pktito that made it: "pktito 0.1.0 e9603fd" */
+    char built[64];              /* the QNN that compiled it: "v2.51.0.260929181845" */
+    char names[6][16];           /* the inputs' and output's, and their ids and shapes */
     uint32_t id[6], rank[6], dims[6][4];
-    uint64_t bytes;
+    uint64_t bytes;              /* the binary's, which follows */
 } cache_head;
+static_assert(sizeof(cache_head) == 616, "the graph file's header, as tools read it");
 
 static void cache_key(const pk_qnn *e, const pk_model *m, char *key, size_t n) {
     const char *src = pk_model_meta(m, "source_sha256"), *conv = pk_model_meta(m, "converter");
@@ -763,6 +780,16 @@ static void cache_key(const pk_qnn *e, const pk_model *m, char *key, size_t n) {
     for (int i = 0; i < 32; i++)
         snprintf(hex + 2 * i, 3, "%02x", h->digest[i]);
     snprintf(key, n, "%s %u %u", hex, e->T0, e->layers);
+}
+
+/* The Hexagon's version in a chip's words (target_words: soc,arch,...):
+ * their second number, read from at most n bytes; 0 where there is none */
+static unsigned hexagon(const char *w, size_t n) {
+    const char *c = memchr(w, ',', n);
+    unsigned v = 0;
+    for (c = c ? c + 1 : w + n; c < w + n && *c >= '0' && *c <= '9'; c++)
+        v = v * 10 + (unsigned)(*c - '0');
+    return v;
 }
 
 /* QNN's build, as the cache keeps it */
@@ -786,11 +813,18 @@ static int read_cache(pk_qnn *e, const pk_model *m, const char *path, char *err,
     int rc = -1;
     Qnn_ErrorHandle_t s;
     char what[512];
-    if (fread(&h, sizeof h, 1, f) != 1 || strncmp(h.magic, PK_QNN_CACHE, sizeof h.magic))
-        snprintf(err, errlen, "%s is not a graph this pktito reads (" PK_QNN_CACHE ")", path);
+    if (fread(&h, sizeof h, 1, f) != 1 || strncmp(h.magic, PK_QNN_GRAPH, sizeof h.magic))
+        snprintf(err, errlen, "%s is not a graph this pktito reads (" PK_QNN_GRAPH ")", path);
     else if (strncmp(h.key, key, sizeof h.key))
         snprintf(err, errlen, "%s is the graph of another model, length or layers", path);
-    else if (h.bytes == 0 || h.bytes >= ((uint64_t)1 << 32) || !(bin = malloc(h.bytes)) ||
+    /* another Hexagon's graph, which no QNN runs; one compiled for another
+     * SoC of this one's is QNN's to run or refuse - untried, each Hexagon
+     * here being one SoC's (v73 the X1E80100's, v75 the SM8650's, v79 the
+     * SM8750's, 2026-11-03) */
+    else if (h.chip[0] && e->chip[0] && hexagon(h.chip, sizeof h.chip) != hexagon(e->chip, sizeof e->chip)) {
+        h.chip[sizeof h.chip - 1] = 0;
+        snprintf(err, errlen, "%s is the graph of the NPU %s, and this one is %s", path, h.chip, e->chip);
+    } else if (h.bytes == 0 || h.bytes >= ((uint64_t)1 << 32) || !(bin = malloc(h.bytes)) ||
              fread(bin, 1, h.bytes, f) != h.bytes)
         snprintf(err, errlen, "%s: its graph could not be read", path);
     else if ((s = e->q.contextCreateFromBinary(e->backend, e->device, NULL, bin, h.bytes, &e->context, NULL))) {
@@ -835,8 +869,10 @@ static void write_cache(pk_qnn *e, const pk_model *m, const char *path) {
     void *bin = malloc(n);
     cache_head h;
     memset(&h, 0, sizeof h);
-    snprintf(h.magic, sizeof h.magic, "%s", PK_QNN_CACHE);
+    snprintf(h.magic, sizeof h.magic, "%s", PK_QNN_GRAPH);
     cache_key(e, m, h.key, sizeof h.key);
+    snprintf(h.chip, sizeof h.chip, "%s", e->chip);
+    snprintf(h.made, sizeof h.made, "pktito %s%s%s", PKTITO_VERSION, *PK_COMMIT ? " " : "", PK_COMMIT);
     snprintf(h.built, sizeof h.built, "%s", build_id(e));
     for (int k = 0; k < 6; k++) {
         const Qnn_Tensor_t *t = io(e, k);
@@ -1016,36 +1052,38 @@ static int open_device(pk_qnn *e, target *t, char *err, size_t errlen) {
     return 0;
 }
 
+/* The NPU QNN runs on, in target_words' words, into out: 0; -1 where
+ * QNN describes no chip (a PC's: target, above), -2 where the chip it
+ * describes has no NPU */
+static int own_chip(pk_qnn *e, char *out, size_t n) {
+    const QnnDevice_PlatformInfo_t *p = NULL;
+    if (!e->q.deviceGetPlatformInfo || e->q.deviceGetPlatformInfo(e->log, &p) || !p)
+        return -1;
+    int rc = -2;
+    for (uint32_t i = 0; rc && i < p->v1.numHwDevices; i++) {
+        const QnnHtpDevice_DeviceInfoExtension_t *x =
+            (const QnnHtpDevice_DeviceInfoExtension_t *)p->v1.hwDevices[i].v1.deviceInfoExtension;
+        if (x && x->devType == QNN_HTP_DEVICE_TYPE_ON_CHIP) {
+            target_words(x, out, n);
+            rc = 0;
+        }
+    }
+    if (e->q.deviceFreePlatformInfo)
+        e->q.deviceFreePlatformInfo(e->log, p);
+    return rc;
+}
+
 int pk_qnn_target(char *out, size_t n, char *err, size_t errlen) {
     pk_qnn *e = calloc(1, sizeof *e);
     if (!e) {
         snprintf(err, errlen, "out of memory");
         return -1;
     }
-    const QnnDevice_PlatformInfo_t *p = NULL;
     int rc = open_device(e, NULL, err, errlen);
-    /* a PC's QNN has no chip to describe (target, above) */
-    if (!rc && (!e->q.deviceGetPlatformInfo || e->q.deviceGetPlatformInfo(e->log, &p) || !p)) {
-        snprintf(err, errlen, "QNN describes no chip here");
-        rc = -1;
-    }
-    if (!rc) {
-        rc = -1;
-        for (uint32_t i = 0; rc && i < p->v1.numHwDevices; i++) {
-            const QnnHtpDevice_DeviceInfoExtension_t *x =
-                (const QnnHtpDevice_DeviceInfoExtension_t *)p->v1.hwDevices[i].v1.deviceInfoExtension;
-            if (x && x->devType == QNN_HTP_DEVICE_TYPE_ON_CHIP) {
-                target_words(x, out, n);
-                rc = 0;
-            }
-        }
-        if (rc)
-            snprintf(err, errlen, "QNN finds no NPU on the chip");
-        if (e->q.deviceFreePlatformInfo)
-            e->q.deviceFreePlatformInfo(e->log, p);
-    }
+    if (!rc && (rc = own_chip(e, out, n)))
+        snprintf(err, errlen, rc == -1 ? "QNN describes no chip here" : "QNN finds no NPU on the chip");
     pk_qnn_free(e);
-    return rc;
+    return rc ? -1 : 0;
 }
 
 /* The graph made and compiled, into a context of its own, and kept in
@@ -1117,6 +1155,11 @@ pk_qnn *pk_qnn_open(const pk_model *m, uint32_t frames, const char *cache, char 
         return NULL;
     }
     e->other = other;
+    /* the NPU the graph is for: the one named, else this one */
+    if (other)
+        target_words(&t.ext, e->chip, sizeof e->chip);
+    else if (own_chip(e, e->chip, sizeof e->chip))
+        e->chip[0] = 0;
     if (!other) {
         platform_log(e);
         burst(e);

@@ -126,8 +126,8 @@ pub const CATALOG: &[Entry] = &[
                 chip: "57,75,8,1,0",
                 part: Part {
                     file: "parakeet-tdt-0.6b-v2-sm8650.qnn",
-                    bytes: 717_939_192,
-                    sha256: "d3f46a9bd8729e8c363b9835391f8c165c250613d94ed38187cf156463e1aa03",
+                    bytes: 717_939_304,
+                    sha256: "f12c6b55f288c515f11f9e63fa06c230424f23b7b39b39f474a38b2ab91b16f3",
                 },
             },
             // the Galaxy S25's Snapdragon 8 Elite
@@ -135,8 +135,8 @@ pub const CATALOG: &[Entry] = &[
                 chip: "69,79,8,1,0",
                 part: Part {
                     file: "parakeet-tdt-0.6b-v2-sm8750.qnn",
-                    bytes: 715_403_768,
-                    sha256: "3971a22dc806c1df7d2f6f67134b57368d4a9d913e37fb88860461e34bb829de",
+                    bytes: 715_403_880,
+                    sha256: "b2293ca9d91cade115af956dadf3fcc495e24db5b17c6aab60a002d841eadad6",
                 },
             },
             // the Googlebook's Snapdragon X Elite
@@ -144,8 +144,8 @@ pub const CATALOG: &[Entry] = &[
                 chip: "60,73,8,1,1",
                 part: Part {
                     file: "parakeet-tdt-0.6b-v2-x1e80100.qnn",
-                    bytes: 716_317_176,
-                    sha256: "3f20c1630068477b5207f62c9b53445ea32ae98fd34af2714fe3fa1681fc4a2e",
+                    bytes: 716_317_288,
+                    sha256: "48ccb9089cce638ed0555dfbf1dbcff805e17a0a657fb270d05d795ed8de5bd4",
                 },
             },
         ],
@@ -180,24 +180,24 @@ pub const CATALOG: &[Entry] = &[
                 chip: "57,75,8,1,0",
                 part: Part {
                     file: "parakeet-tdt-0.6b-v3-sm8650.qnn",
-                    bytes: 717_939_192,
-                    sha256: "0af11d0c3f13d20a24cada1a06ea78b73c08b9e5dce002d58c159fa3c75e5a54",
+                    bytes: 717_939_304,
+                    sha256: "589170fab8e81f64334d4b3fc7ea3dfcaf8fbd1758b07e43d628b9468d298429",
                 },
             },
             Graph {
                 chip: "69,79,8,1,0",
                 part: Part {
                     file: "parakeet-tdt-0.6b-v3-sm8750.qnn",
-                    bytes: 715_403_768,
-                    sha256: "44e441d1249f05169bdbaf9809bfdf73f23a87cc512888568d47a45c5b0db397",
+                    bytes: 715_403_880,
+                    sha256: "725c8414d6bbeeca26e2fbb5ac161cc076df3dc707f12878236d6b5eabdc9556",
                 },
             },
             Graph {
                 chip: "60,73,8,1,1",
                 part: Part {
                     file: "parakeet-tdt-0.6b-v3-x1e80100.qnn",
-                    bytes: 716_317_176,
-                    sha256: "7a52099dfa8f9335d0ce65034ad081d0ad4de9aed36b7ba9d17cc0fcbb773aec",
+                    bytes: 716_317_288,
+                    sha256: "02a6cd893573211484344d9f4ca2adc9e7728012ce92cbd47d8fb0e59ce3ae61",
                 },
             },
         ],
