@@ -1073,8 +1073,9 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   overflow-y: auto;
   margin: var(--space-3) 0;
   padding: 0 24px;
-  display: flex;
-  flex-direction: column;
+  /* a block, not a flex column: as a column, any change in the header (a
+     search's count) laid all of a 3-hour book's 1,704 rows out again, 9 ms
+     each time in Chromium, against 0.8 as a block (2026-11-03) */
 }
 .pk-msg {
   margin: 16px 24px 0;

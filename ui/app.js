@@ -1916,6 +1916,28 @@ function segHtml(s, i, filling) {
    one was open (Peter, 2026-10-22). A match across words is a mark in each
    piece: the first carries its place in the text (data-at), every piece its
    number (data-hit), so that the current one lights whole. */
+/* Row s's matches of the search, each [start, end) in its text. A cue's
+   line break reads as the space it stands for. Each row's lowercase is
+   kept: a search runs on every key typed, over every row. */
+const lowered = new WeakMap();
+function matchesIn(s) {
+  if (!query) return [];
+  let l = lowered.get(s);
+  if (!l) {
+    const flat = s.text.replace(/\n/g, " ");
+    const low = flat.toLowerCase();
+    // a lowercase that changes the length would put the marks in the wrong
+    // places: such a row is searched as written
+    l = low.length === s.text.length ? { low, as: false } : { low: flat, as: true };
+    lowered.set(s, l);
+  }
+  const q = l.as ? query : query.toLowerCase(),
+    found = [];
+  for (let from = 0, j; (j = l.low.indexOf(q, from)) >= 0; from = j + q.length)
+    found.push([j, j + q.length]);
+  return found;
+}
+
 function bodyHtml(s, i) {
   const text = s.text,
     words = [],
@@ -1927,16 +1949,7 @@ function bodyHtml(s, i) {
     words.push([j, j + w.text.length, k]);
     at = j + w.text.length;
   });
-  if (query) {
-    // a cue's line break reads as the space it stands for
-    const flat = text.replace(/\n/g, " ");
-    let low = flat.toLowerCase(),
-      q = query.toLowerCase();
-    // a lowercase that changes the length would put the marks in the wrong places
-    if (low.length !== text.length) [low, q] = [flat, query];
-    for (let from = 0, j; (j = low.indexOf(q, from)) >= 0; from = j + q.length)
-      found.push([j, j + q.length]);
-  }
+  found.push(...matchesIn(s));
   // the text cut wherever a word or a match starts or ends
   const cuts = [
     ...new Set([
@@ -1979,6 +1992,7 @@ function renderTranscript(f, mode) {
       .map((s, i) => segHtml(s, i, mode === "running"))
       .join("") + (mode === "review" ? statsHtml(f) : "");
   curSeg = curWord = null;
+  watchRows(mode === "review" ? rowsOf(f) : []);
   if (mode === "running") markLive();
   let msg = "",
     err = false;
@@ -2566,14 +2580,14 @@ function retime() {
   const tr = $("transcript"),
     top = tr.scrollTop,
     on = hitAt;
+  // the rows drawn again for their times, and the search's marks with them
+  renderTranscript(f, "review");
+  tr.scrollTop = top;
+  showTime(f.pos);
   if (query) {
     runFind();
     if (on >= 0 && on < hits.length) goHit(on);
     tr.scrollTop = top;
-  } else {
-    renderTranscript(f, "review");
-    tr.scrollTop = top;
-    showTime(f.pos);
   }
 }
 
@@ -2635,36 +2649,88 @@ function wordAt(s, offset) {
   return found;
 }
 
-/* The search as the field has it, the transcript marked again; sought when
-   the reader typed it, rather than the transcript drawn anew under it */
+/* The rows' marks follow the search without the transcript drawn anew:
+   drawing a 3-hour book again on each key typed (1,730 rows, 34,000
+   elements) took 135-450 ms a key on the 9950X, most of it layout, as
+   many to take a letter away (pktito-9950x's measure, 2026-11-03). A
+   search finds its matches in the rows' text; a row whose marks change is
+   only noted (stale), and drawn again when it is in sight, or near it, or
+   goHit goes to it. Marks move no text, so the rows keep their heights. */
+const stale = new Set(),
+  inView = new Set();
+// the rows drawn with marks: a search that no longer matches one draws it again
+let marked = [];
+const sight = new IntersectionObserver(
+  (es) => {
+    for (const e of es) {
+      const i = Number(e.target.dataset.i);
+      if (e.isIntersecting) {
+        inView.add(i);
+        markRow(i);
+      } else inView.delete(i);
+    }
+  },
+  { root: $("transcript"), rootMargin: "100% 0px" },
+);
+
+/* after the transcript is drawn: its rows, as drawn for the search */
+function watchRows(rows) {
+  sight.disconnect();
+  stale.clear();
+  inView.clear();
+  marked = rows.map((s) => matchesIn(s).length > 0);
+  for (const el of $("transcript").querySelectorAll(".pk-seg")) sight.observe(el);
+}
+
+/* row i drawn again for the search, if it is stale; the playhead's word and
+   the current match lit in it as they were */
+function markRow(i) {
+  if (!stale.delete(i)) return;
+  const f = current(),
+    s = f && rowsOf(f)[i],
+    p = $("transcript").children[i]?.querySelector("p");
+  if (!s || !p) return;
+  const lit = curWord && p.contains(curWord) ? curWord.dataset.w : null;
+  p.innerHTML = bodyHtml(s, i);
+  marked[i] = !!query && p.querySelector(".pk-hit") !== null;
+  if (lit !== null) {
+    curWord = p.querySelector(`[data-w="${lit}"]`);
+    if (curWord) curWord.classList.add("pk-now");
+  }
+  if (hitAt >= 0 && hits[hitAt].i === i)
+    for (const el of p.querySelectorAll(`[data-hit="${i}.${hits[hitAt].hi}"]`))
+      el.classList.add("is-on");
+}
+
+/* The search as the field has it, the transcript's marks with it; sought
+   when the reader typed it, rather than the transcript drawn anew under it */
 function runFind(sought) {
   const f = current();
   if (!f || modeOf(f) !== "review") return;
   // the time of the match the reader is on, before the search changes
   const was = hitTimes[hitAt];
   query = $("find").value.trim();
-  const tr = $("transcript"),
-    top = tr.scrollTop,
-    rows = rowsOf(f);
-  tr.innerHTML =
-    rows.map((s, i) => segHtml(s, i, false)).join("") + statsHtml(f);
-  tr.scrollTop = top;
-  curSeg = curWord = null;
-  showTime(f.pos);
-  // each match once, by its first piece
-  hits = [...tr.querySelectorAll(".pk-hit[data-at]")];
-  // each match at its word's time, for its tick under the waveform
-  hitTimes = hits.map((h) => {
-    const s = rows[Number(h.closest(".pk-seg").dataset.i)],
-      k = wordAt(s, Number(h.dataset.at));
-    return k >= 0 ? s.words[k].start : s.start;
+  const rows = rowsOf(f);
+  // each match, by its row and its number in the row, at its word's time,
+  // for its tick under the waveform
+  hits = [];
+  hitTimes = [];
+  rows.forEach((s, i) => {
+    const found = matchesIn(s);
+    found.forEach(([a], hi) => {
+      hits.push({ i, hi });
+      const k = wordAt(s, a);
+      hitTimes.push(k >= 0 ? s.words[k].start : s.start);
+    });
+    if (found.length || marked[i]) stale.add(i);
   });
+  hitAt = -1;
+  for (const i of inView) markRow(i);
   // the match the reader was on while it is still one, so that a search
   // typed on keeps its place, as Android's does; otherwise the match the
   // playhead last passed, so that a search typed as it plays or rests
   // mid-recording starts where the listener is; the first when it has
   // passed none
-  hitAt = -1;
   passed = passedAt(f.pos);
   const kept = hitTimes.indexOf(was);
   if (hits.length) {
@@ -2676,8 +2742,7 @@ function runFind(sought) {
     // seek's follow would take the reader to the last of matches in one word
     if (sought && !playing) seek(hitTimes[k], false);
     goHit(k);
-  }
-  findCount();
+  } else findCount();
 }
 
 /* The reader on the match the playhead last passed, the first where it has
@@ -2706,16 +2771,19 @@ function stepHit(d) {
   goHit(k);
 }
 
-/* every piece of match k */
-const hitPieces = (k) =>
-  $("transcript").querySelectorAll(`[data-hit="${hits[k].dataset.hit}"]`);
+/* every piece of match k, its row drawn for the search first */
+function hitPieces(k) {
+  const { i, hi } = hits[k];
+  markRow(i);
+  return $("transcript").children[i].querySelectorAll(`[data-hit="${i}.${hi}"]`);
+}
 
 function goHit(k, scroll = true) {
   if (hitAt >= 0)
     for (const el of hitPieces(hitAt)) el.classList.remove("is-on");
   hitAt = k;
   for (const el of hitPieces(hitAt)) el.classList.add("is-on");
-  if (scroll) hits[hitAt].scrollIntoView({ block: "center" });
+  if (scroll) hitPieces(hitAt)[0]?.scrollIntoView({ block: "center" });
   findCount();
 }
 
@@ -2728,12 +2796,19 @@ function findCount() {
   $("find-prev").disabled = $("find-next").disabled = hits.length < 2;
   const f = current(),
     dur = f && f.duration;
+  // one tick a pixel of the lane, and the current one: "l" in a 3-hour
+  // book has 4,872 matches, and a tick each was 4,872 elements a key typed;
+  // a click takes the nearest match by its time, not by its tick
+  const lane = $("ticks").clientWidth || 2000,
+    taken = new Set();
   $("ticks").innerHTML = dur
     ? hitTimes
-        .map(
-          (t, k) =>
-            `<i data-k="${k}"${k === hitAt ? ' class="is-on"' : ""} style="left:${((t / dur) * 100).toFixed(3)}%"></i>`,
-        )
+        .map((t, k) => {
+          const px = Math.round((t / dur) * lane);
+          if (k !== hitAt && taken.has(px)) return "";
+          taken.add(px);
+          return `<i data-k="${k}"${k === hitAt ? ' class="is-on"' : ""} style="left:${((t / dur) * 100).toFixed(3)}%"></i>`;
+        })
         .join("")
     : "";
   // the waveform a little shorter while there are ticks (app.css), its bars
@@ -2870,12 +2945,11 @@ function rebuild() {
     );
   updateHead(f, "review");
   const on = hitAt;
+  renderTranscript(f, "review");
+  showTime(f.pos);
   if (query) {
     runFind();
     if (on >= 0 && on < hits.length) goHit(on);
-  } else {
-    renderTranscript(f, "review");
-    showTime(f.pos);
   }
   if (curSeg) curSeg.scrollIntoView({ block: "center" });
 }
