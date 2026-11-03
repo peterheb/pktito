@@ -178,9 +178,9 @@
     <string name="manage_faster_phone">Faster on this phone</string>
     <string name="manage_faster_tablet">Faster on this tablet</string>
     <string name="manage_faster_computer">Faster on this computer</string>
-    <string name="manage_faster_text_phone">The %1$s model on this phone\'s NPU&#160;· %2$s&#160;MB more</string>
-    <string name="manage_faster_text_tablet">The %1$s model on this tablet\'s NPU&#160;· %2$s&#160;MB more</string>
-    <string name="manage_faster_text_computer">The %1$s model on this computer\'s NPU&#160;· %2$s&#160;MB more</string>
+    <string name="manage_faster_text_phone">The %1$s model on this phone\'s NPU&#160;· %2$s&#160;MB&#160;more</string>
+    <string name="manage_faster_text_tablet">The %1$s model on this tablet\'s NPU&#160;· %2$s&#160;MB&#160;more</string>
+    <string name="manage_faster_text_computer">The %1$s model on this computer\'s NPU&#160;· %2$s&#160;MB&#160;more</string>
     <string name="manage_get">Download</string>
     <!-- the NPU refused the model, which goes on with the processor, as iOS's prepare_cpu says it of the Neural Engine -->
     <string name="npu_cpu_phone">This phone\'s NPU can\'t run the model, so pktito uses its processor instead</string>
