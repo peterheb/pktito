@@ -31,7 +31,11 @@ android {
         // Android 9), with no older path beside them; native.sh builds for
         // the same
         minSdk = 29
-        targetSdk = 36
+        // Android 17: an app targeting 37 runs as untrusted_app, which the
+        // Googlebook's DSP HAL serves; one targeting 34 to 36 runs as
+        // untrusted_app_34, which its SELinux policy leaves out, and so
+        // reaches no NPU there (2026-11-03)
+        targetSdk = 37
         versionCode = 3
         versionName = "0.9.5"
         // the two native.sh builds the library for: without this AndroidX's
