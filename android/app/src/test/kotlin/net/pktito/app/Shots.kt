@@ -177,13 +177,29 @@ class Shots {
         "bg", "cs", "da", "de", "el", "en", "es", "et", "fi", "fr", "hr", "hu", "it", "lt",
         "lv", "mt", "nl", "pl", "pt", "ro", "ru", "sk", "sl", "sv", "uk",
     )
-    private fun offers(have: Boolean = false, both: Boolean = false, partial: Long = 0) = listOf(
-        Offer("parakeet-tdt-0.6b-v2", "english", listOf("en"), "", 624_480_196, "", have, 0, File(""), File("")),
-        Offer(
+    // npu: in the edition of a phone whose NPU the catalog has a graph for
+    // (the Galaxy S24's), nothing downloaded; faster: the English model here
+    // on the CPU, its graph offered
+    private fun offers(have: Boolean = false, both: Boolean = false, partial: Long = 0, npu: Boolean = false, faster: Boolean = false) = listOf(
+        offer("parakeet-tdt-0.6b-v2", "english", listOf("en"), "", 624_480_196, 12_115_524, 717_939_192, have, 0, npu, faster),
+        offer(
             "parakeet-tdt-0.6b-v3", "multilingual", languages, "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3#multilingual-asr",
-            647_552_644, "", both, if (both) 0 else partial, File(""), File(""),
+            647_552_644, 35_187_972, 717_939_192, both, if (both) 0 else partial, npu, false,
         ),
     )
+
+    /** A catalog model: its whole file here (have) or partial bytes of it kept; with npu, nothing here and the NPU's edition its; with faster, its graph offered. */
+    private fun offer(
+        name: String, key: String, langs: List<String>, accuracy: String, whole: Long, slim: Long, graph: Long,
+        have: Boolean, partial: Long, npu: Boolean, faster: Boolean,
+    ): Offer {
+        val g = Part(File(""), graph, "", here = false, kept = 0, taken = 0).takeIf { npu || faster }
+        val kept = if (have) whole else partial
+        return Offer(
+            name, key, langs, accuracy, Part(File(""), whole, "", have, kept, kept), Part(File(""), slim, "", here = false, kept = 0, taken = 0), g,
+            if (g != null) Edition.NPU else Edition.CPU, if (have) Edition.CPU else null, if (faster && have) graph else 0,
+        )
+    }
     private val models = @Composable { ModelButton(offers(have = true), "parakeet-tdt-0.6b-v2", null, {}, {}, {}) }
     private val readyActions = ReadyActions({}, {}, {}, {}, {})
     // the recent list: today's, yesterday's, this year's and last year's,
@@ -225,13 +241,15 @@ class Shots {
 
     // Manage models: the English model in use and the Multilingual's download
     // stopped at 312 MB, on a phone; both downloaded, on the tablet on its side;
-    // and there with a transcription running, and a delete's question
+    // and there with a transcription running, and a delete's question; the
+    // English model's graph for the NPU offered, and coming
     @Composable
     private fun manageModels(
         both: Boolean = false, running: Boolean = false, d: Download? = null, toast: String? = null, compact: Boolean = true,
+        faster: Boolean = false,
     ) = Manage(
-        offers(have = true, both = both, partial = if (both) 0 else 312_000_000), "parakeet-tdt-0.6b-v2", null, d, running, null,
-        18_400_000_000, toast, compact, ManageActions({}, {}, {}, {}, {}),
+        offers(have = true, both = both, partial = if (both) 0 else 312_000_000, faster = faster), "parakeet-tdt-0.6b-v2", null, d, running, null,
+        18_400_000_000, toast, compact, ManageActions({}, {}, {}, {}, {}, {}),
     )
     private val manageUp = { compose.onAllNodes(isDialog()).onFirst() }
     private val askDelete = {
@@ -251,6 +269,15 @@ class Shots {
     @Test fun manageRunning() = shot("manage-running", false, tab = 1, act = manageUp) { manageModels(both = true, running = true, compact = false) }
     @Test fun manageAsk() = shot("manage-ask", false, tab = 1, act = askDelete) { manageModels(both = true, compact = false) }
     @Test fun manageAskPhone() = shot("manage-ask", false, act = askDelete) { manageModels(both = true) }
+    @Test fun manageFaster() = shot("manage-faster", false, act = manageUp) { manageModels(both = true, faster = true) }
+    @Test fun manageFasterDark() = shot("manage-faster", true, act = manageUp) { manageModels(both = true, faster = true) }
+    @Test fun manageFasterTab() = shot("manage-faster", false, tab = 1, act = manageUp) { manageModels(both = true, faster = true, compact = false) }
+    @Test fun manageFasterDownloading() = shot("manage-faster-downloading", false, act = manageUp) {
+        manageModels(
+            both = true, faster = true,
+            d = Download("parakeet-tdt-0.6b-v2", "downloading", 262_144_000, 717_939_192, 11.8e6, "models.pktito.net", null, retry = false, trying = false),
+        )
+    }
 
     // the setup screen in each of its modes, a download a third of the way, as the desktop's stand-in has it
     private val setupActions = SetupActions({}, {}, {}, {}, {}, {}, {}, {})
@@ -262,9 +289,10 @@ class Shots {
             "No address associated with hostname\nGET https://models.pktito.net/8bfa6750b83c/parakeet-tdt-0.6b-v2.pkf\nRange: bytes=262144000-",
     )
     @Composable
-    private fun setupScreen(d: Download? = null, copying: Copy? = null, waiting: Int = 0) =
-        Setup(offers(), null, d, copying, waiting, setupActions)
+    private fun setupScreen(d: Download? = null, copying: Copy? = null, waiting: Int = 0, npu: Boolean = false) =
+        Setup(offers(npu = npu), null, d, copying, waiting, setupActions)
     @Test fun setup() = shot("setup", false) { setupScreen() }
+    @Test fun setupNpu() = shot("setup-npu", false) { setupScreen(npu = true) }
     @Test fun setupDark() = shot("setup", true) { setupScreen() }
     @Test fun setupNarrow() = shot("setup-360", false, narrow = true) { setupScreen() }
     @Test fun setupWindow() = shot("setup", false, window = true) { setupScreen(waiting = 1) }

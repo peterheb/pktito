@@ -7,7 +7,11 @@
 //! that every decoder hands its samples to (native/mix.h). On the Mac and
 //! iOS pktito is its ane fork (vendor/pktito-ane), whose encoder can run on
 //! the Neural Engine through Core ML (core/ane.m), and runs on the CPU as
-//! pktito's does where it isn't given one.
+//! pktito's does where it isn't given one. On Android it is that fork with
+//! the qnn branch's (vendor/pktito-qnn), whose encoder can run on a
+//! Snapdragon's NPU (core/qnn.c), in a build with QNN_SDK set, and which
+//! reads the fork's slim model file, whose only encoder is the NPU's graph;
+//! without QNN_SDK it runs on the CPU as pktito's does.
 //!
 //! Everything goes into one archive, and the system's libraries come after
 //! it. GNU ld reads each archive once, left to right, taking only what
@@ -70,9 +74,14 @@ fn main() {
     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let os = env::var("CARGO_CFG_TARGET_OS").unwrap();
     let arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap();
-    let root = manifest.join(if os == "macos" || os == "ios" { "../vendor/pktito-ane" } else { "../vendor/pktito" });
+    let root = manifest.join(match os.as_str() {
+        "macos" | "ios" => "../vendor/pktito-ane",
+        "android" => "../vendor/pktito-qnn",
+        _ => "../vendor/pktito",
+    });
     println!("cargo:rerun-if-changed=../vendor/pktito");
     println!("cargo:rerun-if-changed=../vendor/pktito-ane");
+    println!("cargo:rerun-if-changed=../vendor/pktito-qnn");
     println!("cargo:rerun-if-changed=native");
     println!("cargo:rerun-if-env-changed=QNN_SDK");
     // Qualcomm's AI Runtime SDK, where QNN_SDK names it: the encoder on a

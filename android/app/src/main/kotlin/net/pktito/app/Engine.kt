@@ -36,12 +36,21 @@ object Engine {
     @JvmStatic external fun free(handle: Long)
 
     /**
-     * handle's encoder on the phone's NPU, where this build has Qualcomm's
-     * libraries (libs, the app's native library folder) and the phone a
-     * Snapdragon that takes them: its graph compiled now, a minute or two,
-     * and kept at cache for the next time. What came of it, for the log.
+     * The phone's NPU as Qualcomm's QNN describes it, as a graph compiled for
+     * it names it (model.rs, Graph's chip: "57,75,8,1,0"), where this build
+     * has QNN and its libraries for the chip are in libs, the app's native
+     * library folder; else an IOException that says why. 137 to 168 ms on
+     * the Googlebook: off the main thread, once (Editions).
      */
-    @JvmStatic external fun npu(handle: Long, cache: String, libs: String): String
+    @JvmStatic external fun npuChip(libs: String): String
+
+    /**
+     * handle's encoder on the phone's NPU: the graph at graph, compiled on a
+     * PC for this chip, read in a second or less; the seconds it took. Where
+     * QNN refuses it, an IOException with why, and handle's encoder stays
+     * the model's own, which a slim file has not.
+     */
+    @JvmStatic external fun npu(handle: Long, graph: String, libs: String): Double
 
     /** The model, the backend and the threads it runs on. */
     @JvmStatic external fun about(handle: Long): String
@@ -136,14 +145,16 @@ object Engine {
     @JvmStatic external fun catalog(dir: String): String
 
     /**
-     * The catalog model name downloaded into dir, or its download gone on
-     * with from what it kept, on this thread, checked against its size and
-     * SHA-256, and tried again by itself while the network is away (the
-     * desktop's download.rs): progress hears each change. The checked
+     * Files of the catalog model name downloaded into dir in turn (files, a
+     * JSON array of the catalog's names for them: an edition, or a graph
+     * alone), or their download gone on with from what it kept, on this
+     * thread, each checked against its size and SHA-256, and tried again by
+     * itself while the network is away (the desktop's download.rs):
+     * progress hears each change, the files' bytes counted as one. The last
      * file's path, or "" where it stopped short, paused, cancelled or
      * failed, as the last state says.
      */
-    @JvmStatic external fun download(dir: String, name: String, progress: Download): String
+    @JvmStatic external fun download(dir: String, name: String, files: String, progress: Download): String
 
     /** The download running stops before its next read, keeping what it has. */
     @JvmStatic external fun pauseDownload()
@@ -151,8 +162,12 @@ object Engine {
     /** The download running, waiting to try again after the network failed it, tries now. */
     @JvmStatic external fun retryDownload()
 
-    /** The download of name stops and what it had is deleted: by its own thread, which says so, if it runs (true), else here (false). */
-    @JvmStatic external fun cancelDownload(dir: String, name: String): Boolean
+    /**
+     * The download of files of name (as download takes them) stops and what
+     * it had is deleted, its files done too: by its own thread, which says
+     * so, if it runs (true), else here (false).
+     */
+    @JvmStatic external fun cancelDownload(dir: String, name: String, files: String): Boolean
 
     /** What a model file that load refused for why means, as the desktop's key for its words ("model_file.not_model"). */
     @JvmStatic external fun trouble(why: String): String

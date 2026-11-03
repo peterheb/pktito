@@ -53,9 +53,16 @@ class TranscribeService : Service() {
                 transcribe(uri)
             } catch (e: Exception) {
                 // a recording that can't be read in the app's words, what
-                // said so only here in the log (Engine.problem)
+                // said so only here in the log (Engine.problem); the NPU's
+                // failure with a slim model, which has no encoder to go on
+                // with, is the NPU's to deal with (Transcriber.npuFailed)
                 Log.w(TAG, "transcribing ${Transcriber.name}", e)
-                val why = Engine.problem(e)?.let { words(resources, it) } ?: e.message ?: e.toString()
+                val key = Engine.problem(e)
+                val why = when (key) {
+                    "npu.failed" -> Transcriber.npuFailed(this, runCatching { JSONObject(e.message ?: "").getString("detail") }.getOrDefault(""))
+                    null -> e.message ?: e.toString()
+                    else -> words(resources, key)
+                }
                 Transcriber.post {
                     error = why
                     step = "error"

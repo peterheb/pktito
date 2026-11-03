@@ -138,6 +138,16 @@
     <string name="manage_ask_part_title">[Ďęłęțę țhę pąűșęď ďőwńłőąď? ····· ··]</string>
     <string name="manage_ask_part_text">[Țhįș fřęęș %1$s&#160;MB. Ďőwńłőąďįńg țhę %2$s mőďęł ągąįń șțąřțș ővęř. ····· ····· ··]</string>
     <string name="manage_cant_delete">[Čőűłďń\'ț ďęłęțę țhę mőďęł ····· ·]</string>
+    <string name="manage_faster_phone">[Fąșțęř őń țhįș phőńę ····· ···]</string>
+    <string name="manage_faster_tablet">[Fąșțęř őń țhįș țąbłęț ······]</string>
+    <string name="manage_faster_computer">[Fąșțęř őń țhįș čőmpűțęř ····· ·]</string>
+    <string name="manage_faster_text_phone">[Țhę %1$s mőďęł őń țhįș phőńę\'ș ŃPŰ&#160;· %2$s&#160;MB mőřę ····· ····· ·]</string>
+    <string name="manage_faster_text_tablet">[Țhę %1$s mőďęł őń țhįș țąbłęț\'ș ŃPŰ&#160;· %2$s&#160;MB mőřę ····· ····· ·]</string>
+    <string name="manage_faster_text_computer">[Țhę %1$s mőďęł őń țhįș čőmpűțęř\'ș ŃPŰ&#160;· %2$s&#160;MB mőřę ····· ····· ··]</string>
+    <string name="manage_get">[Ďőwńłőąď ·····]</string>
+    <string name="npu_cpu_phone">[Țhįș phőńę\'ș ŃPŰ čąń\'ț řűń țhę mőďęł, șő pkțįțő űșęș įțș přőčęșșőř įńșțęąď ····· ····· ····· ·]</string>
+    <string name="npu_cpu_tablet">[Țhįș țąbłęț\'ș ŃPŰ čąń\'ț řűń țhę mőďęł, șő pkțįțő űșęș įțș přőčęșșőř įńșțęąď ····· ····· ····· ·]</string>
+    <string name="npu_cpu_computer">[Țhįș čőmpűțęř\'ș ŃPŰ čąń\'ț řűń țhę mőďęł, șő pkțįțő űșęș įțș přőčęșșőř įńșțęąď ····· ····· ····· ··]</string>
     <string name="manage_free_mb">[%1$s&#160;MB fřęę ····]</string>
     <string name="manage_free_gb">[%1$s&#160;GB fřęę ····]</string>
     <string name="manage_downloading">[Ďőwńłőąďįńg&#160;· %1$s őf %2$s&#160;MB ····· ···]</string>

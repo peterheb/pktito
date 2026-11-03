@@ -116,39 +116,63 @@ pub extern "system" fn Java_net_pktito_app_Engine_about<'a>(
         .resolve::<ThrowRuntimeExAndDefault>()
 }
 
-/// Engine.npu(handle, cache, libs): handle's encoder on the phone's NPU
-/// (pktito::Asr::use_qnn), where the build has Qualcomm's libraries, in
-/// libs, the app's native library folder, and the phone a Snapdragon that
-/// takes them; its compiled graph kept at cache. What came of it, for the
-/// log.
+/// Where the NPU's half of QNN, its skel library, is read from: libs, the
+/// app's native library folder, where it comes with the app, then the
+/// system's folders.
+fn npu_libs(libs: &str) {
+    std::env::set_var(
+        "ADSP_LIBRARY_PATH",
+        format!("{libs};/vendor/dsp/cdsp;/vendor/lib/rfsa/adsp;/system/lib/rfsa/adsp;/dsp"),
+    );
+}
+
+/// Engine.npuChip(libs): the phone's NPU as QNN describes it (pktito::
+/// qnn_chip), as model::Graph's chip names the one a graph is for; an
+/// IOException with why where QNN finds none: a phone of another make, a
+/// Snapdragon whose NPU's library the app does not bring in libs, or a
+/// build without QNN.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_npuChip<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    libs: JString<'a>,
+) -> JObject<'a> {
+    unowned
+        .with_env(|env| -> jni::errors::Result<JObject<'a>> {
+            npu_libs(&libs.try_to_string(env)?);
+            match pktito::qnn_chip() {
+                Ok(chip) => Ok(env.new_string(chip)?.into()),
+                Err(why) => throw(env, &why).map(|_| JObject::null()),
+            }
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.npu(handle, graph, libs): handle's encoder on the phone's NPU
+/// (pktito::Asr::use_qnn), the graph at graph, compiled for this chip:
+/// the seconds QNN took to read it, or an IOException with why where it
+/// refused it, the model's own encoder then the one, where it has one.
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_net_pktito_app_Engine_npu<'a>(
     mut unowned: EnvUnowned<'a>,
     _class: JClass<'a>,
     handle: jlong,
-    cache: JString<'a>,
+    graph: JString<'a>,
     libs: JString<'a>,
-) -> JObject<'a> {
+) -> jdouble {
     unowned
-        .with_env(|env| -> jni::errors::Result<JObject<'a>> {
+        .with_env(|env| -> jni::errors::Result<jdouble> {
             let l = unsafe { &mut *(handle as *mut Loaded) };
-            let cache = cache.try_to_string(env)?;
-            let libs = libs.try_to_string(env)?;
-            // where the NPU's half of QNN (its skel library) is read from:
-            // the app's own folder, then the system's
-            std::env::set_var(
-                "ADSP_LIBRARY_PATH",
-                format!("{libs};/vendor/dsp/cdsp;/vendor/lib/rfsa/adsp;/system/lib/rfsa/adsp;/dsp"),
-            );
+            let graph = graph.try_to_string(env)?;
+            npu_libs(&libs.try_to_string(env)?);
             let t = std::time::Instant::now();
-            let said = match l.asr.use_qnn(Path::new(&cache)) {
+            match l.asr.use_qnn(Path::new(&graph)) {
                 Ok(()) => {
                     l.npu = true;
-                    format!("on, ready in {:.1} s", t.elapsed().as_secs_f64())
+                    Ok(t.elapsed().as_secs_f64())
                 }
-                Err(why) => format!("off: {why}"),
-            };
-            Ok(env.new_string(said)?.into())
+                Err(why) => throw(env, &why).map(|_| 0.0),
+            }
         })
         .resolve::<ThrowRuntimeExAndDefault>()
 }
@@ -234,6 +258,14 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
             }
             let (segments, complete) = match run {
                 Ok(r) => r,
+                // a slim file's encoder is the NPU's alone: the NPU failed a
+                // chunk, which a whole file's encoder would have run on the
+                // CPU (core/encoder.c); said with its key, as a recording's
+                // problem is, for the app to fall back to the whole file
+                Err(why) if !l.model.has_encoder() => {
+                    let why = serde_json::json!({ "key": "npu.failed", "detail": why });
+                    return throw(env, &why.to_string()).map(|_| JObject::null());
+                }
                 Err(why) => return throw(env, &why).map(|_| JObject::null()),
             };
             let t = Transcript {
@@ -509,10 +541,12 @@ pub extern "system" fn Java_net_pktito_app_Engine_backend<'a>(
         .resolve::<ThrowRuntimeExAndDefault>()
 }
 
-/// What catalog() says of each model, as main.rs's Offer: its entry,
-/// whether it is downloaded, the bytes a download that stopped has kept,
-/// its file's path, which the app loads it from, and the path of the part
-/// a download gathers, which Manage models deletes.
+/// What catalog() says of each model, as main.rs's Offer: its entry, with
+/// the files of its editions (Coreml's slim file and the graphs for NPUs,
+/// whose state the app reads from the folder itself, as iOS's does);
+/// whether its whole .pkf is downloaded, the bytes a download of that one
+/// that stopped has kept, its path, which the app loads it from, and the
+/// path of the part a download gathers.
 #[derive(Serialize)]
 struct Offer {
     #[serde(flatten)]
@@ -551,12 +585,31 @@ pub extern "system" fn Java_net_pktito_app_Engine_catalog<'a>(
         .resolve::<ThrowRuntimeExAndDefault>()
 }
 
-/// Engine.download(dir, name, progress): the catalog model name downloaded
-/// into dir, or its download gone on with from what it kept, on this
-/// thread, as the window's runs on one of its own (download.rs: checked
-/// against its size and SHA-256, tried again by itself while the network
-/// is away). progress.state(json) hears each change of download::State, at
-/// most ten a second while bytes come, and last how it ended. The checked
+/// The files of the catalog model name that files, a JSON array of their
+/// names, names (model::Wanted::named), in dir; why not, for one it does
+/// not have.
+fn wanted(dir: &Path, name: &str, files: &str) -> Result<Vec<model::Wanted>, String> {
+    let e = model::entry(name).ok_or_else(|| format!("{name}: no such model"))?;
+    let names: Vec<String> = serde_json::from_str(files).map_err(|err| err.to_string())?;
+    let w = names
+        .iter()
+        .map(|f| model::Wanted::named(dir, e, f).ok_or_else(|| format!("{name} has no file {f}")))
+        .collect::<Result<Vec<_>, _>>()?;
+    if w.is_empty() {
+        return Err(format!("{name}: no files to download"));
+    }
+    Ok(w)
+}
+
+/// Engine.download(dir, name, files, progress): files of the catalog model
+/// name (a JSON array of their names: its edition for this phone, the
+/// whole .pkf or the slim one and the NPU's graph, or a graph alone for a
+/// whole .pkf here), downloaded into dir in turn, or their download gone
+/// on with from what it kept, on this thread, as the window's runs on one
+/// of its own (download.rs: each checked against its size and SHA-256,
+/// tried again by itself while the network is away). progress.state(json)
+/// hears each change of download::State, the files' bytes counted as one,
+/// at most ten a second while bytes come, and last how it ended. The last
 /// file's path, or "" where it stopped short: paused, cancelled or failed.
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_net_pktito_app_Engine_download<'a>(
@@ -564,16 +617,18 @@ pub extern "system" fn Java_net_pktito_app_Engine_download<'a>(
     _class: JClass<'a>,
     dir: JString<'a>,
     name: JString<'a>,
+    files: JString<'a>,
     progress: JObject<'a>,
 ) -> JObject<'a> {
     unowned
         .with_env(|env| -> jni::errors::Result<JObject<'a>> {
             let dir = PathBuf::from(dir.try_to_string(env)?);
             let name = name.try_to_string(env)?;
-            let Some(e) = model::entry(&name) else {
-                return throw(env, &format!("{name}: no such model")).map(|_| JObject::null());
+            let files = match wanted(&dir, &name, &files.try_to_string(env)?) {
+                Ok(w) => w,
+                Err(why) => return throw(env, &why).map(|_| JObject::null()),
             };
-            let job = Arc::new(download::Job::new(e, &dir));
+            let job = Arc::new(download::Job::files(&files));
             *DOWNLOAD.lock().unwrap() = Some(job.clone());
             let failed = RefCell::new(None);
             let tell = |s: &download::State| {
@@ -599,7 +654,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_download<'a>(
                     job.ctl.pause.store(true, Ordering::Relaxed);
                 }
             };
-            let got = job.run(e, &dir, &tell);
+            let got = job.run_files(&files, &tell);
             tell(&job.state());
             {
                 let mut slot = DOWNLOAD.lock().unwrap();
@@ -642,26 +697,31 @@ pub extern "system" fn Java_net_pktito_app_Engine_retryDownload<'a>(
     }
 }
 
-/// Engine.cancelDownload(dir, name): the download of name stops and what it
-/// had is deleted, by its own thread, which says so, if it is running
-/// (true); else here, from dir, the app's models folder (false).
+/// Engine.cancelDownload(dir, name, files): the download of files of name
+/// (as download() takes them) stops and what it had is deleted, by its own
+/// thread, which says so, if it is running (true); else here, from dir,
+/// the app's models folder, as its thread would have (false): each file's
+/// part, and each file, done or one an update left (download::Job::run_files).
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_net_pktito_app_Engine_cancelDownload<'a>(
     mut unowned: EnvUnowned<'a>,
     _class: JClass<'a>,
     dir: JString<'a>,
     name: JString<'a>,
+    files: JString<'a>,
 ) -> jboolean {
     unowned
         .with_env(|env| -> jni::errors::Result<jboolean> {
             let dir = PathBuf::from(dir.try_to_string(env)?);
             let name = name.try_to_string(env)?;
+            let files = files.try_to_string(env)?;
             if let Some(j) = DOWNLOAD.lock().unwrap().as_ref() {
                 j.ctl.cancel.store(true, Ordering::Relaxed);
                 return Ok(true);
             }
-            if let Some(e) = model::entry(&name) {
-                let _ = fs::remove_file(model::part_in(&dir, e));
+            for w in wanted(&dir, &name, &files).unwrap_or_default() {
+                let _ = fs::remove_file(&w.part);
+                let _ = fs::remove_file(&w.dst);
             }
             Ok(false)
         })

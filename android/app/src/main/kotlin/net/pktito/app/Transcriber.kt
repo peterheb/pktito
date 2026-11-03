@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import java.io.File
 import java.io.IOException
+import java.security.MessageDigest
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -65,6 +66,8 @@ object Transcriber {
     private var handle = 0L
     /** The file the model in handle was loaded from. */
     private var loadedFrom: String? = null
+    /** That file and its graph for the NPU, if it was given one: what loaded compares. */
+    private var loadedAs: String? = null
 
     /** block on the main thread, where the screen reads this state. */
     fun post(block: Transcriber.() -> Unit) {
@@ -160,9 +163,11 @@ object Transcriber {
         }
     }
 
-    /** Whether the model in use is the one loaded. */
+    /** Whether the model in use is the one loaded, in the edition it is in now. */
     @Synchronized
-    fun loaded(context: Context): Boolean = handle != 0L && loadedFrom == Models.usable(context)?.path
+    fun loaded(context: Context): Boolean = handle != 0L && loadedAs == Models.usable(context)?.let(::key)
+
+    private fun key(u: Models.Use) = u.file.path + (u.graph?.let { " " + it.file.path } ?: "")
 
     /** The file of the model loaded, which a transcription running uses, whichever is in use now. */
     val loadedPath: String?
@@ -179,33 +184,113 @@ object Transcriber {
     @Synchronized
     fun letGo(path: String) {
         if (handle == 0L || loadedFrom != path) return
+        free()
+    }
+
+    private fun free() {
         Engine.free(handle)
         handle = 0L
         loadedFrom = null
+        loadedAs = null
     }
 
     /**
      * The model in use (Models), loaded once for the process, and again
-     * once another is chosen, the one before let go: on the
-     * transcription's thread, before it starts, where nothing else uses it.
+     * once another is chosen or it is in another edition, the one before
+     * let go: on the transcription's thread, before it starts, where
+     * nothing else uses it. In the NPU's edition its encoder is the graph
+     * a PC compiled for this chip, which QNN reads in under a second (0.7 s
+     * on the Galaxy S24 Ultra, 2026-11-02); one QNN refuses is the NPU's
+     * failure (npuFailed), and a model with its own encoder goes on with it.
      */
     @Synchronized
     fun model(context: Context): Long {
-        val pkf = Models.usable(context) ?: throw IOException(context.getString(R.string.no_model))
-        if (handle != 0L && loadedFrom != pkf.path) {
-            Engine.free(handle)
-            handle = 0L
-        }
+        // the chip, for the edition, where the launch's question of it has not come back
+        Editions.chipNow(context)
+        val use = Models.usable(context) ?: throw IOException(context.getString(R.string.no_model))
+        if (handle != 0L && loadedAs != key(use)) free()
         if (handle == 0L) {
-            handle = Engine.load(pkf.path)
-            loadedFrom = pkf.path
-            // the encoder on the NPU where the build and the phone have one:
-            // the first time its graph compiles, a minute or two
-            val npu = Engine.npu(handle, File(context.cacheDir, pkf.nameWithoutExtension + ".qnn").path,
-                context.applicationInfo.nativeLibraryDir)
-            Log.i(TAG, "the NPU: $npu")
+            handle = Engine.load(use.file.path)
+            loadedFrom = use.file.path
+            loadedAs = key(use)
+            val graph = use.graph
+            val o = use.offer
+            if (graph != null && o != null)
+                try {
+                    val s = Engine.npu(handle, graph.file.path, context.applicationInfo.nativeLibraryDir)
+                    Log.i(TAG, "the NPU's graph for ${o.name} in %.2f s".format(s))
+                } catch (e: IOException) {
+                    val refused = npuFailed(context, o, e.message ?: "")
+                    // the whole model's encoder runs it, as its CPU's edition,
+                    // which the model is in now; a slim model has none
+                    if (!o.whole.here) {
+                        free()
+                        throw IOException(failed(context, refused))
+                    }
+                    loadedAs = use.file.path
+                }
         }
         return handle
+    }
+
+    /**
+     * A transcription's failure on the NPU with the slim model, which has
+     * no encoder of its own to go on with (Engine.transcribe's npu.failed),
+     * for why: the model let go, its failure the NPU's (npuFailed). Its
+     * words, for the screen. On the transcription's thread.
+     */
+    @Synchronized
+    fun npuFailed(context: Context, why: String): String {
+        val o = Models.usable(context)?.offer
+        if (handle != 0L) free()
+        return failed(context, o != null && npuFailed(context, o, why))
+    }
+
+    /** What a slim model's failure on the NPU says: that the NPU can't run the model, or for a graph that wasn't the catalog's, that it is damaged, as it is downloaded again. */
+    private fun failed(context: Context, refused: Boolean) =
+        if (refused) Editions.cpuWords(context) else context.getString(R.string.model_file_damaged)
+
+    /**
+     * The NPU's refusal of o's graph (Engine.npu), or its failure in a
+     * transcription (Engine.transcribe's npu.failed), for why: the graph is
+     * deleted. One that is not the catalog's, an older one of the same size
+     * an update of the app left, is downloaded again, its model's edition
+     * still the NPU's. The catalog's is the NPU's refusal, remembered for
+     * this system and build (Editions.refused), and the model is the CPU's
+     * edition: with its whole file here, it goes on with that, said so in a
+     * toast; else its whole file is downloaded. Not tried twice: no failure
+     * of QNN's has been seen to pass. Whether it was the NPU's refusal.
+     * Any thread.
+     */
+    private fun npuFailed(context: Context, o: Offer, why: String): Boolean {
+        val graph = o.graph ?: return false
+        val app = context.applicationContext
+        val refused = sha256(graph.file) == graph.sha256
+        Log.w(TAG, "the NPU's graph for ${o.name}${if (refused) "" else ", not the catalog's"}: $why")
+        if (refused) Editions.refused(app, o.name, graph, why)
+        graph.file.delete()
+        main.post {
+            Models.refresh(app)
+            val now = Models.offers.find { it.name == o.name } ?: return@post
+            if (!now.have) Downloads.start(app, now)
+            else if (refused) Models.news = Editions.cpuWords(app)
+        }
+        return refused
+    }
+
+    private fun sha256(f: File): String = try {
+        val h = MessageDigest.getInstance("SHA-256")
+        f.inputStream().use { input ->
+            val buf = ByteArray(1 shl 20)
+            while (true) {
+                val k = input.read(buf)
+                if (k < 0) break
+                h.update(buf, 0, k)
+            }
+        }
+        h.digest().joinToString("") { "%02x".format(it) }
+    } catch (e: IOException) {
+        ""
     }
 
     private const val TAG = "pktito"

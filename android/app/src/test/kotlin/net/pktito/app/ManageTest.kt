@@ -37,8 +37,13 @@ class ManageTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private fun offer(name: String, key: String, have: Boolean) =
-        Offer(name, key, listOf("en"), "", 624_480_196, "", have, 0, File("$name.pkf"), File("$name.pkf.part"))
+    private fun offer(name: String, key: String, have: Boolean): Offer {
+        val bytes = if (have) 624_480_196L else 0
+        return Offer(
+            name, key, listOf("en"), "", Part(File("$name.pkf"), 624_480_196, "", have, bytes, bytes), Part(File("$name-slim.pkf"), 12_115_524, "", here = false), null,
+            Edition.CPU, if (have) Edition.CPU else null, 0,
+        )
+    }
     private val both = listOf(offer("v2", "english", true), offer("v3", "multilingual", true))
 
     /** Whether a transcription runs, which a test may change while Manage models is up. */
@@ -52,7 +57,7 @@ class ManageTest {
                 hardKeyboardHidden = Configuration.HARDKEYBOARDHIDDEN_NO
             }
             CompositionLocalProvider(LocalConfiguration provides c) {
-                PktitoTheme { Manage(offers, "v2", own, download, transcribing, null, 0, null, compact = false, ManageActions({}, {}, {}, {}, {})) }
+                PktitoTheme { Manage(offers, "v2", own, download, transcribing, null, 0, null, compact = false, ManageActions({}, {}, {}, {}, {}, {})) }
             }
         }
         compose.waitForIdle()

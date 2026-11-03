@@ -8,6 +8,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.LabeledIntent
 import android.content.pm.PackageManager
 import android.media.AudioManager
@@ -16,6 +17,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
 import android.provider.OpenableColumns
+import android.system.Os
 import android.util.Log
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
@@ -165,6 +167,15 @@ class MainActivity : ComponentActivity() {
         managing = savedInstanceState?.getBoolean("managing") ?: false
         savedInstanceState?.getString("find")?.let(finder::restore)
         waiting = savedInstanceState?.let { BundleCompat.getParcelable(it, "waiting", Uri::class.java) }
+        // a debug build's downloads from where files/model_base says, as the
+        // desktop's from PKTITO_MODEL_BASE (model.rs): a server on the PC
+        // through adb reverse, for files models.pktito.net does not serve yet
+        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0)
+            File(filesDir, "model_base").takeIf { it.isFile }?.let { Os.setenv("PKTITO_MODEL_BASE", it.readText().trim(), true) }
+        // the NPU's chip, for the edition each model downloads in, asked of QNN
+        // once a system and build: waited for a second at most, so that the
+        // first frame shows the sizes of the edition the phone runs
+        Editions.ask(this, 1000)
         Models.refresh(this)
         Recents.refresh(this)
         Recents.prune(this)
@@ -212,8 +223,12 @@ class MainActivity : ComponentActivity() {
         } else start(uri)
     }
 
-    /** Whether the screen is the setup screen's: no model yet, or one coming, by download or from a file. */
-    private fun setup() = Models.ready == null || Downloads.state != null || Models.copying != null
+    /**
+     * Whether the screen is the setup screen's: no model yet, or one coming,
+     * by download or from a file; a graph coming for a model here is Manage
+     * models' (Downloads.faster).
+     */
+    private fun setup() = Models.ready == null || (Downloads.state != null && !Downloads.faster) || Models.copying != null
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
@@ -538,6 +553,7 @@ class MainActivity : ComponentActivity() {
                             Downloads.cancel(this@MainActivity)
                             deleted(null)
                         },
+                        faster = ::download,
                         close = { managing = false },
                     ),
                 )

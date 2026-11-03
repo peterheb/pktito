@@ -1,5 +1,6 @@
 package net.pktito.app.ui
 
+import android.content.Context
 import android.content.res.Resources
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -29,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -43,10 +45,12 @@ import androidx.compose.ui.unit.dp
 import java.io.File
 import java.util.Locale
 import net.pktito.app.Download
+import net.pktito.app.Editions
 import net.pktito.app.Models
 import net.pktito.app.Offer
 import net.pktito.app.R
 import net.pktito.app.mb
+import net.pktito.app.words
 
 /** What Manage models does with what it is asked. */
 class ManageActions(
@@ -55,13 +59,15 @@ class ManageActions(
     val deleteOwn: () -> Unit,
     /** The download under way stopped and what it had deleted (Downloads.cancel), as the setup screen's Cancel does. */
     val stop: () -> Unit,
+    /** A model here on the CPU made faster, its graph for the NPU downloaded (Downloads.parts). */
+    val faster: (Offer) -> Unit,
     val close: () -> Unit,
 )
 
 /**
  * One thing the app keeps: what it is (key: its kind and its name, "have:",
- * "part:" or "own:"), its words, what it takes, its button's, and the
- * question before the button does it (none for Stop).
+ * "part:", "faster:" or "own:"), its words, what it takes, its button's,
+ * and the question before the button does it (none for Stop or Download).
  */
 private class Kept(
     val key: String,
@@ -83,7 +89,11 @@ private class Kept(
  * the green of the menu's Downloaded; what a download that stopped kept,
  * which it would go on from; a download under way, with Stop; and the copy
  * of a model file of the person's own; each deleted after a question that
- * says what follows. Under them what they take in all, and the room left.
+ * says what follows. A model's row counts all its files, either edition's
+ * and what a download of them kept, and its Delete deletes them all, as
+ * iOS's does; under one here on the CPU where the NPU can run it, the
+ * offer of its graph, Faster, which iOS makes of its Neural Engine's.
+ * Under them what they take in all, and the room left.
  * In a window of Material's compact width (compact: under 600 dp, a phone's
  * as the screen's root measures it, MainActivity), Android's sheet from the
  * screen's foot, where the thumb is; in a wider one, a dialog in its
@@ -111,6 +121,7 @@ fun Manage(
 ) {
     val p = pk
     val res = LocalResources.current
+    val context = LocalContext.current
     // the row whose question is up, by its key, kept through a turn of the
     // screen or a fold, which make the screen anew (the pkfold emulator,
     // 2026-10-30: the question went, Manage models stayed)
@@ -126,25 +137,26 @@ fun Manage(
                     val inUse = own == null && o.name == model
                     val then = Models.next(offers, model, o.name)
                     val text = when {
-                        !inUse -> res.getString(R.string.manage_ask_text, mb(o.bytes))
-                        then != null -> res.getString(R.string.manage_ask_text_switch, mb(o.bytes), Models.label(res, then.key))
-                        else -> res.getString(R.string.manage_ask_text_last, mb(o.bytes))
+                        !inUse -> res.getString(R.string.manage_ask_text, mb(o.taken))
+                        then != null -> res.getString(R.string.manage_ask_text_switch, mb(o.taken), Models.label(res, then.key))
+                        else -> res.getString(R.string.manage_ask_text_last, mb(o.taken))
                     }
                     add(
                         Kept(
-                            "have:${o.name}", label, note(res, "${o.name}$DOT${res.getString(R.string.manage_size, mb(o.bytes))}", inUse, p.ok), o.bytes, delete,
-                            !(running && (inUse || o.file.path == loaded)),
+                            "have:${o.name}", label, note(res, "${o.name}$DOT${res.getString(R.string.manage_size, mb(o.taken))}", inUse, p.ok), o.taken, delete,
+                            !(running && (inUse || o.files.any { it.path == loaded })),
                             res.getString(R.string.manage_ask_title, label) to text,
                         ) { a.delete(o) },
                     )
+                    if (o.faster > 0) add(faster(context, o, label, d, a))
                 }
                 d != null && d.going ->
                     add(Kept("part:${o.name}", label, AnnotatedString(res.getString(R.string.manage_downloading, mb(d.got), mb(d.total))), d.got, res.getString(R.string.stop), true, null, a.stop))
                 d != null || o.partial > 0 -> {
                     val got = d?.got ?: o.partial
-                    val ask = res.getString(R.string.manage_ask_part_title) to res.getString(R.string.manage_ask_part_text, mb(got), label)
+                    val ask = res.getString(R.string.manage_ask_part_title) to res.getString(R.string.manage_ask_part_text, mb(o.taken), label)
                     add(
-                        Kept("part:${o.name}", label, AnnotatedString(res.getString(R.string.manage_paused, mb(got), mb(o.bytes))), got, delete, true, ask) {
+                        Kept("part:${o.name}", label, AnnotatedString(res.getString(R.string.manage_paused, mb(got), mb(o.bytes))), o.taken, delete, true, ask) {
                             if (d != null) a.stop() else a.deletePart(o)
                         },
                     )
@@ -211,6 +223,34 @@ fun Manage(
             asking = null
             k.onAct()
         }, onCancel = { asking = null })
+    }
+}
+
+/**
+ * The offer of a model here on the CPU in the NPU's edition, which takes
+ * its graph alone (Downloads.parts): Faster on this phone (or tablet, or
+ * computer: Editions.kind), and its megabytes to come, then how its
+ * download goes, with Stop, as the downloads under way above; what a
+ * download of it that stopped kept is the model row's, counted and deleted
+ * with the rest of the model's files.
+ */
+private fun faster(context: Context, o: Offer, label: String, d: Download?, a: ManageActions): Kept {
+    val res = context.resources
+    val title = res.getString(Editions.kind(context, R.string.manage_faster_phone, R.string.manage_faster_tablet, R.string.manage_faster_computer))
+    val kept = o.graph?.kept ?: 0
+    val key = "faster:${o.name}"
+    val get = { a.faster(o) }
+    return when {
+        d != null && d.going ->
+            Kept(key, title, AnnotatedString(res.getString(R.string.manage_downloading, mb(d.got), mb(d.total))), 0, res.getString(R.string.stop), true, null, a.stop)
+        d != null && d.step == "failed" ->
+            Kept(key, title, AnnotatedString(words(res, d.problem?.key, d.problem?.host ?: "")), 0, res.getString(R.string.download_try_again), true, null, get)
+        d != null || kept > 0 ->
+            Kept(key, title, AnnotatedString(res.getString(R.string.manage_paused, mb(d?.got ?: kept), mb(o.faster))), 0, res.getString(R.string.download_resume), true, null, get)
+        else -> {
+            val more = Editions.kind(context, R.string.manage_faster_text_phone, R.string.manage_faster_text_tablet, R.string.manage_faster_text_computer)
+            Kept(key, title, AnnotatedString(res.getString(more, label, mb(o.faster))), 0, res.getString(R.string.manage_get), true, null, get)
+        }
     }
 }
 

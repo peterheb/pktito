@@ -14,7 +14,10 @@ import org.robolectric.RobolectricTestRunner
  */
 @RunWith(RobolectricTestRunner::class)
 class ModelsTest {
-    private fun offer(name: String, have: Boolean) = Offer(name, name, listOf("en"), "", 1, "", have, 0, File("$name.pkf"), File("$name.pkf.part"))
+    private fun offer(name: String, have: Boolean) = Offer(
+        name, name, listOf("en"), "", Part(File("$name.pkf"), 1, "", here = have), Part(File("$name-slim.pkf"), 1, "", here = false), null,
+        Edition.CPU, if (have) Edition.CPU else null, 0,
+    )
 
     @Test fun theModelInUseGivesWayToAnother() =
         assertEquals("v3", Models.next(listOf(offer("v2", true), offer("v3", true)), "v2", "v2")?.name)

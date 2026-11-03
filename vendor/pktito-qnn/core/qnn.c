@@ -70,6 +70,7 @@ struct pk_qnn {
     Qnn_GraphHandle_t graph;
     uint32_t n_mels, d, T0, T1, T2, T3;
     uint32_t layers;             /* the encoder's layers it runs: all, but for checking */
+    int other;                   /* compiled for another chip (PKTITO_QNN_TARGET): kept, not run */
     Qnn_Tensor_t in[5], out;     /* mel, the three stages' masks, the keys' bias; x */
     float *buf[5], *x;           /* their data */
     char names[6][16];           /* in's and out's names and shapes, their own */
@@ -93,17 +94,29 @@ static void own_io(pk_qnn *e) {
 
 /* ------------------------------------------------------------ logging --- */
 
-/* QNN's messages: the last error kept for err, and every message at
- * PKTITO_QNN_LOG's level or below on stderr (1 errors, 2 warnings, 3
- * info, 4 verbose) */
-static char last_error[256];
+/* QNN's messages: its errors since the call err reports on, joined, kept
+ * for err - the first is often the cause and the last QNN's summary
+ * ("Request feature arch with value 79 unsupported", then "Failed to
+ * create context from binary", for a V79's graph on a V73) - and every
+ * message at PKTITO_QNN_LOG's level or below on stderr (1 errors, 2
+ * warnings, 3 info, 4 verbose) */
+static char last_error[512];
 
 static void log_cb(const char *fmt, QnnLog_Level_t level, uint64_t ts, va_list ap) {
     (void)ts;
     char line[512];
     vsnprintf(line, sizeof line, fmt, ap);
-    if (level == QNN_LOG_LEVEL_ERROR)
-        snprintf(last_error, sizeof last_error, "%s", line);
+    if (level == QNN_LOG_LEVEL_ERROR) {
+        size_t n = strlen(last_error), k = strcspn(line, "\n");
+        if (n && n + 2 < sizeof last_error) {
+            memcpy(last_error + n, "; ", 2);
+            n += 2;
+        }
+        if (k > sizeof last_error - 1 - n)
+            k = sizeof last_error - 1 - n;
+        memcpy(last_error + n, line, k);
+        last_error[n + k] = 0;
+    }
     const char *v = getenv("PKTITO_QNN_LOG");
     if (v && (int)level <= atoi(v))
         fprintf(stderr, "qnn: %s%s", line, line[0] && line[strlen(line) - 1] == '\n' ? "" : "\n");
@@ -720,45 +733,74 @@ static int make_graph(pk_qnn *e, const pk_model *m, char *err, size_t errlen) {
 /* ---------------------------------------------------------- the cache --- */
 
 /* The compiled graph kept (pk_qnn_open's cache): this header, then QNN's
- * binary of the context. The key is what the binary was made of and for:
- * the model's data (its SHA-256, the .pkf header's), the length and layers
- * built, and QNN's build; PK_QNN_CACHE changes with what make_graph
- * writes. */
-#define PK_QNN_CACHE "pktito-qnn 5"
+ * binary of the context. The key is what the binary was made of: the
+ * model's checkpoint and conversion as its metadata names them
+ * (source_sha256, converter), which a slim file (pktito-tools slim) has
+ * byte for byte as the full file whose encoder the graph holds - or, in a
+ * file without them, its own data's SHA-256, the .pkf header's - and the
+ * length and layers built. The QNN that compiled it is kept beside the
+ * key, not in it: QNN reads an older QNN's graph and not a newer one's
+ * (QAIRT 2.51's HTP backend guide, its table of SDK 2.42's and 2.43's),
+ * and contextCreateFromBinary says which. PK_QNN_CACHE changes with what
+ * make_graph writes. */
+#define PK_QNN_CACHE "pktito-qnn 6"
 
 typedef struct {
-    char magic[16], key[176];
+    char magic[16], key[176], built[64];
     char names[6][16];
     uint32_t id[6], rank[6], dims[6][4];
     uint64_t bytes;
 } cache_head;
 
 static void cache_key(const pk_qnn *e, const pk_model *m, char *key, size_t n) {
+    const char *src = pk_model_meta(m, "source_sha256"), *conv = pk_model_meta(m, "converter");
+    if (src && conv) {
+        snprintf(key, n, "%s %s %u %u", src, conv, e->T0, e->layers);
+        return;
+    }
     const pk_header *h = (const pk_header *)m->map;
     char hex[65];
     for (int i = 0; i < 32; i++)
         snprintf(hex + 2 * i, 3, "%02x", h->digest[i]);
-    const char *build = NULL;
-    if (e->q.backendGetBuildId(&build) || !build)
-        build = "?";
-    snprintf(key, n, "%s %u %u %s", hex, e->T0, e->layers, build);
+    snprintf(key, n, "%s %u %u", hex, e->T0, e->layers);
 }
 
-/* 0 if the cache held this graph and the NPU took it */
-static int read_cache(pk_qnn *e, const pk_model *m, const char *path) {
+/* QNN's build, as the cache keeps it */
+static const char *build_id(const pk_qnn *e) {
+    const char *b = NULL;
+    return e->q.backendGetBuildId(&b) || !b ? "?" : b;
+}
+
+/* 0 if the cache held this graph and the NPU took it; -1, and why in err */
+static int read_cache(pk_qnn *e, const pk_model *m, const char *path, char *err, size_t errlen) {
+    last_error[0] = 0;
     FILE *f = fopen(path, "rb");
-    if (!f)
+    if (!f) {
+        snprintf(err, errlen, "no compiled graph at %s", path);
         return -1;
+    }
     cache_head h;
     char key[sizeof h.key];
     cache_key(e, m, key, sizeof key);
     void *bin = NULL;
     int rc = -1;
-    if (fread(&h, sizeof h, 1, f) == 1 && !strncmp(h.magic, PK_QNN_CACHE, sizeof h.magic) &&
-        !strncmp(h.key, key, sizeof h.key) && h.bytes > 0 && h.bytes < ((uint64_t)1 << 32) &&
-        (bin = malloc(h.bytes)) && fread(bin, 1, h.bytes, f) == h.bytes &&
-        !e->q.contextCreateFromBinary(e->backend, e->device, NULL, bin, h.bytes, &e->context, NULL) &&
-        !e->q.graphRetrieve(e->context, "encoder", &e->graph)) {
+    Qnn_ErrorHandle_t s;
+    char what[512];
+    if (fread(&h, sizeof h, 1, f) != 1 || strncmp(h.magic, PK_QNN_CACHE, sizeof h.magic))
+        snprintf(err, errlen, "%s is not a graph this pktito reads (" PK_QNN_CACHE ")", path);
+    else if (strncmp(h.key, key, sizeof h.key))
+        snprintf(err, errlen, "%s is the graph of another model, length or layers", path);
+    else if (h.bytes == 0 || h.bytes >= ((uint64_t)1 << 32) || !(bin = malloc(h.bytes)) ||
+             fread(bin, 1, h.bytes, f) != h.bytes)
+        snprintf(err, errlen, "%s: its graph could not be read", path);
+    else if ((s = e->q.contextCreateFromBinary(e->backend, e->device, NULL, bin, h.bytes, &e->context, NULL))) {
+        h.built[sizeof h.built - 1] = 0;
+        snprintf(what, sizeof what, "%s, compiled by QNN %s, in QNN %s: contextCreateFromBinary", path,
+                 h.built, build_id(e));
+        fail(err, errlen, what, s);
+    } else if ((s = e->q.graphRetrieve(e->context, "encoder", &e->graph)))
+        fail(err, errlen, "graphRetrieve", s);
+    else {
         for (int k = 0; k < 6; k++) {
             Qnn_Tensor_t *t = io(e, k);
             *t = (Qnn_Tensor_t)QNN_TENSOR_INIT;
@@ -774,7 +816,8 @@ static int read_cache(pk_qnn *e, const pk_model *m, const char *path) {
             t->v1.memType = QNN_TENSORMEMTYPE_RAW;
         }
         rc = 0;
-    } else if (e->context) {
+    }
+    if (rc && e->context) {
         e->q.contextFree(e->context, NULL);
         e->context = NULL;
     }
@@ -794,6 +837,7 @@ static void write_cache(pk_qnn *e, const pk_model *m, const char *path) {
     memset(&h, 0, sizeof h);
     snprintf(h.magic, sizeof h.magic, "%s", PK_QNN_CACHE);
     cache_key(e, m, h.key, sizeof h.key);
+    snprintf(h.built, sizeof h.built, "%s", build_id(e));
     for (int k = 0; k < 6; k++) {
         const Qnn_Tensor_t *t = io(e, k);
         memcpy(h.names[k], e->names[k], sizeof h.names[k]);
@@ -851,10 +895,164 @@ static void burst(pk_qnn *e) {
     perf->setPowerConfig(id, cfg);
 }
 
+/* ------------------------------------------------------- the platform --- */
+
+/* The chip QNN compiles for, where it is not the one QNN runs on: a PC's
+ * QNN has no NPU to ask (deviceGetPlatformInfo is the phone's alone), so it
+ * is told one - the SoC and its Hexagon, as Qualcomm's own
+ * qnn-context-binary-generator tells it, and the chip's description as
+ * the phone's QNN gives it - and the graph it compiles is kept in the
+ * cache for that phone to read back (pk_qnn_open). */
+typedef struct {
+    QnnHtpDevice_DeviceInfoExtension_t ext;
+    QnnDevice_CoreInfo_t core;
+    QnnDevice_HardwareDeviceInfo_t hw;
+    QnnDevice_PlatformInfo_t info;
+    QnnHtpDevice_CustomConfig_t soc, arch;
+    QnnDevice_Config_t cfg[3];
+    const QnnDevice_Config_t *list[4];
+} target;
+
+/* PKTITO_QNN_TARGET=soc,arch,vtcm,dlbc,signed - QnnTypes.h's
+ * QNN_SOC_MODEL_ number, the Hexagon version, its VTCM in MB, and whether
+ * it has DLBC and a signed PD, as the phone's QNN gives them
+ * (platform_log): 1 with t made from it, 0 without one, -1 for one that
+ * doesn't parse */
+static int target_from_env(target *t) {
+    const char *v = getenv("PKTITO_QNN_TARGET");
+    unsigned soc, arch, vtcm, dlbc, sig;
+    if (!v)
+        return 0;
+    if (sscanf(v, "%u,%u,%u,%u,%u", &soc, &arch, &vtcm, &dlbc, &sig) != 5)
+        return -1;
+    memset(t, 0, sizeof *t);
+    t->ext.devType = QNN_HTP_DEVICE_TYPE_ON_CHIP;
+    t->ext.onChipDevice.vtcmSize = vtcm;
+    t->ext.onChipDevice.socModel = soc;
+    t->ext.onChipDevice.signedPdSupport = sig != 0;
+    t->ext.onChipDevice.dlbcSupport = dlbc != 0;
+    t->ext.onChipDevice.arch = (QnnHtpDevice_Arch_t)arch;
+    t->core = (QnnDevice_CoreInfo_t)QNN_DEVICE_CORE_INFO_INIT;
+    t->core.v1.coreId = 0;
+    t->core.v1.coreType = QNN_HTP_CORE_TYPE_NSP;
+    t->hw = (QnnDevice_HardwareDeviceInfo_t)QNN_DEVICE_HARDWARE_DEVICE_INFO_INIT;
+    t->hw.v1.deviceId = 0;
+    t->hw.v1.deviceType = QNN_HTP_DEVICE_TYPE_ON_CHIP;
+    t->hw.v1.numCores = 1;
+    t->hw.v1.cores = &t->core;
+    t->hw.v1.deviceInfoExtension = (QnnDevice_DeviceInfoExtension_t)&t->ext;
+    t->info = (QnnDevice_PlatformInfo_t)QNN_DEVICE_PLATFORM_INFO_INIT;
+    t->info.version = QNN_DEVICE_PLATFORM_INFO_VERSION_1;
+    t->info.v1.numHwDevices = 1;
+    t->info.v1.hwDevices = &t->hw;
+    t->soc.option = QNN_HTP_DEVICE_CONFIG_OPTION_SOC;
+    t->soc.socModel = soc;
+    t->arch.option = QNN_HTP_DEVICE_CONFIG_OPTION_ARCH;
+    t->arch.arch.deviceId = 0;
+    t->arch.arch.arch = (QnnHtpDevice_Arch_t)arch;
+    for (int k = 0; k < 3; k++)
+        t->cfg[k] = (QnnDevice_Config_t)QNN_DEVICE_CONFIG_INIT;
+    t->cfg[0].option = QNN_DEVICE_CONFIG_OPTION_CUSTOM;
+    t->cfg[0].customConfig = &t->soc;
+    t->cfg[1].option = QNN_DEVICE_CONFIG_OPTION_CUSTOM;
+    t->cfg[1].customConfig = &t->arch;
+    t->cfg[2].option = QNN_DEVICE_CONFIG_OPTION_PLATFORM_INFO;
+    t->cfg[2].hardwareInfo = &t->info;
+    for (int k = 0; k < 3; k++)
+        t->list[k] = &t->cfg[k];
+    t->list[3] = NULL;
+    return 1;
+}
+
+/* An HTP on the chip in PKTITO_QNN_TARGET's words: soc,arch,vtcm,dlbc,signed */
+static void target_words(const QnnHtpDevice_DeviceInfoExtension_t *x, char *out, size_t n) {
+    snprintf(out, n, "%u,%u,%zu,%d,%d", x->onChipDevice.socModel, (unsigned)x->onChipDevice.arch,
+             x->onChipDevice.vtcmSize, x->onChipDevice.dlbcSupport, x->onChipDevice.signedPdSupport);
+}
+
+/* PKTITO_QNN_LOG: the chip as its QNN says, a device a line on stderr,
+ * with the PKTITO_QNN_TARGET that names it to a PC */
+static void platform_log(const pk_qnn *e) {
+    const QnnDevice_PlatformInfo_t *p = NULL;
+    if (!getenv("PKTITO_QNN_LOG") || !e->q.deviceGetPlatformInfo || e->q.deviceGetPlatformInfo(e->log, &p) || !p)
+        return;
+    for (uint32_t i = 0; i < p->v1.numHwDevices; i++) {
+        const QnnDevice_HardwareDeviceInfoV1_t *h = &p->v1.hwDevices[i].v1;
+        const QnnHtpDevice_DeviceInfoExtension_t *x = (const QnnHtpDevice_DeviceInfoExtension_t *)h->deviceInfoExtension;
+        fprintf(stderr, "qnn: device %u, type %u, %u cores", h->deviceId, h->deviceType, h->numCores);
+        for (uint32_t c = 0; c < h->numCores; c++)
+            fprintf(stderr, "%s%u (type %u)", c ? ", " : ": ", h->cores[c].v1.coreId, h->cores[c].v1.coreType);
+        if (x && x->devType == QNN_HTP_DEVICE_TYPE_ON_CHIP) {
+            char w[64];
+            target_words(x, w, sizeof w);
+            fprintf(stderr, "; PKTITO_QNN_TARGET=%s", w);
+        }
+        fputc('\n', stderr);
+    }
+    if (e->q.deviceFreePlatformInfo)
+        e->q.deviceFreePlatformInfo(e->log, p);
+}
+
+/* QNN's HTP library loaded, and its log, backend and device made: for the
+ * chip QNN runs on, or with t for the one t describes. 0, or -1 with why
+ * in err */
+static int open_device(pk_qnn *e, target *t, char *err, size_t errlen) {
+    last_error[0] = 0;
+    e->lib = dlopen("libQnnHtp.so", RTLD_NOW | RTLD_LOCAL);
+    get_providers_fn gp = e->lib ? (get_providers_fn)dlsym(e->lib, "QnnInterface_getProviders") : NULL;
+    const QnnInterface_t **prov = NULL;
+    uint32_t np = 0;
+    if (!gp || gp(&prov, &np) || np == 0 || prov[0]->apiVersion.coreApiVersion.major != QNN_API_VERSION_MAJOR) {
+        snprintf(err, errlen, "no QNN HTP library: %s", e->lib ? "no provider of QNN 2" : dlerror());
+        return -1;
+    }
+    e->q = prov[0]->QNN_INTERFACE_VER_NAME;
+    Qnn_ErrorHandle_t s;
+    if (e->q.logCreate(log_cb, QNN_LOG_LEVEL_WARN, &e->log))
+        e->log = NULL;
+    if ((s = e->q.backendCreate(e->log, NULL, &e->backend)) ||
+        (s = e->q.deviceCreate(e->log, t ? t->list : NULL, &e->device)))
+        return fail(err, errlen, e->backend ? "deviceCreate" : "backendCreate", s);
+    return 0;
+}
+
+int pk_qnn_target(char *out, size_t n, char *err, size_t errlen) {
+    pk_qnn *e = calloc(1, sizeof *e);
+    if (!e) {
+        snprintf(err, errlen, "out of memory");
+        return -1;
+    }
+    const QnnDevice_PlatformInfo_t *p = NULL;
+    int rc = open_device(e, NULL, err, errlen);
+    /* a PC's QNN has no chip to describe (target, above) */
+    if (!rc && (!e->q.deviceGetPlatformInfo || e->q.deviceGetPlatformInfo(e->log, &p) || !p)) {
+        snprintf(err, errlen, "QNN describes no chip here");
+        rc = -1;
+    }
+    if (!rc) {
+        rc = -1;
+        for (uint32_t i = 0; rc && i < p->v1.numHwDevices; i++) {
+            const QnnHtpDevice_DeviceInfoExtension_t *x =
+                (const QnnHtpDevice_DeviceInfoExtension_t *)p->v1.hwDevices[i].v1.deviceInfoExtension;
+            if (x && x->devType == QNN_HTP_DEVICE_TYPE_ON_CHIP) {
+                target_words(x, out, n);
+                rc = 0;
+            }
+        }
+        if (rc)
+            snprintf(err, errlen, "QNN finds no NPU on the chip");
+        if (e->q.deviceFreePlatformInfo)
+            e->q.deviceFreePlatformInfo(e->log, p);
+    }
+    pk_qnn_free(e);
+    return rc;
+}
+
 /* The graph made and compiled, into a context of its own, and kept in
  * cache where there is one: 0, or -1 with why in err */
 static int compile(pk_qnn *e, const pk_model *m, const char *cache, char *err, size_t errlen) {
     Qnn_ErrorHandle_t s;
+    last_error[0] = 0;           /* not a cache's refusal (read_cache) */
     if ((s = e->q.contextCreate(e->backend, e->device, NULL, &e->context)))
         return fail(err, errlen, "contextCreate", s);
     /* the compiler's highest optimization, and the HTP's fp16 sigmoid of
@@ -878,8 +1076,10 @@ static int compile(pk_qnn *e, const pk_model *m, const char *cache, char *err, s
 }
 
 pk_qnn *pk_qnn_open(const pk_model *m, uint32_t frames, const char *cache, char *err, size_t errlen) {
-    if (!m->layers) {
-        snprintf(err, errlen, "the model has no encoder of its own");
+    /* a slim model has no weights to make a graph of: its graph is the
+     * full file's, compiled ahead of time and read from cache */
+    if (m->encoder_coreml && !cache) {
+        snprintf(err, errlen, "the model leaves its encoder out: give its compiled graph's file");
         return NULL;
     }
     if (m->n_heads > 16) {
@@ -900,31 +1100,29 @@ pk_qnn *pk_qnn_open(const pk_model *m, uint32_t frames, const char *cache, char 
      * numbers part from the CPU's (encoder.c's PKTITO_QNN_CHECK) */
     const char *nl = getenv("PKTITO_QNN_LAYERS");
     e->layers = nl && (uint32_t)atoi(nl) < m->n_layers ? (uint32_t)atoi(nl) : m->n_layers;
-    last_error[0] = 0;
-
-    e->lib = dlopen("libQnnHtp.so", RTLD_NOW | RTLD_LOCAL);
-    get_providers_fn gp = e->lib ? (get_providers_fn)dlsym(e->lib, "QnnInterface_getProviders") : NULL;
-    const QnnInterface_t **prov = NULL;
-    uint32_t np = 0;
-    if (!gp || gp(&prov, &np) || np == 0 || prov[0]->apiVersion.coreApiVersion.major != QNN_API_VERSION_MAJOR) {
-        snprintf(err, errlen, "no QNN HTP library: %s", e->lib ? "no provider of QNN 2" : dlerror());
+    if (m->encoder_coreml && e->layers < m->n_layers) {
+        snprintf(err, errlen, "PKTITO_QNN_LAYERS is checked against the CPU's encoder, which the model leaves out");
         pk_qnn_free(e);
         return NULL;
     }
-    e->q = prov[0]->QNN_INTERFACE_VER_NAME;
-
-    Qnn_ErrorHandle_t s;
-    if (e->q.logCreate(log_cb, QNN_LOG_LEVEL_WARN, &e->log))
-        e->log = NULL;
-    if ((s = e->q.backendCreate(e->log, NULL, &e->backend)) ||
-        (s = e->q.deviceCreate(e->log, NULL, &e->device))) {
-        fail(err, errlen, e->backend ? "deviceCreate" : "backendCreate", s);
+    target t;
+    const int other = target_from_env(&t);
+    if (other < 0) {
+        snprintf(err, errlen, "PKTITO_QNN_TARGET is soc,arch,vtcm,dlbc,signed, as a phone's PKTITO_QNN_LOG gives it");
         pk_qnn_free(e);
         return NULL;
     }
-    burst(e);
-    if (!cache || read_cache(e, m, cache))
-        if (compile(e, m, cache, err, errlen)) {
+    if (open_device(e, other ? &t : NULL, err, errlen)) {
+        pk_qnn_free(e);
+        return NULL;
+    }
+    e->other = other;
+    if (!other) {
+        platform_log(e);
+        burst(e);
+    }
+    if (!cache || read_cache(e, m, cache, err, errlen))
+        if (m->encoder_coreml || compile(e, m, cache, err, errlen)) {
             pk_qnn_free(e);
             return NULL;
         }
@@ -970,7 +1168,10 @@ uint32_t pk_qnn_frames(const pk_qnn *e) { return e->T0; }
 uint32_t pk_qnn_layers(const pk_qnn *e) { return e->layers; }
 
 uint32_t pk_qnn_encode(pk_qnn *e, const float *feat, uint32_t T0, float *x) {
-    if (T0 == 0 || T0 > e->T0)
+    /* a graph for another chip is the cache's alone: here the CPU's
+     * encoder runs (an x86 QNN would emulate the NPU's, at a fifth of real
+     * time on a Ryzen 9 9950X) */
+    if (T0 == 0 || T0 > e->T0 || e->other)
         return 0;
     const uint32_t T1 = (T0 + 1) / 2, T2 = (T1 + 1) / 2, T3 = (T2 + 1) / 2;
     memcpy(e->buf[0], feat, (size_t)T0 * e->n_mels * sizeof(float));

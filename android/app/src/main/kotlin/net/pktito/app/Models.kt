@@ -18,8 +18,36 @@ import java.nio.file.Files
 import java.security.MessageDigest
 import kotlin.concurrent.thread
 import org.json.JSONArray
+import org.json.JSONObject
 
-/** A model the catalog lists (model.rs, Entry), as it stands here: downloaded, or the bytes a download kept. */
+/**
+ * A file of a model's that the catalog names (model.rs, Part), at its place
+ * in the models folder, as it stood when the catalog was read: here once its
+ * size is the catalog's, as a download is put in place only once its
+ * SHA-256 checks; else what a download of it that stopped kept. A test says
+ * how it stands instead.
+ */
+class Part(
+    val file: File,
+    val bytes: Long,
+    val sha256: String,
+    val here: Boolean = file.length() == bytes,
+    /** Its bytes here: all of them, or what a download that stopped kept. */
+    val kept: Long = if (here) bytes else File(file.path + ".part").length().coerceAtMost(bytes),
+    /** The bytes its file and its part take, whatever is in them: an older graph an update of the app left counts until the new one takes its place. */
+    val taken: Long = file.length() + File(file.path + ".part").length(),
+) {
+    /** Where its download gathers until it checks (model.rs, Wanted). */
+    val part: File get() = File(file.path + ".part")
+}
+
+/**
+ * A model the catalog lists (model.rs, Entry), as it stands here (iOS's
+ * Offer): its files, the edition this phone downloads (Editions), the one
+ * it can transcribe with now, if any, and what a download costs. have,
+ * bytes and partial are the edition's, so that the screens say what the
+ * desktop's say of a model, as the Mac's window does of its two editions.
+ */
 class Offer(
     val name: String,
     /** The desktop's key for its words: "english", "multilingual". */
@@ -28,14 +56,37 @@ class Offer(
     val languages: List<String>,
     /** Where its error rate in each language is, for a model of several; "" for none. */
     val accuracy: String,
-    val bytes: Long,
-    val sha256: String,
-    val have: Boolean,
-    val partial: Long,
-    val file: File,
-    /** Where its download gathers until it checks (model.rs, part_in). */
-    val part: File,
-)
+    /** The whole model file, its encoder pktito's own on the CPU. */
+    val whole: Part,
+    /** The model file without its encoder, the NPU's edition's with graph. */
+    val slim: Part,
+    /** Its graph for this phone's NPU, where the catalog has one for the chip (model.rs, Graph). */
+    val graph: Part?,
+    val edition: Edition,
+    val usable: Edition?,
+    /** The graph alone, for a whole model here without it (Manage models, Faster): its bytes, 0 where none is offered. */
+    val faster: Long,
+) {
+    val have: Boolean get() = usable != null
+
+    /** The files a download of edition fetches, in order. */
+    val parts: List<Part> get() = if (edition == Edition.NPU && graph != null) listOf(slim, graph) else listOf(whole)
+
+    /** The bytes a download of edition fetches, all of them. */
+    val bytes: Long get() = parts.sumOf { it.bytes }
+
+    /** The bytes a download of edition that stopped kept, its files done and its part; 0 once it is here. */
+    val partial: Long get() = if (usable == edition) 0 else parts.sumOf { it.kept }
+
+    /** The file the engine loads: the whole model where it is here, whose encoder runs what the NPU's can't, else the slim one. */
+    val file: File get() = if (whole.here || graph == null) whole.file else slim.file
+
+    /** What its files take here, either edition's, the parts of them and an older graph: what Manage models' Delete frees. */
+    val taken: Long get() = whole.taken + slim.taken + (graph?.taken ?: 0)
+
+    /** Each of its files and their parts, for a delete. */
+    val files: List<File> get() = listOfNotNull(whole, slim, graph).flatMap { listOf(it.file, it.part) }
+}
 
 /** A model file of the person's own on its way in: its name, the bytes copied of its size (0 where its app does not say), then its check. */
 class Copy(val name: String, val got: Long, val total: Long, val checking: Boolean = false)
@@ -68,26 +119,56 @@ object Models {
     private fun ownDir(context: Context) = File(context.noBackupFilesDir, "own")
     private fun prefs(context: Context) = context.getSharedPreferences("pktito", Context.MODE_PRIVATE)
 
-    /** The catalog, as it stands in the models folder (Engine.catalog). Any thread. */
+    /**
+     * The catalog, as it stands in the models folder (Engine.catalog), each
+     * model in the editions this phone has (Editions): the NPU's where the
+     * catalog has a graph for its chip and the NPU has not refused it, else
+     * the CPU's; and the one it can run, the NPU's where the graph is here
+     * with a model file, the slim one or the whole, else the CPU's where the
+     * whole file is. The chip not yet known, the NPU is none. Any thread.
+     */
     fun catalog(context: Context): List<Offer> {
-        val a = JSONArray(Engine.catalog(dir(context).path))
+        val dir = dir(context)
+        val chip = Editions.chip(context)
+        val a = JSONArray(Engine.catalog(dir.path))
         return (0 until a.length()).map { i ->
             val o = a.getJSONObject(i)
             val langs = o.getJSONArray("languages")
+            val name = o.getString("name")
+            val part = { p: JSONObject -> Part(File(dir, p.getString("file")), p.getLong("bytes"), p.getString("sha256")) }
+            val whole = Part(File(o.getString("file")), o.getLong("bytes"), o.getString("sha256"))
+            val slim = part(o.getJSONObject("coreml").getJSONObject("slim"))
+            val graphs = o.getJSONArray("qnn")
+            val graph = (0 until graphs.length()).map { graphs.getJSONObject(it) }
+                .find { !chip.isNullOrEmpty() && it.getString("chip") == chip }?.let { part(it.getJSONObject("part")) }
+            val npu = graph != null && Editions.failure(context, name, graph) == null
+            val usable = when {
+                npu && graph!!.here && (slim.here || whole.here) -> Edition.NPU
+                whole.here -> Edition.CPU
+                else -> null
+            }
             Offer(
-                o.getString("name"), o.getString("key"), (0 until langs.length()).map { langs.getString(it) },
-                o.getString("accuracy"), o.getLong("bytes"), o.getString("sha256"), o.getBoolean("have"),
-                o.getLong("partial"), File(o.getString("file")), File(o.getString("part")),
+                name, o.getString("key"), (0 until langs.length()).map { langs.getString(it) }, o.getString("accuracy"),
+                whole, slim, graph, if (npu) Edition.NPU else Edition.CPU, usable,
+                faster = if (npu && usable == Edition.CPU) graph!!.bytes else 0,
             )
         }
     }
 
-    /** The model file to transcribe with: the person's own, else the catalog model in use, if it is here (model.rs, usable). Any thread. */
-    fun usable(context: Context): File? {
+    /**
+     * What to transcribe with: the person's own file, else the catalog model
+     * in use where it is here (model.rs, usable), in the edition this phone
+     * runs: its file, and its graph for the NPU where that is the edition.
+     */
+    class Use(val file: File, val graph: Part?, val offer: Offer?)
+
+    /** The model to transcribe with (Use), or null where there is none here. Any thread. */
+    fun usable(context: Context): Use? {
         val p = prefs(context)
-        p.getString("model_file", null)?.let(::File)?.takeIf { it.isFile }?.let { return it }
+        p.getString("model_file", null)?.let(::File)?.takeIf { it.isFile }?.let { return Use(it, null, null) }
         val name = p.getString("model", null) ?: return null
-        return catalog(context).find { it.name == name && it.have }?.file
+        val o = catalog(context).find { it.name == name && it.have } ?: return null
+        return Use(o.file, o.graph.takeIf { o.usable == Edition.NPU }, o)
     }
 
     /** The screen's state anew, from the files and the preferences. */
@@ -99,7 +180,7 @@ object Models {
         val p = prefs(context)
         model = p.getString("model", null)
         own = p.getString("model_file", null)?.let(::File)?.takeIf { it.isFile }
-        ready = usable(context)
+        ready = usable(context)?.file
     }
 
     /**
@@ -142,13 +223,17 @@ object Models {
      * gives way to the next (next); with none, none is in use, the setup
      * screen's choice still the model deleted, to download again. The own
      * file, while it is in use, stays in use, and the catalog model under
-     * it goes without a word.
+     * it goes without a word. Every file of the model goes, either
+     * edition's (iOS's delete), and the graph for the NPU on its way to a
+     * whole file here (Faster) with them.
      */
     fun delete(context: Context, o: Offer): String? {
         val inUse = own == null && model == o.name
-        if (Transcriber.running && (inUse || Transcriber.loadedPath == o.file.path)) return context.getString(R.string.manage_cant_delete)
-        Transcriber.letGo(o.file.path)
-        if (!gone(o.file)) return context.getString(R.string.manage_cant_delete)
+        val loaded = Transcriber.loadedPath?.takeIf { path -> o.files.any { it.path == path } }
+        if (Transcriber.running && (inUse || loaded != null)) return context.getString(R.string.manage_cant_delete)
+        if (Downloads.state?.name == o.name) Downloads.cancel(context)
+        loaded?.let(Transcriber::letGo)
+        if (!o.files.all(::gone)) return context.getString(R.string.manage_cant_delete)
         return taken(context, if (inUse) next(offers, model, o.name) else null)
     }
 
@@ -162,9 +247,19 @@ object Models {
         return taken(context, next(offers, model, null))
     }
 
-    /** What a download that stopped kept, deleted where no download is under way for it (Downloads.cancel is for one that is). */
+    /**
+     * What a download that stopped kept, deleted where no download is under
+     * way for it (Downloads.cancel is for one that is): every file of a
+     * model not here, none of which it can run without the rest, or the
+     * graph of one here on the CPU (Faster).
+     */
     fun deletePart(context: Context, o: Offer): String? {
-        if (!gone(o.part)) return context.getString(R.string.manage_cant_delete)
+        val files = when {
+            !o.have -> o.files
+            o.usable == Edition.CPU -> o.graph?.let { listOf(it.file, it.part) }.orEmpty()
+            else -> emptyList()
+        }
+        if (!files.all(::gone)) return context.getString(R.string.manage_cant_delete)
         refresh(context)
         return null
     }
@@ -321,10 +416,10 @@ object Models {
             return words(app.resources, Engine.trouble(why)) to false
         }
         val res = app.resources
-        val same = catalog(app).find { it.sha256 == sha && it.bytes == part.length() }
+        val same = catalog(app).find { it.whole.sha256 == sha && it.whole.bytes == part.length() }
         if (same != null) {
             dir(app).mkdirs()
-            if (!part.renameTo(same.file)) throw IOException("${same.file}: cannot move the model there")
+            if (!part.renameTo(same.whole.file)) throw IOException("${same.whole.file}: cannot move the model there")
             use(app, same.name)
             return res.getString(R.string.models_using, label(res, same.key)) to true
         }

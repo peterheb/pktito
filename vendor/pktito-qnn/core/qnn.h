@@ -26,8 +26,11 @@ typedef struct pk_qnn pk_qnn;
  * device's CPU when it is first made, which takes a minute or two (94 to
  * 114 s on a Galaxy S24 Ultra, tools/qnn/CLIMB.md); with cache a path,
  * the compiled graph (718 MB for the English model) is kept there and
- * read back the next time, for the same model, length and QNN. NULL if
- * the NPU can't run it, and why in err. */
+ * read back the next time, for the same model and length, by any QNN that
+ * reads it. A slim model's (pktito-tools slim) is that graph alone,
+ * compiled from the full file ahead of time - on a PC, for the phone's
+ * chip, with PKTITO_QNN_TARGET - and never here. NULL if the NPU can't
+ * run it, and why in err. */
 pk_qnn *pk_qnn_open(const pk_model *m, uint32_t frames, const char *cache, char *err, size_t errlen);
 void pk_qnn_free(pk_qnn *e);
 
@@ -42,5 +45,9 @@ uint32_t pk_qnn_layers(const pk_qnn *e);
  * [Te][d_model], Te encoder frames, which it returns; 0 if QNN failed. One
  * call at a time. */
 uint32_t pk_qnn_encode(pk_qnn *e, const float *feat, uint32_t T0, float *x);
+
+/* The chip QNN runs on, in PKTITO_QNN_TARGET's words, into out
+ * (pk_qnn_chip): 0, or -1 where QNN finds no NPU, and why in err */
+int pk_qnn_target(char *out, size_t n, char *err, size_t errlen);
 
 #endif

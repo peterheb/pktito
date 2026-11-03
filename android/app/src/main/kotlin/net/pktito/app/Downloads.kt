@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import java.util.Locale
 import kotlin.concurrent.thread
 import kotlin.math.roundToLong
+import org.json.JSONArray
 import org.json.JSONObject
 
 /** What went wrong, from the desktop's Rust (strings.rs, Problem): the key of its words, the server they name, and the particulars as whatever reported it said them. */
@@ -75,13 +76,18 @@ class Download(
  * download the person asked for, with a network as its condition; before
  * it a foreground service (DownloadService). Its progress is in a
  * notification as well as on the screen. One at a time: the screen offers
- * no second while one is shown.
+ * no second while one is shown. It fetches the files of the model's
+ * edition for this phone (Offer.parts), or for a model here on the CPU,
+ * its graph for the NPU alone (Manage models, Faster), each checked in
+ * turn, their bytes counted as one.
  */
 object Downloads {
     /** The download under way, paused or failed, for the screen; null once it is done or cancelled. */
     var state by mutableStateOf<Download?>(null)
 
     const val NAME = "name"
+    /** The files it fetches, as Engine.download takes them. */
+    const val FILES = "files"
     /** The notification's id; the transcription's is 1. */
     const val NOTE = 2
     const val JOB = 1
@@ -92,24 +98,42 @@ object Downloads {
     private var worker: Thread? = null
     /** What ends the job or the service keeping the download going, once it ends. */
     private var over: (() -> Unit)? = null
+    /** The files of the download shown (FILES), for its Cancel. On the main thread. */
+    private var files = "[]"
 
     val running: Boolean
         @Synchronized get() = worker?.isAlive == true
 
     /**
-     * The model of that name downloaded, or its download gone on with from
-     * what it kept: the screen says so at once, from what is here, as
-     * app.js's startDownload; a download that is waiting to try again
-     * tries now.
+     * Whether the download shown is of a model here, which can only be its
+     * graph for the NPU (Manage models, Faster): Manage models shows it,
+     * not the setup screen, and the model in use stays in use.
+     */
+    val faster: Boolean
+        get() = state?.let { d -> Models.offers.find { it.name == d.name }?.have } == true
+
+    /** The files a download of o fetches: its edition's, or for a model here on the CPU, the graph that makes it faster. */
+    fun parts(o: Offer): List<Part> = if (o.have) listOfNotNull(o.graph.takeIf { o.faster > 0 }) else o.parts
+
+    /**
+     * The files of the model of that name downloaded (parts), or their
+     * download gone on with from what it kept: the screen says so at once,
+     * from what is here, as app.js's startDownload; a download that is
+     * waiting to try again tries now.
      */
     fun start(context: Context, o: Offer) {
         if (running) return Engine.retryDownload()
-        state = Download(o.name, "downloading", o.partial, o.bytes, 0.0, "", null, retry = false, trying = false)
+        val parts = parts(o)
+        if (parts.isEmpty()) return
+        files = JSONArray(parts.map { it.file.name }).toString()
+        val got = parts.sumOf { it.kept }
+        val total = parts.sumOf { it.bytes }
+        state = Download(o.name, "downloading", got, total, 0.0, "", null, retry = false, trying = false)
         if (Build.VERSION.SDK_INT < 34)
-            context.startForegroundService(Intent(context, DownloadService::class.java).putExtra(NAME, o.name))
-        else if (!DownloadJob.schedule(context, o)) {
+            context.startForegroundService(Intent(context, DownloadService::class.java).putExtra(NAME, o.name).putExtra(FILES, files))
+        else if (!DownloadJob.schedule(context, o.name, files, total - got)) {
             Log.w(TAG, "${o.name}: JobScheduler refused the download's job")
-            state = Download(o.name, "failed", o.partial, o.bytes, 0.0, "", Problem("", "", "JobScheduler refused the download's job"), retry = false, trying = false)
+            state = Download(o.name, "failed", got, total, 0.0, "", Problem("", "", "JobScheduler refused the download's job"), retry = false, trying = false)
         }
     }
 
@@ -130,7 +154,7 @@ object Downloads {
     /** Stop it and delete what it had: its thread does, and says so, if it is running; else here. */
     fun cancel(context: Context) {
         val name = state?.name ?: return
-        if (Engine.cancelDownload(Models.dir(context).path, name)) return
+        if (Engine.cancelDownload(Models.dir(context).path, name, files)) return
         cancelJob(context)
         state = null
         Models.refresh(context)
@@ -141,22 +165,33 @@ object Downloads {
     }
 
     /**
-     * The download of name on a thread of its own, or the one running told
-     * to try now, for the job or the service that keeps it going: over ends
-     * that once the download ends. false where there is nothing to do, the
-     * model here already.
+     * The download of files of name on a thread of its own, or the one
+     * running told to try now, for the job or the service that keeps it
+     * going, on the main thread: over ends that once the download ends.
+     * false where there is nothing to do, the files here already.
      */
     @Synchronized
-    fun run(context: Context, name: String, over: () -> Unit): Boolean {
+    fun run(context: Context, name: String, files: String, over: () -> Unit): Boolean {
         val app = context.applicationContext
-        if (Models.catalog(app).find { it.name == name }?.have != false) return false
+        val o = Models.catalog(app).find { it.name == name } ?: return false
+        val parts = of(o, files)
+        if (parts.all { it.here }) return false
+        this.files = files
         this.over = over
         if (worker?.isAlive == true) {
             Engine.retryDownload()
             return true
         }
-        worker = thread(name = "download") { download(app, name) }
+        // a graph for a model here, which leaves the one in use as it is
+        val faster = o.have
+        worker = thread(name = "download") { download(app, name, files, parts, faster) }
         return true
+    }
+
+    /** Which of o's files files names (FILES). */
+    private fun of(o: Offer, files: String): List<Part> {
+        val names = JSONArray(files).let { a -> (0 until a.length()).map { a.getString(it) } }
+        return listOfNotNull(o.whole, o.slim, o.graph).filter { it.file.name in names }
     }
 
     /**
@@ -173,15 +208,15 @@ object Downloads {
         over = { cancelJob(app) }
     }
 
-    private fun download(app: Context, name: String) {
+    private fun download(app: Context, name: String, files: String, parts: List<Part>, faster: Boolean) {
         // room for the rest made where Android can make it (Models.room); where
         // it cannot, the download stops when the storage is full, as the
         // desktop's does, keeping what it has to go on from
-        Models.catalog(app).find { it.name == name }?.let { Models.room(app, it.bytes - it.partial) }
+        Models.room(app, parts.sumOf { it.bytes - it.kept })
         val notes = app.getSystemService(NotificationManager::class.java)
         var shown = 0L
         val path = try {
-            Engine.download(Models.dir(app).path, name, object : Engine.Download {
+            Engine.download(Models.dir(app).path, name, files, object : Engine.Download {
                 override fun state(json: String) {
                     val d = Download.parse(json)
                     main.post { state = d.takeUnless { it.step == "done" || it.step == "cancelled" } }
@@ -206,8 +241,8 @@ object Downloads {
         }
         if (path.isNotEmpty()) {
             // in use once it checks, as the desktop's (main.rs, download_model)
-            Models.use(app, name)
-            Log.i(TAG, "downloaded $name")
+            if (!faster) Models.use(app, name)
+            Log.i(TAG, "downloaded $name: $files")
         }
         main.post {
             Models.refresh(app)
@@ -284,9 +319,10 @@ fun timeLeft(res: Resources, s: Double): String = when {
 class DownloadJob : JobService() {
     override fun onStartJob(params: JobParameters): Boolean {
         val name = params.extras.getString(Downloads.NAME) ?: return false
+        val files = params.extras.getString(Downloads.FILES) ?: return false
         // the notification first, as a user-initiated job owes Android
         setNotification(params, Downloads.NOTE, Downloads.note(this, name, Downloads.state), JOB_END_NOTIFICATION_POLICY_REMOVE)
-        return Downloads.run(this, name) { jobFinished(params, false) }
+        return Downloads.run(this, name, files) { jobFinished(params, false) }
     }
 
     override fun onStopJob(params: JobParameters): Boolean {
@@ -297,13 +333,18 @@ class DownloadJob : JobService() {
     }
 
     companion object {
-        /** Whether JobScheduler took it: a user-initiated job is taken only while the app is in sight. */
-        fun schedule(context: Context, o: Offer): Boolean {
+        /** Whether JobScheduler took it, bytes to come: a user-initiated job is taken only while the app is in sight. */
+        fun schedule(context: Context, name: String, files: String, bytes: Long): Boolean {
             val job = JobInfo.Builder(Downloads.JOB, ComponentName(context, DownloadJob::class.java))
                 .setUserInitiated(true)
                 .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
-                .setEstimatedNetworkBytes(o.bytes - o.partial, 0)
-                .setExtras(PersistableBundle().apply { putString(Downloads.NAME, o.name) })
+                .setEstimatedNetworkBytes(bytes, 0)
+                .setExtras(
+                    PersistableBundle().apply {
+                        putString(Downloads.NAME, name)
+                        putString(Downloads.FILES, files)
+                    },
+                )
                 .build()
             return context.getSystemService(JobScheduler::class.java).schedule(job) == JobScheduler.RESULT_SUCCESS
         }
@@ -321,9 +362,10 @@ class DownloadService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val name = intent?.getStringExtra(Downloads.NAME)
+        val files = intent?.getStringExtra(Downloads.FILES)
         // first, as startForegroundService promised Android, within seconds
         startForeground(Downloads.NOTE, Downloads.note(this, name ?: "", Downloads.state), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-        if (name == null || !Downloads.run(this, name) { done(startId) }) done(startId)
+        if (name == null || files == null || !Downloads.run(this, name, files) { done(startId) }) done(startId)
         return START_NOT_STICKY
     }
 
