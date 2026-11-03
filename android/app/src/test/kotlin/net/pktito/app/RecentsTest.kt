@@ -10,9 +10,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The recent list from before it was backed up, moved from no_backup to the
- * app's files once (Recents.moveList): its index and transcripts with it,
- * and a list already there, as a restore leaves one, kept.
+ * The recent list from before it was backed up, moved from no_backup to the app's files once
+ * (Recents.moveList): its index and transcripts with it, and a list already there, as a restore
+ * leaves one, kept.
  */
 @RunWith(RobolectricTestRunner::class)
 class RecentsTest {
@@ -26,7 +26,8 @@ class RecentsTest {
         for (id in ids) File(dir, "$id.json").writeText("{}")
     }
 
-    @Test fun theListMovesWithItsTranscripts() {
+    @Test
+    fun theListMovesWithItsTranscripts() {
         list(old, "a", "b")
         new.parentFile!!.mkdirs()
         Recents.moveList(old, new)
@@ -34,7 +35,8 @@ class RecentsTest {
         assertEquals(setOf("index.json", "a.json", "b.json"), new.list()!!.toSet())
     }
 
-    @Test fun aListAlreadyThereStays() {
+    @Test
+    fun aListAlreadyThereStays() {
         list(old, "a")
         list(new, "b")
         Recents.moveList(old, new)
@@ -42,7 +44,8 @@ class RecentsTest {
         assertTrue(File(old, "a.json").isFile)
     }
 
-    @Test fun noListMovesNothing() {
+    @Test
+    fun noListMovesNothing() {
         Recents.moveList(old, new)
         assertFalse(new.exists())
     }

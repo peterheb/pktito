@@ -132,6 +132,43 @@ extern "C" {
     fn pk_asr_ane_warm(a: *mut RawAsr, err: *mut c_char, errlen: usize) -> c_int;
 }
 
+// Android's, from the fork's qnn branch (vendor/pktito-qnn): the encoder
+// on a Snapdragon's NPU (core/qnn.h), in a build with QNN_SDK set
+// (build.rs), without which it says so; the chip it is, for the graph
+// compiled for it; and the fork's slim model file, whose only encoder that
+// graph is
+#[cfg(target_os = "android")]
+extern "C" {
+    fn pk_model_has_encoder(m: *const RawModel) -> c_int;
+    fn pk_asr_use_qnn(
+        a: *mut RawAsr,
+        on: c_int,
+        cache: *const c_char,
+        err: *mut c_char,
+        errlen: usize,
+    ) -> c_int;
+    fn pk_qnn_chip(chip: *mut c_char, cap: usize, err: *mut c_char, errlen: usize) -> c_int;
+}
+
+/// The phone's NPU as QNN describes it, as the graph compiled for it names
+/// it (model::Graph's chip: "57,75,8,1,0"); why not where QNN finds none,
+/// or the build has no QNN. QNN loads the NPU's own library to say, 137 to
+/// 168 ms on the Googlebook (2026-11-03): asked once, off the screen's
+/// thread.
+#[cfg(target_os = "android")]
+pub fn qnn_chip() -> Result<String, String> {
+    let mut chip = [0 as c_char; 64];
+    let mut err = [0 as c_char; 1024];
+    if unsafe { pk_qnn_chip(chip.as_mut_ptr(), chip.len(), err.as_mut_ptr(), err.len()) } != 0 {
+        return Err(unsafe { CStr::from_ptr(err.as_ptr()) }
+            .to_string_lossy()
+            .into_owned());
+    }
+    Ok(unsafe { CStr::from_ptr(chip.as_ptr()) }
+        .to_string_lossy()
+        .into_owned())
+}
+
 /// The cues of a subtitle track for words and their times in milliseconds,
 /// as the CLI's --srt has them (core/captions.c): English's rules for
 /// english 1, punctuation and pauses alone for 0, and for -1 English's if
@@ -262,8 +299,9 @@ impl Model {
     }
 
     /// Whether the file holds the encoder: not a slim one (model.rs,
-    /// Coreml), which transcribes only with a Core ML encoder (Asr::use_ane).
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    /// Coreml), which transcribes only with a Core ML encoder (Asr::use_ane)
+    /// or, on Android, an NPU's graph (Asr::use_qnn).
+    #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
     pub fn has_encoder(&self) -> bool {
         unsafe { pk_model_has_encoder(self.raw) != 0 }
     }
@@ -380,6 +418,25 @@ impl Asr {
             }
         };
         if rc != 0 {
+            return Err(unsafe { CStr::from_ptr(err.as_ptr()) }
+                .to_string_lossy()
+                .into_owned());
+        }
+        Ok(())
+    }
+
+    /// The encoder on the phone's NPU (a Snapdragon's Hexagon, through
+    /// Qualcomm's QNN: core/qnn.h): the graph at path, compiled on a PC for
+    /// this chip from the model's checkpoint, read in 0.7 s on a Galaxy
+    /// S24 Ultra. Where QNN refuses it, why, and the model's own encoder on
+    /// the CPU, which a slim file has not. The app ships no compiler, so a
+    /// whole file is never compiled here.
+    #[cfg(target_os = "android")]
+    pub fn use_qnn(&mut self, cache: &Path) -> Result<(), String> {
+        let c =
+            CString::new(cache.to_string_lossy().as_bytes()).map_err(|_| "bad path".to_string())?;
+        let mut err = [0 as c_char; 1024];
+        if unsafe { pk_asr_use_qnn(self.raw, 1, c.as_ptr(), err.as_mut_ptr(), err.len()) } != 0 {
             return Err(unsafe { CStr::from_ptr(err.as_ptr()) }
                 .to_string_lossy()
                 .into_owned());

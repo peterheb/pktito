@@ -48,8 +48,8 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
@@ -109,7 +109,10 @@ import net.pktito.app.R
 import net.pktito.app.Recents
 import net.pktito.app.Seg
 
-/** What the start screen does with what it is asked: choose a file, About, and the recent list's open, forget and clear, by a transcript's id. */
+/**
+ * What the start screen does with what it is asked: choose a file, About, and the recent list's
+ * open, forget and clear, by a transcript's id.
+ */
 class ReadyActions(
     val choose: () -> Unit,
     val about: () -> Unit,
@@ -119,21 +122,17 @@ class ReadyActions(
 )
 
 /**
- * The start screen (ui/index.html, #ready): the wordmark and the model in
- * use, its menu (ModelButton), on the column's top edge, and under them the
- * prompt and its button in a dashed zone, as the desktop's drop zone,
- * which says where a file goes. A phone has nothing to drop, so the zone
- * says what it is for. The wordmark opens About. With transcripts on the
- * recent list, the column is the screen's height and the list takes what
- * is left under the zone (app.css, .has-recent); without, the top row and
- * the zone have their middle in the window's, as iOS's and the desktop's
- * (.pk-ready). Where the top row and the zone, as tall as their words make
- * them, leave the list under 160 dp, the screen scrolls as a whole, the
- * list with it: the desktop's window is never that short, but a split
- * screen is, and a phone on its side at any text size. The emulator's
- * Pixel 5 on its side has 345 dp, which leave the list 66 at the default
- * text size and 38 at twice it; upright at twice it they leave 427
- * (2026-11-01).
+ * The start screen (ui/index.html, #ready): the wordmark and the model in use, its menu
+ * (ModelButton), on the column's top edge, and under them the prompt and its button in a dashed
+ * zone, as the desktop's drop zone, which says where a file goes. A phone has nothing to drop, so
+ * the zone says what it is for. The wordmark opens About. With transcripts on the recent list, the
+ * column is the screen's height and the list takes what is left under the zone (app.css,
+ * .has-recent); without, the top row and the zone have their middle in the window's, as iOS's and
+ * the desktop's (.pk-ready). Where the top row and the zone, as tall as their words make them,
+ * leave the list under 160 dp, the screen scrolls as a whole, the list with it: the desktop's
+ * window is never that short, but a split screen is, and a phone on its side at any text size. The
+ * emulator's Pixel 5 on its side has 345 dp, which leave the list 66 at the default text size and
+ * 38 at twice it; upright at twice it they leave 427 (2026-11-01).
  */
 @Composable
 fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> Unit) {
@@ -142,22 +141,24 @@ fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> 
     // the top row's height and the zone's, as they were last laid out
     var top by remember { mutableIntStateOf(0) }
     var zone by remember { mutableIntStateOf(0) }
-    BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = if (listed) Alignment.TopCenter else Alignment.Center) {
+    BoxWithConstraints(
+        Modifier.fillMaxSize(),
+        contentAlignment = if (listed) Alignment.TopCenter else Alignment.Center,
+    ) {
         // what they leave the list, less the column's 11 dp above and 16
         // below and its two gaps of 24
         val left = maxHeight - 75.dp - with(LocalDensity.current) { (top + zone).toDp() }
         val short = left < 160.dp
         val edge = if (maxWidth < 600.dp) 16.dp else 40.dp
         Column(
-            Modifier
-                .widthIn(max = 640.dp)
+            Modifier.widthIn(max = 640.dp)
                 .fillMaxWidth()
                 .then(
                     when {
                         short -> Modifier.verticalScroll(rememberScrollState())
                         listed -> Modifier.fillMaxHeight()
                         else -> Modifier
-                    },
+                    }
                 )
                 // 16 from a phone's sides, as every screen there, and 40 in
                 // the 640 dp column of a wider one (design/README.md, Edges);
@@ -170,12 +171,24 @@ fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> 
                 // above and below, so that the top row and the zone have
                 // their middle there: at 11 above they stood 2.6 dp over it
                 // on a phone
-                .padding(start = edge, end = edge, top = if (listed) 11.dp else 16.dp, bottom = 16.dp),
+                .padding(
+                    start = edge,
+                    end = edge,
+                    top = if (listed) 11.dp else 16.dp,
+                    bottom = 16.dp,
+                ),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             TopRow(a, model, Modifier.onSizeChanged { top = it.height })
             Drop(a, Modifier.fillMaxWidth().onSizeChanged { zone = it.height })
-            if (listed) Recent(recent, a, onClear = { asking = true }, scrolls = !short, if (short) Modifier else Modifier.weight(1f))
+            if (listed)
+                Recent(
+                    recent,
+                    a,
+                    onClear = { asking = true },
+                    scrolls = !short,
+                    if (short) Modifier else Modifier.weight(1f),
+                )
         }
     }
     if (asking)
@@ -189,9 +202,8 @@ fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> 
 }
 
 /**
- * The start screen's top row: the wordmark, which opens About, and the
- * model in use, its menu (ModelButton), under the wordmark where the two
- * do not fit (Beside).
+ * The start screen's top row: the wordmark, which opens About, and the model in use, its menu
+ * (ModelButton), under the wordmark where the two do not fit (Beside).
  */
 @Composable
 private fun TopRow(a: ReadyActions, model: @Composable () -> Unit, modifier: Modifier = Modifier) {
@@ -199,9 +211,8 @@ private fun TopRow(a: ReadyActions, model: @Composable () -> Unit, modifier: Mod
 }
 
 /**
- * The drop zone (app.css, .pk-ready-drop): the prompt and Choose in a dashed
- * zone, its dashes 6.2:1 on the surface inside, 6.8 on the ground outside,
- * past the 3:1 a boundary needs.
+ * The drop zone (app.css, .pk-ready-drop): the prompt and Choose in a dashed zone, its dashes 6.2:1
+ * on the surface inside, 6.8 on the ground outside, past the 3:1 a boundary needs.
  */
 @Composable
 private fun Drop(a: ReadyActions, modifier: Modifier) {
@@ -212,9 +223,16 @@ private fun Drop(a: ReadyActions, modifier: Modifier) {
             .drawBehind {
                 val w = 2.dp.toPx()
                 drawRoundRect(
-                    p.inkMuted, Offset(w / 2, w / 2), size.copy(size.width - w, size.height - w),
+                    p.inkMuted,
+                    Offset(w / 2, w / 2),
+                    size.copy(size.width - w, size.height - w),
                     CornerRadius(Radius.radiusUi.toPx()),
-                    style = Stroke(w, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx()))),
+                    style =
+                        Stroke(
+                            w,
+                            pathEffect =
+                                PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())),
+                        ),
                 )
             }
             .padding(horizontal = 24.dp, vertical = 36.dp),
@@ -233,37 +251,49 @@ private fun Drop(a: ReadyActions, modifier: Modifier) {
     }
 }
 
-/** A transcript open beside the side, as its row there says it (LiveRow): how far it has got, by the desktop's steps. */
+/**
+ * A transcript open beside the side, as its row there says it (LiveRow): how far it has got, by the
+ * desktop's steps.
+ */
 class Opened(val id: String, val name: String, val step: String, val done: Double) {
     val running: Boolean
         get() = step == "loading" || step == "reading" || step == "transcribing"
 }
 
 /**
- * A window with room for the work beside it (MainActivity, sided) keeps the
- * start screen's top row and recent list in a column at its left, the side,
- * as the desktop's does from 1160 px (app.css, the side): beside the drop
- * zone while the list has anything in it (open, null), and beside the
- * transcript open, whose row it marks, or heads the list with where the
- * list does not have it (LiveRow); Choose a file… stands in there for the
- * zone's. 300 dp, the desktop's 300 px. Another row there leaves the one
- * open as Back would, and opens (ReadyActions.open). While a transcription
- * runs, the rows and Choose wait for it, dimmed: Android transcribes one
- * file at a time, and a phone has no way back from one under way either.
+ * A window with room for the work beside it (MainActivity, sided) keeps the start screen's top row
+ * and recent list in a column at its left, the side, as the desktop's does from 1160 px (app.css,
+ * the side): beside the drop zone while the list has anything in it (open, null), and beside the
+ * transcript open, whose row it marks, or heads the list with where the list does not have it
+ * (LiveRow); Choose a file… stands in there for the zone's. 300 dp, the desktop's 300 px. Another
+ * row there leaves the one open as Back would, and opens (ReadyActions.open). While a transcription
+ * runs, the rows and Choose wait for it, dimmed: Android transcribes one file at a time, and a
+ * phone has no way back from one under way either.
  */
 @Composable
-fun Side(recent: List<Recents.Item>, a: ReadyActions, open: Opened?, model: @Composable () -> Unit, work: @Composable () -> Unit) {
+fun Side(
+    recent: List<Recents.Item>,
+    a: ReadyActions,
+    open: Opened?,
+    model: @Composable () -> Unit,
+    work: @Composable () -> Unit,
+) {
     val p = pk
     var asking by rememberSaveable { mutableStateOf(false) }
     val running = open?.running == true
     val live = open?.takeIf { o -> recent.none { it.id == o.id } }
     Row(Modifier.fillMaxSize()) {
         Column(
-            Modifier
-                .width(300.dp)
+            Modifier.width(300.dp)
                 .fillMaxHeight()
                 // its edge, the desktop's border-right
-                .drawBehind { drawRect(p.sunk, Offset(size.width - 1.dp.toPx(), 0f), Size(1.dp.toPx(), size.height)) }
+                .drawBehind {
+                    drawRect(
+                        p.sunk,
+                        Offset(size.width - 1.dp.toPx(), 0f),
+                        Size(1.dp.toPx(), size.height),
+                    )
+                }
                 // its top row on the work's header's line, the model menu's
                 // 40 in the middle of the header's 62, and Choose with the
                 // strip's top, 16 under the row as the strip is under the
@@ -276,13 +306,36 @@ fun Side(recent: List<Recents.Item>, a: ReadyActions, open: Opened?, model: @Com
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             TopRow(a, model)
-            if (open != null) PkButton(stringResource(R.string.choose), a.choose, Modifier.fillMaxWidth(), enabled = !running)
+            if (open != null)
+                PkButton(
+                    stringResource(R.string.choose),
+                    a.choose,
+                    Modifier.fillMaxWidth(),
+                    enabled = !running,
+                )
             if (recent.isNotEmpty() || live != null)
-                Recent(recent, a, onClear = { asking = true }, scrolls = true, Modifier.weight(1f), top = 0.dp, open = open?.id, live = live, enabled = !running)
+                Recent(
+                    recent,
+                    a,
+                    onClear = { asking = true },
+                    scrolls = true,
+                    Modifier.weight(1f),
+                    top = 0.dp,
+                    open = open?.id,
+                    live = live,
+                    enabled = !running,
+                )
         }
         Box(Modifier.weight(1f).fillMaxHeight()) {
             // the zone in the middle, 560 wide, 40 from either edge at the least
-            if (open == null) Drop(a, Modifier.align(Alignment.Center).padding(horizontal = 40.dp).widthIn(max = 560.dp).fillMaxWidth())
+            if (open == null)
+                Drop(
+                    a,
+                    Modifier.align(Alignment.Center)
+                        .padding(horizontal = 40.dp)
+                        .widthIn(max = 560.dp)
+                        .fillMaxWidth(),
+                )
             else work()
         }
     }
@@ -297,29 +350,31 @@ fun Side(recent: List<Recents.Item>, a: ReadyActions, open: Opened?, model: @Com
 }
 
 /**
- * The recent list (app.css, .pk-recent): its heading and Clear, which asks
- * first, then each transcript, newest first, opened by a tap; taken off the
- * list by a long press's menu, by the × over its date under a mouse, or by
- * Delete from the keyboard, which goes on to the row that takes its place
- * (app.js, renderReady and forget). Each row is a line where that leaves
- * its name 250 dp, as the desktop's narrowest window's list, 440 wide (480
- * less its margins), leaves it, grown with the text (withText),
- * beside the list's widest length and date; on a phone, narrower, its
- * length and date go under its name, which keeps the width. On an open
- * fold, 673 dp, whose start screen has 560 inside its column and the list
- * 12 past either side of that, a row keeps its line through 1.3 times the
- * text size, the name 393 dp, and at 1.5 would have 385 to the 390 asked
- * there, so the two go under (2026-11-01).
- * scrolls: the list scrolls under its heading, else it is all there, for a
- * screen that scrolls (Ready). In
- * the side, the row of the transcript open is marked (open), one the list
- * does not have heads it (live), and while one is under way the rows and
- * Clear wait (enabled); Clear goes with the last of the list's own.
+ * The recent list (app.css, .pk-recent): its heading and Clear, which asks first, then each
+ * transcript, newest first, opened by a tap; taken off the list by a long press's menu, by the ×
+ * over its date under a mouse, or by Delete from the keyboard, which goes on to the row that takes
+ * its place (app.js, renderReady and forget). Each row is a line where that leaves its name 250 dp,
+ * as the desktop's narrowest window's list, 440 wide (480 less its margins), leaves it, grown with
+ * the text (withText), beside the list's widest length and date; on a phone, narrower, its length
+ * and date go under its name, which keeps the width. On an open fold, 673 dp, whose start screen
+ * has 560 inside its column and the list 12 past either side of that, a row keeps its line through
+ * 1.3 times the text size, the name 393 dp, and at 1.5 would have 385 to the 390 asked there, so
+ * the two go under (2026-11-01). scrolls: the list scrolls under its heading, else it is all there,
+ * for a screen that scrolls (Ready). In the side, the row of the transcript open is marked (open),
+ * one the list does not have heads it (live), and while one is under way the rows and Clear wait
+ * (enabled); Clear goes with the last of the list's own.
  */
 @Composable
 private fun Recent(
-    items: List<Recents.Item>, a: ReadyActions, onClear: () -> Unit, scrolls: Boolean, modifier: Modifier,
-    top: Dp = 8.dp, open: String? = null, live: Opened? = null, enabled: Boolean = true,
+    items: List<Recents.Item>,
+    a: ReadyActions,
+    onClear: () -> Unit,
+    scrolls: Boolean,
+    modifier: Modifier,
+    top: Dp = 8.dp,
+    open: String? = null,
+    live: Opened? = null,
+    enabled: Boolean = true,
 ) {
     val p = pk
     val rows = remember { mutableMapOf<String, FocusRequester>() }
@@ -328,21 +383,32 @@ private fun Recent(
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val dates = items.map { whenDone(it.finished) }
-    val beside = remember(items, dates, measurer, density) {
-        with(density) {
-            items.indices.maxOfOrNull { i ->
-                val length = measurer.measure(hms(items[i].duration, items[i].duration), figures).size.width
-                length + maxOf(72.dp.roundToPx(), measurer.measure(dates[i], Type.small).size.width)
-            }?.toDp() ?: 0.dp
+    val beside =
+        remember(items, dates, measurer, density) {
+            with(density) {
+                items.indices
+                    .maxOfOrNull { i ->
+                        val length =
+                            measurer
+                                .measure(hms(items[i].duration, items[i].duration), figures)
+                                .size
+                                .width
+                        length +
+                            maxOf(
+                                72.dp.roundToPx(),
+                                measurer.measure(dates[i], Type.small).size.width,
+                            )
+                    }
+                    ?.toDp() ?: 0.dp
+            }
         }
-    }
     val least = 250.dp.withText()
     val now by rememberUpdatedState(items)
     var refocus by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(refocus) {
         val i = refocus ?: return@LaunchedEffect
         // a frame, for the list to lay out the row that took its place
-        withFrameNanos { }
+        withFrameNanos {}
         now.getOrNull(minOf(i, now.size - 1))?.let { runCatching { rows[it.id]?.requestFocus() } }
         refocus = null
     }
@@ -351,12 +417,20 @@ private fun Recent(
     // the rows' boxes go round them, as the desktop's rows' hover does, 4 px
     // from a narrow window's edge (design/README.md, On an edge): they were
     // 12 inside them (the layout audit, 2026-11-01)
-    Column(modifier.bleed(12.dp).padding(top = top), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(
+        modifier.bleed(12.dp).padding(top = top),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         Row(
             Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(stringResource(R.string.recent_title), style = Type.ui, color = p.ink, modifier = Modifier.weight(1f))
+            Text(
+                stringResource(R.string.recent_title),
+                style = Type.ui,
+                color = p.ink,
+                modifier = Modifier.weight(1f),
+            )
             // the list's one action, a ghost button as small as the heading,
             // its padding outside it so that its word ends over the dates,
             // in their grey (app.css, #clear-recent)
@@ -365,31 +439,41 @@ private fun Recent(
                     stringResource(R.string.recent_clear),
                     style = Type.ui.copy(fontSize = 13.sp),
                     color = p.inkMuted,
-                    modifier = Modifier
-                        .bleed(8.dp, 11.dp)
-                        .then(if (enabled) Modifier else Modifier.alpha(0.45f))
-                        .control(Corner, enabled = enabled, label = stringResource(R.string.recent_clear_label), onClick = onClear)
-                        .padding(horizontal = 8.dp, vertical = 11.dp),
+                    modifier =
+                        Modifier.bleed(8.dp, 11.dp)
+                            .then(if (enabled) Modifier else Modifier.alpha(0.45f))
+                            .control(
+                                Corner,
+                                enabled = enabled,
+                                label = stringResource(R.string.recent_clear_label),
+                                onClick = onClear,
+                            )
+                            .padding(horizontal = 8.dp, vertical = 11.dp),
                 )
         }
         BoxWithConstraints(if (scrolls) Modifier.weight(1f) else Modifier) {
             // the row's 10 and 12 dp, its icon's 16 and three gaps of 10
             val oneLine = maxWidth - 68.dp - beside >= least
-            val row = @Composable { i: Int, r: Recents.Item ->
-                val focus = remember { FocusRequester() }
-                DisposableEffect(r.id) {
-                    rows[r.id] = focus
-                    onDispose { rows.remove(r.id) }
+            val row =
+                @Composable { i: Int, r: Recents.Item ->
+                    val focus = remember { FocusRequester() }
+                    DisposableEffect(r.id) {
+                        rows[r.id] = focus
+                        onDispose { rows.remove(r.id) }
+                    }
+                    RecentRow(
+                        r,
+                        oneLine,
+                        focus,
+                        current = r.id == open,
+                        enabled = enabled,
+                        onOpen = { a.open(r.id) },
+                        onForget = { keys ->
+                            if (keys) refocus = i
+                            a.forget(r.id)
+                        },
+                    )
                 }
-                RecentRow(
-                    r, oneLine, focus, current = r.id == open, enabled = enabled,
-                    onOpen = { a.open(r.id) },
-                    onForget = { keys ->
-                        if (keys) refocus = i
-                        a.forget(r.id)
-                    },
-                )
-            }
             if (scrolls)
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     if (live != null) item(key = "live") { LiveRow(live) }
@@ -408,10 +492,9 @@ private fun Recent(
 private val rowName = Type.ui.copy(lineHeight = 1.3.em)
 
 /**
- * A recent row's room before its icon: 12, the heading's, less the 2 dp
- * that the file icon's ink stands in its 16 dp box (Feather's file, from 3
- * of 24 with its stroke), so that the ink is on the screen's edge, under the
- * heading's first letter (design/README.md, On an edge).
+ * A recent row's room before its icon: 12, the heading's, less the 2 dp that the file icon's ink
+ * stands in its 16 dp box (Feather's file, from 3 of 24 with its stroke), so that the ink is on the
+ * screen's edge, under the heading's first letter (design/README.md, On an edge).
  */
 private val rowStart = 10.dp
 
@@ -419,14 +502,19 @@ private val rowStart = 10.dp
 private val figures = Type.stamp.copy(fontFeatureSettings = "tnum")
 
 /**
- * onForget: true from the keyboard, which then goes on to the next row. The
- * transcript open beside the side (current) is on the surface, as the
- * desktop's row with aria-current, and a tap there is the one already open.
+ * onForget: true from the keyboard, which then goes on to the next row. The transcript open beside
+ * the side (current) is on the surface, as the desktop's row with aria-current, and a tap there is
+ * the one already open.
  */
 @Composable
 private fun RecentRow(
-    r: Recents.Item, oneLine: Boolean, focus: FocusRequester, current: Boolean, enabled: Boolean,
-    onOpen: () -> Unit, onForget: (keys: Boolean) -> Unit,
+    r: Recents.Item,
+    oneLine: Boolean,
+    focus: FocusRequester,
+    current: Boolean,
+    enabled: Boolean,
+    onOpen: () -> Unit,
+    onForget: (keys: Boolean) -> Unit,
 ) {
     val p = pk
     var menu by remember { mutableStateOf(false) }
@@ -437,21 +525,38 @@ private fun RecentRow(
     val date = whenDone(r.finished)
     // the row's hover is its box's, which holds the × too: on the × the row
     // would lose it, and the × with it
-    Box(Modifier.fillMaxWidth().then(if (enabled) Modifier else Modifier.alpha(0.45f)).hoverable(hover)) {
+    Box(
+        Modifier.fillMaxWidth()
+            .then(if (enabled) Modifier else Modifier.alpha(0.45f))
+            .hoverable(hover)
+    ) {
         Row(
-            Modifier
-                .focusRequester(focus)
+            Modifier.focusRequester(focus)
                 .control(
-                    Corner, if (current) p.surface else Color.Transparent, enabled = enabled, held = menu,
-                    onLongClick = { menu = true }, onClick = { if (!current) onOpen() },
+                    Corner,
+                    if (current) p.surface else Color.Transparent,
+                    enabled = enabled,
+                    held = menu,
+                    onLongClick = { menu = true },
+                    onClick = { if (!current) onOpen() },
                 )
                 .then(if (current) Modifier.semantics { selected = true } else Modifier)
                 .onKeyEvent { e ->
-                    val del = e.type == KeyEventType.KeyDown && (e.key == Key.Delete || e.key == Key.Backspace)
+                    val del =
+                        e.type == KeyEventType.KeyDown &&
+                            (e.key == Key.Delete || e.key == Key.Backspace)
                     if (del) onForget(true)
                     del
                 }
-                .semantics { customActions = listOf(CustomAccessibilityAction(remove) { onForget(false); true }) }
+                .semantics {
+                    customActions =
+                        listOf(
+                            CustomAccessibilityAction(remove) {
+                                onForget(false)
+                                true
+                            }
+                        )
+                }
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
                 .padding(start = rowStart, end = 12.dp, top = 10.dp, bottom = 10.dp),
@@ -460,19 +565,48 @@ private fun RecentRow(
         ) {
             Icon(Icons.file, null, tint = p.ink, modifier = Modifier.size(16.dp))
             if (oneLine) {
-                Text(r.name, style = rowName, color = p.ink, maxLines = 1, overflow = TextOverflow.MiddleEllipsis, modifier = Modifier.weight(1f))
+                Text(
+                    r.name,
+                    style = rowName,
+                    color = p.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.MiddleEllipsis,
+                    modifier = Modifier.weight(1f),
+                )
                 Text(length, style = figures, color = p.inkMuted, maxLines = 1)
                 Text(
-                    date, style = Type.small, color = p.inkMuted, maxLines = 1, textAlign = TextAlign.End,
+                    date,
+                    style = Type.small,
+                    color = p.inkMuted,
+                    maxLines = 1,
+                    textAlign = TextAlign.End,
                     // the desktop's 72, and as much more as a date of another year needs
                     modifier = Modifier.widthIn(min = 72.dp).alpha(if (hovered) 0f else 1f),
                 )
             } else
                 Column(Modifier.weight(1f)) {
-                    Text(r.name, style = rowName, color = p.ink, maxLines = 1, overflow = TextOverflow.MiddleEllipsis)
+                    Text(
+                        r.name,
+                        style = rowName,
+                        color = p.ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.MiddleEllipsis,
+                    )
                     Row {
-                        Text(length, style = figures, color = p.inkMuted, maxLines = 1, modifier = Modifier.alignByBaseline())
-                        Text("$DOT$date", style = Type.small, color = p.inkMuted, maxLines = 1, modifier = Modifier.alignByBaseline())
+                        Text(
+                            length,
+                            style = figures,
+                            color = p.inkMuted,
+                            maxLines = 1,
+                            modifier = Modifier.alignByBaseline(),
+                        )
+                        Text(
+                            "$DOT$date",
+                            style = Type.small,
+                            color = p.inkMuted,
+                            maxLines = 1,
+                            modifier = Modifier.alignByBaseline(),
+                        )
                     }
                 }
         }
@@ -480,16 +614,21 @@ private fun RecentRow(
         // .pk-x), out of the keys' way: Delete is theirs
         if (hovered && enabled)
             Box(
-                Modifier
-                    .align(Alignment.CenterEnd)
+                Modifier.align(Alignment.CenterEnd)
                     .padding(end = 6.dp)
                     .size(32.dp)
                     .focusProperties { canFocus = false }
                     .control(CornerSm, label = remove, onClick = { onForget(false) }),
                 contentAlignment = Alignment.Center,
-            ) { Icon(Icons.x, null, tint = p.inkMuted, modifier = Modifier.size(16.dp)) }
+            ) {
+                Icon(Icons.x, null, tint = p.inkMuted, modifier = Modifier.size(16.dp))
+            }
         Menu(menu, { menu = false }) {
-            Item(stringResource(R.string.recent_remove_item), null, note = AnnotatedString(stringResource(R.string.recent_remove_note))) {
+            Item(
+                stringResource(R.string.recent_remove_item),
+                null,
+                note = AnnotatedString(stringResource(R.string.recent_remove_note)),
+            ) {
                 menu = false
                 onForget(false)
             }
@@ -498,25 +637,25 @@ private fun RecentRow(
 }
 
 /**
- * The transcript open beside the side that the list does not have (app.js,
- * liveHtml): under way, stopped or failed, or taken off the list; its name,
- * and under it how far it has got (rowBody), on the open row's surface.
+ * The transcript open beside the side that the list does not have (app.js, liveHtml): under way,
+ * stopped or failed, or taken off the list; its name, and under it how far it has got (rowBody), on
+ * the open row's surface.
  */
 @Composable
 private fun LiveRow(o: Opened) {
     val p = pk
     val pct = (o.done * 100).toInt()
-    val (status, ink) = when (o.step) {
-        "loading" -> stringResource(R.string.status_loading) to p.inkMuted
-        "reading" -> stringResource(R.string.status_reading) to p.inkMuted
-        "transcribing" -> stringResource(R.string.status_transcribing, pct) to p.inkMuted
-        "stopped" -> stringResource(R.string.status_stopped_at, pct) to p.inkMuted
-        "done" -> stringResource(R.string.status_done) to p.ok
-        else -> stringResource(R.string.status_failed) to p.err
-    }
+    val (status, ink) =
+        when (o.step) {
+            "loading" -> stringResource(R.string.status_loading) to p.inkMuted
+            "reading" -> stringResource(R.string.status_reading) to p.inkMuted
+            "transcribing" -> stringResource(R.string.status_transcribing, pct) to p.inkMuted
+            "stopped" -> stringResource(R.string.status_stopped_at, pct) to p.inkMuted
+            "done" -> stringResource(R.string.status_done) to p.ok
+            else -> stringResource(R.string.status_failed) to p.err
+        }
     Row(
-        Modifier
-            .fillMaxWidth()
+        Modifier.fillMaxWidth()
             .heightIn(min = 48.dp)
             .background(p.surface, Corner)
             .semantics(mergeDescendants = true) { selected = true }
@@ -526,16 +665,29 @@ private fun LiveRow(o: Opened) {
     ) {
         Icon(Icons.file, null, tint = p.ink, modifier = Modifier.size(16.dp))
         Column(Modifier.weight(1f)) {
-            Text(o.name, style = rowName, color = p.ink, maxLines = 1, overflow = TextOverflow.MiddleEllipsis)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (o.step == "done") Icon(Icons.check, null, tint = ink, modifier = Modifier.size(14.dp))
+            Text(
+                o.name,
+                style = rowName,
+                color = p.ink,
+                maxLines = 1,
+                overflow = TextOverflow.MiddleEllipsis,
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                if (o.step == "done")
+                    Icon(Icons.check, null, tint = ink, modifier = Modifier.size(14.dp))
                 Text(status, style = Type.small, color = ink)
             }
         }
     }
 }
 
-/** When a transcript finished, as the desktop's list says it: Today, Yesterday, else the date, its year if not this one's (app.js, when). */
+/**
+ * When a transcript finished, as the desktop's list says it: Today, Yesterday, else the date, its
+ * year if not this one's (app.js, when).
+ */
 @Composable
 private fun whenDone(secs: Long): String {
     val today = LocalDate.now()
@@ -546,30 +698,40 @@ private fun whenDone(secs: Long): String {
         else -> {
             val locale = LocalConfiguration.current.locales[0]
             val skeleton = if (day.year == today.year) "MMMd" else "yMMMd"
-            DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale).format(day)
+            DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
+                .format(day)
         }
     }
 }
 
 /**
- * Clearing the list asks first, as the desktop's window does (app.js,
- * askClear): what it does, then Clear, in the error's red, and Cancel, the
- * one the question is for. Back, Esc and a tap beside it are Cancel; with
- * keys, Cancel has the focus, so that Enter does not clear the list.
+ * Clearing the list asks first, as the desktop's window does (app.js, askClear): what it does, then
+ * Clear, in the error's red, and Cancel, the one the question is for. Back, Esc and a tap beside it
+ * are Cancel; with keys, Cancel has the focus, so that Enter does not clear the list.
  */
 @Composable
 private fun AskClear(onClear: () -> Unit, onCancel: () -> Unit) =
-    Confirm(stringResource(R.string.ask_clear_title), stringResource(R.string.ask_clear_text), stringResource(R.string.ask_clear), onClear, onCancel)
+    Confirm(
+        stringResource(R.string.ask_clear_title),
+        stringResource(R.string.ask_clear_text),
+        stringResource(R.string.ask_clear),
+        onClear,
+        onCancel,
+    )
 
-/** The wordmark as each screen's way to About, its padding outside it so that the word stays where it is (app.css, button.pk-wm). */
+/**
+ * The wordmark as each screen's way to About, its padding outside it so that the word stays where
+ * it is (app.css, button.pk-wm).
+ */
 @Composable
 fun WordmarkButton(onAbout: () -> Unit) {
     Box(
-        Modifier
-            .bleed(6.dp, 4.dp)
+        Modifier.bleed(6.dp, 4.dp)
             .control(Corner, label = stringResource(R.string.about_open), onClick = onAbout)
-            .padding(horizontal = 6.dp, vertical = 4.dp),
-    ) { Wordmark() }
+            .padding(horizontal = 6.dp, vertical = 4.dp)
+    ) {
+        Wordmark()
+    }
 }
 
 /** What the work screen does with what it is asked. */
@@ -590,31 +752,28 @@ class WorkActions(
 /** The formats Share offers, the desktop's Save as's, in its order. */
 class Format(val ext: String, val label: Int, val withTimes: Int = label)
 
-val FORMATS = listOf(
-    Format("txt", R.string.format_txt, R.string.format_txt_times),
-    Format("srt", R.string.format_srt),
-    Format("vtt", R.string.format_vtt),
-    Format("md", R.string.format_md, R.string.format_md_times),
-    Format("json", R.string.format_json),
-)
+val FORMATS =
+    listOf(
+        Format("txt", R.string.format_txt, R.string.format_txt_times),
+        Format("srt", R.string.format_srt),
+        Format("vtt", R.string.format_vtt),
+        Format("md", R.string.format_md, R.string.format_md_times),
+        Format("json", R.string.format_json),
+    )
 
 /**
- * One file at work and then its transcript (ui/index.html, #work): the
- * header with the way back, the name, and what can be done with it (at
- * work only Stop; Copy and Share once it is done), the strip, the
- * choice of sentences or captions, a line for what went wrong, and the rows.
- * While the keyboard is up for Find and leaves the rows under the floor
- * (160 dp withText) below the header, the strip and the views line as they
- * were last shown, those make room for it: the field takes the top line and
- * the rows the rest, as a phone's find in page takes its top; the keyboard
- * put away, or the search closed, they come back (the three apps, Peter,
- * 2026-11-01). On its side the emulator's Pixel 5 has 120 dp above the
- * keyboard, where the three took 235 and left the field out of sight and
- * the transcript not a row; upright, 499 leave the rows 250 at the default
- * text size, and at twice it 164, under the floor's 297. The emulator's
- * 1280 by 800 dp tablet makes room too on its side, at the default text
- * size: 408 dp above the keyboard, where the three as shown leave the rows
- * 152; upright, at twice the text size, it keeps 598 dp of rows.
+ * One file at work and then its transcript (ui/index.html, #work): the header with the way back,
+ * the name, and what can be done with it (at work only Stop; Copy and Share once it is done), the
+ * strip, the choice of sentences or captions, a line for what went wrong, and the rows. While the
+ * keyboard is up for Find and leaves the rows under the floor (160 dp withText) below the header,
+ * the strip and the views line as they were last shown, those make room for it: the field takes the
+ * top line and the rows the rest, as a phone's find in page takes its top; the keyboard put away,
+ * or the search closed, they come back (the three apps, Peter, 2026-11-01). On its side the
+ * emulator's Pixel 5 has 120 dp above the keyboard, where the three took 235 and left the field out
+ * of sight and the transcript not a row; upright, 499 leave the rows 250 at the default text size,
+ * and at twice it 164, under the floor's 297. The emulator's 1280 by 800 dp tablet makes room too
+ * on its side, at the default text size: 408 dp above the keyboard, where the three as shown leave
+ * the rows 152; upright, at twice the text size, it keeps 598 dp of rows.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -657,8 +816,13 @@ fun Work(
     var tall by remember { mutableIntStateOf(0) }
     val floor = 160.dp.withText()
     // what the three leave the rows, less the rows' 16 dp above them
-    val makeRoom = WindowInsets.isImeVisible && find.typing && review && rows.isNotEmpty() && tall > 0 &&
-        with(LocalDensity.current) { (tall - head - strip - line).toDp() } - 16.dp < floor
+    val makeRoom =
+        WindowInsets.isImeVisible &&
+            find.typing &&
+            review &&
+            rows.isNotEmpty() &&
+            tall > 0 &&
+            with(LocalDensity.current) { (tall - head - strip - line).toDp() } - 16.dp < floor
     // 16 dp from the sides of a work under 600 dp wide, a phone's, and 24
     // from a wider one's, by its own width, beside the side or not
     // (design/README.md, Edges; Material's margin at medium and expanded
@@ -671,28 +835,56 @@ fun Work(
             // button hung past it: the arrow's ink is 14 dp into its 40 (11 to
             // the 18 dp icon, and 3 in that), more in a larger button at a
             // larger text size (inkInset)
-            if (!makeRoom) Head(
-                back = if (running) null else ({ IconBtn(Icons.back, stringResource(R.string.back), a.back, Modifier.hang(start = inkInset(4f)), kind = Kind.Ghost) }),
-                name = {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(name, style = Type.ui, color = p.ink, maxLines = 1, overflow = TextOverflow.MiddleEllipsis, modifier = Modifier.weight(1f, fill = false))
-                        // until the ring has progress: reading, the model loading, the first chunk (Spinner)
-                        if (running && !(step == "transcribing" && done > 0)) Spinner()
+            if (!makeRoom)
+                Head(
+                    back =
+                        if (running) null
+                        else
+                            ({
+                                IconBtn(
+                                    Icons.back,
+                                    stringResource(R.string.back),
+                                    a.back,
+                                    Modifier.hang(start = inkInset(4f)),
+                                    kind = Kind.Ghost,
+                                )
+                            }),
+                    name = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Text(
+                                name,
+                                style = Type.ui,
+                                color = p.ink,
+                                maxLines = 1,
+                                overflow = TextOverflow.MiddleEllipsis,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                            // until the ring has progress: reading, the model loading, the first
+                            // chunk (Spinner)
+                            if (running && !(step == "transcribing" && done > 0)) Spinner()
+                        }
+                    },
+                    modifier =
+                        Modifier.onSizeChanged { head = it.height }
+                            .fillMaxWidth()
+                            .heightIn(min = 62.dp)
+                            .padding(start = edge, end = edge, top = 11.dp, bottom = 11.dp),
+                ) {
+                    if (running) PkButton(stringResource(R.string.stop), a.stop, kind = Kind.Ghost)
+                    if (review && rows.isNotEmpty()) {
+                        IconBtn(
+                            Icons.copy,
+                            stringResource(
+                                if (captions) R.string.copy_captions else R.string.copy_text
+                            ),
+                            a.copy,
+                        )
+                        ShareAs(name, times, a)
                     }
-                },
-                modifier = Modifier
-                    .onSizeChanged { head = it.height }
-                    .fillMaxWidth()
-                    .heightIn(min = 62.dp)
-                    .padding(start = edge, end = edge, top = 11.dp, bottom = 11.dp),
-            ) {
-                if (running)
-                    PkButton(stringResource(R.string.stop), a.stop, kind = Kind.Ghost)
-                if (review && rows.isNotEmpty()) {
-                    IconBtn(Icons.copy, stringResource(if (captions) R.string.copy_captions else R.string.copy_text), a.copy)
-                    ShareAs(name, times, a)
                 }
-            }
             if (step != "error" && !makeRoom)
                 Strip(
                     peaks = peaks,
@@ -702,12 +894,13 @@ fun Work(
                     playable = playable,
                     position = position,
                     duration = duration,
-                    left = when {
-                        review -> base.at(position)
-                        step == "loading" -> stringResource(R.string.status_loading)
-                        step == "reading" -> stringResource(R.string.status_reading)
-                        else -> pace ?: ""
-                    },
+                    left =
+                        when {
+                            review -> base.at(position)
+                            step == "loading" -> stringResource(R.string.status_loading)
+                            step == "reading" -> stringResource(R.string.status_reading)
+                            else -> pace ?: ""
+                        },
                     right = if (duration > 0) base.length() else "",
                     playLabel = stringResource(if (playing) R.string.pause else R.string.play),
                     onPlay = a.play,
@@ -715,7 +908,9 @@ fun Work(
                     sound = sound,
                     base = base,
                     onBase = a.setBase,
-                    ticks = if (review && duration > 0) hits.map { it.time / duration } else emptyList(),
+                    ticks =
+                        if (review && duration > 0) hits.map { it.time / duration }
+                        else emptyList(),
                     tickAt = find.at,
                     // a tick: its match, and the playhead there (app.js, #ticks)
                     onTick = { k ->
@@ -726,22 +921,32 @@ fun Work(
                     },
                     // 16 under the header's buttons, the one gap between the
                     // screen's blocks (Peter, 2026-10-27): their 11 and 5
-                    modifier = Modifier.onSizeChanged { strip = it.height }.padding(start = edge, end = edge, top = 5.dp),
+                    modifier =
+                        Modifier.onSizeChanged { strip = it.height }
+                            .padding(start = edge, end = edge, top = 5.dp),
                     why = why,
                     locate = locate,
                 )
             if (review && rows.isNotEmpty())
                 // a step takes the playhead to its match (Finder.step)
                 Views(
-                    captions, a.setCaptions, find, hits, { t: Double -> a.seek(t, false) }, makeRoom,
-                    Modifier.onSizeChanged { if (!makeRoom) line = it.height }.padding(start = edge, end = edge, top = 16.dp),
+                    captions,
+                    a.setCaptions,
+                    find,
+                    hits,
+                    { t: Double -> a.seek(t, false) },
+                    makeRoom,
+                    Modifier.onSizeChanged { if (!makeRoom) line = it.height }
+                        .padding(start = edge, end = edge, top = 16.dp),
                 )
-            val msg = when {
-                error != null -> error
-                step == "stopped" -> stringResource(R.string.status_stopped_at, (done * 100).toInt())
-                step == "done" && rows.isEmpty() -> stringResource(R.string.no_speech)
-                else -> null
-            }
+            val msg =
+                when {
+                    error != null -> error
+                    step == "stopped" ->
+                        stringResource(R.string.status_stopped_at, (done * 100).toInt())
+                    step == "done" && rows.isEmpty() -> stringResource(R.string.no_speech)
+                    else -> null
+                }
             if (msg != null && !makeRoom)
                 Row(
                     Modifier.padding(start = edge, end = edge, top = 16.dp),
@@ -750,32 +955,59 @@ fun Work(
                 ) {
                     val bad = error != null
                     if (bad) Icon(Icons.alert, null, tint = p.err, modifier = Modifier.size(16.dp))
-                    Text(msg, style = Type.body.copy(fontSize = 15.sp), color = if (bad) p.err else p.inkMuted)
+                    Text(
+                        msg,
+                        style = Type.body.copy(fontSize = 15.sp),
+                        color = if (bad) p.err else p.inkMuted,
+                    )
                 }
-            Rows(rows, review, captions, playing, position, stats, base, hits, find.at, find.shown, follow, a, edge, Modifier.weight(1f))
+            Rows(
+                rows,
+                review,
+                captions,
+                playing,
+                position,
+                stats,
+                base,
+                hits,
+                find.at,
+                find.shown,
+                follow,
+                a,
+                edge,
+                Modifier.weight(1f),
+            )
         }
     }
 }
 
 /**
- * The header's line: the way back at its start, what can be done with the
- * file at its end, and the name between them while it keeps the words'
- * least there (wordsFloor), or its whole width where that is less; else the
- * name on a line of its own 16 dp under them, under the arrow's ink, and the
- * buttons stay where the thumb knows them. On a 393 dp phone the name has
- * 187 dp beside Copy and Share at the default text size, over the floor's
- * 160, and 175 at 1.3 times it, under the floor's 208, so it goes under
- * them there (2026-10-31). Where even that line is too short for the name
- * it gives up its middle, which keeps its extension.
+ * The header's line: the way back at its start, what can be done with the file at its end, and the
+ * name between them while it keeps the words' least there (wordsFloor), or its whole width where
+ * that is less; else the name on a line of its own 16 dp under them, under the arrow's ink, and the
+ * buttons stay where the thumb knows them. On a 393 dp phone the name has 187 dp beside Copy and
+ * Share at the default text size, over the floor's 160, and 175 at 1.3 times it, under the floor's
+ * 208, so it goes under them there (2026-10-31). Where even that line is too short for the name it
+ * gives up its middle, which keeps its extension.
  */
 @Composable
-private fun Head(back: (@Composable () -> Unit)?, name: @Composable () -> Unit, modifier: Modifier, actions: @Composable () -> Unit) {
+private fun Head(
+    back: (@Composable () -> Unit)?,
+    name: @Composable () -> Unit,
+    modifier: Modifier,
+    actions: @Composable () -> Unit,
+) {
     val least = wordsFloor()
     Layout(
         {
             Box { back?.invoke() }
             Box { name() }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { actions() }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                actions()
+            }
         },
         modifier,
     ) { (b, n, k), c ->
@@ -813,23 +1045,27 @@ private fun Head(back: (@Composable () -> Unit)?, name: @Composable () -> Unit, 
 }
 
 /**
- * The views line: Sentences or Captions, and the search right after them,
- * 12 dp apart, one group of the transcript's controls (app.css, .pk-views
- * and .pk-find): alone at the line's far end, a reader might not see that
- * the transcript can be searched (Peter, 2026-10-31). Its field, which
- * says Find, where that fits beside them, the desktop's 200 dp and 280 with
- * a search in it, grown with the text (withText): at twice the text
- * size a tablet's 280 left "rabbit" 53 dp and scrolled its first letter
- * out (2026-10-31). Else the glass, which opens the field across the line
- * until the search is let go, as a phone's find in page does. The views
- * have what the glass leaves them, stacked where that is too little for
- * the two side by side (Switch2). Alone, while the header and the strip
- * make room for the keyboard (Work): the field by itself across the line,
- * the same field as beside the views, so that it keeps the keys and the
- * keyboard stays up as it moves.
+ * The views line: Sentences or Captions, and the search right after them, 12 dp apart, one group of
+ * the transcript's controls (app.css, .pk-views and .pk-find): alone at the line's far end, a
+ * reader might not see that the transcript can be searched (Peter, 2026-10-31). Its field, which
+ * says Find, where that fits beside them, the desktop's 200 dp and 280 with a search in it, grown
+ * with the text (withText): at twice the text size a tablet's 280 left "rabbit" 53 dp and scrolled
+ * its first letter out (2026-10-31). Else the glass, which opens the field across the line until
+ * the search is let go, as a phone's find in page does. The views have what the glass leaves them,
+ * stacked where that is too little for the two side by side (Switch2). Alone, while the header and
+ * the strip make room for the keyboard (Work): the field by itself across the line, the same field
+ * as beside the views, so that it keeps the keys and the keyboard stays up as it moves.
  */
 @Composable
-private fun Views(captions: Boolean, setCaptions: (Boolean) -> Unit, find: Finder, hits: List<Hit>, seek: (Double) -> Unit, alone: Boolean, modifier: Modifier) {
+private fun Views(
+    captions: Boolean,
+    setCaptions: (Boolean) -> Unit,
+    find: Finder,
+    hits: List<Hit>,
+    seek: (Double) -> Unit,
+    alone: Boolean,
+    modifier: Modifier,
+) {
     val first = stringResource(R.string.sentences)
     val second = stringResource(R.string.captions)
     val label = stringResource(R.string.find_label)
@@ -838,17 +1074,24 @@ private fun Views(captions: Boolean, setCaptions: (Boolean) -> Unit, find: Finde
     SubcomposeLayout(modifier.fillMaxWidth()) { c ->
         val gap = 12.dp.roundToPx()
         val loose = c.copy(minWidth = 0, minHeight = 0)
-        val v = subcompose("views") { Switch2(first, second, captions, setCaptions) }
-            .first().measure(loose.copy(maxWidth = c.maxWidth - gap - 40.dp.roundToPx()))
+        val v =
+            subcompose("views") { Switch2(first, second, captions, setCaptions) }
+                .first()
+                .measure(loose.copy(maxWidth = c.maxWidth - gap - 40.dp.roundToPx()))
         val field = width.roundToPx()
         val beside = !alone && v.width + gap + field <= c.maxWidth
         // one field at either width, which keeps the keys when a search
         // makes it too wide to stay beside the views, or the keyboard needs the room
-        val f = if (beside || opened || alone) {
-            val w = if (beside) field else c.maxWidth
-            subcompose("field") { FindField(find, hits, seek, find::clear) }.first().measure(loose.copy(minWidth = w, maxWidth = w))
-        } else
-            subcompose("glass") { IconBtn(Icons.search, label, find::focus, kind = Kind.Ghost) }.first().measure(loose)
+        val f =
+            if (beside || opened || alone) {
+                val w = if (beside) field else c.maxWidth
+                subcompose("field") { FindField(find, hits, seek, find::clear) }
+                    .first()
+                    .measure(loose.copy(minWidth = w, maxWidth = w))
+            } else
+                subcompose("glass") { IconBtn(Icons.search, label, find::focus, kind = Kind.Ghost) }
+                    .first()
+                    .measure(loose)
         val views = beside || !(opened || alone)
         val h = maxOf(if (views) v.height else 0, f.height)
         layout(c.maxWidth, h) {
@@ -859,26 +1102,32 @@ private fun Views(captions: Boolean, setCaptions: (Boolean) -> Unit, find: Finde
 }
 
 /**
- * Share, the plume button a finished transcript is for, and its menu of
- * formats, the desktop's Save as's: each sends the transcript as a file of
- * its kind to the app picked in the system's share sheet, which has Save
- * file too (MainActivity.share). Where the desktop's button saves, a
- * phone's shares: on one a transcript goes to another app, Drive or a chat
- * or mail, far more often than to a folder. Ctrl+S still saves, where there
- * are keys.
+ * Share, the plume button a finished transcript is for, and its menu of formats, the desktop's Save
+ * as's: each sends the transcript as a file of its kind to the app picked in the system's share
+ * sheet, which has Save file too (MainActivity.share). Where the desktop's button saves, a phone's
+ * shares: on one a transcript goes to another app, Drive or a chat or mail, far more often than to
+ * a folder. Ctrl+S still saves, where there are keys.
  */
 @Composable
 private fun ShareAs(name: String, times: Boolean, a: WorkActions) {
     var open by remember { mutableStateOf(false) }
     val stem = name.substringBeforeLast('.').ifEmpty { name }
     Box {
-        PkButton(stringResource(R.string.share), { open = true }, kind = Kind.Primary, trailing = Icons.down, held = open)
+        PkButton(
+            stringResource(R.string.share),
+            { open = true },
+            kind = Kind.Primary,
+            trailing = Icons.down,
+            held = open,
+        )
         Menu(open, { open = false }) {
-            for (f in FORMATS)
-                Item(stringResource(if (times) f.withTimes else f.label), "$stem.${f.ext}") {
-                    open = false
-                    a.share(f.ext)
-                }
+            for (f in FORMATS) Item(
+                stringResource(if (times) f.withTimes else f.label),
+                "$stem.${f.ext}",
+            ) {
+                open = false
+                a.share(f.ext)
+            }
             MenuLine()
             Check(stringResource(R.string.save_times), times, a.setTimes)
         }
@@ -886,15 +1135,13 @@ private fun ShareAs(name: String, times: Boolean, a: WorkActions) {
 }
 
 /**
- * The transcript's rows (app.css, .pk-seg): each sentence's time, or a cue's
- * start and end, then its text, at most 560 dp wide; the time above the
- * text under 620 dp, as the desktop's window has it (app.css, max-width:
- * 619px), where the time's column is its 112 dp, and wider by as much as
- * the file's longest time needs more at a larger text size; a cue's two
- * times a range there. The row playing on the surface, the beak's square after
- * its time and the word playing underlined in it; a row, tapped anywhere,
- * plays from its time. The fingers on the list are counted for what moves it
- * besides the reader (Follow).
+ * The transcript's rows (app.css, .pk-seg): each sentence's time, or a cue's start and end, then
+ * its text, at most 560 dp wide; the time above the text under 620 dp, as the desktop's window has
+ * it (app.css, max-width: 619px), where the time's column is its 112 dp, and wider by as much as
+ * the file's longest time needs more at a larger text size; a cue's two times a range there. The
+ * row playing on the surface, the beak's square after its time and the word playing underlined in
+ * it; a row, tapped anywhere, plays from its time. The fingers on the list are counted for what
+ * moves it besides the reader (Follow).
  */
 @Composable
 private fun Rows(
@@ -915,7 +1162,9 @@ private fun Rows(
     modifier: Modifier,
 ) {
     val p = pk
-    val current = if (review && (playing || position > 0)) rows.indexOfLast { it.start <= position + 1e-3 } else -1
+    val current =
+        if (review && (playing || position > 0)) rows.indexOfLast { it.start <= position + 1e-3 }
+        else -1
     // each row's matches, by their place among all of them
     val marks = remember(hits) { hits.withIndex().groupBy { it.value.row } }
     // the text selected, if any (SegRow)
@@ -927,9 +1176,11 @@ private fun Rows(
     // longest time and the beak after it (SegRow) need, at a larger text size
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val times = remember(base, measurer, density) {
-        with(density) { measurer.measure(base.at(base.duration), figures).size.width.toDp() } + 10.dp
-    }
+    val times =
+        remember(base, measurer, density) {
+            with(density) { measurer.measure(base.at(base.duration), figures).size.width.toDp() } +
+                10.dp
+        }
     BoxWithConstraints(modifier.fillMaxWidth().padding(top = 16.dp)) {
         // a column from 620 dp at the default text size, the desktop's
         // (app.css, max-width: 619px), where the text keeps 416 beside 112:
@@ -937,11 +1188,29 @@ private fun Rows(
         // further out as the time's column grows with the text
         val column = maxOf(112.dp, times).takeIf { maxWidth >= 508.dp + it }
         SelectionContainer(selection) {
-            LazyColumn(Modifier.hands(follow), state = follow.list, contentPadding = PaddingValues(start = edge, end = edge, bottom = 16.dp)) {
+            LazyColumn(
+                Modifier.hands(follow),
+                state = follow.list,
+                contentPadding = PaddingValues(start = edge, end = edge, bottom = 16.dp),
+            ) {
                 itemsIndexed(rows) { i, s ->
                     val now = i == current
                     val word = if (now) s.words.indexOfLast { it.start <= position + 1e-3 } else -1
-                    SegRow(s, now, word, marks[i], at, shown, column, captions, review, base, selection) { a.seek(s.start, true) }
+                    SegRow(
+                        s,
+                        now,
+                        word,
+                        marks[i],
+                        at,
+                        shown,
+                        column,
+                        captions,
+                        review,
+                        base,
+                        selection,
+                    ) {
+                        a.seek(s.start, true)
+                    }
                 }
                 if (stats != null)
                     item {
@@ -949,7 +1218,11 @@ private fun Rows(
                             stats,
                             style = Type.small.copy(fontSize = 12.sp, fontFeatureSettings = "tnum"),
                             color = p.inkMuted,
-                            modifier = Modifier.padding(start = if (column != null) column + 28.dp else 16.dp, top = 16.dp),
+                            modifier =
+                                Modifier.padding(
+                                    start = if (column != null) column + 28.dp else 16.dp,
+                                    top = 16.dp,
+                                ),
                         )
                     }
             }
@@ -960,110 +1233,152 @@ private fun Rows(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SegRow(
-    s: Seg, now: Boolean, word: Int, marks: List<IndexedValue<Hit>>?, at: Int, shown: Int, column: Dp?, cue: Boolean, review: Boolean,
-    base: Timebase, selection: SelectionState, onTime: () -> Unit,
+    s: Seg,
+    now: Boolean,
+    word: Int,
+    marks: List<IndexedValue<Hit>>?,
+    at: Int,
+    shown: Int,
+    column: Dp?,
+    cue: Boolean,
+    review: Boolean,
+    base: Timebase,
+    selection: SelectionState,
+    onTime: () -> Unit,
 ) {
     val p = pk
     val stamp = figures
     val line = stamp.copy(lineHeight = 20.sp)
-    val start = @Composable { mod: Modifier -> Text(base.at(s.start), style = line, color = p.inkMuted, modifier = mod) }
-    val end = @Composable { mod: Modifier -> Text(base.at(s.end), style = stamp, color = p.inkMuted, modifier = mod) }
+    val start =
+        @Composable { mod: Modifier ->
+            Text(base.at(s.start), style = line, color = p.inkMuted, modifier = mod)
+        }
+    val end =
+        @Composable { mod: Modifier ->
+            Text(base.at(s.end), style = stamp, color = p.inkMuted, modifier = mod)
+        }
     // the row playing: the beak's square after its time, on its baseline
-    val beak = @Composable { scope: RowScope ->
-        if (now)
-            with(scope) {
-                Spacer(Modifier.width(3.dp))
-                Box(Modifier.size(7.dp).alignBy { it.measuredHeight }.background(p.beak))
-            }
-    }
+    val beak =
+        @Composable { scope: RowScope ->
+            if (now)
+                with(scope) {
+                    Spacer(Modifier.width(3.dp))
+                    Box(Modifier.size(7.dp).alignBy { it.measuredHeight }.background(p.beak))
+                }
+        }
     // a cue's end under its start, or on a narrow screen after it as a
     // range, 00:02.88 – 00:05.60, the beak after the range: side by side, a
     // start with the beak after it and the end beside that read as two
     // times of their own (Peter, the S25, 2026-10-26). A range too wide for
     // the line takes its end to the next whole: at 2.0 times the text size
     // a phone's line broke the end's time in two.
-    val time = @Composable { mod: Modifier ->
-        if (cue && column == null)
-            FlowRow(mod) {
-                Text("${base.at(s.start)} – ", style = line, color = p.inkMuted)
-                Row {
-                    Text(base.at(s.end), style = line, color = p.inkMuted, modifier = Modifier.alignByBaseline())
-                    beak(this)
+    val time =
+        @Composable { mod: Modifier ->
+            if (cue && column == null)
+                FlowRow(mod) {
+                    Text("${base.at(s.start)} – ", style = line, color = p.inkMuted)
+                    Row {
+                        Text(
+                            base.at(s.end),
+                            style = line,
+                            color = p.inkMuted,
+                            modifier = Modifier.alignByBaseline(),
+                        )
+                        beak(this)
+                    }
                 }
-            }
-        else
-            Column(mod, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Row {
-                    start(Modifier.alignByBaseline())
-                    beak(this)
+            else
+                Column(mod, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Row {
+                        start(Modifier.alignByBaseline())
+                        beak(this)
+                    }
+                    if (cue) end(Modifier)
                 }
-                if (cue) end(Modifier)
-            }
-    }
+        }
     // the whole row plays from its time, its words as well as the time, which
     // a thumb is too broad to find (Peter, the S25, 2026-10-26); but not a
     // tap that lets go of a selection of the text. The selection is gone by
     // the time the tap is, so whether there was one is taken as the finger
     // comes down, before the text's own gestures see it.
     val selecting = remember { booleanArrayOf(false) }
-    val box = Modifier
-        .widthIn(max = 716.dp)
-        .fillMaxWidth()
-        .background(if (now) p.surface else Color.Transparent, Corner)
-        .then(
-            if (review)
-                Modifier
-                    .pointerInput(selection) {
-                        awaitEachGesture {
-                            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                            selecting[0] = selection.selectedTexts.isNotEmpty()
+    val box =
+        Modifier.widthIn(max = 716.dp)
+            .fillMaxWidth()
+            .background(if (now) p.surface else Color.Transparent, Corner)
+            .then(
+                if (review)
+                    Modifier.pointerInput(selection) {
+                            awaitEachGesture {
+                                awaitFirstDown(
+                                    requireUnconsumed = false,
+                                    pass = PointerEventPass.Initial,
+                                )
+                                selecting[0] = selection.selectedTexts.isNotEmpty()
+                            }
                         }
-                    }
-                    .clickable(remember { MutableInteractionSource() }, null, onClickLabel = stringResource(R.string.play_from, base.at(s.start))) {
-                        if (!selecting[0]) onTime()
-                    }
-            else Modifier
-        )
+                        .clickable(
+                            remember { MutableInteractionSource() },
+                            null,
+                            onClickLabel = stringResource(R.string.play_from, base.at(s.start)),
+                        ) {
+                            if (!selecting[0]) onTime()
+                        }
+                else Modifier
+            )
     if (column != null)
         // a row of one line 48 dp tall at the least, Android's least for a
         // finger, its line in the middle: it was 44, iOS's 44 pt (the layout
         // audit, 2026-11-01). With its time over it, a row has two lines.
-        Row(box.heightIn(min = 48.dp).wrapContentHeight().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Row(
+            box.heightIn(min = 48.dp)
+                .wrapContentHeight()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
             time(Modifier.width(column).alignByBaseline())
             Spacer(Modifier.width(12.dp))
             Sentence(s, word, marks, at, shown, Modifier.weight(1f).alignByBaseline())
         }
     else
-        Column(box.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(
+            box.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
             time(Modifier)
             Sentence(s, word, marks, at, shown, Modifier)
         }
 }
 
 /**
- * A row's text in the transcript's type, the word playing underlined in the
- * beak's colour, 2 dp, 4 below the line; and a search's matches marked
- * (app.css, .pk-hit): each on plume mixed 45% into the ground, as tall as
- * its letters and 2 dp round them, its corners 3 dp; the one the reader is
- * on in plume, its letters on-plume, an ink bar 2 dp under it, for a state
- * shown by more than its colour (the tokens' contrast, 2026-10-22). Once
- * the list has brought a move's row into sight (Finder.show), the match's
- * own line too, and the row's 8 dp round it: a row taller than the room,
- * above the keyboard (Work) or a long one, had its top in sight and the
- * match below.
+ * A row's text in the transcript's type, the word playing underlined in the beak's colour, 2 dp, 4
+ * below the line; and a search's matches marked (app.css, .pk-hit): each on plume mixed 45% into
+ * the ground, as tall as its letters and 2 dp round them, its corners 3 dp; the one the reader is
+ * on in plume, its letters on-plume, an ink bar 2 dp under it, for a state shown by more than its
+ * colour (the tokens' contrast, 2026-10-22). Once the list has brought a move's row into sight
+ * (Finder.show), the match's own line too, and the row's 8 dp round it: a row taller than the room,
+ * above the keyboard (Work) or a long one, had its top in sight and the match below.
  */
 @Composable
-private fun Sentence(s: Seg, word: Int, marks: List<IndexedValue<Hit>>?, at: Int, shown: Int, modifier: Modifier) {
+private fun Sentence(
+    s: Seg,
+    word: Int,
+    marks: List<IndexedValue<Hit>>?,
+    at: Int,
+    shown: Int,
+    modifier: Modifier,
+) {
     val p = pk
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val span = remember(s, word) { if (word < 0) null else wordSpan(s, word) }
     val on = marks?.firstOrNull { it.index == at }?.value
-    val text = remember(s, on, p) {
-        buildAnnotatedString {
-            append(s.text)
-            if (on != null && on.end <= s.text.length) addStyle(SpanStyle(color = p.onPlume), on.start, on.end)
+    val text =
+        remember(s, on, p) {
+            buildAnnotatedString {
+                append(s.text)
+                if (on != null && on.end <= s.text.length)
+                    addStyle(SpanStyle(color = p.onPlume), on.start, on.end)
+            }
         }
-    }
     val hl = mix(p.ground, p.plume, 0.45f)
     val sight = remember { BringIntoViewRequester() }
     val pad = with(LocalDensity.current) { 8.dp.toPx() }
@@ -1081,28 +1396,36 @@ private fun Sentence(s: Seg, word: Int, marks: List<IndexedValue<Hit>>?, at: Int
         style = Type.transcript,
         color = p.ink,
         onTextLayout = { layout = it },
-        modifier = modifier.bringIntoViewRequester(sight).drawBehind {
-            val l = layout ?: return@drawBehind
-            for (m in marks.orEmpty()) {
-                val current = m.index == at
-                mark(l, m.value.start, m.value.end, if (current) p.plume else hl, if (current) p.ink else null)
-            }
-            val (a, b) = span ?: return@drawBehind
-            if (b <= a || b > l.layoutInput.text.length) return@drawBehind
-            val line = l.getLineForOffset(a)
-            val y = l.getLineBaseline(line) + 4.dp.toPx()
-            val x0 = l.getHorizontalPosition(a, true)
-            val x1 = if (l.getLineForOffset(b - 1) == line) l.getHorizontalPosition(b, true) else l.getLineRight(line)
-            drawLine(p.beak, Offset(x0, y), Offset(x1, y), 2.dp.toPx())
-        },
+        modifier =
+            modifier.bringIntoViewRequester(sight).drawBehind {
+                val l = layout ?: return@drawBehind
+                for (m in marks.orEmpty()) {
+                    val current = m.index == at
+                    mark(
+                        l,
+                        m.value.start,
+                        m.value.end,
+                        if (current) p.plume else hl,
+                        if (current) p.ink else null,
+                    )
+                }
+                val (a, b) = span ?: return@drawBehind
+                if (b <= a || b > l.layoutInput.text.length) return@drawBehind
+                val line = l.getLineForOffset(a)
+                val y = l.getLineBaseline(line) + 4.dp.toPx()
+                val x0 = l.getHorizontalPosition(a, true)
+                val x1 =
+                    if (l.getLineForOffset(b - 1) == line) l.getHorizontalPosition(b, true)
+                    else l.getLineRight(line)
+                drawLine(p.beak, Offset(x0, y), Offset(x1, y), 2.dp.toPx())
+            },
     )
 }
 
 /**
- * A match's mark behind the letters from a to b, on each line they are on:
- * their height, from Archivo's ascent to its descent (0.878 and 0.21 em,
- * its hhea), and 2 dp round them, as an inline mark's box is drawn on the
- * desktop; under, an ink bar 2 dp under it, the width of the letters.
+ * A match's mark behind the letters from a to b, on each line they are on: their height, from
+ * Archivo's ascent to its descent (0.878 and 0.21 em, its hhea), and 2 dp round them, as an inline
+ * mark's box is drawn on the desktop; under, an ink bar 2 dp under it, the width of the letters.
  */
 private fun DrawScope.mark(l: TextLayoutResult, a: Int, b: Int, fill: Color, under: Color?) {
     if (b <= a || b > l.layoutInput.text.length) return
@@ -1113,11 +1436,18 @@ private fun DrawScope.mark(l: TextLayoutResult, a: Int, b: Int, fill: Color, und
         val s1 = minOf(b, l.getLineEnd(line, visibleEnd = true))
         if (s1 <= s0) continue
         val x0 = l.getHorizontalPosition(s0, true)
-        val x1 = if (l.getLineForOffset(s1) == line) l.getHorizontalPosition(s1, true) else l.getLineRight(line)
+        val x1 =
+            if (l.getLineForOffset(s1) == line) l.getHorizontalPosition(s1, true)
+            else l.getLineRight(line)
         val base = l.getLineBaseline(line)
         val top = base - 0.878f * em - round
         val bottom = base + 0.21f * em + round
-        drawRoundRect(fill, Offset(x0 - round, top), Size(x1 - x0 + 2 * round, bottom - top), CornerRadius(3.dp.toPx()))
+        drawRoundRect(
+            fill,
+            Offset(x0 - round, top),
+            Size(x1 - x0 + 2 * round, bottom - top),
+            CornerRadius(3.dp.toPx()),
+        )
         if (under != null) drawRect(under, Offset(x0, bottom), Size(x1 - x0, 2.dp.toPx()))
     }
 }

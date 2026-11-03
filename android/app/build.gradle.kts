@@ -12,9 +12,13 @@ plugins {
 // unsigned. Play signs what it installs with its own key (Play App
 // Signing); this one only proves an upload is ours, and a lost one is
 // replaced through Play's support, not by a new listing
-val upload = File(
-    System.getenv("PKTITO_UPLOAD") ?: "${System.getProperty("user.home")}/.pktito-upload/upload.properties",
-).takeIf { it.isFile }?.let { f -> Properties().apply { f.inputStream().use { load(it) } } }
+val upload =
+    File(
+            System.getenv("PKTITO_UPLOAD")
+                ?: "${System.getProperty("user.home")}/.pktito-upload/upload.properties"
+        )
+        .takeIf { it.isFile }
+        ?.let { f -> Properties().apply { f.inputStream().use { load(it) } } }
 
 android {
     namespace = "net.pktito.app"
@@ -27,7 +31,11 @@ android {
         // Android 9), with no older path beside them; native.sh builds for
         // the same
         minSdk = 29
-        targetSdk = 36
+        // Android 17: an app targeting 37 runs as untrusted_app, which the
+        // Googlebook's DSP HAL serves; one targeting 34 to 36 runs as
+        // untrusted_app_34, which its SELinux policy leaves out, and so
+        // reaches no NPU there (2026-11-03)
+        targetSdk = 37
         versionCode = 3
         versionName = "0.9.5"
         // the two native.sh builds the library for: without this AndroidX's
@@ -61,7 +69,10 @@ android {
             if (upload != null) signingConfig = signingConfigs.getByName("upload")
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
     compileOptions {
@@ -70,6 +81,17 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    // Qualcomm's QNN libraries beside libpktito_app.so, where a QNN build
+    // put them (the encoder on a Snapdragon's NPU): extracted on install,
+    // as the NPU reads its half (the skel) from a file in the app's native
+    // library folder, and packaged as Qualcomm built them, the Hexagon ones
+    // not being Arm code for the NDK's strip
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+            keepDebugSymbols += "**/libQnn*.so"
+        }
     }
     // the screens drawn on the JVM (src/test, Shots), with the app's fonts
     testOptions {
@@ -83,9 +105,15 @@ android {
 // notices.py's list of licenses: what resolves to a file, so neither a
 // BOM nor a multiplatform module's metadata, whose code is its -android's
 tasks.register("packaged") {
-    val modules = configurations.named("releaseRuntimeClasspath")
-        .flatMap { it.incoming.artifacts.resolvedArtifacts }
-        .map { all -> all.map { "${it.id.componentIdentifier.displayName}\t${it.file}" }.distinct().sorted() }
+    val modules =
+        configurations
+            .named("releaseRuntimeClasspath")
+            .flatMap { it.incoming.artifacts.resolvedArtifacts }
+            .map { all ->
+                all.map { "${it.id.componentIdentifier.displayName}\t${it.file}" }
+                    .distinct()
+                    .sorted()
+            }
     val out = layout.buildDirectory.file("notices/packaged.txt")
     inputs.property("modules", modules)
     outputs.file(out)

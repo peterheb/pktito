@@ -16,27 +16,26 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isPopup
-import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onChildren
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.onChildren
-import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import java.io.File
 import net.pktito.app.ui.About
 import net.pktito.app.ui.Finder
 import net.pktito.app.ui.Follow
-import net.pktito.app.ui.findIn
 import net.pktito.app.ui.Manage
 import net.pktito.app.ui.ManageActions
 import net.pktito.app.ui.ModelButton
@@ -51,6 +50,7 @@ import net.pktito.app.ui.Sound
 import net.pktito.app.ui.Timebase
 import net.pktito.app.ui.Work
 import net.pktito.app.ui.WorkActions
+import net.pktito.app.ui.findIn
 import net.pktito.app.ui.pk
 import org.junit.Rule
 import org.junit.Test
@@ -61,39 +61,47 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The screens drawn on the JVM, Robolectric's native graphics with the
- * app's own fonts, into build/shots: each state of each screen, light and
- * dark, a phone's width and a laptop window's, to look at beside the
- * desktop's (site/screenshots). The transcript is AliceBench's chapter 1 as
- * pktito-cli transcribes it, and its outline audio.rs's of the same audio
- * (src/test/resources). Nothing is asserted: the pictures are for a person.
+ * The screens drawn on the JVM, Robolectric's native graphics with the app's own fonts, into
+ * build/shots: each state of each screen, light and dark, a phone's width and a laptop window's, to
+ * look at beside the desktop's (site/screenshots). The transcript is AliceBench's chapter 1 as
+ * pktito-cli transcribes it, and its outline audio.rs's of the same audio (src/test/resources).
+ * Nothing is asserted: the pictures are for a person.
  *
- *   ./gradlew testDebugUnitTest --tests net.pktito.app.Shots
+ * ./gradlew testDebugUnitTest --tests net.pktito.app.Shots
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "w411dp-h891dp-xxhdpi")
 class Shots {
-    @get:Rule
-    val compose = createComposeRule()
+    @get:Rule val compose = createComposeRule()
 
     private fun resource(name: String) = javaClass.getResourceAsStream("/$name")!!.readBytes()
+
     private val segments = Transcriber.parse(String(resource("alice-segments.json")))
-    private val cues = Transcriber.parseCues(String(resource("alice-cues.json")), segments.flatMap { it.words })
+    private val cues =
+        Transcriber.parseCues(String(resource("alice-cues.json")), segments.flatMap { it.words })
     private val peaks = resource("alice-peaks.bin")
     private val actions = WorkActions({}, {}, {}, {}, {}, {}, {}, { _, _ -> }, {}, {})
 
     /**
-     * The screen, or what act leads to on it (a menu, its own window); with
-     * keys, as with the Googlebook's keyboard, which a qualifier cannot say
-     * (its hardKeyboardHidden is the device's, not a resource's). land is a
-     * landscape window's, the Googlebook's own window the default one's
-     * there, 680 by 800 inside its header.
+     * The screen, or what act leads to on it (a menu, its own window); with keys, as with the
+     * Googlebook's keyboard, which a qualifier cannot say (its hardKeyboardHidden is the device's,
+     * not a resource's). land is a landscape window's, the Googlebook's own window the default
+     * one's there, 680 by 800 inside its header.
      */
     private fun shot(
-        name: String, dark: Boolean, wide: Boolean = false, keys: Boolean = false, narrow: Boolean = false,
-        land: Boolean = false, window: Boolean = false, short: Boolean = false, tab: Int = 0, targets: Boolean = false,
-        act: (() -> SemanticsNodeInteraction)? = null, content: @Composable () -> Unit,
+        name: String,
+        dark: Boolean,
+        wide: Boolean = false,
+        keys: Boolean = false,
+        narrow: Boolean = false,
+        land: Boolean = false,
+        window: Boolean = false,
+        short: Boolean = false,
+        tab: Int = 0,
+        targets: Boolean = false,
+        act: (() -> SemanticsNodeInteraction)? = null,
+        content: @Composable () -> Unit,
     ) {
         RuntimeEnvironment.setQualifiers(
             when {
@@ -108,7 +116,7 @@ class Shots {
                 wide -> "w840dp-h900dp-xhdpi"
                 narrow -> "w360dp-h780dp-xxhdpi"
                 else -> "w411dp-h891dp-xxhdpi"
-            },
+            }
         )
         RuntimeEnvironment.setQualifiers(if (dark) "+night" else "+notnight")
         compose.setContent {
@@ -122,30 +130,55 @@ class Shots {
             }
         }
         val dir = File("build/shots").apply { mkdirs() }
-        val size = if (tab == 1) "-tab-land" else if (tab == 2) "-tab-port" else if (tab == 3) "-840x480" else if (land) "-land" else if (short) "-short" else if (window) "-window" else if (wide) "-wide" else ""
-        val file = File(dir, "$name${if (keys) "-keys" else ""}-${if (dark) "dark" else "light"}$size.png")
+        val size =
+            if (tab == 1) "-tab-land"
+            else if (tab == 2) "-tab-port"
+            else if (tab == 3) "-840x480"
+            else if (land) "-land"
+            else if (short) "-short" else if (window) "-window" else if (wide) "-wide" else ""
+        val file =
+            File(dir, "$name${if (keys) "-keys" else ""}-${if (dark) "dark" else "light"}$size.png")
         val node = act?.invoke() ?: compose.onRoot()
-        file.outputStream().use { node.captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it) }
+        file.outputStream().use {
+            node.captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
+        }
         // what can be touched, and where, for a picture of the targets: px in the root
         if (targets) {
-            val touched = hasClickAction() or SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo) or
-                hasTestTag("wave") or hasTestTag("lane") or hasTestTag("strip")
+            val touched =
+                hasClickAction() or
+                    SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo) or
+                    hasTestTag("wave") or
+                    hasTestTag("lane") or
+                    hasTestTag("strip")
             val nodes = compose.onAllNodes(touched, useUnmergedTree = true).fetchSemanticsNodes()
-            File(dir, file.name.removeSuffix(".png") + ".json").writeText(
-                nodes.joinToString(",\n", "[", "]") { n ->
-                    val c = n.config
-                    val label = c.getOrNull(SemanticsProperties.TestTag)
-                        ?: c.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull()
-                        ?: c.getOrNull(SemanticsProperties.Text)?.firstOrNull()?.text ?: ""
-                    val b = n.boundsInRoot
-                    "{\"label\":\"${label.replace("\"", "")}\",\"l\":${b.left},\"t\":${b.top},\"r\":${b.right},\"b\":${b.bottom}}"
-                },
-            )
+            File(dir, file.name.removeSuffix(".png") + ".json")
+                .writeText(
+                    nodes.joinToString(",\n", "[", "]") { n ->
+                        val c = n.config
+                        val label =
+                            c.getOrNull(SemanticsProperties.TestTag)
+                                ?: c.getOrNull(SemanticsProperties.ContentDescription)
+                                    ?.firstOrNull()
+                                ?: c.getOrNull(SemanticsProperties.Text)?.firstOrNull()?.text
+                                ?: ""
+                        val b = n.boundsInRoot
+                        "{\"label\":\"${label.replace("\"", "")}\",\"l\":${b.left},\"t\":${b.top},\"r\":${b.right},\"b\":${b.bottom}}"
+                    }
+                )
         }
     }
 
-    /** A search for query, its field open on a phone if open, on the match k (-1: the one the playhead last passed). */
-    private fun finder(rows: List<Seg>, query: String, open: Boolean = query.isNotEmpty(), k: Int = -1, position: Double = 0.0) =
+    /**
+     * A search for query, its field open on a phone if open, on the match k (-1: the one the
+     * playhead last passed).
+     */
+    private fun finder(
+        rows: List<Seg>,
+        query: String,
+        open: Boolean = query.isNotEmpty(),
+        k: Int = -1,
+        position: Double = 0.0,
+    ) =
         Finder().apply {
             this.query = query
             this.open = open
@@ -155,164 +188,578 @@ class Shots {
         }
 
     @Composable
-    private fun work(step: String, done: Double, rows: List<Seg> = segments, captions: Boolean = false, name: String = "wonderland_ch_01.flac",
-                     position: Double = 0.0, playing: Boolean = false, error: String? = null,
-                     speed: Double = 1.0, volume: Double = 1.0, muted: Boolean = false, base: Timebase = Timebase(),
-                     find: Finder = Finder(), why: String? = null, locate: Boolean = false) =
+    private fun work(
+        step: String,
+        done: Double,
+        rows: List<Seg> = segments,
+        captions: Boolean = false,
+        name: String = "wonderland_ch_01.flac",
+        position: Double = 0.0,
+        playing: Boolean = false,
+        error: String? = null,
+        speed: Double = 1.0,
+        volume: Double = 1.0,
+        muted: Boolean = false,
+        base: Timebase = Timebase(),
+        find: Finder = Finder(),
+        why: String? = null,
+        locate: Boolean = false,
+    ) =
         Work(
-            name = name, step = step, done = done,
+            name = name,
+            step = step,
+            done = done,
             duration = if (step == "reading" || step == "loading") 0.0 else 640.505,
             peaks = if (step == "reading" || step == "loading") null else peaks,
-            rows = rows, error = error, why = why, locate = if (locate) ({}) else null,
+            rows = rows,
+            error = error,
+            why = why,
+            locate = if (locate) ({}) else null,
             stats = if (step == "done") "Transcribed in 0:11, 58.2x real-time" else null,
             pace = if (step == "transcribing") "57.9x real-time" else null,
-            captions = captions, times = false, playable = step == "done" && why == null, playing = playing,
-            position = position, follow = Follow(rememberLazyListState()),
-            sound = Sound(speed, Player.SPEEDS, volume, muted, {}, { _, _ -> }, {}), chosen = base,
-            find = find, hits = if (step == "done") findIn(rows, find.query) else emptyList(), a = actions,
+            captions = captions,
+            times = false,
+            playable = step == "done" && why == null,
+            playing = playing,
+            position = position,
+            follow = Follow(rememberLazyListState()),
+            sound = Sound(speed, Player.SPEEDS, volume, muted, {}, { _, _ -> }, {}),
+            chosen = base,
+            find = find,
+            hits = if (step == "done") findIn(rows, find.query) else emptyList(),
+            a = actions,
         )
 
     // the catalog as model.rs has it, nothing downloaded, or the English model here
-    private val languages = listOf(
-        "bg", "cs", "da", "de", "el", "en", "es", "et", "fi", "fr", "hr", "hu", "it", "lt",
-        "lv", "mt", "nl", "pl", "pt", "ro", "ru", "sk", "sl", "sv", "uk",
-    )
-    private fun offers(have: Boolean = false, both: Boolean = false, partial: Long = 0) = listOf(
-        Offer("parakeet-tdt-0.6b-v2", "english", listOf("en"), "", 624_480_196, "", have, 0, File(""), File("")),
-        Offer(
-            "parakeet-tdt-0.6b-v3", "multilingual", languages, "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3#multilingual-asr",
-            647_552_644, "", both, if (both) 0 else partial, File(""), File(""),
-        ),
-    )
-    private val models = @Composable { ModelButton(offers(have = true), "parakeet-tdt-0.6b-v2", null, {}, {}, {}) }
+    private val languages =
+        listOf(
+            "bg",
+            "cs",
+            "da",
+            "de",
+            "el",
+            "en",
+            "es",
+            "et",
+            "fi",
+            "fr",
+            "hr",
+            "hu",
+            "it",
+            "lt",
+            "lv",
+            "mt",
+            "nl",
+            "pl",
+            "pt",
+            "ro",
+            "ru",
+            "sk",
+            "sl",
+            "sv",
+            "uk",
+        )
+
+    // npu: in the edition of a phone whose NPU the catalog has a graph for
+    // (the Galaxy S24's), nothing downloaded; faster: the English model here
+    // on the CPU, its graph offered
+    private fun offers(
+        have: Boolean = false,
+        both: Boolean = false,
+        partial: Long = 0,
+        npu: Boolean = false,
+        faster: Boolean = false,
+    ) =
+        listOf(
+            offer(
+                "parakeet-tdt-0.6b-v2",
+                "english",
+                listOf("en"),
+                "",
+                624_480_196,
+                12_115_524,
+                717_939_192,
+                have,
+                0,
+                npu,
+                faster,
+            ),
+            offer(
+                "parakeet-tdt-0.6b-v3",
+                "multilingual",
+                languages,
+                "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3#multilingual-asr",
+                647_552_644,
+                35_187_972,
+                717_939_192,
+                both,
+                if (both) 0 else partial,
+                npu,
+                false,
+            ),
+        )
+
+    /**
+     * A catalog model: its whole file here (have) or partial bytes of it kept; with npu, nothing
+     * here and the NPU's edition its; with faster, its graph offered.
+     */
+    private fun offer(
+        name: String,
+        key: String,
+        langs: List<String>,
+        accuracy: String,
+        whole: Long,
+        slim: Long,
+        graph: Long,
+        have: Boolean,
+        partial: Long,
+        npu: Boolean,
+        faster: Boolean,
+    ): Offer {
+        val g =
+            Part(File(""), graph, "", here = false, kept = 0, taken = 0).takeIf { npu || faster }
+        val kept = if (have) whole else partial
+        return Offer(
+            name,
+            key,
+            langs,
+            accuracy,
+            Part(File(""), whole, "", have, kept, kept),
+            Part(File(""), slim, "", here = false, kept = 0, taken = 0),
+            g,
+            if (g != null) Edition.NPU else Edition.CPU,
+            if (have) Edition.CPU else null,
+            if (faster && have) graph else 0,
+        )
+    }
+
+    private val models =
+        @Composable { ModelButton(offers(have = true), "parakeet-tdt-0.6b-v2", null, {}, {}, {}) }
     private val readyActions = ReadyActions({}, {}, {}, {}, {})
     // the recent list: today's, yesterday's, this year's and last year's,
     // an hour long and minutes, a name that fits and two that do not
     private val day = 86_400L
     private val now = System.currentTimeMillis() / 1000
-    private val recent = listOf(
-        Recents.Item("5", Uri.parse("content://x/5"), "wonderland_ch_01.flac", 640.505, now, 0, 0),
-        Recents.Item("4", Uri.parse("content://x/4"), "Interview with Dr. Ramirez, part 2.m4a", 3725.0, now - day, 0, 0),
-        Recents.Item("3", Uri.parse("content://x/3"), "Recording 2026-10-24 14-32-11.m4a", 312.4, now - 2 * day, 0, 0),
-        Recents.Item("2", Uri.parse("content://x/2"), "Team standup.mp4", 905.0, now - 6 * day, 0, 0),
-        Recents.Item("1", Uri.parse("content://x/1"), "Lecture 7, Thermodynamics.mp3", 4810.0, now - 400 * day, 0, 0),
-    )
+    private val recent =
+        listOf(
+            Recents.Item(
+                "5",
+                Uri.parse("content://x/5"),
+                "wonderland_ch_01.flac",
+                640.505,
+                now,
+                0,
+                0,
+            ),
+            Recents.Item(
+                "4",
+                Uri.parse("content://x/4"),
+                "Interview with Dr. Ramirez, part 2.m4a",
+                3725.0,
+                now - day,
+                0,
+                0,
+            ),
+            Recents.Item(
+                "3",
+                Uri.parse("content://x/3"),
+                "Recording 2026-10-24 14-32-11.m4a",
+                312.4,
+                now - 2 * day,
+                0,
+                0,
+            ),
+            Recents.Item(
+                "2",
+                Uri.parse("content://x/2"),
+                "Team standup.mp4",
+                905.0,
+                now - 6 * day,
+                0,
+                0,
+            ),
+            Recents.Item(
+                "1",
+                Uri.parse("content://x/1"),
+                "Lecture 7, Thermodynamics.mp3",
+                4810.0,
+                now - 400 * day,
+                0,
+                0,
+            ),
+        )
+
     @Test fun ready() = shot("ready", false) { Ready(emptyList(), readyActions, models) }
+
     @Test fun readyDark() = shot("ready", true) { Ready(emptyList(), readyActions, models) }
+
     @Test fun readyRecent() = shot("ready-recent", false) { Ready(recent, readyActions, models) }
+
     @Test fun readyRecentDark() = shot("ready-recent", true) { Ready(recent, readyActions, models) }
-    @Test fun readyRecentNarrow() = shot("ready-recent-360", false, narrow = true) { Ready(recent, readyActions, models) }
-    @Test fun readyRecentWindow() = shot("ready-recent", false, window = true) { Ready(recent, readyActions, models) }
-    @Test fun readyRecentLand() = shot("ready-recent", false, land = true) { Ready(recent, readyActions, models) }
-    @Test fun readyRecentShort() = shot("ready-recent", false, short = true) { Ready(recent, readyActions, models) }
+
+    @Test
+    fun readyRecentNarrow() =
+        shot("ready-recent-360", false, narrow = true) { Ready(recent, readyActions, models) }
+
+    @Test
+    fun readyRecentWindow() =
+        shot("ready-recent", false, window = true) { Ready(recent, readyActions, models) }
+
+    @Test
+    fun readyRecentLand() =
+        shot("ready-recent", false, land = true) { Ready(recent, readyActions, models) }
+
+    @Test
+    fun readyRecentShort() =
+        shot("ready-recent", false, short = true) { Ready(recent, readyActions, models) }
+
     private val removeMenu = {
         compose.onNodeWithText("Team standup.mp4").performTouchInput { longClick() }
         compose.onRoot()
     }
-    @Test fun recentMenu() = shot("recent-menu", false, act = removeMenu) { Ready(recent, readyActions, models) }
+
+    @Test
+    fun recentMenu() =
+        shot("recent-menu", false, act = removeMenu) { Ready(recent, readyActions, models) }
+
     private val askClear = {
         compose.onNodeWithText("Clear").performClick()
         compose.onNode(isDialog())
     }
-    @Test fun recentClear() = shot("recent-clear", false, act = askClear) { Ready(recent, readyActions, models) }
-    @Test fun recentClearDark() = shot("recent-clear", true, act = askClear) { Ready(recent, readyActions, models) }
+
+    @Test
+    fun recentClear() =
+        shot("recent-clear", false, act = askClear) { Ready(recent, readyActions, models) }
+
+    @Test
+    fun recentClearDark() =
+        shot("recent-clear", true, act = askClear) { Ready(recent, readyActions, models) }
+
     private val modelMenu = {
         compose.onNodeWithText("English model").performClick()
         compose.onNode(isPopup())
     }
-    @Test fun modelMenu() = shot("models", false, act = modelMenu) { Ready(emptyList(), readyActions, models) }
-    @Test fun modelMenuDark() = shot("models", true, act = modelMenu) { Ready(emptyList(), readyActions, models) }
+
+    @Test
+    fun modelMenu() =
+        shot("models", false, act = modelMenu) { Ready(emptyList(), readyActions, models) }
+
+    @Test
+    fun modelMenuDark() =
+        shot("models", true, act = modelMenu) { Ready(emptyList(), readyActions, models) }
 
     // Manage models: the English model in use and the Multilingual's download
     // stopped at 312 MB, on a phone; both downloaded, on the tablet on its side;
-    // and there with a transcription running, and a delete's question
+    // and there with a transcription running, and a delete's question; the
+    // English model's graph for the NPU offered, and coming
     @Composable
     private fun manageModels(
-        both: Boolean = false, running: Boolean = false, d: Download? = null, toast: String? = null, compact: Boolean = true,
-    ) = Manage(
-        offers(have = true, both = both, partial = if (both) 0 else 312_000_000), "parakeet-tdt-0.6b-v2", null, d, running, null,
-        18_400_000_000, toast, compact, ManageActions({}, {}, {}, {}, {}),
-    )
+        both: Boolean = false,
+        running: Boolean = false,
+        d: Download? = null,
+        toast: String? = null,
+        compact: Boolean = true,
+        faster: Boolean = false,
+    ) =
+        Manage(
+            offers(
+                have = true,
+                both = both,
+                partial = if (both) 0 else 312_000_000,
+                faster = faster,
+            ),
+            "parakeet-tdt-0.6b-v2",
+            null,
+            d,
+            running,
+            null,
+            18_400_000_000,
+            toast,
+            compact,
+            ManageActions({}, {}, {}, {}, {}, {}),
+        )
+
     private val manageUp = { compose.onAllNodes(isDialog()).onFirst() }
     private val askDelete = {
         compose.onAllNodesWithText("Delete").onFirst().performClick()
         compose.onAllNodes(isDialog()).onLast()
     }
-    @Test fun manage() = shot("manage", false, act = manageUp) { manageModels() }
-    @Test fun manageDark() = shot("manage", true, act = manageUp) { manageModels() }
-    @Test fun manageNarrow() = shot("manage-360", false, narrow = true, act = manageUp) { manageModels() }
-    @Test fun manageDownloading() = shot("manage-downloading", false, act = manageUp) {
-        manageModels(d = Download("parakeet-tdt-0.6b-v3", "downloading", 262_144_000, 647_552_644, 11.8e6, "models.pktito.net", null, retry = false, trying = false))
-    }
-    @Test fun manageToast() = shot("manage-toast", false, act = manageUp) { manageModels(both = true, toast = "Using the Multilingual model") }
-    @Test fun manageTab() = shot("manage", false, tab = 1, act = manageUp) { manageModels(both = true, compact = false) }
-    @Test fun manageTabDark() = shot("manage", true, tab = 1, act = manageUp) { manageModels(both = true, compact = false) }
-    @Test fun manageTabToast() = shot("manage-toast", false, tab = 1, act = manageUp) { manageModels(both = true, toast = "Using the Multilingual model", compact = false) }
-    @Test fun manageRunning() = shot("manage-running", false, tab = 1, act = manageUp) { manageModels(both = true, running = true, compact = false) }
-    @Test fun manageAsk() = shot("manage-ask", false, tab = 1, act = askDelete) { manageModels(both = true, compact = false) }
-    @Test fun manageAskPhone() = shot("manage-ask", false, act = askDelete) { manageModels(both = true) }
 
-    // the setup screen in each of its modes, a download a third of the way, as the desktop's stand-in has it
+    @Test fun manage() = shot("manage", false, act = manageUp) { manageModels() }
+
+    @Test fun manageDark() = shot("manage", true, act = manageUp) { manageModels() }
+
+    @Test
+    fun manageNarrow() = shot("manage-360", false, narrow = true, act = manageUp) { manageModels() }
+
+    @Test
+    fun manageDownloading() =
+        shot("manage-downloading", false, act = manageUp) {
+            manageModels(
+                d =
+                    Download(
+                        "parakeet-tdt-0.6b-v3",
+                        "downloading",
+                        262_144_000,
+                        647_552_644,
+                        11.8e6,
+                        "models.pktito.net",
+                        null,
+                        retry = false,
+                        trying = false,
+                    )
+            )
+        }
+
+    @Test
+    fun manageToast() =
+        shot("manage-toast", false, act = manageUp) {
+            manageModels(both = true, toast = "Using the Multilingual model")
+        }
+
+    @Test
+    fun manageTab() =
+        shot("manage", false, tab = 1, act = manageUp) {
+            manageModels(both = true, compact = false)
+        }
+
+    @Test
+    fun manageTabDark() =
+        shot("manage", true, tab = 1, act = manageUp) { manageModels(both = true, compact = false) }
+
+    @Test
+    fun manageTabToast() =
+        shot("manage-toast", false, tab = 1, act = manageUp) {
+            manageModels(both = true, toast = "Using the Multilingual model", compact = false)
+        }
+
+    @Test
+    fun manageRunning() =
+        shot("manage-running", false, tab = 1, act = manageUp) {
+            manageModels(both = true, running = true, compact = false)
+        }
+
+    @Test
+    fun manageAsk() =
+        shot("manage-ask", false, tab = 1, act = askDelete) {
+            manageModels(both = true, compact = false)
+        }
+
+    @Test
+    fun manageAskPhone() = shot("manage-ask", false, act = askDelete) { manageModels(both = true) }
+
+    @Test
+    fun manageFaster() =
+        shot("manage-faster", false, act = manageUp) { manageModels(both = true, faster = true) }
+
+    @Test
+    fun manageFasterDark() =
+        shot("manage-faster", true, act = manageUp) { manageModels(both = true, faster = true) }
+
+    @Test
+    fun manageFasterTab() =
+        shot("manage-faster", false, tab = 1, act = manageUp) {
+            manageModels(both = true, faster = true, compact = false)
+        }
+
+    @Test
+    fun manageFasterDownloading() =
+        shot("manage-faster-downloading", false, act = manageUp) {
+            manageModels(
+                both = true,
+                faster = true,
+                d =
+                    Download(
+                        "parakeet-tdt-0.6b-v2",
+                        "downloading",
+                        262_144_000,
+                        717_939_192,
+                        11.8e6,
+                        "models.pktito.net",
+                        null,
+                        retry = false,
+                        trying = false,
+                    ),
+            )
+        }
+
+    // the setup screen in each of its modes, a download a third of the way, as the desktop's
+    // stand-in has it
     private val setupActions = SetupActions({}, {}, {}, {}, {}, {}, {}, {})
-    private fun download(step: String, got: Long, speed: Double = 0.0, problem: Problem? = null, retry: Boolean = false) =
-        Download("parakeet-tdt-0.6b-v2", step, got, 624_480_196, speed, "models.pktito.net", problem, retry, trying = false)
-    private val lost = Problem(
-        "download.cant_reach", "models.pktito.net",
-        "Dns Failed: resolve dns name 'models.pktito.net:443': failed to lookup address information: " +
-            "No address associated with hostname\nGET https://models.pktito.net/8bfa6750b83c/parakeet-tdt-0.6b-v2.pkf\nRange: bytes=262144000-",
-    )
+
+    private fun download(
+        step: String,
+        got: Long,
+        speed: Double = 0.0,
+        problem: Problem? = null,
+        retry: Boolean = false,
+    ) =
+        Download(
+            "parakeet-tdt-0.6b-v2",
+            step,
+            got,
+            624_480_196,
+            speed,
+            "models.pktito.net",
+            problem,
+            retry,
+            trying = false,
+        )
+
+    private val lost =
+        Problem(
+            "download.cant_reach",
+            "models.pktito.net",
+            "Dns Failed: resolve dns name 'models.pktito.net:443': failed to lookup address information: " +
+                "No address associated with hostname\nGET https://models.pktito.net/8bfa6750b83c/parakeet-tdt-0.6b-v2.pkf\nRange: bytes=262144000-",
+        )
+
     @Composable
-    private fun setupScreen(d: Download? = null, copying: Copy? = null, waiting: Int = 0) =
-        Setup(offers(), null, d, copying, waiting, setupActions)
+    private fun setupScreen(
+        d: Download? = null,
+        copying: Copy? = null,
+        waiting: Int = 0,
+        npu: Boolean = false,
+    ) = Setup(offers(npu = npu), null, d, copying, waiting, setupActions)
+
     @Test fun setup() = shot("setup", false) { setupScreen() }
+
+    @Test fun setupNpu() = shot("setup-npu", false) { setupScreen(npu = true) }
+
     @Test fun setupDark() = shot("setup", true) { setupScreen() }
+
     @Test fun setupNarrow() = shot("setup-360", false, narrow = true) { setupScreen() }
+
     @Test fun setupWindow() = shot("setup", false, window = true) { setupScreen(waiting = 1) }
+
     // the count is a link in its card's words, a node of its own under them
     private val languagesOpen = {
-        compose.onNodeWithText("25 European languages", substring = true, useUnmergedTree = true).onChildren().onFirst().performClick()
+        compose
+            .onNodeWithText("25 European languages", substring = true, useUnmergedTree = true)
+            .onChildren()
+            .onFirst()
+            .performClick()
         compose.onRoot()
     }
-    @Test fun setupLanguages() = shot("setup-languages", false, act = languagesOpen) { setupScreen() }
-    @Test fun setupLanguagesDark() = shot("setup-languages", true, act = languagesOpen) { setupScreen() }
-    @Test fun downloading() = shot("downloading", false) { setupScreen(download("downloading", 262_144_000, 11.8e6)) }
-    @Test fun downloadingDark() = shot("downloading", true) { setupScreen(download("downloading", 262_144_000, 11.8e6)) }
-    @Test fun downloadingNarrow() = shot("downloading-360", false, narrow = true) { setupScreen(download("downloading", 262_144_000, 11.8e6), waiting = 1) }
-    @Test fun downloadPaused() = shot("download-paused", false) { setupScreen(download("paused", 262_144_000)) }
-    @Test fun downloadChecking() = shot("download-checking", false) { setupScreen(download("checking", 624_480_196)) }
+
+    @Test
+    fun setupLanguages() = shot("setup-languages", false, act = languagesOpen) { setupScreen() }
+
+    @Test
+    fun setupLanguagesDark() = shot("setup-languages", true, act = languagesOpen) { setupScreen() }
+
+    @Test
+    fun downloading() =
+        shot("downloading", false) { setupScreen(download("downloading", 262_144_000, 11.8e6)) }
+
+    @Test
+    fun downloadingDark() =
+        shot("downloading", true) { setupScreen(download("downloading", 262_144_000, 11.8e6)) }
+
+    @Test
+    fun downloadingNarrow() =
+        shot("downloading-360", false, narrow = true) {
+            setupScreen(download("downloading", 262_144_000, 11.8e6), waiting = 1)
+        }
+
+    @Test
+    fun downloadPaused() =
+        shot("download-paused", false) { setupScreen(download("paused", 262_144_000)) }
+
+    @Test
+    fun downloadChecking() =
+        shot("download-checking", false) { setupScreen(download("checking", 624_480_196)) }
+
     private val details = {
         compose.onNodeWithText("Details").performClick()
         compose.onRoot()
     }
-    @Test fun downloadFailed() = shot("download-failed", false, act = details) { setupScreen(download("failed", 262_144_000, problem = lost, retry = true)) }
-    @Test fun downloadFailedDark() = shot("download-failed", true) { setupScreen(download("failed", 262_144_000, problem = lost, retry = true)) }
-    @Test fun downloadFailedNarrow() = shot("download-failed-360", false, narrow = true) { setupScreen(download("failed", 262_144_000, problem = lost, retry = true)) }
-    @Test fun copying() = shot("copying", false) { setupScreen(copying = Copy("parakeet-tdt-0.6b-v3.pkf", 302_000_000, 647_552_644)) }
+
+    @Test
+    fun downloadFailed() =
+        shot("download-failed", false, act = details) {
+            setupScreen(download("failed", 262_144_000, problem = lost, retry = true))
+        }
+
+    @Test
+    fun downloadFailedDark() =
+        shot("download-failed", true) {
+            setupScreen(download("failed", 262_144_000, problem = lost, retry = true))
+        }
+
+    @Test
+    fun downloadFailedNarrow() =
+        shot("download-failed-360", false, narrow = true) {
+            setupScreen(download("failed", 262_144_000, problem = lost, retry = true))
+        }
+
+    @Test
+    fun copying() =
+        shot("copying", false) {
+            setupScreen(copying = Copy("parakeet-tdt-0.6b-v3.pkf", 302_000_000, 647_552_644))
+        }
+
     private val about = @Composable { About("Version 0.9.2 · neon-dp", {}, {}) }
+
     @Test fun about() = shot("about", false, content = about)
+
     @Test fun aboutDark() = shot("about", true, content = about)
+
     @Test fun aboutNarrow() = shot("about-360", false, narrow = true, content = about)
+
     @Test fun aboutWindow() = shot("about", false, window = true, content = about)
+
     @Test fun aboutLand() = shot("about", false, land = true, content = about)
+
     @Test fun aboutLandDark() = shot("about", true, land = true, content = about)
+
     // the sheets, each alone, as About opens it
     private fun sheet(link: String) = {
         compose.onNodeWithText(link).performClick()
         compose.onNodeWithTag("sheet")
     }
+
     @Test fun privacy() = shot("privacy", false, act = sheet("Privacy"), content = about)
+
     @Test fun privacyDark() = shot("privacy", true, act = sheet("Privacy"), content = about)
-    @Test fun privacyWindow() = shot("privacy", false, window = true, act = sheet("Privacy"), content = about)
-    @Test fun licenses() = shot("licenses", false, act = sheet("Open source licenses"), content = about)
-    @Test fun licensesDark() = shot("licenses", true, act = sheet("Open source licenses"), content = about)
-    @Test fun licensesLand() = shot("licenses", false, land = true, act = sheet("Open source licenses"), content = about)
+
+    @Test
+    fun privacyWindow() =
+        shot("privacy", false, window = true, act = sheet("Privacy"), content = about)
+
+    @Test
+    fun licenses() = shot("licenses", false, act = sheet("Open source licenses"), content = about)
+
+    @Test
+    fun licensesDark() =
+        shot("licenses", true, act = sheet("Open source licenses"), content = about)
+
+    @Test
+    fun licensesLand() =
+        shot("licenses", false, land = true, act = sheet("Open source licenses"), content = about)
+
     @Test fun reading() = shot("reading", false) { work("reading", 0.0, emptyList()) }
-    @Test fun transcribing() = shot("transcribing", false) { work("transcribing", 0.42, segments.take(6)) }
-    @Test fun transcribingDark() = shot("transcribing", true) { work("transcribing", 0.42, segments.take(6)) }
+
+    @Test
+    fun transcribing() =
+        shot("transcribing", false) { work("transcribing", 0.42, segments.take(6)) }
+
+    @Test
+    fun transcribingDark() =
+        shot("transcribing", true) { work("transcribing", 0.42, segments.take(6)) }
+
     @Test fun done() = shot("done", false) { work("done", 1.0, position = 30.0, playing = true) }
+
     @Test fun doneDark() = shot("done", true) { work("done", 1.0, position = 30.0, playing = true) }
-    @Test fun doneWide() = shot("done", false, wide = true) { work("done", 1.0, position = 30.0, playing = true) }
-    @Test fun doneWideDark() = shot("done", true, wide = true) { work("done", 1.0, position = 30.0, playing = true) }
+
+    @Test
+    fun doneWide() =
+        shot("done", false, wide = true) { work("done", 1.0, position = 30.0, playing = true) }
+
+    @Test
+    fun doneWideDark() =
+        shot("done", true, wide = true) { work("done", 1.0, position = 30.0, playing = true) }
+
     private val shareMenu = {
         compose.onNodeWithText("Share").performClick()
         compose.onNode(isPopup())
@@ -321,106 +768,357 @@ class Shots {
         compose.onNodeWithText("1×").performClick()
         compose.onNode(isPopup())
     }
+
     @Test fun speedMenu() = shot("speed", false, act = speedMenu) { work("done", 1.0) }
+
     @Test fun speedMenuDark() = shot("speed", true, act = speedMenu) { work("done", 1.0) }
+
     // a speed other than 1× on play's ground, and the speaker's one wave under half the volume
-    @Test fun doneSlowQuiet() = shot("done-1.5x-quiet", false) { work("done", 1.0, position = 30.0, speed = 1.5, volume = 0.3) }
+    @Test
+    fun doneSlowQuiet() =
+        shot("done-1.5x-quiet", false) {
+            work("done", 1.0, position = 30.0, speed = 1.5, volume = 0.3)
+        }
+
     // silent, muted or at none, the speaker lit, where there are keys and so a speaker
-    @Test fun doneMutedKeys() = shot("done-muted", false, keys = true) { work("done", 1.0, position = 30.0, muted = true) }
-    @Test fun doneMutedKeysDark() = shot("done-muted", true, keys = true) { work("done", 1.0, position = 30.0, muted = true) }
-    @Test fun doneNoneKeys() = shot("done-none", false, keys = true) { work("done", 1.0, position = 30.0, volume = 0.0) }
+    @Test
+    fun doneMutedKeys() =
+        shot("done-muted", false, keys = true) { work("done", 1.0, position = 30.0, muted = true) }
+
+    @Test
+    fun doneMutedKeysDark() =
+        shot("done-muted", true, keys = true) { work("done", 1.0, position = 30.0, muted = true) }
+
+    @Test
+    fun doneNoneKeys() =
+        shot("done-none", false, keys = true) { work("done", 1.0, position = 30.0, volume = 0.0) }
+
     @Test fun shareMenu() = shot("share", false, act = shareMenu) { work("done", 1.0) }
+
     @Test fun shareMenuDark() = shot("share", true, act = shareMenu) { work("done", 1.0) }
-    @Test fun speedMenuKeys() = shot("speed", false, keys = true, act = speedMenu) { work("done", 1.0) }
-    @Test fun shareMenuKeys() = shot("share", false, keys = true, act = shareMenu) { work("done", 1.0) }
-    @Test fun shareMenuKeysDark() = shot("share", true, keys = true, act = shareMenu) { work("done", 1.0) }
-    @Test fun captions() = shot("captions", false) { work("done", 1.0, cues, captions = true, position = 12.0) }
-    @Test fun captionsDark() = shot("captions", true) { work("done", 1.0, cues, captions = true, position = 12.0) }
-    // a cue's range on a phone at 360 in frames, its longest; a laptop's window keeps start over end
-    @Test fun captionsNarrowFrames() = shot("captions-360-frames", false, narrow = true) {
-        work("done", 1.0, cues, captions = true, position = 12.0, base = Timebase(frames = true, video = 29.97))
-    }
-    @Test fun captionsWide() = shot("captions", false, wide = true) { work("done", 1.0, cues, captions = true, position = 12.0) }
-    // a search: on a phone, the glass on the views line, then its field open over it with "alice" in it, on its
-    // third match; in a laptop's window beside the views; a word that is not there; and in the captions
+
+    @Test
+    fun speedMenuKeys() = shot("speed", false, keys = true, act = speedMenu) { work("done", 1.0) }
+
+    @Test
+    fun shareMenuKeys() = shot("share", false, keys = true, act = shareMenu) { work("done", 1.0) }
+
+    @Test
+    fun shareMenuKeysDark() =
+        shot("share", true, keys = true, act = shareMenu) { work("done", 1.0) }
+
+    @Test
+    fun captions() =
+        shot("captions", false) { work("done", 1.0, cues, captions = true, position = 12.0) }
+
+    @Test
+    fun captionsDark() =
+        shot("captions", true) { work("done", 1.0, cues, captions = true, position = 12.0) }
+
+    // a cue's range on a phone at 360 in frames, its longest; a laptop's window keeps start over
+    // end
+    @Test
+    fun captionsNarrowFrames() =
+        shot("captions-360-frames", false, narrow = true) {
+            work(
+                "done",
+                1.0,
+                cues,
+                captions = true,
+                position = 12.0,
+                base = Timebase(frames = true, video = 29.97),
+            )
+        }
+
+    @Test
+    fun captionsWide() =
+        shot("captions", false, wide = true) {
+            work("done", 1.0, cues, captions = true, position = 12.0)
+        }
+
+    // a search: on a phone, the glass on the views line, then its field open over it with "alice"
+    // in it, on its
+    // third match; in a laptop's window beside the views; a word that is not there; and in the
+    // captions
     @Test fun findClosed() = shot("find-closed", false) { work("done", 1.0, position = 30.0) }
-    @Test fun find() = shot("find", false) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
-    @Test fun findDark() = shot("find", true) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
-    @Test fun findNarrow() = shot("find-360", false, narrow = true) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
-    @Test fun findWindow() = shot("find", false, window = true) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
-    @Test fun findWindowEmpty() = shot("find-empty", false, window = true) { work("done", 1.0, find = finder(segments, "")) }
-    @Test fun findNone() = shot("find-none", false) { work("done", 1.0, find = finder(segments, "jabberwock")) }
-    @Test fun findCaptions() = shot("find-captions", false) { work("done", 1.0, cues, captions = true, find = finder(cues, "the", k = 3)) }
+
+    @Test
+    fun find() =
+        shot("find", false) {
+            work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2))
+        }
+
+    @Test
+    fun findDark() =
+        shot("find", true) {
+            work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2))
+        }
+
+    @Test
+    fun findNarrow() =
+        shot("find-360", false, narrow = true) {
+            work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2))
+        }
+
+    @Test
+    fun findWindow() =
+        shot("find", false, window = true) {
+            work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2))
+        }
+
+    @Test
+    fun findWindowEmpty() =
+        shot("find-empty", false, window = true) { work("done", 1.0, find = finder(segments, "")) }
+
+    @Test
+    fun findNone() =
+        shot("find-none", false) { work("done", 1.0, find = finder(segments, "jabberwock")) }
+
+    @Test
+    fun findCaptions() =
+        shot("find-captions", false) {
+            work("done", 1.0, cues, captions = true, find = finder(cues, "the", k = 3))
+        }
+
     // the time menu as the desktop's stand-in has it (an audio file, 25 fps chosen, at the start),
     // and a 29.97 video's in frames at its own rate, drop-frame, half a minute in
     private fun timeMenu(time: String) = {
         compose.onNodeWithText(time).performClick()
         compose.onNode(isPopup())
     }
-    @Test fun timeMenu() = shot("time", false, act = timeMenu("00:00.00")) { work("done", 1.0, base = Timebase(fps = 25.0)) }
-    @Test fun timeMenuDark() = shot("time", true, act = timeMenu("00:00.00")) { work("done", 1.0, base = Timebase(fps = 25.0)) }
-    @Test fun timeMenuVideo() = shot("time-video", false, act = timeMenu("00:00:29;29")) {
-        work("done", 1.0, position = 30.0, base = Timebase(frames = true, video = 29.97))
-    }
-    @Test fun doneFrames() = shot("done-frames", false) { work("done", 1.0, position = 30.0, base = Timebase(frames = true, video = 29.97)) }
+
+    @Test
+    fun timeMenu() =
+        shot("time", false, act = timeMenu("00:00.00")) {
+            work("done", 1.0, base = Timebase(fps = 25.0))
+        }
+
+    @Test
+    fun timeMenuDark() =
+        shot("time", true, act = timeMenu("00:00.00")) {
+            work("done", 1.0, base = Timebase(fps = 25.0))
+        }
+
+    @Test
+    fun timeMenuVideo() =
+        shot("time-video", false, act = timeMenu("00:00:29;29")) {
+            work("done", 1.0, position = 30.0, base = Timebase(frames = true, video = 29.97))
+        }
+
+    @Test
+    fun doneFrames() =
+        shot("done-frames", false) {
+            work("done", 1.0, position = 30.0, base = Timebase(frames = true, video = 29.97))
+        }
+
     // a phone at 360 dp: the slider gives way, in seconds and in frames
-    @Test fun doneNarrow() = shot("done-360", false, narrow = true) { work("done", 1.0, position = 30.0) }
-    // a recording that does not play: no play, why in the times' place, Locate… where it can be found again
+    @Test
+    fun doneNarrow() = shot("done-360", false, narrow = true) { work("done", 1.0, position = 30.0) }
+
+    // a recording that does not play: no play, why in the times' place, Locate… where it can be
+    // found again
     private val moved = "Original not found"
     private val changed = "Original changed since transcribing"
-    @Test fun doneMoved() = shot("done-moved", false) { work("done", 1.0, position = 30.0, why = moved, locate = true) }
-    @Test fun doneMovedDark() = shot("done-moved", true) { work("done", 1.0, position = 30.0, why = moved, locate = true) }
-    @Test fun doneChangedNarrow() = shot("done-changed-360", false, narrow = true) { work("done", 1.0, position = 30.0, why = changed, locate = true) }
-    @Test fun doneCant() = shot("done-cant", false) { work("done", 1.0, why = "Android can't play this file") }
-    @Test fun doneNarrowFrames() = shot("done-360-frames", false, narrow = true) { work("done", 1.0, position = 30.0, base = Timebase(frames = true, video = 29.97)) }
-    // the strip's targets with a search's ticks: a finger's (no keys) and the desktop's (keys), a phone's and a tablet's
-    @Test fun targetsFinger() = shot("targets", false, targets = true) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
-    @Test fun targetsKeys() = shot("targets", false, keys = true, targets = true) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
-    @Test fun targetsFingerTab() = shot("targets", false, tab = 1, targets = true) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
-    @Test fun targetsKeysTab() = shot("targets", false, keys = true, tab = 1, targets = true) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
-    @Test fun tabDoneLand() = shot("done", false, tab = 1) { work("done", 1.0, position = 30.0, playing = true) }
-    @Test fun tabDonePort() = shot("done", false, tab = 2) { work("done", 1.0, position = 30.0, playing = true) }
-    @Test fun tabFindLand() = shot("find", false, tab = 1) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
-    @Test fun tabReadyLand() = shot("ready-recent", false, tab = 1) { Ready(recent, readyActions, models) }
-    @Test fun tabReadyPort() = shot("ready-recent", false, tab = 2) { Ready(recent, readyActions, models) }
-    @Test fun tabCaptionsLand() = shot("captions", false, tab = 1) { work("done", 1.0, cues, captions = true, position = 12.0) }
+
+    @Test
+    fun doneMoved() =
+        shot("done-moved", false) { work("done", 1.0, position = 30.0, why = moved, locate = true) }
+
+    @Test
+    fun doneMovedDark() =
+        shot("done-moved", true) { work("done", 1.0, position = 30.0, why = moved, locate = true) }
+
+    @Test
+    fun doneChangedNarrow() =
+        shot("done-changed-360", false, narrow = true) {
+            work("done", 1.0, position = 30.0, why = changed, locate = true)
+        }
+
+    @Test
+    fun doneCant() =
+        shot("done-cant", false) { work("done", 1.0, why = "Android can't play this file") }
+
+    @Test
+    fun doneNarrowFrames() =
+        shot("done-360-frames", false, narrow = true) {
+            work("done", 1.0, position = 30.0, base = Timebase(frames = true, video = 29.97))
+        }
+
+    // the strip's targets with a search's ticks: a finger's (no keys) and the desktop's (keys), a
+    // phone's and a tablet's
+    @Test
+    fun targetsFinger() =
+        shot("targets", false, targets = true) {
+            work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2))
+        }
+
+    @Test
+    fun targetsKeys() =
+        shot("targets", false, keys = true, targets = true) {
+            work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2))
+        }
+
+    @Test
+    fun targetsFingerTab() =
+        shot("targets", false, tab = 1, targets = true) {
+            work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2))
+        }
+
+    @Test
+    fun targetsKeysTab() =
+        shot("targets", false, keys = true, tab = 1, targets = true) {
+            work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2))
+        }
+
+    @Test
+    fun tabDoneLand() =
+        shot("done", false, tab = 1) { work("done", 1.0, position = 30.0, playing = true) }
+
+    @Test
+    fun tabDonePort() =
+        shot("done", false, tab = 2) { work("done", 1.0, position = 30.0, playing = true) }
+
+    @Test
+    fun tabFindLand() =
+        shot("find", false, tab = 1) {
+            work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2))
+        }
+
+    @Test
+    fun tabReadyLand() =
+        shot("ready-recent", false, tab = 1) { Ready(recent, readyActions, models) }
+
+    @Test
+    fun tabReadyPort() =
+        shot("ready-recent", false, tab = 2) { Ready(recent, readyActions, models) }
+
+    @Test
+    fun tabCaptionsLand() =
+        shot("captions", false, tab = 1) {
+            work("done", 1.0, cues, captions = true, position = 12.0)
+        }
+
     // the side, where the window has room for it: beside the drop zone, beside
     // a transcript of the list, marked, and heading the list with one under
     // way, its rows waiting, or stopped
     private val opened = Opened("5", "wonderland_ch_01.flac", "done", 1.0)
-    @Test fun sideReady() = shot("side-ready", false, tab = 1) { Side(recent, readyActions, null, models) {} }
-    @Test fun sideReadyDark() = shot("side-ready", true, tab = 1) { Side(recent, readyActions, null, models) {} }
-    @Test fun sideDone() = shot("side-done", false, tab = 1) { Side(recent, readyActions, opened, models) { work("done", 1.0, position = 30.0, playing = true) } }
-    @Test fun sideDoneDark() = shot("side-done", true, tab = 1) { Side(recent, readyActions, opened, models) { work("done", 1.0, position = 30.0, playing = true) } }
-    @Test fun sideDoneKeys() = shot("side-done", false, keys = true, tab = 1) { Side(recent, readyActions, opened, models) { work("done", 1.0, position = 30.0, playing = true) } }
-    @Test fun sideFind() = shot("side-find", false, tab = 1) {
-        Side(recent, readyActions, opened, models) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
-    }
-    @Test fun sideTranscribing() = shot("side-transcribing", false, tab = 1) {
-        Side(recent, readyActions, Opened("6", "wonderland_ch_02.flac", "transcribing", 0.42), models) {
-            work("transcribing", 0.42, segments.take(6), name = "wonderland_ch_02.flac")
+
+    @Test
+    fun sideReady() =
+        shot("side-ready", false, tab = 1) { Side(recent, readyActions, null, models) {} }
+
+    @Test
+    fun sideReadyDark() =
+        shot("side-ready", true, tab = 1) { Side(recent, readyActions, null, models) {} }
+
+    @Test
+    fun sideDone() =
+        shot("side-done", false, tab = 1) {
+            Side(recent, readyActions, opened, models) {
+                work("done", 1.0, position = 30.0, playing = true)
+            }
         }
-    }
-    @Test fun sideTranscribingDark() = shot("side-transcribing", true, tab = 1) {
-        Side(recent, readyActions, Opened("6", "wonderland_ch_02.flac", "transcribing", 0.42), models) {
-            work("transcribing", 0.42, segments.take(6), name = "wonderland_ch_02.flac")
+
+    @Test
+    fun sideDoneDark() =
+        shot("side-done", true, tab = 1) {
+            Side(recent, readyActions, opened, models) {
+                work("done", 1.0, position = 30.0, playing = true)
+            }
         }
-    }
-    @Test fun sideStopped() = shot("side-stopped", false, tab = 1) {
-        Side(recent.take(2), readyActions, Opened("6", "wonderland_ch_02.flac", "stopped", 0.42), models) {
-            work("stopped", 0.42, segments.take(6), name = "wonderland_ch_02.flac")
+
+    @Test
+    fun sideDoneKeys() =
+        shot("side-done", false, keys = true, tab = 1) {
+            Side(recent, readyActions, opened, models) {
+                work("done", 1.0, position = 30.0, playing = true)
+            }
         }
-    }
-    @Test fun sideFirst() = shot("side-first", false, tab = 1) {
-        Side(emptyList(), readyActions, Opened("6", "wonderland_ch_01.flac", "transcribing", 0.42), models) {
-            work("transcribing", 0.42, segments.take(6))
+
+    @Test
+    fun sideFind() =
+        shot("side-find", false, tab = 1) {
+            Side(recent, readyActions, opened, models) {
+                work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2))
+            }
         }
-    }
-    @Test fun sideLeast() = shot("side-done", false, tab = 3) { Side(recent, readyActions, opened, models) { work("done", 1.0, position = 30.0, playing = true) } }
-    @Test fun sideLeastFind() = shot("side-find", false, tab = 3) {
-        Side(recent, readyActions, opened, models) { work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2)) }
-    }
-    @Test fun error() = shot("error", false) {
-        work("error", 0.0, emptyList(), error = "Can't read this file (Android has no decoder for audio/alac)")
-    }
+
+    @Test
+    fun sideTranscribing() =
+        shot("side-transcribing", false, tab = 1) {
+            Side(
+                recent,
+                readyActions,
+                Opened("6", "wonderland_ch_02.flac", "transcribing", 0.42),
+                models,
+            ) {
+                work("transcribing", 0.42, segments.take(6), name = "wonderland_ch_02.flac")
+            }
+        }
+
+    @Test
+    fun sideTranscribingDark() =
+        shot("side-transcribing", true, tab = 1) {
+            Side(
+                recent,
+                readyActions,
+                Opened("6", "wonderland_ch_02.flac", "transcribing", 0.42),
+                models,
+            ) {
+                work("transcribing", 0.42, segments.take(6), name = "wonderland_ch_02.flac")
+            }
+        }
+
+    @Test
+    fun sideStopped() =
+        shot("side-stopped", false, tab = 1) {
+            Side(
+                recent.take(2),
+                readyActions,
+                Opened("6", "wonderland_ch_02.flac", "stopped", 0.42),
+                models,
+            ) {
+                work("stopped", 0.42, segments.take(6), name = "wonderland_ch_02.flac")
+            }
+        }
+
+    @Test
+    fun sideFirst() =
+        shot("side-first", false, tab = 1) {
+            Side(
+                emptyList(),
+                readyActions,
+                Opened("6", "wonderland_ch_01.flac", "transcribing", 0.42),
+                models,
+            ) {
+                work("transcribing", 0.42, segments.take(6))
+            }
+        }
+
+    @Test
+    fun sideLeast() =
+        shot("side-done", false, tab = 3) {
+            Side(recent, readyActions, opened, models) {
+                work("done", 1.0, position = 30.0, playing = true)
+            }
+        }
+
+    @Test
+    fun sideLeastFind() =
+        shot("side-find", false, tab = 3) {
+            Side(recent, readyActions, opened, models) {
+                work("done", 1.0, position = 30.0, find = finder(segments, "alice", k = 2))
+            }
+        }
+
+    @Test
+    fun error() =
+        shot("error", false) {
+            work(
+                "error",
+                0.0,
+                emptyList(),
+                error = "Can't read this file (Android has no decoder for audio/alac)",
+            )
+        }
 }

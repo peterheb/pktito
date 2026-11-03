@@ -45,6 +45,10 @@ pub struct Entry {
     /// Its edition for Apple's Neural Engine, which the iOS app downloads
     /// where the device can run it (ios.rs).
     pub coreml: Coreml,
+    /// Its encoder for Snapdragons' NPUs, a graph a chip, which the Android
+    /// app downloads with Coreml's slim file where the phone is one of
+    /// those chips (android.rs).
+    pub qnn: &'static [Graph],
 }
 
 /// A file models.pktito.net serves beside a .pkf, under the first twelve
@@ -59,7 +63,7 @@ pub struct Part {
 
 /// A model's edition for Apple's Neural Engine, from pktito's ane fork: the
 /// model file without its encoder (`pktito-tools slim`), which only the
-/// fork loads, and the encoder as a compiled Core ML model, int8, in an
+/// fork loads (its qnn branch too, Android's), and the encoder as a compiled Core ML model, int8, in an
 /// Apple Archive (tools/ane/encoder.py, then `aa archive`), made from the
 /// same checkpoint, whose SHA-256 each names and the fork holds them to.
 /// For v2 589 MB in all where its .pkf is 624; the same transcript as the
@@ -69,6 +73,25 @@ pub struct Part {
 pub struct Coreml {
     pub slim: Part,
     pub encoder: Part,
+}
+
+/// A model's encoder for one chip's NPU, from pktito's qnn branch: the graph
+/// Qualcomm's QNN compiled on a PC from the whole .pkf for that chip
+/// (core/qnn.h, PKTITO_QNN_TARGET), which the qnn branch reads with
+/// Coreml's slim file, the same file, as with the whole model. No phone
+/// compiles one: the Android app ships no compiler. For v2 728 MB with the
+/// slim file where its .pkf is 624. With the PC's graph the Galaxy S24
+/// Ultra (SM8650) ran AliceBench at 177x, word for word what its own compile
+/// wrote, and the Googlebook (X1E80100) the slim file word for word what
+/// the whole one wrote with the same graph (the qnn branch's
+/// tools/qnn/CLIMB.md, 2026-11-02 and 11-03).
+#[derive(Clone, Copy, Serialize)]
+pub struct Graph {
+    /// The chip it is for, as its QNN describes it (pk_qnn_chip): the SoC's
+    /// number in QNN's table, its Hexagon's version, its VTCM in MB, and
+    /// whether it has DLBC and a signed PD
+    pub chip: &'static str,
+    pub part: Part,
 }
 
 /// The models models.pktito.net serves: pktito-tools' conversions of NVIDIA's
@@ -96,6 +119,36 @@ pub const CATALOG: &[Entry] = &[
                 sha256: "8a11f959618e9463386ca9ff5234bec82d535c6a0b1e1b2101cd507c8549297c",
             },
         },
+        // compiled on the 9950X by QAIRT 2.51.0.260929 (2026-11-03)
+        qnn: &[
+            // the Galaxy S24's Snapdragon 8 Gen 3
+            Graph {
+                chip: "57,75,8,1,0",
+                part: Part {
+                    file: "parakeet-tdt-0.6b-v2-sm8650.qnn",
+                    bytes: 717_939_304,
+                    sha256: "f12c6b55f288c515f11f9e63fa06c230424f23b7b39b39f474a38b2ab91b16f3",
+                },
+            },
+            // the Galaxy S25's Snapdragon 8 Elite
+            Graph {
+                chip: "69,79,8,1,0",
+                part: Part {
+                    file: "parakeet-tdt-0.6b-v2-sm8750.qnn",
+                    bytes: 715_403_880,
+                    sha256: "b2293ca9d91cade115af956dadf3fcc495e24db5b17c6aab60a002d841eadad6",
+                },
+            },
+            // the Googlebook's Snapdragon X Elite
+            Graph {
+                chip: "60,73,8,1,1",
+                part: Part {
+                    file: "parakeet-tdt-0.6b-v2-x1e80100.qnn",
+                    bytes: 716_317_288,
+                    sha256: "48ccb9089cce638ed0555dfbf1dbcff805e17a0a657fb270d05d795ed8de5bd4",
+                },
+            },
+        ],
     },
     Entry {
         name: "parakeet-tdt-0.6b-v3",
@@ -122,6 +175,32 @@ pub const CATALOG: &[Entry] = &[
                 sha256: "64cf1a407ada158ee22450e8f258258373fe8e2ba3ac4ba0f482a91f0c122cdc",
             },
         },
+        qnn: &[
+            Graph {
+                chip: "57,75,8,1,0",
+                part: Part {
+                    file: "parakeet-tdt-0.6b-v3-sm8650.qnn",
+                    bytes: 717_939_304,
+                    sha256: "589170fab8e81f64334d4b3fc7ea3dfcaf8fbd1758b07e43d628b9468d298429",
+                },
+            },
+            Graph {
+                chip: "69,79,8,1,0",
+                part: Part {
+                    file: "parakeet-tdt-0.6b-v3-sm8750.qnn",
+                    bytes: 715_403_880,
+                    sha256: "725c8414d6bbeeca26e2fbb5ac161cc076df3dc707f12878236d6b5eabdc9556",
+                },
+            },
+            Graph {
+                chip: "60,73,8,1,1",
+                part: Part {
+                    file: "parakeet-tdt-0.6b-v3-x1e80100.qnn",
+                    bytes: 716_317_288,
+                    sha256: "02a6cd893573211484344d9f4ca2adc9e7728012ce92cbd47d8fb0e59ce3ae61",
+                },
+            },
+        ],
     },
 ];
 
@@ -520,14 +599,15 @@ pub fn download_url(e: &Entry) -> String {
     format!("{}{}/{}.pkf", base(), &e.sha256[..12], e.name)
 }
 
-/// The same for a Core ML edition's file.
+/// The same for a Core ML edition's file, or a graph for an NPU.
 pub fn part_url(p: &Part) -> String {
     format!("{}{}/{}", base(), &p.sha256[..12], p.file)
 }
 
 /// A file to download from models.pktito.net into a folder: a model's
-/// .pkf, or a part of its Core ML edition (Coreml). It gathers in part,
-/// and is renamed to dst once its size and SHA-256 are the published ones.
+/// .pkf, a part of its Core ML edition (Coreml), or a graph of its for a
+/// chip's NPU (Graph). It gathers in part, and is renamed to dst once its
+/// size and SHA-256 are the published ones.
 #[derive(Clone)]
 pub struct Wanted {
     /// what a download of it is called: its model's name
@@ -552,7 +632,22 @@ impl Wanted {
         }
     }
 
-    /// A part of e's Core ML edition, into dir under its own name.
+    /// The file of e's the catalog names file: its .pkf, a part of its
+    /// Core ML edition, or one of its graphs; None for a name the catalog
+    /// does not give e, so that a download asks for no other file (the
+    /// Android app's, which names the files of the edition it wants).
+    pub fn named(dir: &Path, e: &Entry, file: &str) -> Option<Wanted> {
+        if file == format!("{}.pkf", e.name) {
+            return Some(Wanted::model(dir, e));
+        }
+        [&e.coreml.slim, &e.coreml.encoder]
+            .into_iter()
+            .chain(e.qnn.iter().map(|g| &g.part))
+            .find(|p| p.file == file)
+            .map(|p| Wanted::part(dir, e, p))
+    }
+
+    /// A part of e's Core ML edition, or a graph of e's, into dir under its own name.
     pub fn part(dir: &Path, e: &Entry, p: &Part) -> Wanted {
         Wanted {
             name: e.name.into(),

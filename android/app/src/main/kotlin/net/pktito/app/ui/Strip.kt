@@ -62,10 +62,16 @@ import kotlin.math.floor
 import kotlin.math.roundToInt
 import net.pktito.app.R
 
-/** The strip's text, all of it term-ink: which label leads is said by where it is (app.css, .pk-tstamp). */
+/**
+ * The strip's text, all of it term-ink: which label leads is said by where it is (app.css,
+ * .pk-tstamp).
+ */
 private val Tstamp = Type.stamp.copy(lineHeight = 1.em, fontFeatureSettings = "tnum")
 
-/** What the strip's speed and speaker say and do: playback's (Player's), kept between runs by the screen. */
+/**
+ * What the strip's speed and speaker say and do: playback's (Player's), kept between runs by the
+ * screen.
+ */
 class Sound(
     val speed: Double,
     val speeds: List<Double>,
@@ -80,31 +86,30 @@ class Sound(
 /** A speed as the desktop writes it: 0.75×, 1×, 1.5× (app.js, speedMenu). */
 fun rate(s: Double): String = (if (s == floor(s)) s.toInt().toString() else s.toString()) + "×"
 
-/** The speed d steps from now among speeds, held at the ends (app.js, stepSpeed): Slower, Faster, < and >. */
+/**
+ * The speed d steps from now among speeds, held at the ends (app.js, stepSpeed): Slower, Faster, <
+ * and >.
+ */
 fun stepped(speeds: List<Double>, now: Double, d: Int): Double =
     speeds[(speeds.indexOf(now) + d).coerceIn(0, speeds.size - 1)]
 
 /**
- * The file's strip, on term in both themes (app.css, .pk-strip): play, the
- * speed under it on the times' line, or at work the progress in play's
- * place and size, so that the waveform keeps its width when the transcript
- * finishes; the waveform the rest of the width; under its two ends, the
- * time, which chooses how times are written, and the length, and after
- * the time the speaker and its volume. At work the waveform fills to the
- * playhead as the transcript does, and the time's place says the step or
- * the pace. A finished transcript whose recording does not play (why) has
- * no play, its waveform the whole width, and why in the times' place,
- * with Locate… where the file can be found again; a tap on the waveform
- * still moves the playhead (Peter, 2026-10-26: "Just no play button").
+ * The file's strip, on term in both themes (app.css, .pk-strip): play, the speed under it on the
+ * times' line, or at work the progress in play's place and size, so that the waveform keeps its
+ * width when the transcript finishes; the waveform the rest of the width; under its two ends, the
+ * time, which chooses how times are written, and the length, and after the time the speaker and its
+ * volume. At work the waveform fills to the playhead as the transcript does, and the time's place
+ * says the step or the pace. A finished transcript whose recording does not play (why) has no play,
+ * its waveform the whole width, and why in the times' place, with Locate… where the file can be
+ * found again; a tap on the waveform still moves the playhead (Peter, 2026-10-26: "Just no play
+ * button").
  *
- * A finger's strip (byFinger: no keyboard, so no trackpad, as on a phone
- * or a tablet) is a thumb's: play 48 dp, Android's least target, to the
- * desktop's 40; no speaker or slider, as the device's volume keys set the
- * level (Player.keysOnly); the ticks' lane 24 dp, 32 with ticks, where the
- * times' line had taken a thumb's taps under its 15 (the S25's mute,
- * 2026-10-26); and a drag on the waveform or the lane moves the playhead
- * and the time with the thumb, seeking where it is let go. 125 dp tall to
- * the desktop's 116.
+ * A finger's strip (byFinger: no keyboard, so no trackpad, as on a phone or a tablet) is a thumb's:
+ * play 48 dp, Android's least target, to the desktop's 40; no speaker or slider, as the device's
+ * volume keys set the level (Player.keysOnly); the ticks' lane 24 dp, 32 with ticks, where the
+ * times' line had taken a thumb's taps under its 15 (the S25's mute, 2026-10-26); and a drag on the
+ * waveform or the lane moves the playhead and the time with the thumb, seeking where it is let go.
+ * 125 dp tall to the desktop's 116.
  */
 @Composable
 fun Strip(
@@ -145,18 +150,22 @@ fun Strip(
     // where a thumb dragging on the waveform or the lane has the playhead, 0 to 1, until it lets go
     var scrub by remember { mutableStateOf<Double?>(null) }
     val seek by rememberUpdatedState(onSeek)
-    val dragged = if (!finger || !review) Modifier
-    else Modifier.pointerInput(Unit) {
-        fun at(x: Float) = (x / size.width).toDouble().coerceIn(0.0, 1.0)
-        detectHorizontalDragGestures(
-            onDragStart = { scrub = at(it.x) },
-            onDragEnd = {
-                scrub?.let { seek(it) }
-                scrub = null
-            },
-            onDragCancel = { scrub = null },
-        ) { c, _ -> scrub = at(c.position.x) }
-    }
+    val dragged =
+        if (!finger || !review) Modifier
+        else
+            Modifier.pointerInput(Unit) {
+                fun at(x: Float) = (x / size.width).toDouble().coerceIn(0.0, 1.0)
+                detectHorizontalDragGestures(
+                    onDragStart = { scrub = at(it.x) },
+                    onDragEnd = {
+                        scrub?.let { seek(it) }
+                        scrub = null
+                    },
+                    onDragCancel = { scrub = null },
+                ) { c, _ ->
+                    scrub = at(c.position.x)
+                }
+            }
     Row(
         modifier
             .fillMaxWidth()
@@ -177,119 +186,157 @@ fun Strip(
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
                 Box(
-                    Modifier
-                        .alpha(if (playable) 1f else 0.45f)
-                        .control(Corner, p.termLine, onTerm = true, enabled = playable, label = playLabel, onClick = onPlay)
+                    Modifier.alpha(if (playable) 1f else 0.45f)
+                        .control(
+                            Corner,
+                            p.termLine,
+                            onTerm = true,
+                            enabled = playable,
+                            label = playLabel,
+                            onClick = onPlay,
+                        )
                         .size(button),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(if (playing) Icons.pause else Icons.play, null, tint = p.termInk, modifier = Modifier.size(if (finger) 24.dp else 20.dp))
+                    Icon(
+                        if (playing) Icons.pause else Icons.play,
+                        null,
+                        tint = p.termInk,
+                        modifier = Modifier.size(if (finger) 24.dp else 20.dp),
+                    )
                 }
                 Speed(sound, playable)
             }
-        else if (!review)
-            Box(Modifier.padding(top = (wave - button) / 2)) { Ring(done, button) }
+        else if (!review) Box(Modifier.padding(top = (wave - button) / 2)) { Ring(done, button) }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(gap)) {
             val at = scrub ?: if (review) (if (duration > 0) position / duration else 0.0) else done
             Waveform(
-                peaks, at, duration,
-                Modifier
-                    .testTag("wave")
+                peaks,
+                at,
+                duration,
+                Modifier.testTag("wave")
                     .alpha(if (review && !playable && !silent) 0.45f else 1f)
                     .then(
                         if (review)
                             Modifier.pointerInput(Unit) {
-                                detectTapGestures { o -> seek((o.x / size.width).toDouble().coerceIn(0.0, 1.0)) }
+                                detectTapGestures { o ->
+                                    seek((o.x / size.width).toDouble().coerceIn(0.0, 1.0))
+                                }
                             }
-                        else Modifier,
+                        else Modifier
                     )
                     .then(dragged),
                 wave,
             )
-            // the desktop's lane for a search's ticks, 9 dp, which keeps the strip its 116; a finger's, 18
+            // the desktop's lane for a search's ticks, 9 dp, which keeps the strip its 116; a
+            // finger's, 18
             Ticks(ticks, tickAt, onTick, finger, gap, if (finger && review) seek else null, dragged)
             if (silent) Why(why!!, locate)
-            else TimesLine(
-                time = {
-                    // a dragged playhead's time, where the thumb would let it go
-                    if (review) Time(scrub?.let { base.at(it * duration) } ?: left, base, position, onBase)
-                    else Text(left, style = Tstamp, color = p.termInk, maxLines = 1)
-                },
-                speaker = { if (review && !finger) Speaker(sound, playable) },
-                slider = {
-                    if (review && !finger)
-                        Level(
-                            if (sound.muted) 0.0 else sound.volume, playable, stringResource(R.string.volume_label), sound.setVolume,
-                            Modifier.bleed(vertical = 6.dp).alpha(if (playable) 1f else 0.45f),
-                        )
-                },
-                length = { Text(right, style = Tstamp, color = p.termInk, maxLines = 1) },
-            )
+            else
+                TimesLine(
+                    time = {
+                        // a dragged playhead's time, where the thumb would let it go
+                        if (review)
+                            Time(
+                                scrub?.let { base.at(it * duration) } ?: left,
+                                base,
+                                position,
+                                onBase,
+                            )
+                        else Text(left, style = Tstamp, color = p.termInk, maxLines = 1)
+                    },
+                    speaker = { if (review && !finger) Speaker(sound, playable) },
+                    slider = {
+                        if (review && !finger)
+                            Level(
+                                if (sound.muted) 0.0 else sound.volume,
+                                playable,
+                                stringResource(R.string.volume_label),
+                                sound.setVolume,
+                                Modifier.bleed(vertical = 6.dp).alpha(if (playable) 1f else 0.45f),
+                            )
+                    },
+                    length = { Text(right, style = Tstamp, color = p.termInk, maxLines = 1) },
+                )
         }
     }
 }
 
 /**
- * A search's ticks in the lane under the waveform (app.css, .pk-ticks), each
- * match at its word's time, 2 dp of plume; the current one term-ink, 3 dp,
- * and 3 dp longer each way, so that its shape tells it too, 4 clear of the
- * bars and of the times' line in gaps of 7 (Strip). Drawn and touched across
- * the gaps, 23 dp, 15 with none to draw, and a tap goes to the nearest tick
- * within 16 dp of it, the earlier where two are as near, as a click on the
- * desktop's does (f441c18): a tick is 9 wide there, and a finger is wider.
- * Over the times' line in touch: its controls reach 6 dp up into the lane
- * (bleed), and the line, after the lane, took the lower half of each tick
- * there; a tick tapped there muted the speaker (Peter's S25, 2026-10-26;
- * on the emulator, y 545 px of the lane's 516 to 558). A finger's lane
- * is 18 dp, at work too, so that the strip keeps its height, and touched
- * across 32, 24 with no ticks; in review a tap there with no tick near
- * seeks there (miss), as one on the waveform does, where the desktop's
- * does nothing, and a drag along it is the thumb's along the waveform
- * (dragged): after the lane's own modifiers, so that it has all of the
- * lane's height, the bled gaps too, which lint's rule for a Modifier
- * parameter, named modifier and first in the chain, would take from it.
+ * A search's ticks in the lane under the waveform (app.css, .pk-ticks), each match at its word's
+ * time, 2 dp of plume; the current one term-ink, 3 dp, and 3 dp longer each way, so that its shape
+ * tells it too, 4 clear of the bars and of the times' line in gaps of 7 (Strip). Drawn and touched
+ * across the gaps, 23 dp, 15 with none to draw, and a tap goes to the nearest tick within 16 dp of
+ * it, the earlier where two are as near, as a click on the desktop's does (f441c18): a tick is 9
+ * wide there, and a finger is wider. Over the times' line in touch: its controls reach 6 dp up into
+ * the lane (bleed), and the line, after the lane, took the lower half of each tick there; a tick
+ * tapped there muted the speaker (Peter's S25, 2026-10-26; on the emulator, y 545 px of the lane's
+ * 516 to 558). A finger's lane is 18 dp, at work too, so that the strip keeps its height, and
+ * touched across 32, 24 with no ticks; in review a tap there with no tick near seeks there (miss),
+ * as one on the waveform does, where the desktop's does nothing, and a drag along it is the thumb's
+ * along the waveform (dragged): after the lane's own modifiers, so that it has all of the lane's
+ * height, the bled gaps too, which lint's rule for a Modifier parameter, named modifier and first
+ * in the chain, would take from it.
  */
 @Suppress("ModifierParameter")
 @Composable
-private fun Ticks(ticks: List<Double>, at: Int, onTick: (Int) -> Unit, finger: Boolean, gap: Dp, miss: ((Double) -> Unit)?, dragged: Modifier) {
+private fun Ticks(
+    ticks: List<Double>,
+    at: Int,
+    onTick: (Int) -> Unit,
+    finger: Boolean,
+    gap: Dp,
+    miss: ((Double) -> Unit)?,
+    dragged: Modifier,
+) {
     val p = pk
     val tick by rememberUpdatedState(onTick)
     val missed by rememberUpdatedState(miss)
     Canvas(
-        Modifier
-            .zIndex(1f)
+        Modifier.zIndex(1f)
             .fillMaxWidth()
             .testTag("lane")
             .bleed(vertical = gap)
             .height((if (finger) 18.dp else 9.dp) + gap * 2)
             .then(
                 if (ticks.isEmpty() && miss == null) Modifier
-                else Modifier.pointerInput(ticks) {
-                    detectTapGestures { o ->
-                        val k = ticks.indices.minByOrNull { abs(ticks[it] * size.width - o.x) }
-                        if (k != null && abs(ticks[k] * size.width - o.x) <= 16.dp.toPx()) tick(k)
-                        else missed?.invoke((o.x / size.width).toDouble().coerceIn(0.0, 1.0))
+                else
+                    Modifier.pointerInput(ticks) {
+                        detectTapGestures { o ->
+                            val k = ticks.indices.minByOrNull { abs(ticks[it] * size.width - o.x) }
+                            if (k != null && abs(ticks[k] * size.width - o.x) <= 16.dp.toPx())
+                                tick(k)
+                            else missed?.invoke((o.x / size.width).toDouble().coerceIn(0.0, 1.0))
+                        }
                     }
-                },
             )
-            .then(dragged),
+            .then(dragged)
     ) {
         val g = gap.toPx()
-        for ((k, t) in ticks.withIndex())
-            if (k != at) drawLine(p.plume, Offset(t.toFloat() * size.width, g), Offset(t.toFloat() * size.width, size.height - g), 2.dp.toPx())
+        for ((k, t) in ticks.withIndex()) if (k != at)
+            drawLine(
+                p.plume,
+                Offset(t.toFloat() * size.width, g),
+                Offset(t.toFloat() * size.width, size.height - g),
+                2.dp.toPx(),
+            )
         ticks.getOrNull(at)?.let { t ->
             val out = g - 3.dp.toPx()
-            drawLine(p.termInk, Offset(t.toFloat() * size.width, out), Offset(t.toFloat() * size.width, size.height - out), 3.dp.toPx())
+            drawLine(
+                p.termInk,
+                Offset(t.toFloat() * size.width, out),
+                Offset(t.toFloat() * size.width, size.height - out),
+                3.dp.toPx(),
+            )
         }
     }
 }
 
 /**
- * The speed, a button on the times' line, its box 6 dp round its words and
- * the line kept its height (app.css, .pk-speed): on term-line when it is
- * not 1×, as play is. Its menu: the speeds as chips, then Slower and
- * Faster, with their keys where there are keys, a step of which keeps the
- * menu open for the next.
+ * The speed, a button on the times' line, its box 6 dp round its words and the line kept its height
+ * (app.css, .pk-speed): on term-line when it is not 1×, as play is. Its menu: the speeds as chips,
+ * then Slower and Faster, with their keys where there are keys, a step of which keeps the menu open
+ * for the next.
  */
 @Composable
 private fun Speed(sound: Sound, enabled: Boolean) {
@@ -304,34 +351,56 @@ private fun Speed(sound: Sound, enabled: Boolean) {
             style = Tstamp,
             color = p.termInk,
             maxLines = 1,
-            modifier = Modifier
-                .bleed(6.dp, 6.dp)
-                .alpha(if (enabled) 1f else 0.45f)
-                .control(
-                    CornerSm, if (sound.speed != 1.0) p.termLine else Color.Transparent, onTerm = true, enabled = enabled,
-                    label = stringResource(R.string.speed_label, rate(sound.speed).dropLast(1)), held = open,
-                ) { open = true }
-                .padding(6.dp),
+            modifier =
+                Modifier.bleed(6.dp, 6.dp)
+                    .alpha(if (enabled) 1f else 0.45f)
+                    .control(
+                        CornerSm,
+                        if (sound.speed != 1.0) p.termLine else Color.Transparent,
+                        onTerm = true,
+                        enabled = enabled,
+                        label = stringResource(R.string.speed_label, rate(sound.speed).dropLast(1)),
+                        held = open,
+                    ) {
+                        open = true
+                    }
+                    .padding(6.dp),
         )
         // 6 dp under its box, which reaches 6 under the line (app.js, openMenu)
         Menu(open, { open = false }, gap = 12.dp) {
-            Rates(speeds.map { rate(it) to it }, { it == sound.speed }, stringResource(R.string.speed_group), top = 8.dp) {
+            Rates(
+                speeds.map { rate(it) to it },
+                { it == sound.speed },
+                stringResource(R.string.speed_group),
+                top = 8.dp,
+            ) {
                 sound.setSpeed(it)
                 open = false
             }
             MenuLine()
-            Item(stringResource(R.string.speed_slower), null, hint = if (keys) ({ KeyCap("<") }) else null) { step(-1) }
-            Item(stringResource(R.string.speed_faster), null, hint = if (keys) ({ KeyCap(">") }) else null) { step(1) }
+            Item(
+                stringResource(R.string.speed_slower),
+                null,
+                hint = if (keys) ({ KeyCap("<") }) else null,
+            ) {
+                step(-1)
+            }
+            Item(
+                stringResource(R.string.speed_faster),
+                null,
+                hint = if (keys) ({ KeyCap(">") }) else null,
+            ) {
+                step(1)
+            }
         }
     }
 }
 
 /**
- * The time, a button on the times' line as the speed is (app.css,
- * .pk-timebtn), where the times' format is chosen (app.js, timeMenu):
- * seconds and hundredths, or frames, each with the time now in it, and
- * under Frames the rates, a video's own first. A rate picked is a rate to
- * count in; picked over a video's own, it is the rate for every video.
+ * The time, a button on the times' line as the speed is (app.css, .pk-timebtn), where the times'
+ * format is chosen (app.js, timeMenu): seconds and hundredths, or frames, each with the time now in
+ * it, and under Frames the rates, a video's own first. A rate picked is a rate to count in; picked
+ * over a video's own, it is the rate for every video.
  */
 @Composable
 private fun Time(text: String, base: Timebase, now: Double, onBase: (Timebase) -> Unit) {
@@ -347,29 +416,48 @@ private fun Time(text: String, base: Timebase, now: Double, onBase: (Timebase) -
             style = Tstamp,
             color = p.termInk,
             maxLines = 1,
-            modifier = Modifier
-                .bleed(6.dp, 6.dp)
-                .control(CornerSm, onTerm = true, label = stringResource(R.string.times_tip), held = open) { open = true }
-                .padding(6.dp),
+            modifier =
+                Modifier.bleed(6.dp, 6.dp)
+                    .control(
+                        CornerSm,
+                        onTerm = true,
+                        label = stringResource(R.string.times_tip),
+                        held = open,
+                    ) {
+                        open = true
+                    }
+                    .padding(6.dp),
         )
         Menu(open, { open = false }, gap = 12.dp, wide = true) {
-            val check = @Composable { Icon(Icons.check, null, tint = p.ink, modifier = Modifier.size(16.dp)) }
-            Item(stringResource(R.string.times_seconds), stamp(now, base.duration), hint = if (!base.frames) check else null, selected = !base.frames) {
+            val check =
+                @Composable {
+                    Icon(Icons.check, null, tint = p.ink, modifier = Modifier.size(16.dp))
+                }
+            Item(
+                stringResource(R.string.times_seconds),
+                stamp(now, base.duration),
+                hint = if (!base.frames) check else null,
+                selected = !base.frames,
+            ) {
                 pick(base.copy(frames = false))
             }
             Item(
                 stringResource(R.string.times_frames),
                 stringResource(
                     if (base.own) R.string.times_frames_at_video else R.string.times_frames_at,
-                    timecode(now, base.rate), rateLabel(base.rate),
+                    timecode(now, base.rate),
+                    rateLabel(base.rate),
                 ),
                 hint = if (base.frames) check else null,
                 selected = base.frames,
-            ) { pick(base.copy(frames = true)) }
+            ) {
+                pick(base.copy(frames = true))
+            }
             // the video's own rate, a null among the rates
             val chips: List<Pair<String, Double?>> =
-                (if (base.video > 0) listOf(stringResource(R.string.times_video_rate, rateLabel(base.video)) to null) else emptyList()) +
-                    RATES.map { rateLabel(it) to it }
+                (if (base.video > 0)
+                    listOf(stringResource(R.string.times_video_rate, rateLabel(base.video)) to null)
+                else emptyList()) + RATES.map { rateLabel(it) to it }
             Rates(
                 chips,
                 { r -> if (r == null) base.own else !base.own && abs(r - base.rate) < 0.001 },
@@ -378,7 +466,12 @@ private fun Time(text: String, base: Timebase, now: Double, onBase: (Timebase) -
             ) { r ->
                 pick(
                     if (r == null) base.copy(frames = true, videoRate = true)
-                    else base.copy(frames = true, fps = r, videoRate = if (base.video > 0) false else base.videoRate),
+                    else
+                        base.copy(
+                            frames = true,
+                            fps = r,
+                            videoRate = if (base.video > 0) false else base.videoRate,
+                        )
                 )
             }
         }
@@ -386,14 +479,12 @@ private fun Time(text: String, base: Timebase, now: Double, onBase: (Timebase) -
 }
 
 /**
- * The times' line (app.css, .pk-times): the time, the speaker 20 dp after
- * it and the slider 8 after that, and the length at the end. It keeps what
- * fits, the times first and 12 dp before the length: the slider gives way
- * first, as a phone's volume keys stand in for it, then the speaker. At 411
- * dp a phone had 283 for 292 in frames, and 360 dp or a large font leaves
- * less; the desktop's window is never under 480. Where even the two times
- * do not fit, the length goes under the time, at the line's end: a phone's
- * pace and length met at 1.5 times the text size and overlapped at 2.0.
+ * The times' line (app.css, .pk-times): the time, the speaker 20 dp after it and the slider 8 after
+ * that, and the length at the end. It keeps what fits, the times first and 12 dp before the length:
+ * the slider gives way first, as a phone's volume keys stand in for it, then the speaker. At 411 dp
+ * a phone had 283 for 292 in frames, and 360 dp or a large font leaves less; the desktop's window
+ * is never under 480. Where even the two times do not fit, the length goes under the time, at the
+ * line's end: a phone's pace and length met at 1.5 times the text size and overlapped at 2.0.
  */
 @Composable
 private fun TimesLine(
@@ -403,11 +494,22 @@ private fun TimesLine(
     length: @Composable () -> Unit,
 ) {
     // a box each, so that one with nothing in it is there at no size
-    Layout({ Box { time() }; Box { speaker() }; Box { slider() }; Box { length() } }, measurePolicy = TimesPolicy)
+    Layout(
+        {
+            Box { time() }
+            Box { speaker() }
+            Box { slider() }
+            Box { length() }
+        },
+        measurePolicy = TimesPolicy,
+    )
 }
 
 private object TimesPolicy : MeasurePolicy {
-    override fun MeasureScope.measure(measurables: List<Measurable>, constraints: Constraints): MeasureResult {
+    override fun MeasureScope.measure(
+        measurables: List<Measurable>,
+        constraints: Constraints,
+    ): MeasureResult {
         val (t, s, v, l) = measurables.map { it.measure(constraints.copy(minWidth = 0)) }
         val fits = { w: Int -> w + 12.dp.roundToPx() <= constraints.maxWidth }
         val speakerAt = t.width + 20.dp.roundToPx()
@@ -428,26 +530,37 @@ private object TimesPolicy : MeasurePolicy {
     // (IntrinsicSize.Min), where Compose's own answer for a Layout measured
     // each part the line's whole width: two times that never fit, a line
     // under them at every size, and the strip that much taller
-    override fun IntrinsicMeasureScope.minIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int): Int {
+    override fun IntrinsicMeasureScope.minIntrinsicHeight(
+        measurables: List<IntrinsicMeasurable>,
+        width: Int,
+    ): Int {
         val (t, s, v, l) = measurables
-        val under = t.maxIntrinsicWidth(Constraints.Infinity) + l.maxIntrinsicWidth(Constraints.Infinity) + 12.dp.roundToPx() > width
-        val h = maxOf(t.minIntrinsicHeight(width), s.minIntrinsicHeight(width), v.minIntrinsicHeight(width))
+        val under =
+            t.maxIntrinsicWidth(Constraints.Infinity) +
+                l.maxIntrinsicWidth(Constraints.Infinity) +
+                12.dp.roundToPx() > width
+        val h =
+            maxOf(
+                t.minIntrinsicHeight(width),
+                s.minIntrinsicHeight(width),
+                v.minIntrinsicHeight(width),
+            )
         val lh = l.minIntrinsicHeight(width)
         return if (under) h + lh else maxOf(h, lh)
     }
 
-    override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int) =
-        minIntrinsicHeight(measurables, width)
+    override fun IntrinsicMeasureScope.maxIntrinsicHeight(
+        measurables: List<IntrinsicMeasurable>,
+        width: Int,
+    ) = minIntrinsicHeight(measurables, width)
 }
 
 /**
- * Why the recording does not play, in the times' place, whose time, speed
- * and volume mean nothing without it: one quiet line in the strip's ink,
- * more where a phone is too narrow, and Locate… after it, a control as the
- * speaker is, where the file can be found again; under the words, at the
- * line's end, where they would keep too little beside it (Beside), the dot
- * left at their end: at 1.5 times the text size Original not found broke
- * in two beside it on a phone.
+ * Why the recording does not play, in the times' place, whose time, speed and volume mean nothing
+ * without it: one quiet line in the strip's ink, more where a phone is too narrow, and Locate…
+ * after it, a control as the speaker is, where the file can be found again; under the words, at the
+ * line's end, where they would keep too little beside it (Beside), the dot left at their end: at
+ * 1.5 times the text size Original not found broke in two beside it on a phone.
  */
 @Composable
 private fun Why(why: String, locate: (() -> Unit)?) {
@@ -458,12 +571,16 @@ private fun Why(why: String, locate: (() -> Unit)?) {
         return
     }
     val label = stringResource(R.string.play_locate)
-    Beside(Modifier.fillMaxWidth(), gap = 0.dp, follow = true, words = { Text("$why\u00A0·", style = words, color = p.termInk) }) {
+    Beside(
+        Modifier.fillMaxWidth(),
+        gap = 0.dp,
+        follow = true,
+        words = { Text("$why\u00A0·", style = words, color = p.termInk) },
+    ) {
         Box(
-            Modifier
-                .bleed(vertical = 6.dp)
+            Modifier.bleed(vertical = 6.dp)
                 .control(CornerSm, onTerm = true, label = label, onClick = locate)
-                .padding(6.dp),
+                .padding(6.dp)
         ) {
             Text(label, style = Tstamp, color = p.termInk)
         }
@@ -471,16 +588,14 @@ private fun Why(why: String, locate: (() -> Unit)?) {
 }
 
 /**
- * The speaker, after the time (app.css, .pk-volbtn): it mutes, or muted or
- * at none brings the sound back. 25 dp tall in the times' 13, as the
- * slider is, so that their line stays as tall as at work, where they are
- * hidden. Silent, muted or at none, it is lit, its × in the strip's ground
- * on the beak's orange: at 16 dp its three icons are too alike to tell
- * silence by, and a mute that went unseen kept the S25 silent (Peter,
- * 2026-10-27). The orange on the strip, and the × on it, 4.02:1 in light
- * and 7.59 in dark, past the 3:1 a control's state needs. Filled, where the
- * × alone in orange passed as well: a mute that is on deserves it (Peter,
- * 2026-10-27), the one area the beak fills (design/tokens.json).
+ * The speaker, after the time (app.css, .pk-volbtn): it mutes, or muted or at none brings the sound
+ * back. 25 dp tall in the times' 13, as the slider is, so that their line stays as tall as at work,
+ * where they are hidden. Silent, muted or at none, it is lit, its × in the strip's ground on the
+ * beak's orange: at 16 dp its three icons are too alike to tell silence by, and a mute that went
+ * unseen kept the S25 silent (Peter, 2026-10-27). The orange on the strip, and the × on it, 4.02:1
+ * in light and 7.59 in dark, past the 3:1 a control's state needs. Filled, where the × alone in
+ * orange passed as well: a mute that is on deserves it (Peter, 2026-10-27), the one area the beak
+ * fills (design/tokens.json).
  */
 @Composable
 private fun Speaker(sound: Sound, enabled: Boolean) {
@@ -488,15 +603,18 @@ private fun Speaker(sound: Sound, enabled: Boolean) {
     val silent = sound.muted || sound.volume == 0.0
     val v = if (sound.muted) 0.0 else sound.volume
     Box(
-        Modifier
-            .bleed(vertical = 6.dp)
+        Modifier.bleed(vertical = 6.dp)
             .alpha(if (enabled) 1f else 0.45f)
             .control(
-                CornerSm, if (silent) p.beak else Color.Transparent, onTerm = true, enabled = enabled,
-                label = stringResource(if (silent) R.string.volume_unmute else R.string.volume_mute),
+                CornerSm,
+                if (silent) p.beak else Color.Transparent,
+                onTerm = true,
+                enabled = enabled,
+                label =
+                    stringResource(if (silent) R.string.volume_unmute else R.string.volume_mute),
                 onClick = sound.mute,
             )
-            .padding(start = 6.dp, end = 6.dp, top = 4.dp, bottom = 5.dp),
+            .padding(start = 6.dp, end = 6.dp, top = 4.dp, bottom = 5.dp)
     ) {
         Icon(
             when {
@@ -504,18 +622,26 @@ private fun Speaker(sound: Sound, enabled: Boolean) {
                 v < 0.5 -> Icons.vol1
                 else -> Icons.vol2
             },
-            null, tint = if (silent) p.term else p.termInk, modifier = Modifier.size(16.dp),
+            null,
+            tint = if (silent) p.term else p.termInk,
+            modifier = Modifier.size(16.dp),
         )
     }
 }
 
 /**
- * The volume's slider (app.css, .pk-vol-range): 64 by 25 dp, a 4 dp track
- * in the strip's line, filled to the level in the played waveform's
- * colour, its knob 12 dp in term-ink; in steps of 0.05, as the desktop's.
+ * The volume's slider (app.css, .pk-vol-range): 64 by 25 dp, a 4 dp track in the strip's line,
+ * filled to the level in the played waveform's colour, its knob 12 dp in term-ink; in steps of
+ * 0.05, as the desktop's.
  */
 @Composable
-private fun Level(v: Double, enabled: Boolean, label: String, onChange: (Double, Boolean) -> Unit, modifier: Modifier) {
+private fun Level(
+    v: Double,
+    enabled: Boolean,
+    label: String,
+    onChange: (Double, Boolean) -> Unit,
+    modifier: Modifier,
+) {
     val p = pk
     val change by rememberUpdatedState(onChange)
     val knob = with(LocalDensity.current) { 12.dp.toPx() }
@@ -527,38 +653,53 @@ private fun Level(v: Double, enabled: Boolean, label: String, onChange: (Double,
             .semantics {
                 contentDescription = label
                 progressBarRangeInfo = ProgressBarRangeInfo(v.toFloat(), 0f..1f, 19)
-                if (enabled) setProgress { change(it.toDouble(), true); true }
+                if (enabled)
+                    setProgress {
+                        change(it.toDouble(), true)
+                        true
+                    }
             }
             .then(
                 if (enabled)
-                    Modifier
-                        .pointerInput(Unit) {
-                            detectTapGestures { o -> change(level(o.x, size.width.toFloat()), true) }
+                    Modifier.pointerInput(Unit) {
+                            detectTapGestures { o ->
+                                change(level(o.x, size.width.toFloat()), true)
+                            }
                         }
                         .pointerInput(Unit) {
                             var last = 0.0
-                            detectHorizontalDragGestures(onDragEnd = { change(last, true) }) { c, _ ->
+                            detectHorizontalDragGestures(onDragEnd = { change(last, true) }) { c, _
+                                ->
                                 last = level(c.position.x, size.width.toFloat())
                                 change(last, false)
                             }
                         }
-                else Modifier,
-            ),
+                else Modifier
+            )
     ) {
         val track = 4.dp.toPx()
         val y = size.height / 2
         val x = knob / 2 + (size.width - knob) * v.toFloat()
-        drawRoundRect(p.termLine, Offset(0f, y - track / 2), Size(size.width, track), CornerRadius(track / 2))
-        drawRoundRect(p.wavePlayed, Offset(0f, y - track / 2), Size(x, track), CornerRadius(track / 2))
+        drawRoundRect(
+            p.termLine,
+            Offset(0f, y - track / 2),
+            Size(size.width, track),
+            CornerRadius(track / 2),
+        )
+        drawRoundRect(
+            p.wavePlayed,
+            Offset(0f, y - track / 2),
+            Size(x, track),
+            CornerRadius(track / 2),
+        )
         drawCircle(p.termInk, knob / 2, Offset(x, y))
     }
 }
 
 /**
- * The progress, in play's place and size: a ring that fills with the
- * waveform's played colour from the top, and the percent inside it (app.css,
- * .pk-prog). The percent grows with the text size as far as 100% fits in
- * the ring 3 dp clear of it, then stays there: at 2.0 a thumb's 48 dp ring
+ * The progress, in play's place and size: a ring that fills with the waveform's played colour from
+ * the top, and the percent inside it (app.css, .pk-prog). The percent grows with the text size as
+ * far as 100% fits in the ring 3 dp clear of it, then stays there: at 2.0 a thumb's 48 dp ring
  * wrapped its 11 sp, 22 dp, onto a second line, out of the ring.
  */
 @Composable
@@ -567,34 +708,46 @@ private fun Ring(done: Double, side: Dp) {
     val d = done.toFloat().coerceIn(0f, 1f)
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val style = remember(side, measurer, density) {
-        val s = TextStyle(
-            fontFamily = Fonts.sans, fontWeight = FontWeight.W700, fontSize = 11.sp, lineHeight = 1.em,
-            lineHeightStyle = CssLine, letterSpacing = (-0.02).em, fontFeatureSettings = "tnum",
-        )
-        with(density) {
-            val room = (side - 12.dp).toPx()
-            val full = measurer.measure("100%", s, softWrap = false).size.width
-            if (full <= room) s else s.copy(fontSize = (s.fontSize.toDp() * (room / full)).toSp())
+    val style =
+        remember(side, measurer, density) {
+            val s =
+                TextStyle(
+                    fontFamily = Fonts.sans,
+                    fontWeight = FontWeight.W700,
+                    fontSize = 11.sp,
+                    lineHeight = 1.em,
+                    lineHeightStyle = CssLine,
+                    letterSpacing = (-0.02).em,
+                    fontFeatureSettings = "tnum",
+                )
+            with(density) {
+                val room = (side - 12.dp).toPx()
+                val full = measurer.measure("100%", s, softWrap = false).size.width
+                if (full <= room) s
+                else s.copy(fontSize = (s.fontSize.toDp() * (room / full)).toSp())
+            }
         }
-    }
     Box(
-        Modifier
-            .size(side)
-            .drawBehind {
-                val r = Radius.radiusUi.toPx()
-                val inset = 3.dp.toPx()
-                val sweep = Brush.sweepGradient(
-                    0f to p.wavePlayed, d to p.wavePlayed, d to p.termLine, 1f to p.termLine,
+        Modifier.size(side).drawBehind {
+            val r = Radius.radiusUi.toPx()
+            val inset = 3.dp.toPx()
+            val sweep =
+                Brush.sweepGradient(
+                    0f to p.wavePlayed,
+                    d to p.wavePlayed,
+                    d to p.termLine,
+                    1f to p.termLine,
                     center = center,
                 )
-                // a sweep starts at three o'clock, CSS's conic at twelve
-                rotate(-90f) { drawRoundRect(sweep, cornerRadius = CornerRadius(r)) }
-                drawRoundRect(
-                    p.term, Offset(inset, inset), Size(size.width - 2 * inset, size.height - 2 * inset),
-                    CornerRadius(r - inset),
-                )
-            },
+            // a sweep starts at three o'clock, CSS's conic at twelve
+            rotate(-90f) { drawRoundRect(sweep, cornerRadius = CornerRadius(r)) }
+            drawRoundRect(
+                p.term,
+                Offset(inset, inset),
+                Size(size.width - 2 * inset, size.height - 2 * inset),
+                CornerRadius(r - inset),
+            )
+        },
         contentAlignment = Alignment.Center,
     ) {
         Text("${(d * 100).toInt()}%", style = style, color = p.termInk, softWrap = false)
@@ -602,18 +755,15 @@ private fun Ring(done: Double, side: Dp) {
 }
 
 /**
- * The range a waveform draws an outline in (ui/app.js, rangeOf), its slices
- * 0 to 255 over the 48 dB under the loudest (audio.rs): from the outline's
- * own 10th percentile to its 99.5th, which even narration leaves room
- * between, and 16 (3 dB) at the least. A recording quieter for minutes at
- * a time put more than a tenth of it under that floor, where it drew as
- * silence: AliceBench's 12 chapters as one file (2:58:51) have chapter 4,
- * 11% of it, 13 dB under the rest (Peter, 2026-11-01). So the floor goes
- * 3 dB under the quietest stretch of the file where that is lower: each
- * stretch a tenth of the file or 5 minutes of a recording seconds long,
- * whichever is longer, by its median, leaving out stretches more than 36
- * dB under the top (64), which are silence and drew right. A file at one
- * level keeps its floor (chapter 1 alone, 10:40, as before).
+ * The range a waveform draws an outline in (ui/app.js, rangeOf), its slices 0 to 255 over the 48 dB
+ * under the loudest (audio.rs): from the outline's own 10th percentile to its 99.5th, which even
+ * narration leaves room between, and 16 (3 dB) at the least. A recording quieter for minutes at a
+ * time put more than a tenth of it under that floor, where it drew as silence: AliceBench's 12
+ * chapters as one file (2:58:51) have chapter 4, 11% of it, 13 dB under the rest (Peter,
+ * 2026-11-01). So the floor goes 3 dB under the quietest stretch of the file where that is lower:
+ * each stretch a tenth of the file or 5 minutes of a recording seconds long, whichever is longer,
+ * by its median, leaving out stretches more than 36 dB under the top (64), which are silence and
+ * drew right. A file at one level keeps its floor (chapter 1 alone, 10:40, as before).
  */
 internal fun rangeOf(peaks: ByteArray, seconds: Double): Pair<Double, Double> {
     val v = IntArray(peaks.size) { peaks[it].toInt() and 0xff }
@@ -632,17 +782,25 @@ internal fun rangeOf(peaks: ByteArray, seconds: Double): Pair<Double, Double> {
 }
 
 /**
- * The waveform the strip's width (ui/app.js, drawWave): bars 2 dp wide a dp
- * apart, each the mean of the outline's slices under it, in its range for
- * a recording seconds long (rangeOf), kept while the outline is as the
- * playhead moves; the bars before the playhead in the played colour, the
- * playhead the beak's, a dp wider each side and alone reaching the top.
- * No outline yet: the empty strip's bars, 3 dp each.
+ * The waveform the strip's width (ui/app.js, drawWave): bars 2 dp wide a dp apart, each the mean of
+ * the outline's slices under it, in its range for a recording seconds long (rangeOf), kept while
+ * the outline is as the playhead moves; the bars before the playhead in the played colour, the
+ * playhead the beak's, a dp wider each side and alone reaching the top. No outline yet: the empty
+ * strip's bars, 3 dp each.
  */
 @Composable
-fun Waveform(peaks: ByteArray?, at: Double, seconds: Double, modifier: Modifier = Modifier, height: Dp = 64.dp) {
+fun Waveform(
+    peaks: ByteArray?,
+    at: Double,
+    seconds: Double,
+    modifier: Modifier = Modifier,
+    height: Dp = 64.dp,
+) {
     val p = pk
-    val range = remember(peaks, seconds) { if (peaks == null || peaks.isEmpty()) 0.0 to 255.0 else rangeOf(peaks, seconds) }
+    val range =
+        remember(peaks, seconds) {
+            if (peaks == null || peaks.isEmpty()) 0.0 to 255.0 else rangeOf(peaks, seconds)
+        }
     Canvas(modifier.fillMaxWidth().height(height)) {
         val bar = 2.dp.toPx()
         val gap = 1.dp.toPx()
@@ -665,11 +823,12 @@ fun Waveform(peaks: ByteArray?, at: Double, seconds: Double, modifier: Modifier 
                 continue
             }
             val h = 3.dp.toPx() + (v * (top - 7.dp.toPx())).roundToInt()
-            val c = when {
-                peaks == null -> p.termLine
-                i < k -> p.wavePlayed
-                else -> p.wave
-            }
+            val c =
+                when {
+                    peaks == null -> p.termLine
+                    i < k -> p.wavePlayed
+                    else -> p.wave
+                }
             drawRect(c, Offset(x, (top - h) / 2), Size(bar, h))
         }
     }

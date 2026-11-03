@@ -171,6 +171,23 @@
     <string name="manage_ask_part_title">Delete the paused download?</string>
     <string name="manage_ask_part_text">This frees %1$s&#160;MB. Downloading the %2$s model again starts over.</string>
     <string name="manage_cant_delete">Couldn\'t delete the model</string>
+    <!-- the NPU's edition offered for a model downloaded for the processor
+         (manage.faster, manage.faster_text, manage.get), the device by its
+         kind, as iOS's name an iPhone or an iPad: a computer where Android
+         says it is one, a tablet from 600 dp, else a phone. Its megabytes are
+         its download's: the edition takes the place of the processor's file
+         once the NPU runs it, so they are not that much more kept -->
+    <string name="manage_faster_phone">Faster on this phone</string>
+    <string name="manage_faster_tablet">Faster on this tablet</string>
+    <string name="manage_faster_computer">Faster on this computer</string>
+    <string name="manage_faster_text_phone">The %1$s model on this phone\'s NPU&#160;· %2$s&#160;MB&#160;download</string>
+    <string name="manage_faster_text_tablet">The %1$s model on this tablet\'s NPU&#160;· %2$s&#160;MB&#160;download</string>
+    <string name="manage_faster_text_computer">The %1$s model on this computer\'s NPU&#160;· %2$s&#160;MB&#160;download</string>
+    <string name="manage_get">Download</string>
+    <!-- the NPU refused the model, which goes on with the processor, as iOS's prepare_cpu says it of the Neural Engine -->
+    <string name="npu_cpu_phone">This phone\'s NPU can\'t run the model, so pktito uses its processor instead</string>
+    <string name="npu_cpu_tablet">This tablet\'s NPU can\'t run the model, so pktito uses its processor instead</string>
+    <string name="npu_cpu_computer">This computer\'s NPU can\'t run the model, so pktito uses its processor instead</string>
     <!-- Android's own: the room left, a download under way, the copy of a model file opened -->
     <string name="manage_free_mb">%1$s&#160;MB free</string>
     <string name="manage_free_gb">%1$s&#160;GB free</string>

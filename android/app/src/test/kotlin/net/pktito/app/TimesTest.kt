@@ -11,16 +11,16 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The times as the desktop's window writes them: timecodes.json is ui/app.js's
- * own timecode, rateLabel, stamp and hms, run by node (android/timecodes.js)
- * over 425 times (0 to 100 hours, the minutes drop-frame skips and their
- * neighbours, 400 drawn at random), at 19 rates (the time menu's, NTSC's
- * written three ways, others) and in files of 11 lengths, and Times.kt is to
- * write each the same.
+ * The times as the desktop's window writes them: timecodes.json is ui/app.js's own timecode,
+ * rateLabel, stamp and hms, run by node (android/timecodes.js) over 425 times (0 to 100 hours, the
+ * minutes drop-frame skips and their neighbours, 400 drawn at random), at 19 rates (the time
+ * menu's, NTSC's written three ways, others) and in files of 11 lengths, and Times.kt is to write
+ * each the same.
  */
 @RunWith(RobolectricTestRunner::class)
 class TimesTest {
-    private val v = JSONObject(String(javaClass.getResourceAsStream("/timecodes.json")!!.readBytes()))
+    private val v =
+        JSONObject(String(javaClass.getResourceAsStream("/timecodes.json")!!.readBytes()))
 
     @Test
     fun timecodes() {

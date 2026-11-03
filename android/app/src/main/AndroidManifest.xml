@@ -20,6 +20,16 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RUN_USER_INITIATED_JOBS" />
 
+    <!-- the NPU, which the encoder runs on in a QNN build: Android 17's
+         release notes (Beta 2) have an app targeting 37 declare it to reach
+         the NPU directly. Not required, so the app installs on every phone;
+         and no phone here says it has one (pm list features on the Galaxy
+         S24 and S25 and the Googlebook, 2026-11-03), though each runs the
+         encoder on its NPU through FastRPC -->
+    <uses-feature
+        android:name="android.hardware.npu"
+        android:required="false" />
+
     <!-- no permission to read files: each recording is one the person picked,
          or opened with pktito or shared to it from another app, and each of
          those grants that one -->
@@ -33,6 +43,13 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/Theme.Pktito">
+        <!-- the Snapdragon's FastRPC library, through which Qualcomm's QNN
+             reaches the NPU (the encoder there, in a QNN build): a vendor's
+             library, which an app from Android 12 on loads only once it
+             names it; not required, so the app installs on every phone -->
+        <uses-native-library
+            android:name="libcdsprpc.so"
+            android:required="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -98,15 +98,21 @@ class SetupActions(
 )
 
 /**
- * The setup screen (ui/app.js, renderSetup): choose a speech model and
- * download it, or use a model file of one's own, in the desktop's modes,
- * the choice, a download under way or paused, one that failed; and one of
- * Android's own, a model file of one's own being copied in (Models.open).
- * waiting counts the recordings opened or shared before there was a model,
- * which are transcribed once there is.
+ * The setup screen (ui/app.js, renderSetup): choose a speech model and download it, or use a model
+ * file of one's own, in the desktop's modes, the choice, a download under way or paused, one that
+ * failed; and one of Android's own, a model file of one's own being copied in (Models.open).
+ * waiting counts the recordings opened or shared before there was a model, which are transcribed
+ * once there is.
  */
 @Composable
-fun Setup(offers: List<Offer>, model: String?, download: Download?, copying: Copy?, waiting: Int, a: SetupActions) {
+fun Setup(
+    offers: List<Offer>,
+    model: String?,
+    download: Download?,
+    copying: Copy?,
+    waiting: Int,
+    a: SetupActions,
+) {
     when {
         copying != null -> Copying(copying, a)
         download == null -> Choose(offers, model, waiting, a)
@@ -119,30 +125,34 @@ fun Setup(offers: List<Offer>, model: String?, download: Download?, copying: Cop
 private fun ownLanguage() = Locale.getDefault().language
 
 /** A language's name in English, the screen's language (app.js, langName). */
-private fun languageName(code: String) = Locale.forLanguageTag(code).getDisplayLanguage(Locale.ENGLISH).ifEmpty { code }
+private fun languageName(code: String) =
+    Locale.forLanguageTag(code).getDisplayLanguage(Locale.ENGLISH).ifEmpty { code }
 
 /** .pk-text: 400 15/1.5 */
 private val Text15 = Type.body.copy(fontSize = 15.sp)
 
 /**
- * The screen's frame (app.css, .pk-center > .pk-screen): a column 640 dp
- * wide at most, 16 dp in from a narrow window's sides, as every screen on a
- * phone (it was 20; the layout audit, 2026-11-01), and 40 from a wider
- * one's, at least 520 tall where the window has that, in the middle of the
- * window; what it says at its top, 24 apart, and its foot at its bottom,
- * 24 under them at the least: the scale's step, as the start screen's (it
- * was 20; the layout audit, 2026-11-01).
- * Taller than the window, it scrolls.
+ * The screen's frame (app.css, .pk-center > .pk-screen): a column 640 dp wide at most, 16 dp in
+ * from a narrow window's sides, as every screen on a phone (it was 20; the layout audit,
+ * 2026-11-01), and 40 from a wider one's, at least 520 tall where the window has that, in the
+ * middle of the window; what it says at its top, 24 apart, and its foot at its bottom, 24 under
+ * them at the least: the scale's step, as the start screen's (it was 20; the layout audit,
+ * 2026-11-01). Taller than the window, it scrolls.
  */
 @Composable
-private fun Screen(top: @Composable ColumnScope.() -> Unit, foot: @Composable ColumnScope.() -> Unit) {
+private fun Screen(
+    top: @Composable ColumnScope.() -> Unit,
+    foot: @Composable ColumnScope.() -> Unit,
+) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val side = if (maxWidth < 600.dp) 16.dp else 40.dp
         val least = minOf(maxHeight, 520.dp)
-        Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+            contentAlignment = Alignment.Center,
+        ) {
             Column(
-                Modifier
-                    .widthIn(max = 640.dp)
+                Modifier.widthIn(max = 640.dp)
                     .fillMaxWidth()
                     .heightIn(min = least)
                     .padding(start = side, end = side, top = 28.dp, bottom = 24.dp),
@@ -163,15 +173,20 @@ private fun Intro(title: String, text: String? = null) {
         // balance): a phone left "model" alone on the second line of
         // "Downloading the English model", and of "Choose a speech model" at
         // twice the text size (2026-11-01)
-        Text(title, style = Type.lead.copy(lineBreak = LineBreak.Heading), color = pk.ink, modifier = Modifier.semantics { heading() })
+        Text(
+            title,
+            style = Type.lead.copy(lineBreak = LineBreak.Heading),
+            color = pk.ink,
+            modifier = Modifier.semantics { heading() },
+        )
         if (text != null) Text(text, style = Text15, color = pk.ink)
     }
 }
 
 /**
- * Two things on a line, one at its start and one at its end, 16 dp apart
- * at the least, else the second under the first (.pk-spread, which wraps);
- * on a line, their middles level, or their feet where bottom is.
+ * Two things on a line, one at its start and one at its end, 16 dp apart at the least, else the
+ * second under the first (.pk-spread, which wraps); on a line, their middles level, or their feet
+ * where bottom is.
  */
 @Composable
 private fun Spread(bottom: Boolean = false, content: @Composable () -> Unit) {
@@ -197,18 +212,21 @@ private fun Spread(bottom: Boolean = false, content: @Composable () -> Unit) {
 }
 
 /**
- * The choice (app.js, chooseHtml): a card for each model, the one that
- * speaks the system's language chosen to begin with, else the one in use;
- * its button says what choosing it does, and under it the way to a model
- * file of one's own.
+ * The choice (app.js, chooseHtml): a card for each model, the one that speaks the system's language
+ * chosen to begin with, else the one in use; its button says what choosing it does, and under it
+ * the way to a model file of one's own.
  */
 @Composable
 private fun Choose(offers: List<Offer>, model: String?, waiting: Int, a: SetupActions) {
     val res = LocalResources.current
     val own = ownLanguage()
     var choice by rememberSaveable { mutableStateOf("") }
-    val chosen = offers.find { it.name == choice } ?: offers.find { it.name == model }
-        ?: offers.find { own in it.languages } ?: offers.firstOrNull() ?: return
+    val chosen =
+        offers.find { it.name == choice }
+            ?: offers.find { it.name == model }
+            ?: offers.find { own in it.languages }
+            ?: offers.firstOrNull()
+            ?: return
     val legend = stringResource(R.string.setup_legend)
     Screen(
         top = {
@@ -225,40 +243,62 @@ private fun Choose(offers: List<Offer>, model: String?, waiting: Int, a: SetupAc
         },
         foot = {
             val label = Models.label(res, chosen.key)
-            val go = when {
-                chosen.have -> stringResource(R.string.setup_use, label)
-                chosen.partial > 0 -> stringResource(R.string.setup_download_rest, label, mb(chosen.bytes - chosen.partial))
-                else -> stringResource(R.string.setup_download, label, mb(chosen.bytes))
-            }
+            val go =
+                when {
+                    chosen.have -> stringResource(R.string.setup_use, label)
+                    chosen.partial > 0 ->
+                        stringResource(
+                            R.string.setup_download_rest,
+                            label,
+                            mb(chosen.bytes - chosen.partial),
+                        )
+                    else -> stringResource(R.string.setup_download, label, mb(chosen.bytes))
+                }
             // the button and the way to a file of one's own 16 apart, the
             // scale's (.pk-foot-col; it was 14, the layout audit, 2026-11-01)
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 PkButton(
-                    go, { if (chosen.have) a.use(chosen) else a.download(chosen) }, Modifier.fillMaxWidth(),
-                    kind = Kind.Primary, large = true, leading = if (chosen.have) Icons.check else Icons.download,
+                    go,
+                    { if (chosen.have) a.use(chosen) else a.download(chosen) },
+                    Modifier.fillMaxWidth(),
+                    kind = Kind.Primary,
+                    large = true,
+                    leading = if (chosen.have) Icons.check else Icons.download,
                 )
                 Spread {
                     LinkButton(stringResource(R.string.setup_have_file), a.ownFile)
                     if (waiting > 0)
-                        Text(pluralStringResource(R.plurals.setup_waiting, waiting, waiting), style = Type.small, color = pk.inkMuted)
+                        Text(
+                            pluralStringResource(R.plurals.setup_waiting, waiting, waiting),
+                            style = Type.small,
+                            color = pk.inkMuted,
+                        )
                 }
             }
         },
     )
 }
 
-/** Where a link goes in a sentence formatted around it: a private-use character, which no translation has. */
+/**
+ * Where a link goes in a sentence formatted around it: a private-use character, which no
+ * translation has.
+ */
 private const val SLOT = ""
 
 /**
- * A model's card (.pk-choice): its radio, its name, its size or that it is
- * here; under them its file's name and what it transcribes, a model of
- * several's count opening their list, the system's language in ink, and
- * under it that accuracy varies, with the way to how much. The one chosen
- * on the ground in an ink ring, the others on surface.
+ * A model's card (.pk-choice): its radio, its name, its size or that it is here; under them its
+ * file's name and what it transcribes, a model of several's count opening their list, the system's
+ * language in ink, and under it that accuracy varies, with the way to how much. The one chosen on
+ * the ground in an ink ring, the others on surface.
  */
 @Composable
-private fun Card(o: Offer, on: Boolean, own: String, onChoose: () -> Unit, onLink: (String) -> Unit) {
+private fun Card(
+    o: Offer,
+    on: Boolean,
+    own: String,
+    onChoose: () -> Unit,
+    onLink: (String) -> Unit,
+) {
     val p = pk
     val res = LocalResources.current
     var open by rememberSaveable(o.name) { mutableStateOf(false) }
@@ -266,30 +306,43 @@ private fun Card(o: Offer, on: Boolean, own: String, onChoose: () -> Unit, onLin
     val about = Models.about(res, o.key)
     // the sentence with the system's language among the model's, the count
     // in it where a translation puts it: a slot there, filled with the link
-    val among = if (many && own in o.languages) stringResource(R.string.models_languages_among, SLOT, languageName(own)) else SLOT
+    val among =
+        if (many && own in o.languages)
+            stringResource(R.string.models_languages_among, SLOT, languageName(own))
+        else SLOT
     // the count as a button that reads as a link, in the card's colour (.pk-linkbtn-sm)
     val count = TextLinkStyles(SpanStyle(textDecoration = TextDecoration.Underline))
-    val desc = remember(o.name, about, among, count) {
-        buildAnnotatedString {
-            append(o.name)
-            append(DOT)
-            append(among.substringBefore(SLOT))
-            if (many) withLink(LinkAnnotation.Clickable("languages", count) { open = !open }) { append(about) }
-            else append(about)
-            append(among.substringAfter(SLOT, ""))
+    val desc =
+        remember(o.name, about, among, count) {
+            buildAnnotatedString {
+                append(o.name)
+                append(DOT)
+                append(among.substringBefore(SLOT))
+                if (many)
+                    withLink(LinkAnnotation.Clickable("languages", count) { open = !open }) {
+                        append(about)
+                    }
+                else append(about)
+                append(among.substringAfter(SLOT, ""))
+            }
         }
-    }
     Column(
-        Modifier
-            .fillMaxWidth()
+        Modifier.fillMaxWidth()
             .then(if (on) Modifier.border(2.dp, p.ink, Corner) else Modifier)
-            .control(Corner, if (on) p.ground else p.surface, role = Role.RadioButton, onClick = onChoose)
+            .control(
+                Corner,
+                if (on) p.ground else p.surface,
+                role = Role.RadioButton,
+                onClick = onChoose,
+            )
             .semantics { selected = on }
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         val label = Models.label(res, o.key)
-        val size = if (o.have) stringResource(R.string.setup_on_device) else stringResource(R.string.setup_size, mb(o.bytes))
+        val size =
+            if (o.have) stringResource(R.string.setup_on_device)
+            else stringResource(R.string.setup_size, mb(o.bytes))
         val measurer = rememberTextMeasurer()
         BoxWithConstraints {
             // the size at the line's end while it and the name fit there whole,
@@ -297,17 +350,38 @@ private fun Card(o: Offer, on: Boolean, own: String, onChoose: () -> Unit, onLin
             // text size a 393 dp phone's card has 290 dp for them, where
             // English's 624 MB, 89 dp, stays beside its name and en-XA's
             // [624 MB], 119, goes under (2026-10-31)
-            val fits = with(LocalDensity.current) {
-                (measurer.measure(label, CardName).size.width + measurer.measure(size, Type.stamp).size.width).toDp()
-            } + 16.dp <= maxWidth - 30.dp
+            val fits =
+                with(LocalDensity.current) {
+                    (measurer.measure(label, CardName).size.width +
+                            measurer.measure(size, Type.stamp).size.width)
+                        .toDp()
+                } + 16.dp <= maxWidth - 30.dp
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row {
                     Box(Modifier.width(18.dp).align(Alignment.CenterVertically)) { Radio(on) }
                     Spacer(Modifier.width(12.dp))
-                    Text(label, style = CardName, color = p.ink, modifier = Modifier.weight(1f).alignByBaseline())
-                    if (fits) Text(size, style = Type.stamp, color = p.inkMuted, maxLines = 1, modifier = Modifier.alignByBaseline())
+                    Text(
+                        label,
+                        style = CardName,
+                        color = p.ink,
+                        modifier = Modifier.weight(1f).alignByBaseline(),
+                    )
+                    if (fits)
+                        Text(
+                            size,
+                            style = Type.stamp,
+                            color = p.inkMuted,
+                            maxLines = 1,
+                            modifier = Modifier.alignByBaseline(),
+                        )
                 }
-                if (!fits) Text(size, style = Type.stamp, color = p.inkMuted, modifier = Modifier.padding(start = 30.dp))
+                if (!fits)
+                    Text(
+                        size,
+                        style = Type.stamp,
+                        color = p.inkMuted,
+                        modifier = Modifier.padding(start = 30.dp),
+                    )
             }
         }
         Column(Modifier.padding(start = 30.dp)) {
@@ -318,10 +392,15 @@ private fun Card(o: Offer, on: Boolean, own: String, onChoose: () -> Unit, onLin
 }
 
 /** A model's name on its card (.pk-choice .pk-name). */
-private val CardName = TextStyle(
-    fontFamily = Fonts.sans, fontWeight = FontWeight.W700, fontSize = 16.sp, lineHeight = 1.3.em,
-    lineHeightStyle = CssLine, letterSpacing = (-0.01).em,
-)
+private val CardName =
+    TextStyle(
+        fontFamily = Fonts.sans,
+        fontWeight = FontWeight.W700,
+        fontSize = 16.sp,
+        lineHeight = 1.3.em,
+        lineHeightStyle = CssLine,
+        letterSpacing = (-0.01).em,
+    )
 
 /** A radio button in ink, as the desktop's takes the accent colour (.pk-choice input), 16 dp. */
 @Composable
@@ -329,17 +408,20 @@ private fun Radio(on: Boolean) {
     val p = pk
     Canvas(Modifier.size(16.dp)) {
         val w = 1.5.dp.toPx()
-        drawCircle(if (on) p.ink else p.inkMuted, radius = size.minDimension / 2 - w / 2, style = Stroke(w))
+        drawCircle(
+            if (on) p.ink else p.inkMuted,
+            radius = size.minDimension / 2 - w / 2,
+            style = Stroke(w),
+        )
         if (on) drawCircle(p.ink, radius = size.minDimension / 4)
     }
 }
 
 /**
- * A model of several's languages (.pk-langs), by their English names in
- * three columns, down each, the system's own in ink; and under them, where
- * its card links to it, that accuracy varies, and the way to its table.
- * Fewer columns where three would break a name: at 1.5 times the text size
- * a phone's three broke Hungarian and Lithuanian, at 2.0 nearly every name.
+ * A model of several's languages (.pk-langs), by their English names in three columns, down each,
+ * the system's own in ink; and under them, where its card links to it, that accuracy varies, and
+ * the way to its table. Fewer columns where three would break a name: at 1.5 times the text size a
+ * phone's three broke Hungarian and Lithuanian, at 2.0 nearly every name.
  */
 @Composable
 private fun Languages(o: Offer, own: String, onLink: (String) -> Unit) {
@@ -348,41 +430,54 @@ private fun Languages(o: Offer, own: String, onLink: (String) -> Unit) {
     val style = Type.small.copy(lineHeight = 1.6.em)
     val measurer = rememberTextMeasurer()
     // the longest name, in the own language's weight, the wider
-    val widest = remember(names, style, measurer) {
-        names.maxOfOrNull { measurer.measure(it.second, style.copy(fontWeight = FontWeight.W500)).size.width } ?: 0
-    }
+    val widest =
+        remember(names, style, measurer) {
+            names.maxOfOrNull {
+                measurer.measure(it.second, style.copy(fontWeight = FontWeight.W500)).size.width
+            } ?: 0
+        }
     Column(Modifier.padding(top = 8.dp)) {
         BoxWithConstraints {
             val gap = 12.dp
-            val cols = ((maxWidth + gap) / (with(LocalDensity.current) { widest.toDp() } + gap)).toInt().coerceIn(1, 3)
+            val cols =
+                ((maxWidth + gap) / (with(LocalDensity.current) { widest.toDp() } + gap))
+                    .toInt()
+                    .coerceIn(1, 3)
             val rows = (names.size + cols - 1) / cols
             Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                for (c in 0 until cols)
-                    Column(Modifier.weight(1f)) {
-                        for ((code, name) in names.drop(c * rows).take(rows))
-                            Text(
-                                name,
-                                style = if (code == own) style.copy(fontWeight = FontWeight.W500) else style,
-                                color = if (code == own) p.ink else p.inkMuted,
-                            )
-                    }
+                for (c in 0 until cols) Column(Modifier.weight(1f)) {
+                    for ((code, name) in names.drop(c * rows).take(rows)) Text(
+                        name,
+                        style =
+                            if (code == own) style.copy(fontWeight = FontWeight.W500) else style,
+                        color = if (code == own) p.ink else p.inkMuted,
+                    )
+                }
             }
         }
         if (o.accuracy.isNotEmpty()) {
-            val details = link(stringResource(R.string.setup_details), o.accuracy, onLink, color = p.inkMuted)
+            val details =
+                link(stringResource(R.string.setup_details), o.accuracy, onLink, color = p.inkMuted)
             val note = stringResource(R.string.setup_accuracy)
             Words(
-                remember(note, details) { buildAnnotatedString { append("$note "); append(details) } },
-                Type.small, p.inkMuted, Modifier.padding(top = 8.dp), linkColor = p.inkMuted,
+                remember(note, details) {
+                    buildAnnotatedString {
+                        append("$note ")
+                        append(details)
+                    }
+                },
+                Type.small,
+                p.inkMuted,
+                Modifier.padding(top = 8.dp),
+                linkColor = p.inkMuted,
             )
         }
     }
 }
 
 /**
- * A download under way (app.js, downloadHtml): the model's, from where, how
- * far in a figure and in megabytes, at what speed and how long is left, its
- * bar, and the buttons to pause it or let it go.
+ * A download under way (app.js, downloadHtml): the model's, from where, how far in a figure and in
+ * megabytes, at what speed and how long is left, its bar, and the buttons to pause it or let it go.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -395,11 +490,26 @@ private fun Downloading(offers: List<Offer>, d: Download, waiting: Int, a: Setup
     Screen(
         top = {
             WordmarkButton(a.about)
-            Intro(stringResource(R.string.download_title, label), stringResource(R.string.download_from, d.name, d.host.ifEmpty { "models.pktito.net" }))
-            Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Intro(
+                stringResource(R.string.download_title, label),
+                stringResource(
+                    R.string.download_from,
+                    d.name,
+                    d.host.ifEmpty { "models.pktito.net" },
+                ),
+            )
+            Column(
+                Modifier.padding(top = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 Spread(bottom = true) {
                     Figure(percent(if (d.step == "checking") 1.0 else done))
-                    Text(progress(res, d), style = Type.stamp, color = p.inkMuted, modifier = Modifier.padding(bottom = 4.dp))
+                    Text(
+                        progress(res, d),
+                        style = Type.stamp,
+                        color = p.inkMuted,
+                        modifier = Modifier.padding(bottom = 4.dp),
+                    )
                 }
                 Bar(done, stopped = d.step != "downloading", stringResource(R.string.download_bar))
             }
@@ -412,15 +522,27 @@ private fun Downloading(offers: List<Offer>, d: Download, waiting: Int, a: Setup
                 itemVerticalAlignment = Alignment.CenterVertically,
             ) {
                 PkButton(
-                    stringResource(if (paused) R.string.download_resume else R.string.download_pause),
+                    stringResource(
+                        if (paused) R.string.download_resume else R.string.download_pause
+                    ),
                     if (paused) a.retry else a.pause,
-                    kind = if (paused) Kind.Primary else Kind.Default, large = true, enabled = d.step != "checking",
+                    kind = if (paused) Kind.Primary else Kind.Default,
+                    large = true,
+                    enabled = d.step != "checking",
                 )
-                PkButton(stringResource(R.string.download_cancel), a.cancel, kind = Kind.Ghost, large = true)
+                PkButton(
+                    stringResource(R.string.download_cancel),
+                    a.cancel,
+                    kind = Kind.Ghost,
+                    large = true,
+                )
                 if (waiting > 0)
                     Text(
-                        pluralStringResource(R.plurals.setup_waiting, waiting, waiting), style = Type.small, color = p.inkMuted,
-                        textAlign = TextAlign.End, modifier = Modifier.weight(1f),
+                        pluralStringResource(R.plurals.setup_waiting, waiting, waiting),
+                        style = Type.small,
+                        color = p.inkMuted,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.weight(1f),
                     )
             }
         },
@@ -428,10 +550,9 @@ private fun Downloading(offers: List<Offer>, d: Download, waiting: Int, a: Setup
 }
 
 /**
- * A download that stopped (app.js, failedHtml): what stopped it in a few
- * words, what it has kept, whether it is trying again by itself, the
- * particulars folded away, and the ways on: try again, a model file of
- * one's own, or let it go.
+ * A download that stopped (app.js, failedHtml): what stopped it in a few words, what it has kept,
+ * whether it is trying again by itself, the particulars folded away, and the ways on: try again, a
+ * model file of one's own, or let it go.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -446,15 +567,25 @@ private fun Failed(d: Download, a: SetupActions) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Bar(done, stopped = true, stringResource(R.string.download_bar_stopped))
                 Spread {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Icon(Icons.alert, null, tint = p.err, modifier = Modifier.size(16.dp))
                         Text(
-                            if (d.got > 0) stringResource(R.string.download_stopped_at, mb(d.got), mb(d.total))
+                            if (d.got > 0)
+                                stringResource(R.string.download_stopped_at, mb(d.got), mb(d.total))
                             else stringResource(R.string.download_nothing_yet),
-                            style = Type.small, color = p.err,
+                            style = Type.small,
+                            color = p.err,
                         )
                     }
-                    if (d.retry && !d.trying) Text(stringResource(R.string.download_retrying), style = Type.small, color = p.inkMuted)
+                    if (d.retry && !d.trying)
+                        Text(
+                            stringResource(R.string.download_retrying),
+                            style = Type.small,
+                            color = p.inkMuted,
+                        )
                 }
             }
             val detail = d.problem?.detail ?: ""
@@ -467,44 +598,80 @@ private fun Failed(d: Download, a: SetupActions) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 PkButton(
-                    stringResource(if (d.trying) R.string.download_trying else R.string.download_try_again), a.retry,
-                    kind = Kind.Primary, large = true, enabled = !d.trying,
+                    stringResource(
+                        if (d.trying) R.string.download_trying else R.string.download_try_again
+                    ),
+                    a.retry,
+                    kind = Kind.Primary,
+                    large = true,
+                    enabled = !d.trying,
                 )
                 PkButton(stringResource(R.string.download_use_file), a.ownFile, large = true)
-                PkButton(stringResource(R.string.download_cancel), a.cancel, kind = Kind.Ghost, large = true)
+                PkButton(
+                    stringResource(R.string.download_cancel),
+                    a.cancel,
+                    kind = Kind.Ghost,
+                    large = true,
+                )
             }
         },
     )
 }
 
-/** A failure's particulars, folded away under Details (.pk-details), in mono, to select and copy. */
+/**
+ * A failure's particulars, folded away under Details (.pk-details), in mono, to select and copy.
+ */
 @Composable
 private fun Details(detail: String) {
     val p = pk
     var open by rememberSaveable { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().background(p.sunk, Corner).padding(horizontal = 14.dp, vertical = 12.dp)) {
+    Column(
+        Modifier.fillMaxWidth()
+            .background(p.sunk, Corner)
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+    ) {
         Row(
-            Modifier
-                .bleed(6.dp, 6.dp)
+            Modifier.bleed(6.dp, 6.dp)
                 .control(CornerSm) { open = !open }
-                .semantics { if (open) collapse { open = false; true } else expand { open = true; true } }
+                .semantics {
+                    if (open)
+                        collapse {
+                            open = false
+                            true
+                        }
+                    else
+                        expand {
+                            open = true
+                            true
+                        }
+                }
                 .padding(6.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.down, null, tint = p.ink, modifier = Modifier.size(16.dp).rotate(if (open) 0f else -90f))
+            Icon(
+                Icons.down,
+                null,
+                tint = p.ink,
+                modifier = Modifier.size(16.dp).rotate(if (open) 0f else -90f),
+            )
             Text(stringResource(R.string.download_details), style = Type.ui, color = p.ink)
         }
         if (open)
             SelectionContainer {
-                Text(detail, style = Type.stamp, color = p.ink, modifier = Modifier.padding(top = 8.dp))
+                Text(
+                    detail,
+                    style = Type.stamp,
+                    color = p.ink,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
             }
     }
 }
 
 /**
- * A model file of one's own on its way in (Models.open), as a download is
- * shown: Android's own step, where the desktop uses a file where it is.
+ * A model file of one's own on its way in (Models.open), as a download is shown: Android's own
+ * step, where the desktop uses a file where it is.
  */
 @Composable
 private fun Copying(c: Copy, a: SetupActions) {
@@ -515,23 +682,37 @@ private fun Copying(c: Copy, a: SetupActions) {
         top = {
             WordmarkButton(a.about)
             Intro(stringResource(R.string.copy_title), c.name)
-            Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                Modifier.padding(top = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 Spread(bottom = true) {
                     Figure(percent(done))
                     Text(
                         when {
                             c.checking -> res.getString(R.string.download_checking)
-                            c.total > 0 -> res.getString(R.string.download_progress, mb(c.got), mb(c.total))
+                            c.total > 0 ->
+                                res.getString(R.string.download_progress, mb(c.got), mb(c.total))
                             else -> res.getString(R.string.setup_size, mb(c.got))
                         },
-                        style = Type.stamp, color = p.inkMuted, modifier = Modifier.padding(bottom = 4.dp),
+                        style = Type.stamp,
+                        color = p.inkMuted,
+                        modifier = Modifier.padding(bottom = 4.dp),
                     )
                 }
                 Bar(done, stopped = false, stringResource(R.string.copy_title))
             }
         },
         foot = {
-            Row { PkButton(stringResource(R.string.download_cancel), a.cancel, kind = Kind.Ghost, large = true, enabled = !c.checking) }
+            Row {
+                PkButton(
+                    stringResource(R.string.download_cancel),
+                    a.cancel,
+                    kind = Kind.Ghost,
+                    large = true,
+                    enabled = !c.checking,
+                )
+            }
         },
     )
 }
@@ -544,65 +725,104 @@ private fun Figure(percent: Int) {
 }
 
 /**
- * A download's bar (.pk-bar): 6 dp on sunk, its fill the waveform's blue on
- * the light theme and plume on the dark (their contrast with the track,
- * app.css), ink-muted while it is stopped, moving as the desktop's does.
+ * A download's bar (.pk-bar): 6 dp on sunk, its fill the waveform's blue on the light theme and
+ * plume on the dark (their contrast with the track, app.css), ink-muted while it is stopped, moving
+ * as the desktop's does.
  */
 @Composable
 private fun Bar(done: Double, stopped: Boolean, label: String) {
     val p = pk
     val shown by animateFloatAsState(done.toFloat().coerceIn(0f, 1f), tween(300), label = "bar")
     Box(
-        Modifier
-            .fillMaxWidth()
+        Modifier.fillMaxWidth()
             .height(6.dp)
             .clip(RoundedCornerShape(Radius.radiusDot))
             .background(p.sunk)
             .semantics {
                 contentDescription = label
                 progressBarRangeInfo = ProgressBarRangeInfo(done.toFloat().coerceIn(0f, 1f), 0f..1f)
-            },
+            }
     ) {
-        Box(Modifier.fillMaxHeight().fillMaxWidth(shown).background(if (stopped) p.inkMuted else if (p === Dark) p.plume else p.wave))
+        Box(
+            Modifier.fillMaxHeight()
+                .fillMaxWidth(shown)
+                .background(if (stopped) p.inkMuted else if (p === Dark) p.plume else p.wave)
+        )
     }
 }
 
 /**
- * The model in use on the start screen's top edge, a ghost button whose
- * menu is the desktop's (app.js, modelMenu): each catalog model for what it
- * is for and whether it is here, Downloaded in green or its download's
- * size, the one in use checked; a model file of one's own while it is in
- * use; Open a model file; and Manage models, where what they take is
- * deleted (Manage), as the desktop's Store edition has it in place of
- * Show in File Explorer: the app's storage is no folder the person can
- * open. A model that is not here is downloaded.
+ * The model in use on the start screen's top edge, a ghost button whose menu is the desktop's
+ * (app.js, modelMenu): each catalog model for what it is for and whether it is here, Downloaded in
+ * green or its download's size, the one in use checked; a model file of one's own while it is in
+ * use; Open a model file; and Manage models, where what they take is deleted (Manage), as the
+ * desktop's Store edition has it in place of Show in File Explorer: the app's storage is no folder
+ * the person can open. A model that is not here is downloaded.
  */
 @Composable
-fun ModelButton(offers: List<Offer>, model: String?, own: String?, onPick: (Offer) -> Unit, onOwnFile: () -> Unit, onManage: () -> Unit) {
+fun ModelButton(
+    offers: List<Offer>,
+    model: String?,
+    own: String?,
+    onPick: (Offer) -> Unit,
+    onOwnFile: () -> Unit,
+    onManage: () -> Unit,
+) {
     val p = pk
     val res = LocalResources.current
     var open by remember { mutableStateOf(false) }
     val lang = ownLanguage()
-    val label = own ?: offers.find { it.name == model }?.let { stringResource(R.string.models_named, Models.label(res, it.key)) } ?: ""
-    val check = @Composable { Icon(Icons.check, null, tint = p.ink, modifier = Modifier.size(16.dp)) }
+    val label =
+        own
+            ?: offers
+                .find { it.name == model }
+                ?.let { stringResource(R.string.models_named, Models.label(res, it.key)) }
+            ?: ""
+    val check =
+        @Composable { Icon(Icons.check, null, tint = p.ink, modifier = Modifier.size(16.dp)) }
     Box {
         // its chevron's ink on the column's edge, as the desktop's
         // (#ready-model): its padding, 12, outside it, and the 3.3 dp the
         // ink stands in the chevron's 16 dp box (Feather's down, from 5 of
         // 24 with its stroke); at 12 the ink stood 3.2 in (the layout audit,
         // 2026-11-01)
-        PkButton(label, { open = true }, Modifier.offset(x = 12.dp + 16.dp * 5 / 24), kind = Kind.Ghost, trailing = Icons.down, file = own != null, held = open)
+        PkButton(
+            label,
+            { open = true },
+            Modifier.offset(x = 12.dp + 16.dp * 5 / 24),
+            kind = Kind.Ghost,
+            trailing = Icons.down,
+            file = own != null,
+            held = open,
+        )
         Menu(open, { open = false }) {
             for (o in offers) {
                 val on = own == null && o.name == model
                 val note = buildAnnotatedString {
                     val about = Models.about(res, o.key)
-                    append(if (o.languages.size > 1 && lang in o.languages) res.getString(R.string.models_languages_among, about, languageName(lang)) else about)
+                    append(
+                        if (o.languages.size > 1 && lang in o.languages)
+                            res.getString(
+                                R.string.models_languages_among,
+                                about,
+                                languageName(lang),
+                            )
+                        else about
+                    )
                     append(DOT)
-                    if (o.have) withStyle(SpanStyle(color = p.ok)) { append(res.getString(R.string.models_downloaded)) }
+                    if (o.have)
+                        withStyle(SpanStyle(color = p.ok)) {
+                            append(res.getString(R.string.models_downloaded))
+                        }
                     else append(res.getString(R.string.models_download_size, mb(o.bytes)))
                 }
-                Item(Models.label(res, o.key), null, hint = if (on) check else null, selected = on, note = note) {
+                Item(
+                    Models.label(res, o.key),
+                    null,
+                    hint = if (on) check else null,
+                    selected = on,
+                    note = note,
+                ) {
                     open = false
                     if (!on) onPick(o)
                 }

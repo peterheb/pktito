@@ -55,6 +55,22 @@ impl Job {
         job
     }
 
+    /// A job for files of one model's, in turn, counted as one: what the
+    /// Android app chose to download of it, the edition for the phone it
+    /// is on (the whole .pkf, or the slim one and the graph for its NPU),
+    /// or for a whole .pkf here the graph alone (android.rs, download).
+    pub fn files(files: &[Wanted]) -> Job {
+        let job = Job::for_file(&files[0]);
+        job.set(|s| {
+            s.total = files.iter().map(|w| w.bytes).sum();
+            s.got = files
+                .iter()
+                .map(|w| if w.here() { w.bytes } else { w.partial() })
+                .sum();
+        });
+        job
+    }
+
     /// A job for any file models.pktito.net serves (model::Wanted).
     pub fn for_file(w: &Wanted) -> Job {
         Job {
@@ -193,9 +209,7 @@ impl Job {
 
     /// The download on this thread: `tell` hears each change of state as it
     /// goes, and state() says how it ended; the checked file, or None where
-    /// it stopped short. start runs it on a thread of its own, the Android
-    /// app on one of its own (android.rs, download), which a job or a
-    /// service keeps alive for it.
+    /// it stopped short. start runs it on a thread of its own.
     pub fn run(&self, e: &'static Entry, dir: &Path, tell: &impl Fn(&State)) -> Option<PathBuf> {
         let files = model::edition(dir, e);
         let mut before = 0;
@@ -228,6 +242,34 @@ impl Job {
             self.set(|s| s.step = "done");
         }
         model::file_of(dir, e)
+    }
+
+    /// files()'s download on this thread, as run() downloads an edition:
+    /// each file not here in turn, the progress the whole's. A cancel
+    /// deletes every file of it, done or not, and one at a file's place
+    /// that is not the catalog's: an older graph an update of the app
+    /// left, its catalog's graph a new one. The last file's path once all
+    /// are here. The Android app runs it on a thread of its own
+    /// (android.rs, download), which a job or a service keeps alive for it.
+    pub fn run_files(&self, files: &[Wanted], tell: &impl Fn(&State)) -> Option<PathBuf> {
+        let mut before = 0;
+        for w in files {
+            if !w.here() {
+                self.before.store(before, Ordering::Relaxed);
+                if self.run_file(w, tell).is_none() {
+                    if self.state().step == "cancelled" {
+                        for f in files {
+                            let _ = std::fs::remove_file(&f.part);
+                            let _ = std::fs::remove_file(&f.dst);
+                        }
+                    }
+                    return None;
+                }
+            }
+            before += w.bytes;
+        }
+        self.before.store(0, Ordering::Relaxed);
+        files.last().map(|w| w.dst.clone())
     }
 
     /// run() for any file models.pktito.net serves.
