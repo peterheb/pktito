@@ -140,7 +140,13 @@ extern "C" {
 #[cfg(target_os = "android")]
 extern "C" {
     fn pk_model_has_encoder(m: *const RawModel) -> c_int;
-    fn pk_asr_use_qnn(a: *mut RawAsr, on: c_int, cache: *const c_char, err: *mut c_char, errlen: usize) -> c_int;
+    fn pk_asr_use_qnn(
+        a: *mut RawAsr,
+        on: c_int,
+        cache: *const c_char,
+        err: *mut c_char,
+        errlen: usize,
+    ) -> c_int;
     fn pk_qnn_chip(chip: *mut c_char, cap: usize, err: *mut c_char, errlen: usize) -> c_int;
 }
 
@@ -154,9 +160,13 @@ pub fn qnn_chip() -> Result<String, String> {
     let mut chip = [0 as c_char; 64];
     let mut err = [0 as c_char; 1024];
     if unsafe { pk_qnn_chip(chip.as_mut_ptr(), chip.len(), err.as_mut_ptr(), err.len()) } != 0 {
-        return Err(unsafe { CStr::from_ptr(err.as_ptr()) }.to_string_lossy().into_owned());
+        return Err(unsafe { CStr::from_ptr(err.as_ptr()) }
+            .to_string_lossy()
+            .into_owned());
     }
-    Ok(unsafe { CStr::from_ptr(chip.as_ptr()) }.to_string_lossy().into_owned())
+    Ok(unsafe { CStr::from_ptr(chip.as_ptr()) }
+        .to_string_lossy()
+        .into_owned())
 }
 
 /// The cues of a subtitle track for words and their times in milliseconds,
@@ -423,10 +433,13 @@ impl Asr {
     /// whole file is never compiled here.
     #[cfg(target_os = "android")]
     pub fn use_qnn(&mut self, cache: &Path) -> Result<(), String> {
-        let c = CString::new(cache.to_string_lossy().as_bytes()).map_err(|_| "bad path".to_string())?;
+        let c =
+            CString::new(cache.to_string_lossy().as_bytes()).map_err(|_| "bad path".to_string())?;
         let mut err = [0 as c_char; 1024];
         if unsafe { pk_asr_use_qnn(self.raw, 1, c.as_ptr(), err.as_mut_ptr(), err.len()) } != 0 {
-            return Err(unsafe { CStr::from_ptr(err.as_ptr()) }.to_string_lossy().into_owned());
+            return Err(unsafe { CStr::from_ptr(err.as_ptr()) }
+                .to_string_lossy()
+                .into_owned());
         }
         Ok(())
     }

@@ -6,17 +6,20 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * The match the reader is on follows the playhead (Finder.follow), as the
- * desktop's does (app.js, followHit): a seek puts them on the match it last
- * passed, though it lands short of the next; playback, on each it passes. A
- * step, and a search typed at rest, take the playhead to their match
- * (Finder.step, Finder.settle). Alice chapter 1's matches of "rabbit", in
- * seconds.
+ * The match the reader is on follows the playhead (Finder.follow), as the desktop's does (app.js,
+ * followHit): a seek puts them on the match it last passed, though it lands short of the next;
+ * playback, on each it passes. A step, and a search typed at rest, take the playhead to their match
+ * (Finder.step, Finder.settle). Alice chapter 1's matches of "rabbit", in seconds.
  */
 class FindTest {
-    private val hits = listOf(14.72, 44.96, 53.60, 64.93, 75.65, 85.98, 94.54).mapIndexed { i, t -> Hit(i, 0, 6, t) }
+    private val hits =
+        listOf(14.72, 44.96, 53.60, 64.93, 75.65, 85.98, 94.54).mapIndexed { i, t ->
+            Hit(i, 0, 6, t)
+        }
 
-    /** The screen's seek (MainActivity), each kept in seeks: the playhead to s, the reader with it. */
+    /**
+     * The screen's seek (MainActivity), each kept in seeks: the playhead to s, the reader with it.
+     */
     private fun Finder.seek(hits: List<Hit>, seeks: MutableList<Double>) = { s: Double ->
         seeks += s
         follow(hits, s, jump = true)

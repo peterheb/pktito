@@ -41,89 +41,179 @@ class Palette(
     val link: Color,
 )
 
-val Light = Palette(
-    ground = Color(0xFFF4F6F9),
-    surface = Color(0xFFE8ECF2),
-    sunk = Color(0xFFDBE1EA),
-    ink = Color(0xFF101B33),
-    inkMuted = Color(0xFF4A5670),
-    plume = Color(0xFF6CC4F5),
-    plumePress = Color(0xFF4FB0EA),
-    onPlume = Color(0xFF101B33),
-    beak = Color(0xFFC85A1E),
-    term = Color(0xFF101B33),
-    termInk = Color(0xFFE4EBF6),
-    termDim = Color(0xFF8FA0BD),
-    termLine = Color(0xFF2A3A5A),
-    toastEdge = Color(0xFFE5EBF4).copy(alpha = 0f),
-    wave = Color(0xFF4F77B0),
-    wavePlayed = Color(0xFF6CC4F5),  // {plume}
-    ok = Color(0xFF17673F),
-    err = Color(0xFFB42318),
-    tint = Color(0xFF101B33).copy(alpha = 0.07f),
-    tintPress = Color(0xFF101B33).copy(alpha = 0.13f),
-    tintTerm = Color(0xFFE4EBF6).copy(alpha = 0.10f),
-    tintTermPress = Color(0xFFE4EBF6).copy(alpha = 0.18f),
-    scrim = Color(0xFF101B33).copy(alpha = 0.32f),
-    focus = Color(0xFF101B33),
-    link = Color(0xFF101B33),  // {ink}
-)
+val Light =
+    Palette(
+        ground = Color(0xFFF4F6F9),
+        surface = Color(0xFFE8ECF2),
+        sunk = Color(0xFFDBE1EA),
+        ink = Color(0xFF101B33),
+        inkMuted = Color(0xFF4A5670),
+        plume = Color(0xFF6CC4F5),
+        plumePress = Color(0xFF4FB0EA),
+        onPlume = Color(0xFF101B33),
+        beak = Color(0xFFC85A1E),
+        term = Color(0xFF101B33),
+        termInk = Color(0xFFE4EBF6),
+        termDim = Color(0xFF8FA0BD),
+        termLine = Color(0xFF2A3A5A),
+        toastEdge = Color(0xFFE5EBF4).copy(alpha = 0f),
+        wave = Color(0xFF4F77B0),
+        wavePlayed = Color(0xFF6CC4F5), // {plume}
+        ok = Color(0xFF17673F),
+        err = Color(0xFFB42318),
+        tint = Color(0xFF101B33).copy(alpha = 0.07f),
+        tintPress = Color(0xFF101B33).copy(alpha = 0.13f),
+        tintTerm = Color(0xFFE4EBF6).copy(alpha = 0.10f),
+        tintTermPress = Color(0xFFE4EBF6).copy(alpha = 0.18f),
+        scrim = Color(0xFF101B33).copy(alpha = 0.32f),
+        focus = Color(0xFF101B33),
+        link = Color(0xFF101B33), // {ink}
+    )
 
-val Dark = Palette(
-    ground = Color(0xFF0B1220),
-    surface = Color(0xFF111A2B),
-    sunk = Color(0xFF182337),
-    ink = Color(0xFFE5EBF4),
-    inkMuted = Color(0xFF9AA7BF),
-    plume = Color(0xFF6CC4F5),
-    plumePress = Color(0xFF4FB0EA),
-    onPlume = Color(0xFF101B33),
-    beak = Color(0xFFF39A5C),
-    term = Color(0xFF141E33),
-    termInk = Color(0xFFE4EBF6),
-    termDim = Color(0xFF8FA0BD),
-    termLine = Color(0xFF2C3D5F),
-    toastEdge = Color(0xFFE5EBF4).copy(alpha = 0.18f),
-    wave = Color(0xFF4F77B0),
-    wavePlayed = Color(0xFF6CC4F5),  // {plume}
-    ok = Color(0xFF6FD39B),
-    err = Color(0xFFFF8F80),
-    tint = Color(0xFFE5EBF4).copy(alpha = 0.09f),
-    tintPress = Color(0xFFE5EBF4).copy(alpha = 0.16f),
-    tintTerm = Color(0xFFE4EBF6).copy(alpha = 0.10f),
-    tintTermPress = Color(0xFFE4EBF6).copy(alpha = 0.18f),
-    scrim = Color(0xFF000000).copy(alpha = 0.55f),
-    focus = Color(0xFF6CC4F5),
-    link = Color(0xFFE5EBF4),  // {ink}
-)
+val Dark =
+    Palette(
+        ground = Color(0xFF0B1220),
+        surface = Color(0xFF111A2B),
+        sunk = Color(0xFF182337),
+        ink = Color(0xFFE5EBF4),
+        inkMuted = Color(0xFF9AA7BF),
+        plume = Color(0xFF6CC4F5),
+        plumePress = Color(0xFF4FB0EA),
+        onPlume = Color(0xFF101B33),
+        beak = Color(0xFFF39A5C),
+        term = Color(0xFF141E33),
+        termInk = Color(0xFFE4EBF6),
+        termDim = Color(0xFF8FA0BD),
+        termLine = Color(0xFF2C3D5F),
+        toastEdge = Color(0xFFE5EBF4).copy(alpha = 0.18f),
+        wave = Color(0xFF4F77B0),
+        wavePlayed = Color(0xFF6CC4F5), // {plume}
+        ok = Color(0xFF6FD39B),
+        err = Color(0xFFFF8F80),
+        tint = Color(0xFFE5EBF4).copy(alpha = 0.09f),
+        tintPress = Color(0xFFE5EBF4).copy(alpha = 0.16f),
+        tintTerm = Color(0xFFE4EBF6).copy(alpha = 0.10f),
+        tintTermPress = Color(0xFFE4EBF6).copy(alpha = 0.18f),
+        scrim = Color(0xFF000000).copy(alpha = 0.55f),
+        focus = Color(0xFF6CC4F5),
+        link = Color(0xFFE5EBF4), // {ink}
+    )
 
 object Fonts {
-    val sans = FontFamily(Font(R.font.archivo_400, FontWeight.W400), Font(R.font.archivo_500, FontWeight.W500), Font(R.font.archivo_700, FontWeight.W700))
-    val mono = FontFamily(Font(R.font.commit_mono_400, FontWeight.W400), Font(R.font.commit_mono_700, FontWeight.W700))
+    val sans =
+        FontFamily(
+            Font(R.font.archivo_400, FontWeight.W400),
+            Font(R.font.archivo_500, FontWeight.W500),
+            Font(R.font.archivo_700, FontWeight.W700),
+        )
+    val mono =
+        FontFamily(
+            Font(R.font.commit_mono_400, FontWeight.W400),
+            Font(R.font.commit_mono_700, FontWeight.W700),
+        )
 }
 
 /**
- * A line as CSS sets it, as the desktop's text has it: its leading split
- * evenly above and below the letters, and kept on the first line and the
- * last. Compose's own (LineHeightStyle.Default in ui-text 1.12.1) trims
- * both, which set a row's time against its sentence, and a menu's items
+ * A line as CSS sets it, as the desktop's text has it: its leading split evenly above and below the
+ * letters, and kept on the first line and the last. Compose's own (LineHeightStyle.Default in
+ * ui-text 1.12.1) trims both, which set a row's time against its sentence, and a menu's items
  * against each other, closer than the desktop's (Peter, 2026-10-25).
  */
 val CssLine = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None)
 
 /** The type styles, by their names: transcript is the transcript's, ui the app's working size. */
 object Type {
-    val figure = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W700, fontSize = 64.sp, lineHeight = 0.9.em, lineHeightStyle = CssLine, letterSpacing = (-0.04).em)
-    val display = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W700, fontSize = 80.sp, lineHeight = 0.92.em, lineHeightStyle = CssLine, letterSpacing = (-0.02).em)
-    val lead = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W500, fontSize = 26.sp, lineHeight = 1.25.em, lineHeightStyle = CssLine, letterSpacing = (-0.01).em)
-    val body = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W400, fontSize = 18.sp, lineHeight = 1.5.em, lineHeightStyle = CssLine)
-    val transcript = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W400, fontSize = 17.sp, lineHeight = 1.6.em, lineHeightStyle = CssLine)
-    val bodyStrong = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W500, fontSize = 18.sp, lineHeight = 1.5.em, lineHeightStyle = CssLine)
-    val ui = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W500, fontSize = 14.sp, lineHeight = 1.4.em, lineHeightStyle = CssLine)
-    val small = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.W400, fontSize = 13.sp, lineHeight = 1.45.em, lineHeightStyle = CssLine)
-    val code = TextStyle(fontFamily = Fonts.mono, fontWeight = FontWeight.W400, fontSize = 15.sp, lineHeight = 1.6.em, lineHeightStyle = CssLine)
-    val codeStrong = TextStyle(fontFamily = Fonts.mono, fontWeight = FontWeight.W700, fontSize = 15.sp, lineHeight = 1.6.em, lineHeightStyle = CssLine)
-    val stamp = TextStyle(fontFamily = Fonts.mono, fontWeight = FontWeight.W400, fontSize = 13.sp, lineHeight = 1.5.em, lineHeightStyle = CssLine)
+    val figure =
+        TextStyle(
+            fontFamily = Fonts.sans,
+            fontWeight = FontWeight.W700,
+            fontSize = 64.sp,
+            lineHeight = 0.9.em,
+            lineHeightStyle = CssLine,
+            letterSpacing = (-0.04).em,
+        )
+    val display =
+        TextStyle(
+            fontFamily = Fonts.sans,
+            fontWeight = FontWeight.W700,
+            fontSize = 80.sp,
+            lineHeight = 0.92.em,
+            lineHeightStyle = CssLine,
+            letterSpacing = (-0.02).em,
+        )
+    val lead =
+        TextStyle(
+            fontFamily = Fonts.sans,
+            fontWeight = FontWeight.W500,
+            fontSize = 26.sp,
+            lineHeight = 1.25.em,
+            lineHeightStyle = CssLine,
+            letterSpacing = (-0.01).em,
+        )
+    val body =
+        TextStyle(
+            fontFamily = Fonts.sans,
+            fontWeight = FontWeight.W400,
+            fontSize = 18.sp,
+            lineHeight = 1.5.em,
+            lineHeightStyle = CssLine,
+        )
+    val transcript =
+        TextStyle(
+            fontFamily = Fonts.sans,
+            fontWeight = FontWeight.W400,
+            fontSize = 17.sp,
+            lineHeight = 1.6.em,
+            lineHeightStyle = CssLine,
+        )
+    val bodyStrong =
+        TextStyle(
+            fontFamily = Fonts.sans,
+            fontWeight = FontWeight.W500,
+            fontSize = 18.sp,
+            lineHeight = 1.5.em,
+            lineHeightStyle = CssLine,
+        )
+    val ui =
+        TextStyle(
+            fontFamily = Fonts.sans,
+            fontWeight = FontWeight.W500,
+            fontSize = 14.sp,
+            lineHeight = 1.4.em,
+            lineHeightStyle = CssLine,
+        )
+    val small =
+        TextStyle(
+            fontFamily = Fonts.sans,
+            fontWeight = FontWeight.W400,
+            fontSize = 13.sp,
+            lineHeight = 1.45.em,
+            lineHeightStyle = CssLine,
+        )
+    val code =
+        TextStyle(
+            fontFamily = Fonts.mono,
+            fontWeight = FontWeight.W400,
+            fontSize = 15.sp,
+            lineHeight = 1.6.em,
+            lineHeightStyle = CssLine,
+        )
+    val codeStrong =
+        TextStyle(
+            fontFamily = Fonts.mono,
+            fontWeight = FontWeight.W700,
+            fontSize = 15.sp,
+            lineHeight = 1.6.em,
+            lineHeightStyle = CssLine,
+        )
+    val stamp =
+        TextStyle(
+            fontFamily = Fonts.mono,
+            fontWeight = FontWeight.W400,
+            fontSize = 13.sp,
+            lineHeight = 1.5.em,
+            lineHeightStyle = CssLine,
+        )
 }
 
 object Space {

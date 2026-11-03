@@ -12,9 +12,13 @@ plugins {
 // unsigned. Play signs what it installs with its own key (Play App
 // Signing); this one only proves an upload is ours, and a lost one is
 // replaced through Play's support, not by a new listing
-val upload = File(
-    System.getenv("PKTITO_UPLOAD") ?: "${System.getProperty("user.home")}/.pktito-upload/upload.properties",
-).takeIf { it.isFile }?.let { f -> Properties().apply { f.inputStream().use { load(it) } } }
+val upload =
+    File(
+            System.getenv("PKTITO_UPLOAD")
+                ?: "${System.getProperty("user.home")}/.pktito-upload/upload.properties"
+        )
+        .takeIf { it.isFile }
+        ?.let { f -> Properties().apply { f.inputStream().use { load(it) } } }
 
 android {
     namespace = "net.pktito.app"
@@ -61,7 +65,10 @@ android {
             if (upload != null) signingConfig = signingConfigs.getByName("upload")
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
     compileOptions {
@@ -94,9 +101,15 @@ android {
 // notices.py's list of licenses: what resolves to a file, so neither a
 // BOM nor a multiplatform module's metadata, whose code is its -android's
 tasks.register("packaged") {
-    val modules = configurations.named("releaseRuntimeClasspath")
-        .flatMap { it.incoming.artifacts.resolvedArtifacts }
-        .map { all -> all.map { "${it.id.componentIdentifier.displayName}\t${it.file}" }.distinct().sorted() }
+    val modules =
+        configurations
+            .named("releaseRuntimeClasspath")
+            .flatMap { it.incoming.artifacts.resolvedArtifacts }
+            .map { all ->
+                all.map { "${it.id.componentIdentifier.displayName}\t${it.file}" }
+                    .distinct()
+                    .sorted()
+            }
     val out = layout.buildDirectory.file("notices/packaged.txt")
     inputs.property("modules", modules)
     outputs.file(out)

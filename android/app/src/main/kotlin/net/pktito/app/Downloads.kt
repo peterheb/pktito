@@ -31,7 +31,10 @@ import kotlin.math.roundToLong
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** What went wrong, from the desktop's Rust (strings.rs, Problem): the key of its words, the server they name, and the particulars as whatever reported it said them. */
+/**
+ * What went wrong, from the desktop's Rust (strings.rs, Problem): the key of its words, the server
+ * they name, and the particulars as whatever reported it said them.
+ */
 class Problem(val key: String, val host: String, val detail: String)
 
 /** How a download stands (download.rs, State). */
@@ -59,30 +62,40 @@ class Download(
             val o = JSONObject(json)
             val p = o.optJSONObject("problem")
             return Download(
-                o.getString("name"), o.getString("step"), o.getLong("got"), o.getLong("total"),
-                o.getDouble("speed"), o.getString("host"),
-                p?.let { Problem(it.getString("key"), it.getJSONObject("args").optString("host"), it.getString("detail")) },
-                o.getBoolean("retry"), o.getBoolean("trying"),
+                o.getString("name"),
+                o.getString("step"),
+                o.getLong("got"),
+                o.getLong("total"),
+                o.getDouble("speed"),
+                o.getString("host"),
+                p?.let {
+                    Problem(
+                        it.getString("key"),
+                        it.getJSONObject("args").optString("host"),
+                        it.getString("detail"),
+                    )
+                },
+                o.getBoolean("retry"),
+                o.getBoolean("trying"),
             )
         }
     }
 }
 
 /**
- * A catalog model's download, as the desktop's window runs it
- * (download.rs), on a thread of the app's (Engine.download) that a job
- * keeps going with the screen off or another app in front: from Android 14
- * a user-initiated data transfer job (DownloadJob), Android's way for a
- * download the person asked for, with a network as its condition; before
- * it a foreground service (DownloadService). Its progress is in a
- * notification as well as on the screen. One at a time: the screen offers
- * no second while one is shown. It fetches the files of the model's
- * edition for this phone (Offer.parts), or for a model here on the CPU,
- * its graph for the NPU alone (Manage models, Faster), each checked in
- * turn, their bytes counted as one.
+ * A catalog model's download, as the desktop's window runs it (download.rs), on a thread of the
+ * app's (Engine.download) that a job keeps going with the screen off or another app in front: from
+ * Android 14 a user-initiated data transfer job (DownloadJob), Android's way for a download the
+ * person asked for, with a network as its condition; before it a foreground service
+ * (DownloadService). Its progress is in a notification as well as on the screen. One at a time: the
+ * screen offers no second while one is shown. It fetches the files of the model's edition for this
+ * phone (Offer.parts), or for a model here on the CPU, its graph for the NPU alone (Manage models,
+ * Faster), each checked in turn, their bytes counted as one.
  */
 object Downloads {
-    /** The download under way, paused or failed, for the screen; null once it is done or cancelled. */
+    /**
+     * The download under way, paused or failed, for the screen; null once it is done or cancelled.
+     */
     var state by mutableStateOf<Download?>(null)
 
     const val NAME = "name"
@@ -105,21 +118,24 @@ object Downloads {
         @Synchronized get() = worker?.isAlive == true
 
     /**
-     * Whether the download shown is of a model here, which can only be its
-     * graph for the NPU (Manage models, Faster): Manage models shows it,
-     * not the setup screen, and the model in use stays in use.
+     * Whether the download shown is of a model here, which can only be its graph for the NPU
+     * (Manage models, Faster): Manage models shows it, not the setup screen, and the model in use
+     * stays in use.
      */
     val faster: Boolean
         get() = state?.let { d -> Models.offers.find { it.name == d.name }?.have } == true
 
-    /** The files a download of o fetches: its edition's, or for a model here on the CPU, the graph that makes it faster. */
-    fun parts(o: Offer): List<Part> = if (o.have) listOfNotNull(o.graph.takeIf { o.faster > 0 }) else o.parts
+    /**
+     * The files a download of o fetches: its edition's, or for a model here on the CPU, the graph
+     * that makes it faster.
+     */
+    fun parts(o: Offer): List<Part> =
+        if (o.have) listOfNotNull(o.graph.takeIf { o.faster > 0 }) else o.parts
 
     /**
-     * The files of the model of that name downloaded (parts), or their
-     * download gone on with from what it kept: the screen says so at once,
-     * from what is here, as app.js's startDownload; a download that is
-     * waiting to try again tries now.
+     * The files of the model of that name downloaded (parts), or their download gone on with from
+     * what it kept: the screen says so at once, from what is here, as app.js's startDownload; a
+     * download that is waiting to try again tries now.
      */
     fun start(context: Context, o: Offer) {
         if (running) return Engine.retryDownload()
@@ -128,12 +144,38 @@ object Downloads {
         files = JSONArray(parts.map { it.file.name }).toString()
         val got = parts.sumOf { it.kept }
         val total = parts.sumOf { it.bytes }
-        state = Download(o.name, "downloading", got, total, 0.0, "", null, retry = false, trying = false)
+        state =
+            Download(
+                o.name,
+                "downloading",
+                got,
+                total,
+                0.0,
+                "",
+                null,
+                retry = false,
+                trying = false,
+            )
         if (Build.VERSION.SDK_INT < 34)
-            context.startForegroundService(Intent(context, DownloadService::class.java).putExtra(NAME, o.name).putExtra(FILES, files))
+            context.startForegroundService(
+                Intent(context, DownloadService::class.java)
+                    .putExtra(NAME, o.name)
+                    .putExtra(FILES, files)
+            )
         else if (!DownloadJob.schedule(context, o.name, files, total - got)) {
             Log.w(TAG, "${o.name}: JobScheduler refused the download's job")
-            state = Download(o.name, "failed", got, total, 0.0, "", Problem("", "", "JobScheduler refused the download's job"), retry = false, trying = false)
+            state =
+                Download(
+                    o.name,
+                    "failed",
+                    got,
+                    total,
+                    0.0,
+                    "",
+                    Problem("", "", "JobScheduler refused the download's job"),
+                    retry = false,
+                    trying = false,
+                )
         }
     }
 
@@ -148,10 +190,24 @@ object Downloads {
         if (running) return Engine.pauseDownload()
         // a job waiting for a network has nothing to stop but itself
         cancelJob(context)
-        state = state?.let { Download(it.name, "paused", it.got, it.total, 0.0, it.host, null, retry = false, trying = false) }
+        state = state?.let {
+            Download(
+                it.name,
+                "paused",
+                it.got,
+                it.total,
+                0.0,
+                it.host,
+                null,
+                retry = false,
+                trying = false,
+            )
+        }
     }
 
-    /** Stop it and delete what it had: its thread does, and says so, if it is running; else here. */
+    /**
+     * Stop it and delete what it had: its thread does, and says so, if it is running; else here.
+     */
     fun cancel(context: Context) {
         val name = state?.name ?: return
         if (Engine.cancelDownload(Models.dir(context).path, name, files)) return
@@ -161,14 +217,14 @@ object Downloads {
     }
 
     private fun cancelJob(context: Context) {
-        if (Build.VERSION.SDK_INT >= 34) context.getSystemService(JobScheduler::class.java).cancel(JOB)
+        if (Build.VERSION.SDK_INT >= 34)
+            context.getSystemService(JobScheduler::class.java).cancel(JOB)
     }
 
     /**
-     * The download of files of name on a thread of its own, or the one
-     * running told to try now, for the job or the service that keeps it
-     * going, on the main thread: over ends that once the download ends.
-     * false where there is nothing to do, the files here already.
+     * The download of files of name on a thread of its own, or the one running told to try now, for
+     * the job or the service that keeps it going, on the main thread: over ends that once the
+     * download ends. false where there is nothing to do, the files here already.
      */
     @Synchronized
     fun run(context: Context, name: String, files: String, over: () -> Unit): Boolean {
@@ -195,10 +251,9 @@ object Downloads {
     }
 
     /**
-     * The job keeping it going stopped by Android: for the network, the
-     * download says so and tries again by itself, as the desktop's does,
-     * and the job comes back with a network; for anything else (the
-     * person, from Android's list of apps at work) it pauses.
+     * The job keeping it going stopped by Android: for the network, the download says so and tries
+     * again by itself, as the desktop's does, and the job comes back with a network; for anything
+     * else (the person, from Android's list of apps at work) it pauses.
      */
     @Synchronized
     fun stopped(context: Context, network: Boolean) {
@@ -208,37 +263,61 @@ object Downloads {
         over = { cancelJob(app) }
     }
 
-    private fun download(app: Context, name: String, files: String, parts: List<Part>, faster: Boolean) {
+    private fun download(
+        app: Context,
+        name: String,
+        files: String,
+        parts: List<Part>,
+        faster: Boolean,
+    ) {
         // room for the rest made where Android can make it (Models.room); where
         // it cannot, the download stops when the storage is full, as the
         // desktop's does, keeping what it has to go on from
         Models.room(app, parts.sumOf { it.bytes - it.kept })
         val notes = app.getSystemService(NotificationManager::class.java)
         var shown = 0L
-        val path = try {
-            Engine.download(Models.dir(app).path, name, files, object : Engine.Download {
-                override fun state(json: String) {
-                    val d = Download.parse(json)
-                    main.post { state = d.takeUnless { it.step == "done" || it.step == "cancelled" } }
-                    // Android drops a notification's updates past a few a
-                    // second; one that has ended has none, its job's or its
-                    // service's notification going with it
-                    val now = SystemClock.elapsedRealtime()
-                    if (d.going && (now - shown >= 500 || d.step != "downloading")) {
-                        shown = now
-                        notes.notify(NOTE, note(app, name, d))
+        val path =
+            try {
+                Engine.download(
+                    Models.dir(app).path,
+                    name,
+                    files,
+                    object : Engine.Download {
+                        override fun state(json: String) {
+                            val d = Download.parse(json)
+                            main.post {
+                                state = d.takeUnless { it.step == "done" || it.step == "cancelled" }
+                            }
+                            // Android drops a notification's updates past a few a
+                            // second; one that has ended has none, its job's or its
+                            // service's notification going with it
+                            val now = SystemClock.elapsedRealtime()
+                            if (d.going && (now - shown >= 500 || d.step != "downloading")) {
+                                shown = now
+                                notes.notify(NOTE, note(app, name, d))
+                            }
+                        }
+                    },
+                )
+            } catch (e: Exception) {
+                Log.w(TAG, "downloading $name", e)
+                main.post {
+                    state = state?.let {
+                        Download(
+                            it.name,
+                            "failed",
+                            it.got,
+                            it.total,
+                            0.0,
+                            it.host,
+                            Problem("", "", e.toString()),
+                            retry = false,
+                            trying = false,
+                        )
                     }
                 }
-            })
-        } catch (e: Exception) {
-            Log.w(TAG, "downloading $name", e)
-            main.post {
-                state = state?.let {
-                    Download(it.name, "failed", it.got, it.total, 0.0, it.host, Problem("", "", e.toString()), retry = false, trying = false)
-                }
+                ""
             }
-            ""
-        }
         if (path.isNotEmpty()) {
             // in use once it checks, as the desktop's (main.rs, download_model)
             if (!faster) Models.use(app, name)
@@ -247,9 +326,15 @@ object Downloads {
         main.post {
             Models.refresh(app)
             if (path.isNotEmpty())
-                Models.offers.find { it.name == name }?.let {
-                    Models.news = app.getString(R.string.models_ready, Models.label(app.resources, it.key))
-                }
+                Models.offers
+                    .find { it.name == name }
+                    ?.let {
+                        Models.news =
+                            app.getString(
+                                R.string.models_ready,
+                                Models.label(app.resources, it.key),
+                            )
+                    }
         }
         synchronized(this) {
             worker = null
@@ -258,24 +343,47 @@ object Downloads {
         }
     }
 
-    /** The download's notification: the model's, how far it has got, and the way back to the app, where its controls are. */
+    /**
+     * The download's notification: the model's, how far it has got, and the way back to the app,
+     * where its controls are.
+     */
     fun note(context: Context, name: String, d: Download?): Notification {
         val res = context.resources
-        context.getSystemService(NotificationManager::class.java).createNotificationChannel(
-            NotificationChannel(CHANNEL, res.getString(R.string.channel_download), NotificationManager.IMPORTANCE_LOW),
-        )
-        val open = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
-        val key = Models.offers.find { it.name == name }?.key ?: Models.catalog(context).find { it.name == name }?.key ?: ""
-        val b = Notification.Builder(context, CHANNEL)
-            .setSmallIcon(R.drawable.ic_note)
-            .setContentTitle(res.getString(R.string.download_title, Models.label(res, key)))
-            .setContentIntent(open)
-            .setOngoing(true)
+        context
+            .getSystemService(NotificationManager::class.java)
+            .createNotificationChannel(
+                NotificationChannel(
+                    CHANNEL,
+                    res.getString(R.string.channel_download),
+                    NotificationManager.IMPORTANCE_LOW,
+                )
+            )
+        val open =
+            PendingIntent.getActivity(
+                context,
+                0,
+                Intent(context, MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE,
+            )
+        val key =
+            Models.offers.find { it.name == name }?.key
+                ?: Models.catalog(context).find { it.name == name }?.key
+                ?: ""
+        val b =
+            Notification.Builder(context, CHANNEL)
+                .setSmallIcon(R.drawable.ic_note)
+                .setContentTitle(res.getString(R.string.download_title, Models.label(res, key)))
+                .setContentIntent(open)
+                .setOngoing(true)
         when {
             d == null -> b.setProgress(0, 0, true)
-            d.step == "checking" -> b.setContentText(res.getString(R.string.download_checking)).setProgress(0, 0, true)
-            d.step == "failed" -> b.setContentText(words(res, d.problem?.key, d.problem?.host ?: ""))
-            else -> b.setContentText(progress(res, d)).setProgress(1000, (1000 * d.got / d.total.coerceAtLeast(1)).toInt(), false)
+            d.step == "checking" ->
+                b.setContentText(res.getString(R.string.download_checking)).setProgress(0, 0, true)
+            d.step == "failed" ->
+                b.setContentText(words(res, d.problem?.key, d.problem?.host ?: ""))
+            else ->
+                b.setContentText(progress(res, d))
+                    .setProgress(1000, (1000 * d.got / d.total.coerceAtLeast(1)).toInt(), false)
         }
         return b.build()
     }
@@ -287,33 +395,41 @@ fun mb(bytes: Long): String = (bytes / 1e6).roundToLong().toString()
 /** The fraction done, as a whole percent, down (app.js, percent). */
 fun percent(x: Double): Int = (x.coerceIn(0.0, 1.0) * 100).toInt()
 
-/** How far a download has got, in the desktop's words (app.js, updateDownload): "262 of 624 MB · 12.3 MB/s · about 30 s left". */
+/**
+ * How far a download has got, in the desktop's words (app.js, updateDownload): "262 of 624 MB ·
+ * 12.3 MB/s · about 30 s left".
+ */
 fun progress(res: Resources, d: Download): String {
     val got = mb(d.got)
     val total = mb(d.total)
     return when {
         d.step == "checking" -> res.getString(R.string.download_checking)
         d.step == "paused" -> res.getString(R.string.download_progress_paused, got, total)
-        d.speed > 0 -> res.getString(
-            R.string.download_progress_speed, got, total,
-            String.format(Locale.getDefault(), "%.1f", d.speed / 1e6), timeLeft(res, (d.total - d.got) / d.speed),
-        )
+        d.speed > 0 ->
+            res.getString(
+                R.string.download_progress_speed,
+                got,
+                total,
+                String.format(Locale.getDefault(), "%.1f", d.speed / 1e6),
+                timeLeft(res, (d.total - d.got) / d.speed),
+            )
         else -> res.getString(R.string.download_progress, got, total)
     }
 }
 
 /** About how long is left, to 5 s under a minute, else to the minute (app.js, timeLeft). */
-fun timeLeft(res: Resources, s: Double): String = when {
-    !(s >= 0) || s.isInfinite() -> ""
-    s < 50 -> res.getString(R.string.time_left_seconds, maxOf(5, (Math.round(s / 5) * 5).toInt()))
-    else -> res.getString(R.string.time_left_minutes, Math.round(s / 60).toInt())
-}
+fun timeLeft(res: Resources, s: Double): String =
+    when {
+        !(s >= 0) || s.isInfinite() -> ""
+        s < 50 ->
+            res.getString(R.string.time_left_seconds, maxOf(5, (Math.round(s / 5) * 5).toInt()))
+        else -> res.getString(R.string.time_left_minutes, Math.round(s / 60).toInt())
+    }
 
 /**
- * A model's download as a user-initiated data transfer job (Android 14 and
- * later), which Android gives a transfer the person asked for: it runs with
- * the screen off or another app in front while there is a network, comes
- * back when the network does, and shows its notification (Downloads).
+ * A model's download as a user-initiated data transfer job (Android 14 and later), which Android
+ * gives a transfer the person asked for: it runs with the screen off or another app in front while
+ * there is a network, comes back when the network does, and shows its notification (Downloads).
  */
 @RequiresApi(34)
 class DownloadJob : JobService() {
@@ -321,7 +437,12 @@ class DownloadJob : JobService() {
         val name = params.extras.getString(Downloads.NAME) ?: return false
         val files = params.extras.getString(Downloads.FILES) ?: return false
         // the notification first, as a user-initiated job owes Android
-        setNotification(params, Downloads.NOTE, Downloads.note(this, name, Downloads.state), JOB_END_NOTIFICATION_POLICY_REMOVE)
+        setNotification(
+            params,
+            Downloads.NOTE,
+            Downloads.note(this, name, Downloads.state),
+            JOB_END_NOTIFICATION_POLICY_REMOVE,
+        )
         return Downloads.run(this, name, files) { jobFinished(params, false) }
     }
 
@@ -333,29 +454,33 @@ class DownloadJob : JobService() {
     }
 
     companion object {
-        /** Whether JobScheduler took it, bytes to come: a user-initiated job is taken only while the app is in sight. */
+        /**
+         * Whether JobScheduler took it, bytes to come: a user-initiated job is taken only while the
+         * app is in sight.
+         */
         fun schedule(context: Context, name: String, files: String, bytes: Long): Boolean {
-            val job = JobInfo.Builder(Downloads.JOB, ComponentName(context, DownloadJob::class.java))
-                .setUserInitiated(true)
-                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
-                .setEstimatedNetworkBytes(bytes, 0)
-                .setExtras(
-                    PersistableBundle().apply {
-                        putString(Downloads.NAME, name)
-                        putString(Downloads.FILES, files)
-                    },
-                )
-                .build()
-            return context.getSystemService(JobScheduler::class.java).schedule(job) == JobScheduler.RESULT_SUCCESS
+            val job =
+                JobInfo.Builder(Downloads.JOB, ComponentName(context, DownloadJob::class.java))
+                    .setUserInitiated(true)
+                    .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                    .setEstimatedNetworkBytes(bytes, 0)
+                    .setExtras(
+                        PersistableBundle().apply {
+                            putString(Downloads.NAME, name)
+                            putString(Downloads.FILES, files)
+                        }
+                    )
+                    .build()
+            return context.getSystemService(JobScheduler::class.java).schedule(job) ==
+                JobScheduler.RESULT_SUCCESS
         }
     }
 }
 
 /**
- * A model's download before Android 14, which has no user-initiated jobs:
- * a foreground service of the dataSync type, Android's for a transfer,
- * its notification Downloads'. The download tries again by itself while
- * the network is away.
+ * A model's download before Android 14, which has no user-initiated jobs: a foreground service of
+ * the dataSync type, Android's for a transfer, its notification Downloads'. The download tries
+ * again by itself while the network is away.
  */
 class DownloadService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
@@ -364,8 +489,13 @@ class DownloadService : Service() {
         val name = intent?.getStringExtra(Downloads.NAME)
         val files = intent?.getStringExtra(Downloads.FILES)
         // first, as startForegroundService promised Android, within seconds
-        startForeground(Downloads.NOTE, Downloads.note(this, name ?: "", Downloads.state), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-        if (name == null || files == null || !Downloads.run(this, name, files) { done(startId) }) done(startId)
+        startForeground(
+            Downloads.NOTE,
+            Downloads.note(this, name ?: "", Downloads.state),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+        )
+        if (name == null || files == null || !Downloads.run(this, name, files) { done(startId) })
+            done(startId)
         return START_NOT_STICKY
     }
 

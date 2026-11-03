@@ -72,7 +72,11 @@ pub extern "system" fn Java_net_pktito_app_Engine_load<'a>(
             let path = path.try_to_string(env)?;
             let loaded = pktito::Model::load(Path::new(&path)).and_then(|model| {
                 let asr = pktito::Asr::new(&model, transcribe::threads_wanted())?;
-                Ok(Loaded { asr, model, npu: false })
+                Ok(Loaded {
+                    asr,
+                    model,
+                    npu: false,
+                })
             });
             match loaded {
                 Ok(l) => Ok(Box::into_raw(Box::new(l)) as jlong),
@@ -108,7 +112,11 @@ pub extern "system" fn Java_net_pktito_app_Engine_about<'a>(
                 "{}, {}{}, {} threads",
                 l.model.name(),
                 pktito::backend(),
-                if l.npu { ", the encoder on the NPU" } else { "" },
+                if l.npu {
+                    ", the encoder on the NPU"
+                } else {
+                    ""
+                },
                 l.asr.threads()
             );
             Ok(env.new_string(about)?.into())

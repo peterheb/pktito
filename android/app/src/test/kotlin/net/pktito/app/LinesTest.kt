@@ -18,26 +18,41 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Why cssLine is there: Compose lays a line out at least as tall as its
- * font, 64 sp of Archivo 700 at 70 dp whether the style asks 0.9 em or 1
- * (only above that does it follow), where CSS's 64px/0.9 is 57.6 tall; and
- * that cssLine makes it so. At mdpi, where a dp is a pixel.
+ * Why cssLine is there: Compose lays a line out at least as tall as its font, 64 sp of Archivo 700
+ * at 70 dp whether the style asks 0.9 em or 1 (only above that does it follow), where CSS's
+ * 64px/0.9 is 57.6 tall; and that cssLine makes it so. At mdpi, where a dp is a pixel.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "w411dp-h891dp-mdpi")
 class LinesTest {
-    @get:Rule
-    val compose = createComposeRule()
+    @get:Rule val compose = createComposeRule()
 
     private fun heights(): Map<String, Int> {
         val got = mutableMapOf<String, IntSize>()
         compose.setContent {
             PktitoTheme {
-                Text("41%", style = Type.figure, modifier = Modifier.onGloballyPositioned { got["0.9"] = it.size })
-                Text("41%", style = Type.figure.copy(lineHeight = 1.em), modifier = Modifier.onGloballyPositioned { got["1"] = it.size })
-                Text("41%", style = Type.figure.copy(lineHeight = 1.2.em), modifier = Modifier.onGloballyPositioned { got["1.2"] = it.size })
-                Text("41%", style = Type.figure, modifier = Modifier.onGloballyPositioned { got["css"] = it.size }.cssLine(Type.figure))
+                Text(
+                    "41%",
+                    style = Type.figure,
+                    modifier = Modifier.onGloballyPositioned { got["0.9"] = it.size },
+                )
+                Text(
+                    "41%",
+                    style = Type.figure.copy(lineHeight = 1.em),
+                    modifier = Modifier.onGloballyPositioned { got["1"] = it.size },
+                )
+                Text(
+                    "41%",
+                    style = Type.figure.copy(lineHeight = 1.2.em),
+                    modifier = Modifier.onGloballyPositioned { got["1.2"] = it.size },
+                )
+                Text(
+                    "41%",
+                    style = Type.figure,
+                    modifier =
+                        Modifier.onGloballyPositioned { got["css"] = it.size }.cssLine(Type.figure),
+                )
             }
         }
         compose.waitForIdle()

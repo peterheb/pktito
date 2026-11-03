@@ -18,26 +18,26 @@ val pk: Palette
     @Composable @ReadOnlyComposable get() = LocalPalette.current
 
 /**
- * pktito's look, the desktop window's (design/README.md, ui/app.css): the
- * palette of the theme Android is in, as the desktop follows the system's,
- * and Archivo at the app's working size in ink. Material is under it only
- * for what it lays out, a menu's popup, in the same colours.
+ * pktito's look, the desktop window's (design/README.md, ui/app.css): the palette of the theme
+ * Android is in, as the desktop follows the system's, and Archivo at the app's working size in ink.
+ * Material is under it only for what it lays out, a menu's popup, in the same colours.
  */
 @Composable
 fun PktitoTheme(content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()
     val p = if (dark) Dark else Light
-    val scheme = (if (dark) darkColorScheme() else lightColorScheme()).copy(
-        primary = p.plume,
-        onPrimary = p.onPlume,
-        background = p.ground,
-        onBackground = p.ink,
-        surface = p.ground,
-        onSurface = p.ink,
-        surfaceContainer = p.ground,
-        onSurfaceVariant = p.inkMuted,
-        outline = p.sunk,
-    )
+    val scheme =
+        (if (dark) darkColorScheme() else lightColorScheme()).copy(
+            primary = p.plume,
+            onPrimary = p.onPlume,
+            background = p.ground,
+            onBackground = p.ink,
+            surface = p.ground,
+            onSurface = p.ink,
+            surfaceContainer = p.ground,
+            onSurfaceVariant = p.inkMuted,
+            outline = p.sunk,
+        )
     MaterialTheme(colorScheme = scheme) {
         CompositionLocalProvider(
             LocalPalette provides p,

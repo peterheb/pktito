@@ -17,10 +17,9 @@ import kotlin.math.roundToLong
 internal fun two(n: Long) = String.format(Locale.ROOT, "%02d", n)
 
 /**
- * hh:mm:ss, with the hours' digits that say something of the longest time
- * shown with it (len): none under an hour (10:40), one under ten (1:05:00),
- * so that a file's rows keep one width and the hours are not a wall of
- * zeros (Peter, 2026-10-25); a length on its own is its own len. Without
+ * hh:mm:ss, with the hours' digits that say something of the longest time shown with it (len): none
+ * under an hour (10:40), one under ten (1:05:00), so that a file's rows keep one width and the
+ * hours are not a wall of zeros (Peter, 2026-10-25); a length on its own is its own len. Without
  * len, all of them (ui/app.js, hms).
  */
 fun hms(s: Double, len: Double = 36000.0): String {
@@ -49,22 +48,20 @@ fun clock(s: Double): String {
 val RATES = listOf(23.976, 24.0, 25.0, 29.97, 30.0, 50.0, 59.94, 60.0)
 
 /**
- * A frame rate counted exactly: NTSC's 23.976, 29.97 and 59.94 are 24, 30
- * and 60 frames in 1.001 seconds, whatever their rounding says (app.js,
- * exactRate).
+ * A frame rate counted exactly: NTSC's 23.976, 29.97 and 59.94 are 24, 30 and 60 frames in 1.001
+ * seconds, whatever their rounding says (app.js, exactRate).
  */
 fun exactRate(r: Double): Double {
-    for (n in intArrayOf(24, 30, 48, 60, 120))
-        if (abs(r - n * 1000.0 / 1001) < 0.01) return n * 1000.0 / 1001
+    for (n in intArrayOf(24, 30, 48, 60, 120)) if (abs(r - n * 1000.0 / 1001) < 0.01)
+        return n * 1000.0 / 1001
     return if (abs(r - r.roundToInt()) < 0.01) r.roundToInt().toDouble() else r
 }
 
 /**
- * t as SMPTE timecode at a rate (app.js, timecode): hh:mm:ss:ff, counting
- * the frames of its nominal rate (24 for 23.976, 30 for 29.97), the frame
- * t falls in. At 29.97 and 59.94 it is drop-frame, hh:mm:ss;ff: the first
- * 2 (or 4) frame numbers of every minute but each tenth are skipped, so
- * that the clock keeps to real time.
+ * t as SMPTE timecode at a rate (app.js, timecode): hh:mm:ss:ff, counting the frames of its nominal
+ * rate (24 for 23.976, 30 for 29.97), the frame t falls in. At 29.97 and 59.94 it is drop-frame,
+ * hh:mm:ss;ff: the first 2 (or 4) frame numbers of every minute but each tenth are skipped, so that
+ * the clock keeps to real time.
  */
 fun timecode(t: Double, rate: Double): String {
     val r = exactRate(rate)
@@ -79,7 +76,13 @@ fun timecode(t: Double, rate: Double): String {
         frames += 9L * d * (frames / tens) + if (rem >= d) d * ((rem - d) / minute) else 0
     }
     val s = frames / nominal
-    return two(s / 3600) + ":" + two(s / 60 % 60) + ":" + two(s % 60) + (if (drop) ";" else ":") + two(frames % nominal)
+    return two(s / 3600) +
+        ":" +
+        two(s / 60 % 60) +
+        ":" +
+        two(s % 60) +
+        (if (drop) ";" else ":") +
+        two(frames % nominal)
 }
 
 /** A rate as the time menu writes it: 23.976, 24, 29.97 (app.js, rateLabel). */
@@ -89,12 +92,11 @@ fun rateLabel(r: Double): String {
 }
 
 /**
- * How the strip and the rows write a time (app.js, tc and lengthOf):
- * seconds and hundredths, the hours as the file's duration has them, or
- * frames, whose timecode is always hh:mm:ss:ff, as an editor's is; a
- * video's frames at its own rate (video, 0 for audio) unless the rate
- * chosen is to count a video's too (videoRate false, an editor's timeline
- * having one rate), an audio file's at the rate chosen.
+ * How the strip and the rows write a time (app.js, tc and lengthOf): seconds and hundredths, the
+ * hours as the file's duration has them, or frames, whose timecode is always hh:mm:ss:ff, as an
+ * editor's is; a video's frames at its own rate (video, 0 for audio) unless the rate chosen is to
+ * count a video's too (videoRate false, an editor's timeline having one rate), an audio file's at
+ * the rate chosen.
  */
 data class Timebase(
     val frames: Boolean = false,
@@ -103,8 +105,13 @@ data class Timebase(
     val video: Double = 0.0,
     val duration: Double = 0.0,
 ) {
-    val own get() = video > 0 && videoRate
-    val rate get() = if (own) video else if (fps > 0) fps else 24.0
+    val own
+        get() = video > 0 && videoRate
+
+    val rate
+        get() = if (own) video else if (fps > 0) fps else 24.0
+
     fun at(t: Double) = if (frames) timecode(t, rate) else stamp(t, duration)
+
     fun length() = if (frames) timecode(duration, rate) else hms(duration, duration)
 }
