@@ -5,8 +5,11 @@ import UIKit
 /// run is followed by (devicectl --console).
 func trace(_ s: @autoclosure () -> String) {
     #if DEBUG
-    print(String(format: "%.3f ", Date().timeIntervalSince1970.truncatingRemainder(dividingBy: 1000)) + s())
-    fflush(stdout)
+        print(
+            String(
+                format: "%.3f ", Date().timeIntervalSince1970.truncatingRemainder(dividingBy: 1000))
+                + s())
+        fflush(stdout)
     #endif
 }
 

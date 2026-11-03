@@ -17,6 +17,7 @@ it, is kept as it is. The typefaces, the icons, Rust's standard library and
 the WebView2 loader are listed by hand in EXTRAS, their texts in
 scripts/licenses.
 """
+
 import json
 import os
 import re
@@ -29,17 +30,42 @@ LIC = os.path.join(ROOT, "scripts", "licenses")
 # each system the app ships for: its bit in a crate's mask, and its targets
 SYSTEMS = {
     "macos": (1, ["aarch64-apple-darwin", "x86_64-apple-darwin"]),
-    "windows": (2, ["x86_64-pc-windows-gnu", "x86_64-pc-windows-msvc", "aarch64-pc-windows-msvc"]),
+    "windows": (
+        2,
+        ["x86_64-pc-windows-gnu", "x86_64-pc-windows-msvc", "aarch64-pc-windows-msvc"],
+    ),
     "linux": (4, ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]),
 }
 
-PREFER = ["MIT", "Apache-2.0", "Zlib", "ISC", "BSD-3-Clause", "BSD-2-Clause", "Unicode-3.0", "BSL-1.0",
-          "MPL-2.0", "CDLA-Permissive-2.0", "0BSD", "MIT-0", "Unlicense", "CC0-1.0"]
+PREFER = [
+    "MIT",
+    "Apache-2.0",
+    "Zlib",
+    "ISC",
+    "BSD-3-Clause",
+    "BSD-2-Clause",
+    "Unicode-3.0",
+    "BSL-1.0",
+    "MPL-2.0",
+    "CDLA-Permissive-2.0",
+    "0BSD",
+    "MIT-0",
+    "Unlicense",
+    "CC0-1.0",
+]
 
-TITLES = {"MIT": "MIT License", "Apache-2.0": "Apache License 2.0", "MPL-2.0": "Mozilla Public License 2.0",
-          "BSD-3-Clause": "BSD 3-Clause License", "BSD-2-Clause": "BSD 2-Clause License", "ISC": "ISC License",
-          "Zlib": "zlib License", "Unicode-3.0": "Unicode License v3", "BSL-1.0": "Boost Software License 1.0",
-          "CDLA-Permissive-2.0": "Community Data License Agreement, Permissive 2.0"}
+TITLES = {
+    "MIT": "MIT License",
+    "Apache-2.0": "Apache License 2.0",
+    "MPL-2.0": "Mozilla Public License 2.0",
+    "BSD-3-Clause": "BSD 3-Clause License",
+    "BSD-2-Clause": "BSD 2-Clause License",
+    "ISC": "ISC License",
+    "Zlib": "zlib License",
+    "Unicode-3.0": "Unicode License v3",
+    "BSL-1.0": "Boost Software License 1.0",
+    "CDLA-Permissive-2.0": "Community Data License Agreement, Permissive 2.0",
+}
 # the texts in scripts/licenses that a crate's own may be the same as
 CANONICAL = ["MIT", "Apache-2.0", "MPL-2.0", "BSD-3-Clause"]
 
@@ -50,22 +76,56 @@ LEFT_OUT = {"libdbus-sys": "vendor/"}
 # by hand: [group ("type" or "code"), name, notice, license, systems (0 for
 # all), text keys], the texts in scripts/licenses or the app's own files
 EXTRAS = [
-    ["type", "Archivo", "Copyright 2020 The Archivo Project Authors", "OFL-1.1", 0, ["ui/fonts/Archivo-OFL.txt"]],
-    ["type", "Commit Mono", "Copyright (c) 2023 Eigil Nikolajsen", "OFL-1.1", 0, ["ui/fonts/CommitMono-OFL.txt"]],
+    [
+        "type",
+        "Archivo",
+        "Copyright 2020 The Archivo Project Authors",
+        "OFL-1.1",
+        0,
+        ["ui/fonts/Archivo-OFL.txt"],
+    ],
+    [
+        "type",
+        "Commit Mono",
+        "Copyright (c) 2023 Eigil Nikolajsen",
+        "OFL-1.1",
+        0,
+        ["ui/fonts/CommitMono-OFL.txt"],
+    ],
     # the window's icons are drawn after Feather's
     ["type", "Feather icons", "Copyright (c) 2013-2023 Cole Bemis", "MIT", 0, ["MIT"]],
-    ["code", "The Rust standard library", "by the Rust Project Developers", "MIT", 0, ["MIT"]],
+    [
+        "code",
+        "The Rust standard library",
+        "by the Rust Project Developers",
+        "MIT",
+        0,
+        ["MIT"],
+    ],
     # linked into the app by webview2-com-sys (statically with MSVC, beside
     # it as WebView2Loader.dll with MinGW), from Microsoft's WebView2 SDK
-    ["code", "The WebView2 loader", "Copyright (C) Microsoft Corporation", "BSD-3-Clause", 2, ["scripts/licenses/WebView2-SDK.txt"]],
+    [
+        "code",
+        "The WebView2 loader",
+        "Copyright (C) Microsoft Corporation",
+        "BSD-3-Clause",
+        2,
+        ["scripts/licenses/WebView2-SDK.txt"],
+    ],
 ]
 
 FILE = re.compile(r"^(licen[cs]e|copying|copyright|unlicense|notice)", re.I)
 # a line that is a copyright notice, not one of a license's sentences about
 # them, nor its list item (c)
-COPYLINE = re.compile(r"^(copyright\b(?!\s*[,;:]|\s*(notice|owner|holders?|and|license|statement|laws?|protection|assignment)\b)"
-                      r"|(\(c\)|©)\s*\d{4})", re.I)
-PLACEHOLDER = re.compile(r"\[yyyy\]|\{yyyy\}|<year>|\[name of copyright owner\]|<copyright holders?>|<owner>", re.I)
+COPYLINE = re.compile(
+    r"^(copyright\b(?!\s*[,;:]|\s*(notice|owner|holders?|and|license|statement|laws?|protection|assignment)\b)"
+    r"|(\(c\)|©)\s*\d{4})",
+    re.I,
+)
+PLACEHOLDER = re.compile(
+    r"\[yyyy\]|\{yyyy\}|<year>|\[name of copyright owner\]|<copyright holders?>|<owner>",
+    re.I,
+)
 
 
 def read(path):
@@ -81,17 +141,23 @@ def words(t):
     """t's words, lowercased, without its copyright lines."""
     kept = "\n".join(l for l in t.splitlines() if not COPYLINE.match(bare(l)))
     # one MPL-2.0 text links mozilla.org by https, another by http
-    return [w if w != "https" else "http" for w in re.findall(r"[a-z0-9]+", kept.lower())]
+    return [
+        w if w != "https" else "http" for w in re.findall(r"[a-z0-9]+", kept.lower())
+    ]
 
 
 def copyrights(t):
-    return [re.sub(r"\s+", " ", bare(l)) for l in t.splitlines() if COPYLINE.match(bare(l)) and not PLACEHOLDER.search(l)]
+    return [
+        re.sub(r"\s+", " ", bare(l))
+        for l in t.splitlines()
+        if COPYLINE.match(bare(l)) and not PLACEHOLDER.search(l)
+    ]
 
 
 def split_terms(t):
     """An Apache-2.0 text's terms, and what follows them."""
     i = t.upper().find("END OF TERMS AND CONDITIONS")
-    return (t, "") if i < 0 else (t[:i], t[i + len("END OF TERMS AND CONDITIONS"):])
+    return (t, "") if i < 0 else (t[:i], t[i + len("END OF TERMS AND CONDITIONS") :])
 
 
 MIT_W = words(read(os.path.join(LIC, "MIT.txt")))
@@ -102,7 +168,9 @@ APACHE_W, APPENDIX_W = words(_terms), words(_appendix)
 def mit(t):
     w = words(t)
     i = w.index("permission") if "permission" in w else -1
-    return i >= 0 and set(w[:i]) <= {"the", "mit", "license", "expat"} and w[i:] == MIT_W
+    return (
+        i >= 0 and set(w[:i]) <= {"the", "mit", "license", "expat"} and w[i:] == MIT_W
+    )
 
 
 def apache(t):
@@ -110,20 +178,29 @@ def apache(t):
     license's terms and its appendix: "" for nothing."""
     terms, after = split_terms(t)
     w = words(terms)
-    if "apache" not in w or w[w.index("apache"):] != APACHE_W[APACHE_W.index("apache"):]:
+    if (
+        "apache" not in w
+        or w[w.index("apache") :] != APACHE_W[APACHE_W.index("apache") :]
+    ):
         return None
     rest = words(after)
-    if rest[:len(APPENDIX_W)] == APPENDIX_W:
+    if rest[: len(APPENDIX_W)] == APPENDIX_W:
         # the appendix, perhaps filled in: past its last words, what is added
         m = re.search(r"limitations\s+under\s+the\s+license\.?", after, re.I)
-        return after[m.end():].strip() if m else ""
+        return after[m.end() :].strip() if m else ""
     return after.strip() if rest else ""
 
 
 # what a text says it is, by its own words; 0BSD opens as ISC does, so first
 KINDS = [
-    ("0BSD", r"permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted\.\s+the software is provided"),
-    ("ISC", r"permission to use, copy, modify, and/or distribute this software for any purpose with or without fee"),
+    (
+        "0BSD",
+        r"permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted\.\s+the software is provided",
+    ),
+    (
+        "ISC",
+        r"permission to use, copy, modify, and/or distribute this software for any purpose with or without fee",
+    ),
     ("Zlib", r"provided ['‘]as-is['’], without any express or implied warranty"),
     ("BSD-3-Clause", r"neither the name of .{0,120} may be used to endorse or promote"),
     ("BSD-2-Clause", r"redistribution and use in source and binary forms"),
@@ -141,7 +218,7 @@ def both(t):
     """t holds the MIT and the Apache-2.0 texts together, as a crate offering
     either may keep them in one file."""
     w, m = " ".join(words(t)), " ".join(MIT_W)
-    return m in w and " ".join(APACHE_W[APACHE_W.index("apache"):]) in w
+    return m in w and " ".join(APACHE_W[APACHE_W.index("apache") :]) in w
 
 
 def kind(t):
@@ -204,8 +281,21 @@ def choose(expr):
 
 def linked(target):
     """The packages the app links for target, by id."""
-    out = subprocess.run(["cargo", "metadata", "--format-version", "1", "--locked", "--filter-platform", target],
-                         cwd=os.path.join(ROOT, "src-tauri"), capture_output=True, text=True, check=True).stdout
+    out = subprocess.run(
+        [
+            "cargo",
+            "metadata",
+            "--format-version",
+            "1",
+            "--locked",
+            "--filter-platform",
+            target,
+        ],
+        cwd=os.path.join(ROOT, "src-tauri"),
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
     m = json.loads(out)
     pk = {p["id"]: p for p in m["packages"]}
     nodes = {n["id"]: n for n in m["resolve"]["nodes"]}
@@ -215,7 +305,11 @@ def linked(target):
         i = todo.pop()
         if i not in seen:
             seen.add(i)
-            todo += [d["pkg"] for d in nodes[i]["deps"] if any(k["kind"] is None for k in d["dep_kinds"])]
+            todo += [
+                d["pkg"]
+                for d in nodes[i]["deps"]
+                if any(k["kind"] is None for k in d["dep_kinds"])
+            ]
     seen.discard(root)
     return {i: pk[i] for i in seen}
 
@@ -228,7 +322,11 @@ def license_files(p):
         dn[:] = sorted(d for d in dn if d not in (".git", "target"))
         for x in sorted(fn):
             rel = os.path.relpath(os.path.join(dp, x), root).replace(os.sep, "/")
-            if FILE.match(x) and not re.search(r"\.(rs|c|h|toml|json|spdx)$", x, re.I) and not (skip and rel.startswith(skip)):
+            if (
+                FILE.match(x)
+                and not re.search(r"\.(rs|c|h|toml|json|spdx)$", x, re.I)
+                and not (skip and rel.startswith(skip))
+            ):
                 found.append((rel, read(os.path.join(dp, x))))
     return found
 
@@ -249,7 +347,11 @@ def check(data):
     list was last written."""
     path = os.path.join(ROOT, "ui", "notices.js")
     js = read(path)
-    old = json.loads(js[js.index("const NOTICES = ") + len("const NOTICES = "):].rstrip().rstrip(";"))
+    old = json.loads(
+        js[js.index("const NOTICES = ") + len("const NOTICES = ") :]
+        .rstrip()
+        .rstrip(";")
+    )
     new = json.loads(json.dumps(data, ensure_ascii=False))
     if old == new:
         print(f"{path}: current, {len(new['crates'])} crates")
@@ -264,7 +366,11 @@ def check(data):
             if a[k] != b[k]:
                 print(f"  {what} changed: {k}")
 
-    differ("crate", {f"{c[0]} {c[1]}": c for c in old["crates"]}, {f"{c[0]} {c[1]}": c for c in new["crates"]})
+    differ(
+        "crate",
+        {f"{c[0]} {c[1]}": c for c in old["crates"]},
+        {f"{c[0]} {c[1]}": c for c in new["crates"]},
+    )
     differ("part", {e[1]: e for e in old["extras"]}, {e[1]: e for e in new["extras"]})
     differ("text", old["texts"], new["texts"])
     differ("system", old["systems"], new["systems"])
@@ -308,7 +414,9 @@ def notices(systems, extras_by_hand):
 
     out = []
     unknown = []
-    for p, mask in sorted(crates.values(), key=lambda c: (c[0]["name"].lower(), c[0]["version"])):
+    for p, mask in sorted(
+        crates.values(), key=lambda c: (c[0]["name"].lower(), c[0]["version"])
+    ):
         expr = p.get("license") or ""
         chosen = choose(expr) if expr else frozenset()
         files = license_files(p)
@@ -337,7 +445,9 @@ def notices(systems, extras_by_hand):
             elif not got:
                 path = os.path.join(LIC, lic + ".txt")
                 if not os.path.exists(path):
-                    sys.exit(f"{p['name']} {p['version']}: no {lic} text of its own, and none in scripts/licenses")
+                    sys.exit(
+                        f"{p['name']} {p['version']}: no {lic} text of its own, and none in scripts/licenses"
+                    )
                 keys.append(keep(lic, TITLES.get(lic, lic), read(path)))
         for rel, t in files:
             if "/" not in rel and kind(t)[0] is None:
@@ -366,14 +476,27 @@ def notices(systems, extras_by_hand):
         if not lines:
             # the notices in the crate's own texts, past any it adds to Apache-2.0's
             for k in keys:
-                if k in texts and k not in CANONICAL and texts[k].get("lic") != "+Apache-2.0":
+                if (
+                    k in texts
+                    and k not in CANONICAL
+                    and texts[k].get("lic") != "+Apache-2.0"
+                ):
                     lines += copyrights(texts[k]["text"])
         lines = list(dict.fromkeys(lines))
         notice = "; ".join(lines) if lines else f"by {authors(p)}"
         if "MPL-2.0" in chosen:
-            notice += f". Its source: https://crates.io/crates/{p['name']}/{p['version']}"
-        shown = " and ".join(sorted(chosen, key=lambda x: PREFER.index(x) if x in PREFER else 99)) or "unstated"
-        out.append([p["name"], p["version"], shown, notice, mask, list(dict.fromkeys(keys))])
+            notice += (
+                f". Its source: https://crates.io/crates/{p['name']}/{p['version']}"
+            )
+        shown = (
+            " and ".join(
+                sorted(chosen, key=lambda x: PREFER.index(x) if x in PREFER else 99)
+            )
+            or "unstated"
+        )
+        out.append(
+            [p["name"], p["version"], shown, notice, mask, list(dict.fromkeys(keys))]
+        )
 
     extras = []
     for group, name, notice, lic, mask, ks in extras_by_hand:
@@ -382,7 +505,13 @@ def notices(systems, extras_by_hand):
             if k in texts:
                 kk.append(k)
             else:
-                kk.append(keep(k, f"{name.split(',')[0]}: {os.path.basename(k)}", read(os.path.join(ROOT, k))))
+                kk.append(
+                    keep(
+                        k,
+                        f"{name.split(',')[0]}: {os.path.basename(k)}",
+                        read(os.path.join(ROOT, k)),
+                    )
+                )
         extras.append([group, name, notice, lic, mask, kk])
 
     used = {k for c in out + extras for k in c[-1]}
@@ -390,17 +519,25 @@ def notices(systems, extras_by_hand):
         if v["by"]:
             names = list(dict.fromkeys(v["by"]))
             if v["lic"] == "+Apache-2.0":
-                v["title"] = f"{names[0]}: {v['at']}, past the Apache License 2.0 it begins with"
+                v["title"] = (
+                    f"{names[0]}: {v['at']}, past the Apache License 2.0 it begins with"
+                )
             elif "/" in v.get("at", ""):
-                v["title"] = f"{names[0]}: {v['at']}" + (f", {TITLES.get(v['lic'], v['lic'])}" if v["lic"] else "")
+                v["title"] = f"{names[0]}: {v['at']}" + (
+                    f", {TITLES.get(v['lic'], v['lic'])}" if v["lic"] else ""
+                )
             elif v["lic"]:
                 v["title"] = f"{TITLES.get(v['lic'], v['lic'])}: {', '.join(names)}"
             else:
                 v["title"] = f"{names[0]}: {v['at']}"
         for x in ("by", "lic", "at"):
             v.pop(x, None)
-    data = {"systems": {s: b for s, (b, _) in systems.items()}, "extras": extras, "crates": out,
-            "texts": {k: v for k, v in texts.items() if k in used}}
+    data = {
+        "systems": {s: b for s, (b, _) in systems.items()},
+        "extras": extras,
+        "crates": out,
+        "texts": {k: v for k, v in texts.items() if k in used},
+    }
     return data, unknown
 
 
@@ -409,15 +546,21 @@ def main():
     if "--check" in sys.argv[1:]:
         sys.exit(check(data))
     out = data["crates"]
-    js = ("/* What pktito is built from, besides its own code and the models About\n"
-          "   names, and the licenses each is used under: from scripts/notices.py. */\n"
-          "const NOTICES = " + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";\n")
+    js = (
+        "/* What pktito is built from, besides its own code and the models About\n"
+        "   names, and the licenses each is used under: from scripts/notices.py. */\n"
+        "const NOTICES = "
+        + json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+        + ";\n"
+    )
     path = os.path.join(ROOT, "ui", "notices.js")
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(js)
     per = {s: sum(1 for c in out if c[4] & b) for s, (b, _) in SYSTEMS.items()}
-    print(f"{path}: {len(js) / 1024:.0f} KB, {len(out)} crates ({', '.join(f'{s} {n}' for s, n in per.items())}), "
-          f"{len(data['texts'])} texts")
+    print(
+        f"{path}: {len(js) / 1024:.0f} KB, {len(out)} crates ({', '.join(f'{s} {n}' for s, n in per.items())}), "
+        f"{len(data['texts'])} texts"
+    )
     for u in unknown:
         print("  a license not in PREFER, check it:", u)
 

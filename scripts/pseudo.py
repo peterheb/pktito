@@ -19,6 +19,7 @@ The iOS app's come from Android's, as its English does (scripts/strings-ios.py).
 
     scripts/pseudo.py
 """
+
 import json
 import math
 import os
@@ -32,7 +33,9 @@ ACCENT = str.maketrans("acdeilnorstuyzACDEILNORSTUYZ", "ąčďęįłńőřșțű
 
 # what stays as it is: markup, entities and placeholders, Android's
 # (%1$s, %d, %%, its backslash escapes) and the window's ({name})
-PROTECT = re.compile(r"(<[^>]+>|&[A-Za-z0-9#]+;|%(?:\d+\$)?[sdf]|%%|\\u[0-9A-Fa-f]{4}|\\.|\{\w+\})")
+PROTECT = re.compile(
+    r"(<[^>]+>|&[A-Za-z0-9#]+;|%(?:\d+\$)?[sdf]|%%|\\u[0-9A-Fa-f]{4}|\\.|\{\w+\})"
+)
 
 
 def factor(n):
@@ -64,7 +67,10 @@ def pseudo(s):
 def desktop():
     src = os.path.join(root, "ui", "locales", "en.json")
     words = json.load(open(src, encoding="utf-8"))
-    out = {k: (pseudo(v) if isinstance(v, str) else {q: pseudo(f) for q, f in v.items()}) for k, v in words.items()}
+    out = {
+        k: (pseudo(v) if isinstance(v, str) else {q: pseudo(f) for q, f in v.items()})
+        for k, v in words.items()
+    }
     dst = os.path.join(root, "ui", "locales", "en-XA.json")
     with open(dst, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=2)
@@ -73,7 +79,9 @@ def desktop():
 
 
 def android():
-    src = os.path.join(root, "android", "app", "src", "main", "res", "values", "strings.xml")
+    src = os.path.join(
+        root, "android", "app", "src", "main", "res", "values", "strings.xml"
+    )
     text = open(src, encoding="utf-8").read()
 
     def body(raw):
@@ -82,22 +90,36 @@ def android():
         return m.group(1) + pseudo(m.group(2)) + m.group(3) if m else pseudo(raw)
 
     out, n = [], 0
-    for m in re.finditer(r'<string name="([^"]+)"([^>]*)>(.*?)</string>|<plurals name="([^"]+)">(.*?)</plurals>', text, re.S):
+    for m in re.finditer(
+        r'<string name="([^"]+)"([^>]*)>(.*?)</string>|<plurals name="([^"]+)">(.*?)</plurals>',
+        text,
+        re.S,
+    ):
         if m.group(1):
             if 'translatable="false"' in m.group(2):
                 continue
-            out.append(f'    <string name="{m.group(1)}"{m.group(2)}>{body(m.group(3))}</string>')
+            out.append(
+                f'    <string name="{m.group(1)}"{m.group(2)}>{body(m.group(3))}</string>'
+            )
         else:
-            items = re.sub(r'(<item quantity="[^"]+">)(.*?)(</item>)', lambda i: i.group(1) + body(i.group(2)) + i.group(3),
-                           m.group(5), flags=re.S)
+            items = re.sub(
+                r'(<item quantity="[^"]+">)(.*?)(</item>)',
+                lambda i: i.group(1) + body(i.group(2)) + i.group(3),
+                m.group(5),
+                flags=re.S,
+            )
             out.append(f'    <plurals name="{m.group(4)}">{items}</plurals>')
         n += 1
-    dst = os.path.join(root, "android", "app", "src", "debug", "res", "values-en-rXA", "strings.xml")
+    dst = os.path.join(
+        root, "android", "app", "src", "debug", "res", "values-en-rXA", "strings.xml"
+    )
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     with open(dst, "w", encoding="utf-8") as f:
-        f.write('<?xml version="1.0" encoding="utf-8"?>\n'
-                "<!-- The Android app's words in scripts/pseudo.py's pseudo-language, for debug builds: made by it, not edited -->\n"
-                "<resources>\n" + "\n".join(out) + "\n</resources>\n")
+        f.write(
+            '<?xml version="1.0" encoding="utf-8"?>\n'
+            "<!-- The Android app's words in scripts/pseudo.py's pseudo-language, for debug builds: made by it, not edited -->\n"
+            "<resources>\n" + "\n".join(out) + "\n</resources>\n"
+        )
     print(f"android/app/src/debug/res/values-en-rXA/strings.xml: {n} strings")
 
 

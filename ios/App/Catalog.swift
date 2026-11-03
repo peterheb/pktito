@@ -47,7 +47,8 @@ enum Store {
     /// Application Support/models: kept out of backups, since a model can
     /// be downloaded again, as Android keeps them in no_backup
     static let models: URL = {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[
+            0]
         var dir = base.appendingPathComponent("models", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         var v = URLResourceValues()
@@ -66,7 +67,9 @@ enum Store {
     /// A file is renamed into place only after its SHA-256 checks, so the
     /// size is enough to tell, as the core tells (model.rs, have).
     static func have(_ p: Part) -> Bool {
-        let size = (try? FileManager.default.attributesOfItem(atPath: file(p).path)[.size] as? Int64) ?? nil
+        let size =
+            (try? FileManager.default.attributesOfItem(atPath: file(p).path)[.size] as? Int64)
+            ?? nil
         return size == p.bytes
     }
 
@@ -87,7 +90,9 @@ enum Store {
     static func bytes(_ e: CatalogEntry) -> Int64 {
         var n: Int64 = 0
         for p in [e.pkf, e.coreml.slim] where have(p) { n += p.bytes }
-        if let files = FileManager.default.enumerator(at: encoder(e), includingPropertiesForKeys: [.fileSizeKey]) {
+        if let files = FileManager.default.enumerator(
+            at: encoder(e), includingPropertiesForKeys: [.fileSizeKey])
+        {
             for case let f as URL in files {
                 n += Int64((try? f.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
             }

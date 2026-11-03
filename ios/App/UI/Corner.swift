@@ -20,7 +20,9 @@ extension View {
     /// the plain one, in the view's own place, so a view away from the
     /// corner gets none.
     func windowControls(_ clearance: Binding<Clearance>) -> some View {
-        background(CornerProbe { clearance.wrappedValue = $0 }.allowsHitTesting(false).accessibilityHidden(true))
+        background(
+            CornerProbe { clearance.wrappedValue = $0 }.allowsHitTesting(false).accessibilityHidden(
+                true))
     }
 }
 
@@ -57,11 +59,14 @@ private struct CornerProbe: UIViewRepresentable {
             let plain = directionalEdgeInsets(for: .safeArea())
             let across = directionalEdgeInsets(for: .safeArea(cornerAdaptation: .horizontal))
             let down = directionalEdgeInsets(for: .safeArea(cornerAdaptation: .vertical))
-            let c = Clearance(leading: max(0, across.leading - plain.leading), top: max(0, down.top - plain.top))
+            let c = Clearance(
+                leading: max(0, across.leading - plain.leading), top: max(0, down.top - plain.top))
             guard c != last else { return }
             last = c
             #if DEBUG
-            trace("window controls: \(c) for \(frame.integral) in \(window?.bounds.size ?? .zero), safe \(plain)")
+                trace(
+                    "window controls: \(c) for \(frame.integral) in \(window?.bounds.size ?? .zero), safe \(plain)"
+                )
             #endif
             // after this layout, which the padding it asks for would change
             DispatchQueue.main.async { [report] in report(c) }

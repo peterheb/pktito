@@ -45,7 +45,9 @@ struct Strip: View {
         HStack(alignment: .top, spacing: Space.space4) {
             if review && !silent {
                 VStack {
-                    Button { player.toggle() } label: {
+                    Button {
+                        player.toggle()
+                    } label: {
                         Group {
                             if waited {
                                 ProgressView().tint(Pk.termInk)
@@ -57,11 +59,14 @@ struct Strip: View {
                         .frame(width: 24, height: 24)
                         .foregroundStyle(Pk.termInk)
                         .frame(width: 48, height: 48)
-                        .background(Pk.termLine, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
+                        .background(
+                            Pk.termLine, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
                     }
                     .buttonStyle(.plain)
                     .disabled(!player.ready)
-                    .accessibilityLabel(L(waited ? "play_preparing" : player.playing ? "pause" : "play"))
+                    .accessibilityLabel(
+                        L(waited ? "play_preparing" : player.playing ? "pause" : "play")
+                    )
                     // a recording not yet ready a moment after it's asked
                     // for spins in the button: iOS reads a long FLAC through
                     // for exact seeks first (Player.load): AliceBench's 12
@@ -84,16 +89,20 @@ struct Strip: View {
             }
             VStack(spacing: gap) {
                 GeometryReader { g in
-                    let x = { (v: DragGesture.Value) in min(max(v.location.x / max(g.size.width, 1), 0), 1) }
+                    let x = { (v: DragGesture.Value) in
+                        min(max(v.location.x / max(g.size.width, 1), 0), 1)
+                    }
                     Waveform(peaks: t.peaks, seconds: duration, at: at, height: wave)
                         .opacity(review && !player.ready && !silent ? 0.45 : 1)
                         .contentShape(Rectangle())
-                        .gesture(review ? DragGesture(minimumDistance: 0)
-                            .onChanged { scrub = x($0) }
-                            .onEnded { v in
-                                scrub = nil
-                                seek(x(v))
-                            } : nil)
+                        .gesture(
+                            review
+                                ? DragGesture(minimumDistance: 0)
+                                    .onChanged { scrub = x($0) }
+                                    .onEnded { v in
+                                        scrub = nil
+                                        seek(x(v))
+                                    } : nil)
                 }
                 .frame(height: wave)
                 Ticks(ticks: ticks, at: tickAt, onTick: onTick)
@@ -103,7 +112,8 @@ struct Strip: View {
                         Text(why).lineLimit(2)
                         if let locate {
                             Text(" ·")
-                            Button(L("play_locate"), action: locate).buttonStyle(.plain).padding(.horizontal, 6)
+                            Button(L("play_locate"), action: locate).buttonStyle(.plain).padding(
+                                .horizontal, 6)
                         }
                         Spacer(minLength: 0)
                     }
@@ -114,8 +124,9 @@ struct Strip: View {
                     // line, still at the end: they name the waveform's ends
                     let time = Group {
                         if review {
-                            TimeMenu(text: AppState.shared.base.with(duration: duration, video: t.fps)
-                                .at(scrub.map { $0 * duration } ?? player.position))
+                            TimeMenu(
+                                text: AppState.shared.base.with(duration: duration, video: t.fps)
+                                    .at(scrub.map { $0 * duration } ?? player.position))
                         } else {
                             // whole, on two lines where one won't hold it: at AX2 on
                             // the iPhone SE it read "Loading the mod…" (the layout audit)
@@ -123,11 +134,15 @@ struct Strip: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
-                    let length = Text(duration > 0 ? AppState.shared.base.with(duration: duration, video: t.fps).length() : "")
-                        .font(tstamp)
-                        .monospacedDigit()
-                        .foregroundStyle(Pk.termInk)
-                        .lineLimit(1)
+                    let length = Text(
+                        duration > 0
+                            ? AppState.shared.base.with(duration: duration, video: t.fps).length()
+                            : ""
+                    )
+                    .font(tstamp)
+                    .monospacedDigit()
+                    .foregroundStyle(Pk.termInk)
+                    .lineLimit(1)
                     ViewThatFits(in: .horizontal) {
                         HStack {
                             time
@@ -176,7 +191,8 @@ struct Waveform: View {
     var body: some View {
         let range = Waveform.range(peaks, seconds)
         Canvas { ctx, size in
-            let bar: CGFloat = 2, gap: CGFloat = 1
+            let bar: CGFloat = 2
+            let gap: CGFloat = 1
             let n = max(1, Int((size.width + gap) / (bar + gap)))
             let top = size.height
             let k = min(max(Int(at * Double(n)), 0), n - 1)
@@ -191,12 +207,15 @@ struct Waveform: View {
                 }
                 let x = CGFloat(i) * (bar + gap)
                 if i == k {
-                    ctx.fill(Path(CGRect(x: x - gap, y: 0, width: bar + 2 * gap, height: top)), with: .color(Pk.beak))
+                    ctx.fill(
+                        Path(CGRect(x: x - gap, y: 0, width: bar + 2 * gap, height: top)),
+                        with: .color(Pk.beak))
                     continue
                 }
                 let h = 3 + (v * Double(top - 7)).rounded()
                 let c = peaks == nil ? Pk.termLine : i < k ? Pk.wavePlayed : Pk.wave
-                ctx.fill(Path(CGRect(x: x, y: (top - h) / 2, width: bar, height: h)), with: .color(c))
+                ctx.fill(
+                    Path(CGRect(x: x, y: (top - h) / 2, width: bar, height: h)), with: .color(c))
             }
         }
         .frame(height: height)
@@ -243,17 +262,28 @@ private struct Ticks: View {
         GeometryReader { g in
             Canvas { ctx, size in
                 for (k, t) in ticks.enumerated() where k != at {
-                    ctx.fill(Path(CGRect(x: t * size.width - 1, y: 3, width: 2, height: size.height - 6)), with: .color(Pk.plume))
+                    ctx.fill(
+                        Path(
+                            CGRect(x: t * size.width - 1, y: 3, width: 2, height: size.height - 6)),
+                        with: .color(Pk.plume))
                 }
                 if at >= 0 && at < ticks.count {
-                    ctx.fill(Path(CGRect(x: ticks[at] * size.width - 1.5, y: 0, width: 3, height: size.height)),
-                             with: .color(Pk.termInk))
+                    ctx.fill(
+                        Path(
+                            CGRect(
+                                x: ticks[at] * size.width - 1.5, y: 0, width: 3, height: size.height
+                            )),
+                        with: .color(Pk.termInk))
                 }
             }
             .contentShape(Rectangle())
             .onTapGesture { p in
-                guard let k = ticks.indices.min(by: { abs(ticks[$0] * g.size.width - p.x) < abs(ticks[$1] * g.size.width - p.x) }),
-                      abs(ticks[k] * g.size.width - p.x) <= 16 else { return }
+                guard
+                    let k = ticks.indices.min(by: {
+                        abs(ticks[$0] * g.size.width - p.x) < abs(ticks[$1] * g.size.width - p.x)
+                    }),
+                    abs(ticks[k] * g.size.width - p.x) <= 16
+                else { return }
                 onTick(k)
             }
         }
@@ -278,9 +308,14 @@ private struct Ring: View {
         ZStack {
             RoundedRectangle(cornerRadius: Radius.radiusUi).fill(Pk.termLine)
             RoundedRectangle(cornerRadius: Radius.radiusUi)
-                .fill(AngularGradient(stops: [.init(color: Pk.wavePlayed, location: 0), .init(color: Pk.wavePlayed, location: d),
-                                              .init(color: .clear, location: d), .init(color: .clear, location: 1)],
-                                      center: .center, startAngle: .degrees(-90), endAngle: .degrees(270)))
+                .fill(
+                    AngularGradient(
+                        stops: [
+                            .init(color: Pk.wavePlayed, location: 0),
+                            .init(color: Pk.wavePlayed, location: d),
+                            .init(color: .clear, location: d), .init(color: .clear, location: 1),
+                        ],
+                        center: .center, startAngle: .degrees(-90), endAngle: .degrees(270)))
             RoundedRectangle(cornerRadius: Radius.radiusUi - 3).fill(Pk.term).padding(3)
             // the ring's own label, growing with the text size until "100%"
             // fills the ring, which it never outgrows (as Android's)
@@ -301,7 +336,8 @@ private struct SpeedMenu: View {
     var body: some View {
         let p = Player.shared
         Menu {
-            Picker(L("speed_group"), selection: Binding(get: { p.speed }, set: { p.setSpeed($0) })) {
+            Picker(L("speed_group"), selection: Binding(get: { p.speed }, set: { p.setSpeed($0) }))
+            {
                 ForEach(Player.speeds, id: \.self) { Text(rateWord($0)).tag($0) }
             }
             Divider()
@@ -312,7 +348,10 @@ private struct SpeedMenu: View {
                 .font(tstamp)
                 .foregroundStyle(Pk.termInk)
                 .padding(6)
-                .background(p.speed != 1 ? Pk.termLine : .clear, in: RoundedRectangle(cornerRadius: Radius.radiusSm))
+                .background(
+                    p.speed != 1 ? Pk.termLine : .clear,
+                    in: RoundedRectangle(cornerRadius: Radius.radiusSm)
+                )
                 // 44 to a finger round its 16 of words (HIG's least; it was 28)
                 .contentShape(Rectangle().inset(by: -8))
         }
@@ -339,13 +378,28 @@ private struct TimeMenu: View {
         let base = s.base.with(duration: t.duration, video: t.fps)
         let now = Player.shared.position
         Menu {
-            Button { s.base.frames = false } label: {
-                if !base.frames { Label(L("times_seconds"), systemImage: "checkmark") } else { Text(L("times_seconds")) }
+            Button {
+                s.base.frames = false
+            } label: {
+                if !base.frames {
+                    Label(L("times_seconds"), systemImage: "checkmark")
+                } else {
+                    Text(L("times_seconds"))
+                }
                 Text(stamp(now, base.duration))
             }
-            Button { s.base.frames = true } label: {
-                if base.frames { Label(L("times_frames"), systemImage: "checkmark") } else { Text(L("times_frames")) }
-                Text(L(base.own ? "times_frames_at_video" : "times_frames_at", timecode(now, base.rate), rateLabel(base.rate)))
+            Button {
+                s.base.frames = true
+            } label: {
+                if base.frames {
+                    Label(L("times_frames"), systemImage: "checkmark")
+                } else {
+                    Text(L("times_frames"))
+                }
+                Text(
+                    L(
+                        base.own ? "times_frames_at_video" : "times_frames_at",
+                        timecode(now, base.rate), rateLabel(base.rate)))
             }
             Menu(L("times_rates")) {
                 if base.video > 0 {

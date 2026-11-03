@@ -62,7 +62,9 @@ struct Root: View {
             GeometryReader { w in
                 Color.clear.onChange(of: w.size.height, initial: true) { _, h in tall = h }
                     #if DEBUG
-                    .onChange(of: "\(w.size) \(w.safeAreaInsets)", initial: true) { _, s in trace("window: \(s)") }
+                        .onChange(of: "\(w.size) \(w.safeAreaInsets)", initial: true) { _, s in
+                            trace("window: \(s)")
+                        }
                     #endif
             }
             .ignoresSafeArea(.keyboard)
@@ -71,9 +73,11 @@ struct Root: View {
         // on the iPad showed the system's grey under the rows (2026-11-01)
         .background { Pk.ground.ignoresSafeArea() }
         .tint(Pk.ink)
-        .fileImporter(isPresented: Binding(get: { s.pick != nil }, set: { if !$0 { s.pick = nil } }),
-                      // a .pkf has no type of its own to ask for
-                      allowedContentTypes: s.pick == .model ? [.item] : [.audio, .movie]) { r in
+        .fileImporter(
+            isPresented: Binding(get: { s.pick != nil }, set: { if !$0 { s.pick = nil } }),
+            // a .pkf has no type of its own to ask for
+            allowedContentTypes: s.pick == .model ? [.item] : [.audio, .movie]
+        ) { r in
             if case .success(let url) = r { opened(url) }
         }
         .onChange(of: s.pick) { if let p = s.pick { picked = p } }
@@ -111,108 +115,139 @@ struct Root: View {
             Downloads.shared.resumeAfterLaunch()
             Transcriber.shared.prepareIfNew()
             #if DEBUG
-            debugArguments()
+                debugArguments()
             #endif
         }
     }
 
     #if DEBUG
-    /// For a device or a Simulator with no one tapping, through devicectl
-    /// or simctl: -open NAME transcribes Application Support/bench/NAME,
-    /// and -receive NAME a copy of it as iOS sends one (Open in);
-    /// -recent opens the newest transcript of the list; -play SECONDS plays
-    /// it from there; -find WORDS searches it, and with -typing as typed,
-    /// the keyboard up; -landscape turns a phone on its side; -show about
-    /// or manage opens that, and with about, -sheet privacy or notices one
-    /// of its sheets;
-    /// -download english or multilingual downloads that model (its server
-    /// PKTITO_MODEL_BASE, where the environment gives one), and with it
-    /// -pauseAfter S pauses it S seconds on, and -resumeAfter S goes on S
-    /// seconds after that; -pretend setup, download, checking, paused,
-    /// failed, preparing, loading, transcribing, error or toast shows that
-    /// state, with nothing downloaded or transcribed. (A default's own -key
-    /// value, as -captions YES, sets it for the run.)
-    private func debugArguments() {
-        let args = CommandLine.arguments
-        let s = AppState.shared
-        func value(_ flag: String) -> String? {
-            guard let i = args.firstIndex(of: flag), i + 1 < args.count else { return nil }
-            return args[i + 1]
-        }
-        let bench = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("bench")
-        if let name = value("-open") { s.start(bench.appendingPathComponent(name)) }
-        // as iOS sends a file: a copy in Documents/Inbox
-        if let name = value("-receive") {
-            let inbox = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("Inbox", isDirectory: true)
-            try? FileManager.default.createDirectory(at: inbox, withIntermediateDirectories: true)
-            let copy = inbox.appendingPathComponent(name)
-            try? FileManager.default.removeItem(at: copy)
-            try? FileManager.default.copyItem(at: bench.appendingPathComponent(name), to: copy)
-            s.received(copy)
-        }
-        if args.contains("-recent"), let first = Recents.shared.items.first { s.openRecent(first.id) }
-        if let t = value("-play").flatMap(Double.init) {
-            Task {
-                while !Player.shared.ready { try? await Task.sleep(for: .milliseconds(100)) }
-                Player.shared.seek(t, play: true)
+        /// For a device or a Simulator with no one tapping, through devicectl
+        /// or simctl: -open NAME transcribes Application Support/bench/NAME,
+        /// and -receive NAME a copy of it as iOS sends one (Open in);
+        /// -recent opens the newest transcript of the list; -play SECONDS plays
+        /// it from there; -find WORDS searches it, and with -typing as typed,
+        /// the keyboard up; -landscape turns a phone on its side; -show about
+        /// or manage opens that, and with about, -sheet privacy or notices one
+        /// of its sheets;
+        /// -download english or multilingual downloads that model (its server
+        /// PKTITO_MODEL_BASE, where the environment gives one), and with it
+        /// -pauseAfter S pauses it S seconds on, and -resumeAfter S goes on S
+        /// seconds after that; -pretend setup, download, checking, paused,
+        /// failed, preparing, loading, transcribing, error or toast shows that
+        /// state, with nothing downloaded or transcribed. (A default's own -key
+        /// value, as -captions YES, sets it for the run.)
+        private func debugArguments() {
+            let args = CommandLine.arguments
+            let s = AppState.shared
+            func value(_ flag: String) -> String? {
+                guard let i = args.firstIndex(of: flag), i + 1 < args.count else { return nil }
+                return args[i + 1]
             }
-        }
-        if args.contains("-landscape"),
-           let scene = UIApplication.shared.connectedScenes.first(where: { $0 is UIWindowScene }) as? UIWindowScene {
-            scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) { trace("landscape: \($0.localizedDescription)") }
-        }
-        if let q = value("-find") {
-            s.finder.open = true
-            if args.contains("-typing") {
-                // the field opened empty takes the keyboard, as the glass's does; then the words
+            let bench = FileManager.default.urls(
+                for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("bench")
+            if let name = value("-open") { s.start(bench.appendingPathComponent(name)) }
+            // as iOS sends a file: a copy in Documents/Inbox
+            if let name = value("-receive") {
+                let inbox = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[
+                    0
+                ]
+                .appendingPathComponent("Inbox", isDirectory: true)
+                try? FileManager.default.createDirectory(
+                    at: inbox, withIntermediateDirectories: true)
+                let copy = inbox.appendingPathComponent(name)
+                try? FileManager.default.removeItem(at: copy)
+                try? FileManager.default.copyItem(at: bench.appendingPathComponent(name), to: copy)
+                s.received(copy)
+            }
+            if args.contains("-recent"), let first = Recents.shared.items.first {
+                s.openRecent(first.id)
+            }
+            if let t = value("-play").flatMap(Double.init) {
                 Task {
-                    try? await Task.sleep(for: .seconds(1))
+                    while !Player.shared.ready { try? await Task.sleep(for: .milliseconds(100)) }
+                    Player.shared.seek(t, play: true)
+                }
+            }
+            if args.contains("-landscape"),
+                let scene = UIApplication.shared.connectedScenes.first(where: {
+                    $0 is UIWindowScene
+                }) as? UIWindowScene
+            {
+                scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) {
+                    trace("landscape: \($0.localizedDescription)")
+                }
+            }
+            if let q = value("-find") {
+                s.finder.open = true
+                if args.contains("-typing") {
+                    // the field opened empty takes the keyboard, as the glass's does; then the words
+                    Task {
+                        try? await Task.sleep(for: .seconds(1))
+                        s.finder.query = q
+                    }
+                } else {
                     s.finder.query = q
                 }
-            } else {
-                s.finder.query = q
+            }
+            if let key = value("-download"),
+                let o = Models.shared.offers.first(where: { $0.key == key })
+            {
+                Downloads.shared.start(o)
+                let pause = value("-pauseAfter").flatMap(Double.init)
+                let resume = value("-resumeAfter").flatMap(Double.init)
+                Task {
+                    if let pause {
+                        try? await Task.sleep(for: .seconds(pause))
+                        Downloads.shared.pause()
+                    }
+                    if let resume {
+                        try? await Task.sleep(for: .seconds(resume))
+                        Downloads.shared.start(o)
+                    }
+                }
+            }
+            switch value("-show") {
+            case "about": s.about = true
+            case "manage": s.managing = true
+            default: break
+            }
+            // a state as it would be, which no one taps to, for the screenshots
+            let english = "parakeet-tdt-0.6b-v2"
+            let size: Int64 = 624_480_196
+            switch value("-pretend") {
+            case "setup": s.pretendSetup = true
+            case "download":
+                Downloads.shared.pretend(
+                    DownloadState(
+                        name: english, step: .downloading, got: 262_000_000, total: size,
+                        speed: 14_200_000))
+            case "checking":
+                Downloads.shared.pretend(
+                    DownloadState(name: english, step: .checking, got: size, total: size))
+            case "paused":
+                Downloads.shared.pretend(
+                    DownloadState(name: english, step: .paused, got: 262_000_000, total: size))
+            case "failed":
+                Downloads.shared.pretend(
+                    DownloadState(
+                        name: english, step: .failed, got: 262_000_000, total: size,
+                        problem: DownloadProblem(key: "download.not_answering")))
+            case "preparing": Transcriber.shared.pretend(preparing: true)
+            case "loading":
+                Transcriber.shared.pretend(.loading, name: "Interview with the author.m4a", done: 0)
+            case "transcribing":
+                Transcriber.shared.pretend(
+                    .transcribing, name: "Interview with the author.m4a", done: 0.37, duration: 2712
+                )
+            case "error":
+                Transcriber.shared.pretend(
+                    .error, name: "Interview with the author.m4a", done: 0,
+                    error: L("problem_unexpected"))
+            case "toast": s.toast = L("models_using", L("catalog_english"))
+            default: break
             }
         }
-        if let key = value("-download"), let o = Models.shared.offers.first(where: { $0.key == key }) {
-            Downloads.shared.start(o)
-            let pause = value("-pauseAfter").flatMap(Double.init), resume = value("-resumeAfter").flatMap(Double.init)
-            Task {
-                if let pause {
-                    try? await Task.sleep(for: .seconds(pause))
-                    Downloads.shared.pause()
-                }
-                if let resume {
-                    try? await Task.sleep(for: .seconds(resume))
-                    Downloads.shared.start(o)
-                }
-            }
-        }
-        switch value("-show") {
-        case "about": s.about = true
-        case "manage": s.managing = true
-        default: break
-        }
-        // a state as it would be, which no one taps to, for the screenshots
-        let english = "parakeet-tdt-0.6b-v2", size: Int64 = 624_480_196
-        switch value("-pretend") {
-        case "setup": s.pretendSetup = true
-        case "download":
-            Downloads.shared.pretend(DownloadState(name: english, step: .downloading, got: 262_000_000, total: size, speed: 14_200_000))
-        case "checking": Downloads.shared.pretend(DownloadState(name: english, step: .checking, got: size, total: size))
-        case "paused": Downloads.shared.pretend(DownloadState(name: english, step: .paused, got: 262_000_000, total: size))
-        case "failed":
-            Downloads.shared.pretend(DownloadState(name: english, step: .failed, got: 262_000_000, total: size,
-                                                   problem: DownloadProblem(key: "download.not_answering")))
-        case "preparing": Transcriber.shared.pretend(preparing: true)
-        case "loading": Transcriber.shared.pretend(.loading, name: "Interview with the author.m4a", done: 0)
-        case "transcribing": Transcriber.shared.pretend(.transcribing, name: "Interview with the author.m4a", done: 0.37, duration: 2712)
-        case "error": Transcriber.shared.pretend(.error, name: "Interview with the author.m4a", done: 0, error: L("problem_unexpected"))
-        case "toast": s.toast = L("models_using", L("catalog_english"))
-        default: break
-        }
-    }
     #endif
 
     /// A file the picker gave, for what it was opened for.

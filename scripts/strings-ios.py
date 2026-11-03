@@ -12,6 +12,7 @@ ios/App/Pseudo/en-XA.json, which only a debug build has.
 
     scripts/strings-ios.py [--pseudo]
 """
+
 import html
 import json
 import os
@@ -21,8 +22,10 @@ import xml.etree.ElementTree as ET
 
 here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Android's words, then the iOS app's own (ios/strings.xml), in the same form
-sources = [os.path.join(here, "android", "app", "src", "main", "res", "values", "strings.xml"),
-           os.path.join(here, "ios", "strings.xml")]
+sources = [
+    os.path.join(here, "android", "app", "src", "main", "res", "values", "strings.xml"),
+    os.path.join(here, "ios", "strings.xml"),
+]
 
 
 def unescape(s):
@@ -64,7 +67,9 @@ def read(srcs):
         text = open(src, encoding="utf-8").read()
         comment_before = {}
         last = None
-        for m in re.finditer(r"<!--(.*?)-->|<(string|plurals) name=\"([^\"]+)\"", text, re.S):
+        for m in re.finditer(
+            r"<!--(.*?)-->|<(string|plurals) name=\"([^\"]+)\"", text, re.S
+        ):
             if m.group(1) is not None:
                 last = " ".join(m.group(1).split())
             else:
@@ -77,12 +82,17 @@ def read(srcs):
                 raise ValueError(name + ": both Android's and iOS's")
             if el.tag == "string":
                 at = text.index(f'name="{name}"')
-                cdata = "<![CDATA[" in text[at:text.index("</string>", at)]
+                cdata = "<![CDATA[" in text[at : text.index("</string>", at)]
                 v = args(unescape(transform(el.text or "")))
                 found[name] = (comment_before.get(name), markdown(v) if cdata else v)
             elif el.tag == "plurals":
-                found[name] = (comment_before.get(name),
-                               {i.get("quantity"): args(unescape(transform(i.text or ""))) for i in el})
+                found[name] = (
+                    comment_before.get(name),
+                    {
+                        i.get("quantity"): args(unescape(transform(i.text or "")))
+                        for i in el
+                    },
+                )
     return found
 
 
@@ -92,12 +102,34 @@ if "--pseudo" in sys.argv[1:]:
     # words made into it here (UI/Controls.swift, L)
     sys.path.insert(0, os.path.join(here, "scripts"))
     from pseudo import pseudo
-    found = read([(os.path.join(here, "android", "app", "src", "debug", "res", "values-en-rXA", "strings.xml"), lambda t: t),
-                  (sources[1], pseudo)])
+
+    found = read(
+        [
+            (
+                os.path.join(
+                    here,
+                    "android",
+                    "app",
+                    "src",
+                    "debug",
+                    "res",
+                    "values-en-rXA",
+                    "strings.xml",
+                ),
+                lambda t: t,
+            ),
+            (sources[1], pseudo),
+        ]
+    )
     dst = os.path.join(here, "ios", "App", "Pseudo", "en-XA.json")
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     with open(dst, "w", encoding="utf-8") as f:
-        json.dump({k: v for k, (_, v) in sorted(found.items())}, f, ensure_ascii=False, indent=2)
+        json.dump(
+            {k: v for k, (_, v) in sorted(found.items())},
+            f,
+            ensure_ascii=False,
+            indent=2,
+        )
         f.write("\n")
     print("ios/App/Pseudo/en-XA.json:", len(found), "strings")
     sys.exit()
@@ -108,14 +140,24 @@ for name, (comment, v) in read([(src, lambda t: t) for src in sources]).items():
     if comment:
         entry["comment"] = comment
     if isinstance(v, dict):
-        entry["localizations"] = {"en": {"variations": {"plural": {q: unit(f) for q, f in v.items()}}}}
+        entry["localizations"] = {
+            "en": {"variations": {"plural": {q: unit(f) for q, f in v.items()}}}
+        }
     else:
         entry["localizations"] = {"en": unit(v)}
     strings[name] = entry
 
-out = {"sourceLanguage": "en", "strings": dict(sorted(strings.items())), "version": "1.0"}
+out = {
+    "sourceLanguage": "en",
+    "strings": dict(sorted(strings.items())),
+    "version": "1.0",
+}
 dst = os.path.join(here, "ios", "App", "Localizable.xcstrings")
 with open(dst, "w", encoding="utf-8") as f:
     json.dump(out, f, ensure_ascii=False, indent=2)
     f.write("\n")
-print("ios/App/Localizable.xcstrings:", len(strings), "strings from Android's strings.xml and ios/strings.xml")
+print(
+    "ios/App/Localizable.xcstrings:",
+    len(strings),
+    "strings from Android's strings.xml and ios/strings.xml",
+)

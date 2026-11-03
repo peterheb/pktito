@@ -7,7 +7,9 @@ import UIKit
 struct DownloadProblem: LocalizedError {
     let key: String
     var detail = ""
-    var errorDescription: String? { words(key, host: "models.pktito.net") + (detail.isEmpty ? "" : " (\(detail))") }
+    var errorDescription: String? {
+        words(key, host: "models.pktito.net") + (detail.isEmpty ? "" : " (\(detail))")
+    }
 }
 
 /// A model file's download from models.pktito.net, in URLSession's
@@ -57,8 +59,12 @@ final class Downloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendabl
     /// a file's transfer that failed before anyone waited for it, for fetch
     private var failed: [String: Error] = [:]
 
-    private static func held(_ file: String) -> URL { Store.models.appendingPathComponent(file + ".download") }
-    private static func kept(_ file: String) -> URL { Store.models.appendingPathComponent(file + ".resume") }
+    private static func held(_ file: String) -> URL {
+        Store.models.appendingPathComponent(file + ".download")
+    }
+    private static func kept(_ file: String) -> URL {
+        Store.models.appendingPathComponent(file + ".resume")
+    }
 
     /// Each of parts on its way: its transfer a run before began, where the
     /// session still has it, else one begun now, from what a stopped one
@@ -66,9 +72,14 @@ final class Downloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendabl
     /// background is left for when the system likes.
     func begin(_ parts: [Part]) async {
         let tasks = await session.allTasks
-        for p in parts where !Store.have(p) && !FileManager.default.fileExists(atPath: Downloader.held(p.file).path) {
+        for p in parts
+        where !Store.have(p)
+            && !FileManager.default.fileExists(atPath: Downloader.held(p.file).path)
+        {
             let task: URLSessionTask
-            if let t = tasks.first(where: { $0.taskDescription == p.file && ($0.state == .running || $0.state == .suspended) }) {
+            if let t = tasks.first(where: {
+                $0.taskDescription == p.file && ($0.state == .running || $0.state == .suspended)
+            }) {
                 task = t
             } else {
                 let new: URLSessionDownloadTask
@@ -91,8 +102,10 @@ final class Downloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendabl
 
     /// p's transfer waited for (begin), then checked: its path once it is in
     /// place. progress hears its bytes so far, on URLSession's queue.
-    func fetch(_ p: Part, progress: @escaping @Sendable (Int64) -> Void,
-               checking: @escaping @Sendable () -> Void = {}) async throws -> URL {
+    func fetch(
+        _ p: Part, progress: @escaping @Sendable (Int64) -> Void,
+        checking: @escaping @Sendable () -> Void = {}
+    ) async throws -> URL {
         if Store.have(p) {
             return Store.file(p)
         }
@@ -116,14 +129,17 @@ final class Downloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendabl
     /// The bytes a stopped download of p kept, by its resume data.
     func kept(_ p: Part) -> Int64 {
         guard let data = try? Data(contentsOf: Downloader.kept(p.file)),
-              let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
+            let plist = try? PropertyListSerialization.propertyList(from: data, format: nil)
+                as? [String: Any]
         else { return 0 }
         return (plist["NSURLSessionResumeBytesReceived"] as? NSNumber)?.int64Value ?? 0
     }
 
     /// What a download of p kept or got, let go.
     func forget(_ p: Part) {
-        for f in [Downloader.kept(p.file), Downloader.held(p.file)] { try? FileManager.default.removeItem(at: f) }
+        for f in [Downloader.kept(p.file), Downloader.held(p.file)] {
+            try? FileManager.default.removeItem(at: f)
+        }
         lock.lock()
         failed[p.file] = nil
         lock.unlock()
@@ -188,7 +204,8 @@ final class Downloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendabl
     /// Whether task is the one its file is coming by; none is, for a file
     /// no run of the app has asked for since it began (unclaimed), as one
     /// that ended while the app was gone.
-    private func standing(_ task: URLSessionTask) -> (file: String, current: Bool, unclaimed: Bool)? {
+    private func standing(_ task: URLSessionTask) -> (file: String, current: Bool, unclaimed: Bool)?
+    {
         guard let file = task.taskDescription else { return nil }
         lock.lock()
         defer { lock.unlock() }
@@ -206,8 +223,10 @@ final class Downloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendabl
         j?.done.resume(with: result)
     }
 
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData _: Int64,
-                    totalBytesWritten: Int64, totalBytesExpectedToWrite _: Int64) {
+    func urlSession(
+        _ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData _: Int64,
+        totalBytesWritten: Int64, totalBytesExpectedToWrite _: Int64
+    ) {
         guard let t = standing(downloadTask), t.current else { return }
         lock.lock()
         let j = jobs[t.file]
@@ -215,16 +234,26 @@ final class Downloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendabl
         j?.progress(totalBytesWritten)
     }
 
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+    func urlSession(
+        _ session: URLSession, downloadTask: URLSessionDownloadTask,
+        didFinishDownloadingTo location: URL
+    ) {
         // the file is URLSession's only until this returns: moved beside its
         // place now, checked by fetch; one that ended while the app was gone
         // too, for the fetch to come
         guard let t = standing(downloadTask), t.current || t.unclaimed else { return }
         // a transfer gone on from resume data ends with 206, its rest
-        if let http = downloadTask.response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+        if let http = downloadTask.response as? HTTPURLResponse,
+            !(200..<300).contains(http.statusCode)
+        {
             if t.current {
-                ended(t.file, .failure(DownloadProblem(key: http.statusCode == 404 ? "download.not_found" : "download.not_answering",
-                                                       detail: "HTTP \(http.statusCode)")))
+                ended(
+                    t.file,
+                    .failure(
+                        DownloadProblem(
+                            key: http.statusCode == 404
+                                ? "download.not_found" : "download.not_answering",
+                            detail: "HTTP \(http.statusCode)")))
             }
             return
         }
@@ -238,7 +267,8 @@ final class Downloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendabl
         }
     }
 
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?)
+    {
         guard let error, let t = standing(task), t.current || t.unclaimed else { return }
         if let data = (error as NSError).userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
             try? data.write(to: Downloader.kept(t.file))
@@ -300,9 +330,9 @@ final class Downloads {
     var running: Bool { work != nil }
 
     #if DEBUG
-    /// A download's state as it would be, for the simulator's screenshots
-    /// (Root, -pretend): no bytes move.
-    func pretend(_ s: DownloadState) { state = s }
+        /// A download's state as it would be, for the simulator's screenshots
+        /// (Root, -pretend): no bytes move.
+        func pretend(_ s: DownloadState) { state = s }
     #endif
 
     /// The bytes a stopped download of e kept: its files here, and what the
@@ -310,7 +340,9 @@ final class Downloads {
     func kept(_ e: CatalogEntry) -> Int64 {
         if state?.name == e.name, let s = state { return s.got }
         let parts = Editions.preferred(e) == .cpu ? [e.pkf] : [e.coreml.slim, e.coreml.encoder]
-        let n = parts.reduce(Int64(0)) { $0 + (Store.have($1) ? $1.bytes : Downloader.shared.kept($1)) }
+        let n = parts.reduce(Int64(0)) {
+            $0 + (Store.have($1) ? $1.bytes : Downloader.shared.kept($1))
+        }
         return Store.have(e, Editions.preferred(e)) ? 0 : n
     }
 
@@ -332,8 +364,10 @@ final class Downloads {
     /// with: its transfers went on while the app was away, or ended.
     func resumeAfterLaunch() {
         let d = UserDefaults.standard
-        guard state == nil, !d.bool(forKey: "downloadPaused"), let name = d.string(forKey: "downloading"),
-              let o = Models.shared.offers.first(where: { $0.name == name }) else { return }
+        guard state == nil, !d.bool(forKey: "downloadPaused"),
+            let name = d.string(forKey: "downloading"),
+            let o = Models.shared.offers.first(where: { $0.name == name })
+        else { return }
         if Store.have(o.entry, o.edition) {
             d.removeObject(forKey: "downloading")
             return
@@ -385,7 +419,9 @@ final class Downloads {
         defer { work = nil }
         let e = o.entry
         let parts = o.edition == .cpu ? [e.pkf] : [e.coreml.slim, e.coreml.encoder]
-        let here = { (p: Part) in p.file == e.coreml.encoder.file ? Store.haveEncoder(e) : Store.have(p) }
+        let here = { (p: Part) in
+            p.file == e.coreml.encoder.file ? Store.haveEncoder(e) : Store.have(p)
+        }
         got = [:]
         for p in parts {
             got[p.file] = here(p) ? p.bytes : Downloader.shared.kept(p)
@@ -396,24 +432,32 @@ final class Downloads {
             while true {
                 do {
                     await Downloader.shared.begin(parts.filter { !here($0) })
-                    let url = try await Downloader.shared.fetch(p, progress: { n in
-                        Task { @MainActor in self.heard(p, n) }
-                    }, checking: {
-                        Task { @MainActor in self.state?.step = .checking }
-                    })
+                    let url = try await Downloader.shared.fetch(
+                        p,
+                        progress: { n in
+                            Task { @MainActor in self.heard(p, n) }
+                        },
+                        checking: {
+                            Task { @MainActor in self.state?.step = .checking }
+                        })
                     // iOS's time to finish, where the transfer ended while the app was away
                     let time = BackgroundTime("model " + p.file)
                     defer { time.end() }
                     if p.file == e.coreml.encoder.file {
                         state?.step = .checking
-                        try await Task.detached(priority: .userInitiated) { try Unpack.encoder(e, from: url) }.value
+                        try await Task.detached(priority: .userInitiated) {
+                            try Unpack.encoder(e, from: url)
+                        }.value
                     }
                     got[p.file] = p.bytes
                     delay = 2
                     break
                 } catch {
                     if pausing || Task.isCancelled {
-                        if state != nil { state?.step = .paused; state?.speed = 0 }
+                        if state != nil {
+                            state?.step = .paused
+                            state?.speed = 0
+                        }
                         return
                     }
                     let (problem, retry) = Downloads.problem(error)
@@ -466,21 +510,35 @@ final class Downloads {
         if let u = error as? URLError {
             switch u.code {
             case .notConnectedToInternet, .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed,
-                 .internationalRoamingOff, .dataNotAllowed:
-                return (DownloadProblem(key: "download.cant_reach", detail: u.localizedDescription), true)
+                .internationalRoamingOff, .dataNotAllowed:
+                return (
+                    DownloadProblem(key: "download.cant_reach", detail: u.localizedDescription),
+                    true
+                )
             case .networkConnectionLost:
-                return (DownloadProblem(key: "download.connection_lost", detail: u.localizedDescription), true)
+                return (
+                    DownloadProblem(
+                        key: "download.connection_lost", detail: u.localizedDescription), true
+                )
             case .timedOut:
-                return (DownloadProblem(key: "download.not_answering", detail: u.localizedDescription), true)
+                return (
+                    DownloadProblem(key: "download.not_answering", detail: u.localizedDescription),
+                    true
+                )
             default:
-                return (DownloadProblem(key: "download.cant_save", detail: u.localizedDescription), false)
+                return (
+                    DownloadProblem(key: "download.cant_save", detail: u.localizedDescription),
+                    false
+                )
             }
         }
         let ns = error as NSError
         if ns.domain == NSCocoaErrorDomain && ns.code == NSFileWriteOutOfSpaceError {
             return (DownloadProblem(key: "download.disk_full"), false)
         }
-        return (DownloadProblem(key: "download.cant_save", detail: error.localizedDescription), false)
+        return (
+            DownloadProblem(key: "download.cant_save", detail: error.localizedDescription), false
+        )
     }
 }
 

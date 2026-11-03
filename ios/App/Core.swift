@@ -74,7 +74,9 @@ enum Core {
     }
 
     /// transcript as a file of the kind ext names: txt, md, srt, vtt, json.
-    static func format(_ transcript: Transcript, ext: String, name: String, times: Bool) throws -> String {
+    static func format(_ transcript: Transcript, ext: String, name: String, times: Bool) throws
+        -> String
+    {
         struct Text: Decodable { let text: String }
         let json = String(decoding: try JSONEncoder().encode(transcript), as: UTF8.self)
         return try take(pkapp_format(json, ext, name, times), as: Text.self).text
@@ -104,7 +106,9 @@ final class Engine: @unchecked Sendable {
             let encoder: Bool
             let threads: Int
         }
-        let l = try file.withUnsafeFileSystemRepresentation { try take(pkapp_load($0), as: Loaded.self) }
+        let l = try file.withUnsafeFileSystemRepresentation {
+            try take(pkapp_load($0), as: Loaded.self)
+        }
         handle = l.handle
         name = l.name
         hasEncoder = l.encoder
@@ -119,7 +123,9 @@ final class Engine: @unchecked Sendable {
     /// for the model's own encoder again.
     func useNeuralEngine(_ encoder: URL?) throws {
         if let encoder {
-            _ = try encoder.withUnsafeFileSystemRepresentation { try take(pkapp_use_ane(handle, $0), as: Nothing.self) }
+            _ = try encoder.withUnsafeFileSystemRepresentation {
+                try take(pkapp_use_ane(handle, $0), as: Nothing.self)
+            }
         } else {
             _ = try take(pkapp_use_ane(handle, nil), as: Nothing.self)
         }
@@ -149,14 +155,22 @@ final class Engine: @unchecked Sendable {
         let ctx = Unmanaged.passRetained(progress)
         defer { ctx.release() }
         let answer = file.withUnsafeFileSystemRepresentation { path in
-            pkapp_transcribe(handle, path, name, ctx.toOpaque(), { ctx, seconds, fps, peaks, n in
-                let p = Unmanaged<Progress>.fromOpaque(ctx!).takeUnretainedValue()
-                p.heard(seconds, fps, peaks.map { Array(UnsafeBufferPointer(start: $0, count: n)) } ?? [])
-            }, { ctx, done, segments in
-                let p = Unmanaged<Progress>.fromOpaque(ctx!).takeUnretainedValue()
-                let segs = segments.flatMap { try? JSONDecoder().decode([Segment].self, from: Data(bytes: $0, count: strlen($0))) }
-                p.update(done, segs ?? [])
-            })
+            pkapp_transcribe(
+                handle, path, name, ctx.toOpaque(),
+                { ctx, seconds, fps, peaks, n in
+                    let p = Unmanaged<Progress>.fromOpaque(ctx!).takeUnretainedValue()
+                    p.heard(
+                        seconds, fps,
+                        peaks.map { Array(UnsafeBufferPointer(start: $0, count: n)) } ?? [])
+                },
+                { ctx, done, segments in
+                    let p = Unmanaged<Progress>.fromOpaque(ctx!).takeUnretainedValue()
+                    let segs = segments.flatMap {
+                        try? JSONDecoder().decode(
+                            [Segment].self, from: Data(bytes: $0, count: strlen($0)))
+                    }
+                    p.update(done, segs ?? [])
+                })
         }
         return try take(answer, as: Transcript.self)
     }

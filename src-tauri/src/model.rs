@@ -225,13 +225,19 @@ pub fn choose_file(data: &Path, path: &Path) -> Result<(), String> {
     let mut s = load_settings(data);
     let dir = data.join("models");
     match CATALOG.iter().find(|e| same_file(&file_in(&dir, e), path)) {
-        Some(e) => (s.model, s.model_file, s.model_file_is) = (Some(e.name.to_string()), None, None),
+        Some(e) => {
+            (s.model, s.model_file, s.model_file_is) = (Some(e.name.to_string()), None, None)
+        }
         None => {
             s.model_file = Some(path.to_path_buf());
             // a copy of a catalog model, downloaded by hand: on a Mac its
             // Core ML encoder serves it too (encoder_of), and Manage models
             // offers it (Peter, 2026-11-02)
-            s.model_file_is = if NEURAL { copy_of(path).map(|e| e.name.to_string()) } else { None };
+            s.model_file_is = if NEURAL {
+                copy_of(path).map(|e| e.name.to_string())
+            } else {
+                None
+            };
         }
     }
     save_settings(data, &s)
@@ -269,7 +275,8 @@ pub fn encoder_offer(data: &Path, e: &Entry) -> Option<u64> {
     }
     let dir = data.join("models");
     let s = load_settings(data);
-    let own = s.model_file_is.as_deref() == Some(e.name) && s.model_file.as_ref().is_some_and(|f| f.is_file());
+    let own = s.model_file_is.as_deref() == Some(e.name)
+        && s.model_file.as_ref().is_some_and(|f| f.is_file());
     ((have(&dir, e) || own) && !have_encoder(&dir, e)).then_some(e.coreml.encoder.bytes)
 }
 
@@ -311,7 +318,10 @@ pub fn have_any(dir: &Path, e: &Entry) -> bool {
 /// unpacked once it checks), elsewhere the whole model.
 pub fn edition(dir: &Path, e: &Entry) -> Vec<Wanted> {
     if NEURAL {
-        vec![Wanted::part(dir, e, &e.coreml.slim), Wanted::part(dir, e, &e.coreml.encoder)]
+        vec![
+            Wanted::part(dir, e, &e.coreml.slim),
+            Wanted::part(dir, e, &e.coreml.encoder),
+        ]
     } else {
         vec![Wanted::model(dir, e)]
     }
@@ -322,9 +332,21 @@ pub fn edition(dir: &Path, e: &Entry) -> Vec<Wanted> {
 pub fn bytes_of(dir: &Path, e: &Entry) -> u64 {
     let whole = if have(dir, e) { e.bytes } else { 0 };
     // the edition's files, or an encoder fetched for a whole file alone
-    let slim = if NEURAL && Wanted::part(dir, e, &e.coreml.slim).here() { e.coreml.slim.bytes } else { 0 };
-    let encoder = if NEURAL && have_encoder(dir, e) { e.coreml.encoder.bytes } else { 0 };
-    let neural = if whole > 0 || slim > 0 { slim + encoder } else { 0 };
+    let slim = if NEURAL && Wanted::part(dir, e, &e.coreml.slim).here() {
+        e.coreml.slim.bytes
+    } else {
+        0
+    };
+    let encoder = if NEURAL && have_encoder(dir, e) {
+        e.coreml.encoder.bytes
+    } else {
+        0
+    };
+    let neural = if whole > 0 || slim > 0 {
+        slim + encoder
+    } else {
+        0
+    };
     match whole + neural {
         0 => edition(dir, e).iter().map(|w| w.bytes).sum(),
         n => n,
@@ -348,7 +370,10 @@ pub fn remove_parts(dir: &Path, e: &Entry) -> Result<(), String> {
     for w in edition(dir, e) {
         // a slim file checked but its encoder not yet: part of the download
         let done = NEURAL && !have_encoder(dir, e) && w.here();
-        for f in [Some(&w.part), done.then_some(&w.dst)].into_iter().flatten() {
+        for f in [Some(&w.part), done.then_some(&w.dst)]
+            .into_iter()
+            .flatten()
+        {
             match fs::remove_file(f) {
                 Err(err) if err.kind() != io::ErrorKind::NotFound => {
                     return Err(format!("{err}\n{}", f.display()))
@@ -366,7 +391,9 @@ pub fn encoder_for(dir: &Path, path: &Path) -> Option<PathBuf> {
     if !NEURAL {
         return None;
     }
-    let e = CATALOG.iter().find(|e| same_file(&file_in(dir, e), path) || same_file(&slim_in(dir, e), path))?;
+    let e = CATALOG
+        .iter()
+        .find(|e| same_file(&file_in(dir, e), path) || same_file(&slim_in(dir, e), path))?;
     have_encoder(dir, e).then(|| encoder_in(dir, e))
 }
 
@@ -395,13 +422,19 @@ pub fn unpack_encoder(archive: &Path, dst: &Path) -> Result<(), String> {
     match ran {
         Ok(s) if s.success() => {}
         Ok(s) => return fail(format!("aa couldn't unpack {} ({s})", archive.display())),
-        Err(err) => return fail(format!("couldn't run aa to unpack {}: {err}", archive.display())),
+        Err(err) => {
+            return fail(format!(
+                "couldn't run aa to unpack {}: {err}",
+                archive.display()
+            ))
+        }
     }
     if !work.join("model.mil").is_file() {
         return fail(format!("{} holds no Core ML model", archive.display()));
     }
     let _ = fs::remove_dir_all(dst);
-    fs::rename(&work, dst).map_err(|err| format!("couldn't put {} in place: {err}", dst.display()))?;
+    fs::rename(&work, dst)
+        .map_err(|err| format!("couldn't put {} in place: {err}", dst.display()))?;
     let _ = fs::remove_file(archive);
     Ok(())
 }
@@ -550,7 +583,9 @@ pub fn delete(data: &Path, e: &Entry) -> Result<Option<&'static Entry>, String> 
     if s.model.as_deref() != Some(e.name) {
         return Ok(None);
     }
-    let next = CATALOG.iter().find(|x| x.name != e.name && have_any(&dir, x));
+    let next = CATALOG
+        .iter()
+        .find(|x| x.name != e.name && have_any(&dir, x));
     s.model = next.map(|x| x.name.to_string());
     save_settings(data, &s)?;
     Ok(next.filter(|_| s.model_file.is_none()))
@@ -626,13 +661,17 @@ impl Wanted {
 
     /// The bytes of it a download that stopped has kept.
     pub fn partial(&self) -> u64 {
-        fs::metadata(&self.part).map(|m| m.len().min(self.bytes)).unwrap_or(0)
+        fs::metadata(&self.part)
+            .map(|m| m.len().min(self.bytes))
+            .unwrap_or(0)
     }
 
     /// Whether it is here, checked: renamed into place only after its
     /// SHA-256 checked, so the size is enough to tell.
     pub fn here(&self) -> bool {
-        fs::metadata(&self.dst).map(|m| m.len() == self.bytes).unwrap_or(false)
+        fs::metadata(&self.dst)
+            .map(|m| m.len() == self.bytes)
+            .unwrap_or(false)
     }
 }
 
@@ -783,7 +822,11 @@ pub fn download(
 }
 
 /// download() for any file models.pktito.net serves.
-pub fn download_file(w: &Wanted, ctl: &Ctl, mut progress: impl FnMut(u64, bool)) -> Result<PathBuf, Stop> {
+pub fn download_file(
+    w: &Wanted,
+    ctl: &Ctl,
+    mut progress: impl FnMut(u64, bool),
+) -> Result<PathBuf, Stop> {
     let part = w.part.clone();
     let dir = part.parent().unwrap_or(Path::new("."));
     let write_err = |err: io::Error| written(&part, err);

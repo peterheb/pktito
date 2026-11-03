@@ -23,10 +23,15 @@ struct PkButtonStyle: ButtonStyle {
         let pad: CGFloat = large ? 18 : 12
         configuration.label
             .foregroundStyle(ink)
-            .frame(minWidth: max(minWidth - 2 * pad, 0), maxWidth: stretch ? .infinity : nil, minHeight: large ? 48 : 40)
+            .frame(
+                minWidth: max(minWidth - 2 * pad, 0), maxWidth: stretch ? .infinity : nil,
+                minHeight: large ? 48 : 40
+            )
             .padding(.horizontal, pad)
             .background(fill)
-            .overlay(configuration.isPressed ? (onTerm ? Pk.tintTermPress : Pk.tintPress) : Color.clear)
+            .overlay(
+                configuration.isPressed ? (onTerm ? Pk.tintTermPress : Pk.tintPress) : Color.clear
+            )
             .clipShape(RoundedRectangle(cornerRadius: Radius.radiusUi))
             .opacity(enabled ? 1 : 0.45)
             // 44 tall to a finger where it is drawn 40 (HIG's least)
@@ -104,7 +109,10 @@ struct IconButton: View {
             configuration.label
                 .foregroundStyle(onTerm ? Pk.termInk : Pk.ink)
                 .background(ghost ? Color.clear : Pk.sunk)
-                .overlay(configuration.isPressed ? (onTerm ? Pk.tintTermPress : Pk.tintPress) : Color.clear)
+                .overlay(
+                    configuration.isPressed
+                        ? (onTerm ? Pk.tintTermPress : Pk.tintPress) : Color.clear
+                )
                 .clipShape(RoundedRectangle(cornerRadius: Radius.radiusUi))
                 .opacity(enabled ? 1 : 0.45)
                 // drawn 40, 44 to a finger (HIG's least), into the gap round it
@@ -181,7 +189,9 @@ struct Switch2: View {
 
     private func choice(_ text: String, second: Bool) -> some View {
         let on = onSecond == second
-        return Button { onSecond = second } label: {
+        return Button {
+            onSecond = second
+        } label: {
             Text(text)
                 .font(PkType.ui.font(13))
                 .fixedSize()
@@ -191,9 +201,15 @@ struct Switch2: View {
                 // 36 and the switch's 2 round it: 40, as Find's field and the
                 // buttons on its line, which it was 3 short of (the layout audit)
                 .frame(minHeight: 36)
-                .background(on ? Pk.ground : Color.clear, in: RoundedRectangle(cornerRadius: Radius.radiusSm))
+                .background(
+                    on ? Pk.ground : Color.clear,
+                    in: RoundedRectangle(cornerRadius: Radius.radiusSm)
+                )
                 .overlay {
-                    if on { RoundedRectangle(cornerRadius: Radius.radiusSm).stroke(Pk.inkMuted, lineWidth: 1) }
+                    if on {
+                        RoundedRectangle(cornerRadius: Radius.radiusSm).stroke(
+                            Pk.inkMuted, lineWidth: 1)
+                    }
                 }
         }
         .buttonStyle(.plain)
@@ -234,7 +250,8 @@ struct Toast: View {
         // other; 40 tall at least (the layout audit, 2026-11-01)
         // the icon 12 from the words, as the desktop's (.pk-toast's gap)
         HStack(spacing: 12) {
-            (err ? PkIcon.alert : PkIcon.check).frame(width: 16, height: 16).accessibilityHidden(true)
+            (err ? PkIcon.alert : PkIcon.check).frame(width: 16, height: 16).accessibilityHidden(
+                true)
             Text(text).pk(PkType.ui)
         }
         .foregroundStyle(Pk.termInk)
@@ -246,7 +263,9 @@ struct Toast: View {
         .background(Pk.term, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
         // and in dark its 1 pt edge (toast-edge), term one step above the
         // ground leaving it all but unseen (Peter, 2026-11-01)
-        .overlay(RoundedRectangle(cornerRadius: Radius.radiusUi).strokeBorder(Pk.toastEdge, lineWidth: 1))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.radiusUi).strokeBorder(Pk.toastEdge, lineWidth: 1)
+        )
         .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
         .frame(maxWidth: 420)
     }
@@ -256,16 +275,20 @@ struct Toast: View {
 /// strings.xml by scripts/strings-ios.py) by its key, with its arguments;
 /// in a debug build launched with -pseudo, the pseudo-language's (Pseudo).
 func L(_ key: String, _ args: CVarArg...) -> String {
-    let format = Pseudo.word(key) ?? Bundle.main.localizedString(forKey: key, value: nil, table: nil)
+    let format =
+        Pseudo.word(key) ?? Bundle.main.localizedString(forKey: key, value: nil, table: nil)
     return args.isEmpty ? format : String(format: format, locale: Locale.current, arguments: args)
 }
 
 /// The same, for a plural: the catalog's form for n.
 func L(_ key: String, count n: Int) -> String {
     if let forms = Pseudo.forms(key) {
-        return String(format: forms[n == 1 ? "one" : "other"] ?? forms["other"] ?? key, locale: Locale.current, n)
+        return String(
+            format: forms[n == 1 ? "one" : "other"] ?? forms["other"] ?? key,
+            locale: Locale.current, n)
     }
-    return String.localizedStringWithFormat(Bundle.main.localizedString(forKey: key, value: nil, table: nil), n)
+    return String.localizedStringWithFormat(
+        Bundle.main.localizedString(forKey: key, value: nil, table: nil), n)
 }
 
 /// The words in scripts/pseudo.py's pseudo-language, longer, accented and
@@ -275,14 +298,15 @@ func L(_ key: String, count n: Int) -> String {
 /// release build hasn't: EXCLUDED_SOURCE_FILE_NAMES).
 enum Pseudo {
     #if DEBUG
-    private static let table: [String: Any]? = {
-        guard CommandLine.arguments.contains("-pseudo"),
-              let url = Bundle.main.url(forResource: "en-XA", withExtension: "json"),
-              let d = try? Data(contentsOf: url) else { return nil }
-        return try? JSONSerialization.jsonObject(with: d) as? [String: Any]
-    }()
+        private static let table: [String: Any]? = {
+            guard CommandLine.arguments.contains("-pseudo"),
+                let url = Bundle.main.url(forResource: "en-XA", withExtension: "json"),
+                let d = try? Data(contentsOf: url)
+            else { return nil }
+            return try? JSONSerialization.jsonObject(with: d) as? [String: Any]
+        }()
     #else
-    private static let table: [String: Any]? = nil
+        private static let table: [String: Any]? = nil
     #endif
 
     static func word(_ key: String) -> String? { table?[key] as? String }

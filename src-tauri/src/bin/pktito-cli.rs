@@ -312,8 +312,13 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
             Ok((a, t, sha, text)) => {
                 // against its reference, where there is a folder of them
                 let scored = o.reference.as_ref().map(|dir| {
-                    let stem = file.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
-                    fs::read_to_string(dir.join(format!("{stem}.txt"))).ok().map(|r| score::score(&text, &r))
+                    let stem = file
+                        .file_stem()
+                        .map(|s| s.to_string_lossy().into_owned())
+                        .unwrap_or_default();
+                    fs::read_to_string(dir.join(format!("{stem}.txt")))
+                        .ok()
+                        .map(|r| score::score(&text, &r))
                 });
                 if !json {
                     let said = match &scored {
@@ -321,7 +326,12 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
                         Some(None) => "  no reference".into(),
                         Some(Some(s)) => format!("  {}", said(s)),
                     };
-                    println!("{:>9}  {:>9.2} s  {:>7.1}x  {label}{said}", clock(a), t, a / t);
+                    println!(
+                        "{:>9}  {:>9.2} s  {:>7.1}x  {label}{said}",
+                        clock(a),
+                        t,
+                        a / t
+                    );
                 }
                 let mut r = serde_json::json!({ "file": label, "audio_s": a, "seconds": t, "x_real_time": a / t, "transcript_sha256": sha });
                 if let Some(s) = &scored {
@@ -404,7 +414,11 @@ fn said(s: &score::Score) -> String {
 
 /// Word errors over words, in percent.
 fn wer(errors: usize, words: usize) -> f64 {
-    if words == 0 { 0.0 } else { 100.0 * errors as f64 / words as f64 }
+    if words == 0 {
+        0.0
+    } else {
+        100.0 * errors as f64 / words as f64
+    }
 }
 
 /// The encoder a transcription runs: on a Mac, the Neural Engine's where the
@@ -417,23 +431,43 @@ fn wer(errors: usize, words: usize) -> f64 {
 /// Neural Engine edition's, has none, and says what to download. "Neural
 /// Engine" or "CPU", for bench to say.
 #[cfg(target_os = "macos")]
-fn encoder(asr: &mut pktito::Asr, model: &pktito::Model, path: &Path, o: &Opts) -> Result<&'static str, String> {
+fn encoder(
+    asr: &mut pktito::Asr,
+    model: &pktito::Model,
+    path: &Path,
+    o: &Opts,
+) -> Result<&'static str, String> {
     let whole = model.has_encoder();
     let cpu_or = |why: String| if whole { Ok("CPU") } else { Err(why) };
-    let Some(data) = model::data_dir() else { return cpu_or("no data folder for the app on this system".into()) };
+    let Some(data) = model::data_dir() else {
+        return cpu_or("no data folder for the app on this system".into());
+    };
     let dir = data.join("models");
     let e = model::CATALOG.iter().find(|e| {
-        model::same_file(&model::file_in(&dir, e), path) || model::same_file(&model::slim_in(&dir, e), path)
+        model::same_file(&model::file_in(&dir, e), path)
+            || model::same_file(&model::slim_in(&dir, e), path)
     });
     let Some(e) = e else {
-        return cpu_or(format!("{} has no encoder of its own and isn't a catalog model's", path.display()));
+        return cpu_or(format!(
+            "{} has no encoder of its own and isn't a catalog model's",
+            path.display()
+        ));
     };
-    let again = format!("pktito-cli download {} --cpu downloads the one for the CPU", e.name);
+    let again = format!(
+        "pktito-cli download {} --cpu downloads the one for the CPU",
+        e.name
+    );
     if o.cpu {
-        return cpu_or(format!("{} here is the Neural Engine's edition, with no encoder for the CPU: {again}", e.name));
+        return cpu_or(format!(
+            "{} here is the Neural Engine's edition, with no encoder for the CPU: {again}",
+            e.name
+        ));
     }
     if !model::have_encoder(&dir, e) {
-        return cpu_or(format!("{}'s Core ML encoder isn't here: pktito-cli download {}", e.name, e.name));
+        return cpu_or(format!(
+            "{}'s Core ML encoder isn't here: pktito-cli download {}",
+            e.name, e.name
+        ));
     }
     let show = !o.quiet && std::io::stderr().is_terminal();
     if show {
@@ -451,13 +485,20 @@ fn encoder(asr: &mut pktito::Asr, model: &pktito::Model, path: &Path, o: &Opts) 
             if whole {
                 eprintln!("pktito-cli: the Neural Engine can't run the encoder here ({why}); using the CPU");
             }
-            cpu_or(format!("the Neural Engine can't run the encoder here ({why}): {again}"))
+            cpu_or(format!(
+                "the Neural Engine can't run the encoder here ({why}): {again}"
+            ))
         }
     }
 }
 
 #[cfg(not(target_os = "macos"))]
-fn encoder(_asr: &mut pktito::Asr, _model: &pktito::Model, _path: &Path, _o: &Opts) -> Result<&'static str, String> {
+fn encoder(
+    _asr: &mut pktito::Asr,
+    _model: &pktito::Model,
+    _path: &Path,
+    _o: &Opts,
+) -> Result<&'static str, String> {
     Ok("CPU")
 }
 
@@ -578,7 +619,8 @@ fn models() -> Result<i32, String> {
             _ => "",
         };
         let in_use = using.as_deref().is_some_and(|u| {
-            model::same_file(u, &model::file_in(&dir, e)) || model::same_file(u, &model::slim_in(&dir, e))
+            model::same_file(u, &model::file_in(&dir, e))
+                || model::same_file(u, &model::slim_in(&dir, e))
         }) || (using.is_none() && ne && s.model.as_deref() == Some(e.name));
         let state = if !whole && !ne {
             "not downloaded".to_string()
@@ -612,10 +654,19 @@ fn fetch(m: &str, cpu: bool) -> Result<i32, String> {
     // and its Core ML encoder, 589 MB for v2 where the whole is 624, the
     // encoder on the Neural Engine (3x the CPU's speed on an M4 Pro,
     // AliceBench); --cpu, or anywhere else, the whole model
-    let here = if cpu { model::have(&dir, e) } else { model::have_neural(&dir, e) };
-    let at = if cpu { model::file_in(&dir, e) } else { model::slim_in(&dir, e) };
+    let here = if cpu {
+        model::have(&dir, e)
+    } else {
+        model::have_neural(&dir, e)
+    };
+    let at = if cpu {
+        model::file_in(&dir, e)
+    } else {
+        model::slim_in(&dir, e)
+    };
     if !here {
-        fs::create_dir_all(&dir).map_err(|err| format!("couldn't make {}: {err}", dir.display()))?;
+        fs::create_dir_all(&dir)
+            .map_err(|err| format!("couldn't make {}: {err}", dir.display()))?;
         if cpu {
             fetch_file(&model::Wanted::model(&dir, e))?;
         } else {

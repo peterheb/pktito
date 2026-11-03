@@ -37,7 +37,9 @@ struct Drop: View {
                 .multilineTextAlignment(.center)
                 // all its lines, the list under it giving way
                 .fixedSize(horizontal: false, vertical: true)
-            PkButton(text: L("choose"), kind: .primary, large: true) { AppState.shared.pick = .media }
+            PkButton(text: L("choose"), kind: .primary, large: true) {
+                AppState.shared.pick = .media
+            }
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 36)
@@ -74,7 +76,11 @@ struct Ready: View {
                     Drop()
                 }
                 .fixedSize(horizontal: false, vertical: true)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { zone = $0 }
+                .onGeometryChange(for: CGFloat.self) {
+                    $0.size.height
+                } action: {
+                    zone = $0
+                }
                 if listed { RecentList(scrolls: !short) }
             }
             .frame(maxWidth: 640)
@@ -116,7 +122,9 @@ struct Side: View {
                     PkButton(text: L("choose"), stretch: true) { AppState.shared.pick = .media }
                         .disabled(t.running)
                 }
-                if !Recents.shared.items.isEmpty || (open && !Recents.shared.items.contains { $0.id == t.id }) {
+                if !Recents.shared.items.isEmpty
+                    || (open && !Recents.shared.items.contains { $0.id == t.id })
+                {
                     RecentList(scrolls: true, open: open ? t.id : nil, side: true)
                 }
                 Spacer(minLength: 0)
@@ -204,7 +212,8 @@ private func whenDone(_ secs: UInt64) -> String {
     if cal.isDateInToday(day) { return L("date_today") }
     if cal.isDateInYesterday(day) { return L("date_yesterday") }
     let f = DateFormatter()
-    f.setLocalizedDateFormatFromTemplate(cal.isDate(day, equalTo: Date(), toGranularity: .year) ? "MMMd" : "yMMMd")
+    f.setLocalizedDateFormatFromTemplate(
+        cal.isDate(day, equalTo: Date(), toGranularity: .year) ? "MMMd" : "yMMMd")
     return f.string(from: day)
 }
 
@@ -232,8 +241,10 @@ private struct RecentRow: View {
                     PkIcon.file.frame(width: 16, height: 16)
                     Text(r.name).font(PkType.ui.font(14)).lineLimit(1).truncationMode(.middle)
                         .frame(minWidth: nameFloor, maxWidth: .infinity, alignment: .leading)
-                    Text(length).font(PkType.stamp.font(13)).monospacedDigit().foregroundStyle(Pk.inkMuted)
-                    Text(date).pk(PkType.small).foregroundStyle(Pk.inkMuted).frame(minWidth: 72, alignment: .trailing)
+                    Text(length).font(PkType.stamp.font(13)).monospacedDigit().foregroundStyle(
+                        Pk.inkMuted)
+                    Text(date).pk(PkType.small).foregroundStyle(Pk.inkMuted).frame(
+                        minWidth: 72, alignment: .trailing)
                 }
                 HStack(spacing: 10) {
                     PkIcon.file.frame(width: 16, height: 16)
@@ -252,13 +263,18 @@ private struct RecentRow: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .frame(minHeight: 48)
-            .background(current ? Pk.surface : Color.clear, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
+            .background(
+                current ? Pk.surface : Color.clear,
+                in: RoundedRectangle(cornerRadius: Radius.radiusUi)
+            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(current ? .isSelected : [])
         .contextMenu {
-            Button(role: .destructive) { forget() } label: {
+            Button(role: .destructive) {
+                forget()
+            } label: {
                 Text(L("recent_remove_item"))
                 Text(L("recent_remove_note"))
             }
@@ -291,7 +307,8 @@ private struct LiveRow: View {
         HStack(spacing: 10) {
             PkIcon.file.frame(width: 16, height: 16).foregroundStyle(Pk.ink)
             VStack(alignment: .leading, spacing: 0) {
-                Text(t.name).font(PkType.ui.font(14)).foregroundStyle(Pk.ink).lineLimit(1).truncationMode(.middle)
+                Text(t.name).font(PkType.ui.font(14)).foregroundStyle(Pk.ink).lineLimit(1)
+                    .truncationMode(.middle)
                 HStack(spacing: 4) {
                     if t.step == .done { PkIcon.check.frame(width: 14, height: 14) }
                     Text(status).pk(PkType.small).lineLimit(1)

@@ -22,10 +22,14 @@ enum Continued {
     /// ends an app that registers an identifier again.
     static func begin(id: String, name: String) {
         guard #available(iOS 26, *),
-              BGTaskScheduler.shared.register(forTaskWithIdentifier: prefix + id, using: .main, launchHandler: { t in
-                  MainActor.assumeIsolated { started(t) }
-              }) else { return }
-        let r = BGContinuedProcessingTaskRequest(identifier: prefix + id, title: name, subtitle: L("status_reading"))
+            BGTaskScheduler.shared.register(
+                forTaskWithIdentifier: prefix + id, using: .main,
+                launchHandler: { t in
+                    MainActor.assumeIsolated { started(t) }
+                })
+        else { return }
+        let r = BGContinuedProcessingTaskRequest(
+            identifier: prefix + id, title: name, subtitle: L("status_reading"))
         // now or not at all: the transcription runs anyway while the app is on the screen
         r.strategy = .fail
         // the Simulator has no scheduler, and says so here

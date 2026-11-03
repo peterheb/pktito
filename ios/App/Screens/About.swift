@@ -28,7 +28,9 @@ struct About: View {
             let wide = g.size.width >= 880
             // the credits beside their names while there is room for both,
             // under them where the widest name doesn't fit its column
-            let words = Credits(twoColumns: (stacked || wide) && Credit<EmptyView>.namesFit(type)) { sheet = $0 }
+            let words = Credits(twoColumns: (stacked || wide) && Credit<EmptyView>.namesFit(type)) {
+                sheet = $0
+            }
             ZStack(alignment: .topLeading) {
                 if stacked {
                     // a phone scrolls the two together where the words fill it
@@ -37,10 +39,17 @@ struct About: View {
                             Stage().frame(height: max(g.size.height - tall, 160))
                             words
                                 // a phone's 16, as every screen's (the layout audit, 2026-11-01)
-                                .padding(narrow ? EdgeInsets(top: 24, leading: 16, bottom: 28, trailing: 16)
-                                         : EdgeInsets(top: 28, leading: 40, bottom: 32, trailing: 40))
+                                .padding(
+                                    narrow
+                                        ? EdgeInsets(top: 24, leading: 16, bottom: 28, trailing: 16)
+                                        : EdgeInsets(top: 28, leading: 40, bottom: 32, trailing: 40)
+                                )
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { tall = $0 }
+                                .onGeometryChange(for: CGFloat.self) {
+                                    $0.size.height
+                                } action: {
+                                    tall = $0
+                                }
                         }
                     }
                     .scrollBounceBehavior(.basedOnSize)
@@ -50,37 +59,48 @@ struct About: View {
                         // in the middle while they fit, else scrolled from their top
                         ScrollView {
                             words
-                                .padding(wide ? EdgeInsets(top: 32, leading: 40, bottom: 32, trailing: 40)
-                                         : EdgeInsets(top: 28, leading: 16, bottom: 28, trailing: 16))
-                                .frame(maxWidth: .infinity, minHeight: g.size.height, alignment: .leading)
+                                .padding(
+                                    wide
+                                        ? EdgeInsets(top: 32, leading: 40, bottom: 32, trailing: 40)
+                                        : EdgeInsets(top: 28, leading: 16, bottom: 28, trailing: 16)
+                                )
+                                .frame(
+                                    maxWidth: .infinity, minHeight: g.size.height,
+                                    alignment: .leading)
                         }
                         .scrollBounceBehavior(.basedOnSize)
                     }
                 }
                 // where the work screen's way back is, past the window's
                 // controls where they are (Clearance)
-                IconButton(icon: .back, label: L("back"), kind: .ghost) { AppState.shared.about = false }
-                    .padding(.leading, 2 + clear.leading)
-                    .padding(.top, 11)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-                    .windowControls($clear)
+                IconButton(icon: .back, label: L("back"), kind: .ghost) {
+                    AppState.shared.about = false
+                }
+                .padding(.leading, 2 + clear.leading)
+                .padding(.top, 11)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .windowControls($clear)
             }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L("about_open"))
         #if DEBUG
-        // -sheet privacy or notices, with -show about (Root.debugArguments)
-        .onAppear {
-            let args = CommandLine.arguments
-            if let i = args.firstIndex(of: "-sheet"), i + 1 < args.count { sheet = Sheet(rawValue: args[i + 1]) }
-        }
+            // -sheet privacy or notices, with -show about (Root.debugArguments)
+            .onAppear {
+                let args = CommandLine.arguments
+                if let i = args.firstIndex(of: "-sheet"), i + 1 < args.count {
+                    sheet = Sheet(rawValue: args[i + 1])
+                }
+            }
         #endif
         .sheet(item: $sheet) { s in
             // on an iPad, Privacy a form's size and the licenses a page's
             // (app.css, .pk-notices: 600 wide, and 760 by 760)
             switch s {
-            case .privacy: SheetFrame(title: L("privacy_title")) { Privacy() }.presentationSizing(.form)
-            case .notices: SheetFrame(title: L("notices_title")) { Licenses() }.presentationSizing(.page)
+            case .privacy:
+                SheetFrame(title: L("privacy_title")) { Privacy() }.presentationSizing(.form)
+            case .notices:
+                SheetFrame(title: L("notices_title")) { Licenses() }.presentationSizing(.page)
             }
         }
     }
@@ -109,7 +129,9 @@ private struct Credits: View {
     @ViewBuilder private var links: some View {
         let small = PkType.small
         linked(L("about_docs"), "https://pktito.net/docs").pk(small)
-        Button { open(.privacy) } label: {
+        Button {
+            open(.privacy)
+        } label: {
             Text(L("about_privacy")).pk(small).underline().foregroundStyle(Pk.link)
         }
         .buttonStyle(.plain)
@@ -121,9 +143,12 @@ private struct Credits: View {
         VStack(alignment: .leading, spacing: 12) {
             Wordmark(size: 56).padding(.bottom, 8)
             let tagline = PkStyle(face: PkType.body.face, size: 15, lineHeight: 1.5, tracking: 0)
-            linked(markdown: L("about_tagline"), style: tagline, size: tagline.scaled(type), whole: true)
-                .pk(tagline)
-                .foregroundStyle(Pk.ink)
+            linked(
+                markdown: L("about_tagline"), style: tagline, size: tagline.scaled(type),
+                whole: true
+            )
+            .pk(tagline)
+            .foregroundStyle(Pk.ink)
             VStack(alignment: .leading, spacing: 0) {
                 // the engine's code for this processor, without its words (Android's)
                 Text(L("about_version", version, Core.backend.components(separatedBy: " (")[0]))
@@ -149,7 +174,9 @@ private struct Credits: View {
                 Credit(name: L("about_else"), twoColumns: twoColumns) {
                     VStack(alignment: .leading, spacing: 0) {
                         Text(L("about_else_list_ios")).pk(small).foregroundStyle(Pk.inkMuted)
-                        Button { open(.notices) } label: {
+                        Button {
+                            open(.notices)
+                        } label: {
                             Text(L("about_licenses")).pk(small).underline().foregroundStyle(Pk.link)
                         }
                         .buttonStyle(.plain)
@@ -174,7 +201,9 @@ private struct Credit<What: View>: View {
     let twoColumns: Bool
     @ViewBuilder let what: () -> What
 
-    static var style: PkStyle { PkStyle(face: PkType.ui.face, size: 14, lineHeight: 1.45, tracking: 0) }
+    static var style: PkStyle {
+        PkStyle(face: PkType.ui.face, size: 14, lineHeight: 1.45, tracking: 0)
+    }
 
     /// whether each credit's name fits its column on one line
     @MainActor static func namesFit(_ type: DynamicTypeSize) -> Bool {
@@ -203,9 +232,11 @@ private struct Credit<What: View>: View {
 /// The icon of a link that leaves the app, as an image a line of text can
 /// hold: 12 tall, drawn once.
 @MainActor private let externalIcon: Image = {
-    let r = ImageRenderer(content: PkIcon.external.frame(width: 12, height: 12).foregroundStyle(.black))
+    let r = ImageRenderer(
+        content: PkIcon.external.frame(width: 12, height: 12).foregroundStyle(.black))
     r.scale = 3
-    return r.uiImage.map { Image(uiImage: $0).renderingMode(.template) } ?? Image(systemName: "arrow.up.right.square")
+    return r.uiImage.map { Image(uiImage: $0).renderingMode(.template) }
+        ?? Image(systemName: "arrow.up.right.square")
 }()
 
 /// One of the desktop's *_html strings (Localizable's Markdown, from
@@ -215,15 +246,22 @@ private struct Credit<What: View>: View {
 /// its last word (app.js). Its italics in style's face slanted, as the
 /// desktop's browser and Android slant a face with no italic of its own:
 /// the apps carry none (Android's skew, 0.25).
-@MainActor func linked(markdown: String, style: PkStyle? = nil, size: CGFloat = 0, whole: Bool = false) -> Text {
-    let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-    guard var a = try? AttributedString(markdown: markdown, options: options) else { return Text(markdown) }
+@MainActor func linked(
+    markdown: String, style: PkStyle? = nil, size: CGFloat = 0, whole: Bool = false
+) -> Text {
+    let options = AttributedString.MarkdownParsingOptions(
+        interpretedSyntax: .inlineOnlyPreservingWhitespace)
+    guard var a = try? AttributedString(markdown: markdown, options: options) else {
+        return Text(markdown)
+    }
     if let style {
         let slant = CGAffineTransform(a: 1, b: 0, c: 0.25, d: 1, tx: 0, ty: 0)
         // at the size the text around it is (size), the person's text size's
         let s = size > 0 ? size : style.size
-        let slanted = Font(UIFont(descriptor: style.uiFont(s).fontDescriptor.withMatrix(slant), size: s))
-        let runs = a.runs[\.inlinePresentationIntent].filter { $0.0?.contains(.emphasized) == true }.map(\.1)
+        let slanted = Font(
+            UIFont(descriptor: style.uiFont(s).fontDescriptor.withMatrix(slant), size: s))
+        let runs = a.runs[\.inlinePresentationIntent].filter { $0.0?.contains(.emphasized) == true }
+            .map(\.1)
         for r in runs.reversed() {
             a[r].font = slanted
             // the italics one piece, which a line breaks before or after: the
@@ -232,7 +270,10 @@ private struct Credit<What: View>: View {
             if whole {
                 let kept = String(a[r].characters).replacingOccurrences(of: " ", with: "\u{00A0}")
                     .replacingOccurrences(of: "-", with: "\u{2011}")
-                a.replaceSubrange(r, with: AttributedString(kept, attributes: a[r].runs.first?.attributes ?? AttributeContainer()))
+                a.replaceSubrange(
+                    r,
+                    with: AttributedString(
+                        kept, attributes: a[r].runs.first?.attributes ?? AttributeContainer()))
             }
         }
     }
@@ -257,7 +298,8 @@ private struct Credit<What: View>: View {
     var at = a.startIndex
     for r in links {
         // the word joiner keeps the icon on its word's line
-        out = out + Text(AttributedString(a[at..<r.upperBound])) + Text(verbatim: "\u{2060}")
+        out =
+            out + Text(AttributedString(a[at..<r.upperBound])) + Text(verbatim: "\u{2060}")
             + Text(externalIcon).foregroundStyle(Pk.link).baselineOffset(-1)
         at = r.upperBound
     }
@@ -329,7 +371,8 @@ private struct Privacy: View {
     }
 
     private func para(_ t: Text) -> some View {
-        t.pk(sheetText).foregroundStyle(Pk.ink).frame(maxWidth: 560, alignment: .leading).padding(.bottom, 12)
+        t.pk(sheetText).foregroundStyle(Pk.ink).frame(maxWidth: 560, alignment: .leading).padding(
+            .bottom, 12)
     }
 
     private func h3(_ s: String) -> some View {
@@ -343,7 +386,8 @@ private struct Privacy: View {
 
     private func item(_ s: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
-            Text(verbatim: "•").pk(sheetText).frame(width: 22, alignment: .trailing).padding(.trailing, 8)
+            Text(verbatim: "•").pk(sheetText).frame(width: 22, alignment: .trailing).padding(
+                .trailing, 8)
             Text(s).pk(sheetText)
         }
         .foregroundStyle(Pk.ink)
@@ -372,20 +416,28 @@ private struct Notices {
 
     static func read() -> Notices {
         guard let url = Bundle.main.url(forResource: "notices", withExtension: "json"),
-              let d = try? Data(contentsOf: url),
-              let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any] else {
+            let d = try? Data(contentsOf: url),
+            let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any]
+        else {
             return Notices(type: [], libraries: [], texts: [:])
         }
         func rows(_ a: Any?, code: Bool?) -> [Notice] {
             (a as? [[Any]] ?? []).compactMap { r in
-                guard r.count >= 4, let n = r[0] as? String, let l = r[1] as? String, let x = r[2] as? String,
-                      let k = r[3] as? [String] else { return nil }
-                return Notice(name: n, license: l, notice: x, keys: k,
-                              code: code ?? (r.count > 4 ? r[4] as? Bool ?? false : false))
+                guard r.count >= 4, let n = r[0] as? String, let l = r[1] as? String,
+                    let x = r[2] as? String,
+                    let k = r[3] as? [String]
+                else { return nil }
+                return Notice(
+                    name: n, license: l, notice: x, keys: k,
+                    code: code ?? (r.count > 4 ? r[4] as? Bool ?? false : false))
             }
         }
-        let texts = (j["texts"] as? [String: [String: String]] ?? [:]).mapValues { ($0["title"] ?? "", $0["text"] ?? "") }
-        return Notices(type: rows(j["type"], code: false), libraries: rows(j["libraries"], code: nil), texts: texts)
+        let texts = (j["texts"] as? [String: [String: String]] ?? [:]).mapValues {
+            ($0["title"] ?? "", $0["text"] ?? "")
+        }
+        return Notices(
+            type: rows(j["type"], code: false), libraries: rows(j["libraries"], code: nil),
+            texts: texts)
     }
 }
 
@@ -403,27 +455,36 @@ private struct Licenses: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
                 Text(L("notices_intro")).pk(PkType.small).foregroundStyle(Pk.inkMuted)
-                Text(L("notices_type")).pk(h3).foregroundStyle(Pk.ink).padding(.top, 24).padding(.bottom, 6)
+                Text(L("notices_type")).pk(h3).foregroundStyle(Pk.ink).padding(.top, 24).padding(
+                    .bottom, 6)
                 ForEach(n.type) { NoticeRow(x: $0) }
-                Text(L("notices_libraries_ios")).pk(h3).foregroundStyle(Pk.ink).padding(.top, 24).padding(.bottom, 6)
+                Text(L("notices_libraries_ios")).pk(h3).foregroundStyle(Pk.ink).padding(.top, 24)
+                    .padding(.bottom, 6)
                 ForEach(n.libraries) { NoticeRow(x: $0) }
                 Text(L("notices_texts")).pk(h3).foregroundStyle(Pk.ink).padding(.top, 24)
                 ForEach(keys, id: \.self) { k in
                     let t = n.texts[k] ?? ("", "")
                     VStack(alignment: .leading, spacing: 0) {
                         Text(t.title)
-                            .pk(PkStyle(face: PkType.ui.face, size: 13, lineHeight: 1.4, tracking: 0))
+                            .pk(
+                                PkStyle(
+                                    face: PkType.ui.face, size: 13, lineHeight: 1.4, tracking: 0)
+                            )
                             .foregroundStyle(Pk.ink)
                             .padding(.top, 20)
                             .padding(.bottom, 6)
                         Text(t.text.trimmingCharacters(in: .whitespacesAndNewlines))
-                            .pk(PkStyle(face: PkType.code.face, size: 12, lineHeight: 1.5, tracking: 0))
+                            .pk(
+                                PkStyle(
+                                    face: PkType.code.face, size: 12, lineHeight: 1.5, tracking: 0)
+                            )
                             .foregroundStyle(Pk.ink)
                             .textSelection(.enabled)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 12)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Pk.surface, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
+                            .background(
+                                Pk.surface, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
                     }
                 }
             }
@@ -443,7 +504,12 @@ private struct NoticeRow: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Text(x.name)
-                    .pk(x.code ? PkStyle(face: PkType.code.face, size: 12.5, lineHeight: 1.55, tracking: 0) : PkType.small)
+                    .pk(
+                        x.code
+                            ? PkStyle(
+                                face: PkType.code.face, size: 12.5, lineHeight: 1.55, tracking: 0)
+                            : PkType.small
+                    )
                     .foregroundStyle(Pk.ink)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text(x.license).pk(PkType.small).foregroundStyle(Pk.inkMuted)

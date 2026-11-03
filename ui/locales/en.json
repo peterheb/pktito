@@ -95,7 +95,7 @@
   "manage.busy": "pktito is transcribing with this model. Stop it first.",
   "manage.cant_delete": "Couldn't delete the model",
   "manage.faster": "Faster on this Mac",
-  "manage.faster_text": "The {label} model on this Mac's Neural Engine\u00a0· {mb}\u00a0MB more",
+  "manage.faster_text": "The {label} model on this Mac's Neural Engine\u00a0· {mb}\u00a0MB\u00a0more",
   "manage.get": "Download",
 
   "choose.not_downloaded": "Not downloaded yet",

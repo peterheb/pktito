@@ -14,7 +14,8 @@ private func languageName(_ code: String) -> String {
 private func withOwn(_ e: CatalogEntry, _ about: AttributedString) -> AttributedString {
     guard e.languages.count > 1, e.languages.contains(ownLanguage) else { return about }
     let mark = "\u{1}"
-    let parts = L("models_languages_among", mark, languageName(ownLanguage)).components(separatedBy: mark)
+    let parts = L("models_languages_among", mark, languageName(ownLanguage)).components(
+        separatedBy: mark)
     guard parts.count == 2 else { return about }
     return AttributedString(parts[0]) + about + AttributedString(parts[1])
 }
@@ -87,14 +88,18 @@ private struct Screen<Top: View, Foot: View>: View {
 private struct AtLeast: SwiftUI.Layout {
     let height: CGFloat
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) -> CGSize {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ())
+        -> CGSize
+    {
         guard let v = subviews.first else { return .zero }
         let own = v.sizeThatFits(ProposedViewSize(width: proposal.width, height: nil))
         // its own width, which the frame round it centres
         return CGSize(width: own.width, height: max(own.height, height))
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) {
+    func placeSubviews(
+        in bounds: CGRect, proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()
+    ) {
         subviews.first?.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
     }
 }
@@ -117,7 +122,9 @@ private struct Intro: View {
 /// The wordmark as each screen's way to About (app.css, button.pk-wm).
 struct WordmarkButton: View {
     var body: some View {
-        Button { AppState.shared.about = true } label: {
+        Button {
+            AppState.shared.about = true
+        } label: {
             Wordmark().padding(.horizontal, 6).padding(.vertical, 4)
         }
         .buttonStyle(.plain)
@@ -137,7 +144,8 @@ private struct Choose: View {
 
     var body: some View {
         let m = Models.shared
-        let chosen = m.offers.first { $0.name == choice } ?? m.offers.first { $0.name == m.model }
+        let chosen =
+            m.offers.first { $0.name == choice } ?? m.offers.first { $0.name == m.model }
             ?? m.offers.first { $0.entry.languages.contains(ownLanguage) } ?? m.offers.first
         Screen {
             WordmarkButton()
@@ -152,11 +160,17 @@ private struct Choose: View {
         } foot: {
             if let chosen {
                 let name = label(chosen.key)
-                let go = chosen.have ? L("setup_use", name)
-                    : chosen.partial > 0 ? L("setup_download_rest", name, mb(chosen.bytes - chosen.partial))
-                    : L("setup_download", name, mb(chosen.bytes))
+                let go =
+                    chosen.have
+                    ? L("setup_use", name)
+                    : chosen.partial > 0
+                        ? L("setup_download_rest", name, mb(chosen.bytes - chosen.partial))
+                        : L("setup_download", name, mb(chosen.bytes))
                 VStack(alignment: .leading, spacing: 16) {
-                    PkButton(text: go, kind: .primary, large: true, stretch: true, leading: chosen.have ? .check : .download) {
+                    PkButton(
+                        text: go, kind: .primary, large: true, stretch: true,
+                        leading: chosen.have ? .check : .download
+                    ) {
                         if chosen.have {
                             Models.shared.use(chosen.name)
                             Transcriber.shared.prepare()
@@ -229,11 +243,13 @@ private struct Card: View {
                     .pk(PkType.small)
                     .foregroundStyle(Pk.inkMuted)
                     .tint(Pk.inkMuted)
-                    .environment(\.openURL, OpenURLAction { url in
-                        guard url == Card.languages else { return .systemAction }
-                        open.toggle()
-                        return .handled
-                    })
+                    .environment(
+                        \.openURL,
+                        OpenURLAction { url in
+                            guard url == Card.languages else { return .systemAction }
+                            open.toggle()
+                            return .handled
+                        })
                 if many && open { Languages(o: o) }
             }
             .padding(.leading, 30)
@@ -241,7 +257,9 @@ private struct Card: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
-        .background(on ? Pk.ground : Pk.surface, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
+        .background(
+            on ? Pk.ground : Pk.surface, in: RoundedRectangle(cornerRadius: Radius.radiusUi)
+        )
         .overlay {
             if on { RoundedRectangle(cornerRadius: Radius.radiusUi).stroke(Pk.ink, lineWidth: 2) }
         }
@@ -254,7 +272,9 @@ private struct Card: View {
     }
 
     private var radio: some View {
-        Radio(on: on).frame(width: 18).alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
+        Radio(on: on).frame(width: 18).alignmentGuide(.firstTextBaseline) {
+            $0[VerticalAlignment.center] + 5
+        }
     }
 
     private var title: some View {
@@ -419,7 +439,9 @@ private struct Downloading: View {
         let paused = d.step == .paused
         Screen {
             WordmarkButton()
-            Intro(title: L("download_title", name), text: L("download_from", d.name, "models.pktito.net"))
+            Intro(
+                title: L("download_title", name),
+                text: L("download_from", d.name, "models.pktito.net"))
             VStack(spacing: 12) {
                 Spread {
                     Figure(percent: percent(d.step == .checking ? 1 : done))
@@ -434,14 +456,20 @@ private struct Downloading: View {
             .padding(.top, 8)
         } foot: {
             HStack(spacing: 8) {
-                PkButton(text: L(paused ? "download_resume" : "download_pause"), kind: paused ? .primary : .plain, large: true) {
+                PkButton(
+                    text: L(paused ? "download_resume" : "download_pause"),
+                    kind: paused ? .primary : .plain, large: true
+                ) {
                     if paused { Downloads.shared.retry() } else { Downloads.shared.pause() }
                 }
                 .disabled(d.step == .checking)
-                PkButton(text: L("download_cancel"), kind: .ghost, large: true) { Downloads.shared.cancel() }
+                PkButton(text: L("download_cancel"), kind: .ghost, large: true) {
+                    Downloads.shared.cancel()
+                }
                 Spacer()
                 if waiting > 0 {
-                    Text(L("setup_waiting", count: waiting)).pk(PkType.small).foregroundStyle(Pk.inkMuted)
+                    Text(L("setup_waiting", count: waiting)).pk(PkType.small).foregroundStyle(
+                        Pk.inkMuted)
                 }
             }
         }
@@ -450,14 +478,17 @@ private struct Downloading: View {
     /// How far a download has got, in the desktop's words (app.js,
     /// updateDownload): "262 of 589 MB · 12.3 MB/s · about 30 s left".
     private func progressLine(_ d: DownloadState) -> String {
-        let got = mb(d.got), total = mb(d.total)
+        let got = mb(d.got)
+        let total = mb(d.total)
         switch d.step {
         case .checking: return L("download_checking")
         case .paused: return L("download_progress_paused", got, total)
         default:
             if d.speed > 0 {
-                return L("download_progress_speed", got, total, String(format: "%.1f", locale: Locale.current, d.speed / 1e6),
-                         timeLeft(Double(d.total - d.got) / d.speed))
+                return L(
+                    "download_progress_speed", got, total,
+                    String(format: "%.1f", locale: Locale.current, d.speed / 1e6),
+                    timeLeft(Double(d.total - d.got) / d.speed))
             }
             return L("download_progress", got, total)
         }
@@ -481,8 +512,12 @@ private struct Failed: View {
                 HStack {
                     HStack(spacing: 6) {
                         PkIcon.alert.frame(width: 16, height: 16)
-                        Text(d.got > 0 ? L("download_stopped_at", mb(d.got), mb(d.total)) : L("download_nothing_yet"))
-                            .pk(PkType.small)
+                        Text(
+                            d.got > 0
+                                ? L("download_stopped_at", mb(d.got), mb(d.total))
+                                : L("download_nothing_yet")
+                        )
+                        .pk(PkType.small)
                     }
                     .foregroundStyle(Pk.err)
                     Spacer()
@@ -493,9 +528,12 @@ private struct Failed: View {
             }
             if let detail = d.problem?.detail, !detail.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    Button { open.toggle() } label: {
+                    Button {
+                        open.toggle()
+                    } label: {
                         HStack(spacing: 6) {
-                            PkIcon.down.frame(width: 16, height: 16).rotationEffect(.degrees(open ? 0 : -90))
+                            PkIcon.down.frame(width: 16, height: 16).rotationEffect(
+                                .degrees(open ? 0 : -90))
                             Text(L("download_details")).pk(PkType.ui)
                         }
                         .foregroundStyle(Pk.ink)
@@ -522,12 +560,17 @@ private struct Failed: View {
     }
 
     @ViewBuilder private var buttons: some View {
-        PkButton(text: L(d.trying ? "download_trying" : "download_try_again"), kind: .primary, large: true) {
+        PkButton(
+            text: L(d.trying ? "download_trying" : "download_try_again"), kind: .primary,
+            large: true
+        ) {
             Downloads.shared.retry()
         }
         .disabled(d.trying)
         PkButton(text: L("download_use_file"), large: true) { AppState.shared.pick = .model }
-        PkButton(text: L("download_cancel"), kind: .ghost, large: true) { Downloads.shared.cancel() }
+        PkButton(text: L("download_cancel"), kind: .ghost, large: true) {
+            Downloads.shared.cancel()
+        }
     }
 }
 
@@ -544,18 +587,25 @@ private struct Copying: View {
                 Spread {
                     Figure(percent: percent(done))
                 } b: {
-                    Text(c.checking ? L("download_checking")
-                         : c.total > 0 ? L("download_progress", mb(c.got), mb(c.total)) : L("setup_size", mb(c.got)))
-                        .font(PkType.stamp.font(13))
-                        .foregroundStyle(Pk.inkMuted)
-                        .padding(.bottom, 4)
+                    Text(
+                        c.checking
+                            ? L("download_checking")
+                            : c.total > 0
+                                ? L("download_progress", mb(c.got), mb(c.total))
+                                : L("setup_size", mb(c.got))
+                    )
+                    .font(PkType.stamp.font(13))
+                    .foregroundStyle(Pk.inkMuted)
+                    .padding(.bottom, 4)
                 }
                 Bar(done: done, stopped: false, label: L("copy_title"))
             }
             .padding(.top, 8)
         } foot: {
-            PkButton(text: L("download_cancel"), kind: .ghost, large: true) { Models.shared.stopCopying() }
-                .disabled(c.checking)
+            PkButton(text: L("download_cancel"), kind: .ghost, large: true) {
+                Models.shared.stopCopying()
+            }
+            .disabled(c.checking)
         }
     }
 }
@@ -583,7 +633,10 @@ private struct Preparing: View {
 struct ModelMenu: View {
     var body: some View {
         let m = Models.shared
-        let title = m.own?.lastPathComponent ?? m.offers.first { $0.name == m.model }.map { L("models_named", label($0.key)) } ?? ""
+        let title =
+            m.own?.lastPathComponent ?? m.offers.first { $0.name == m.model }.map {
+                L("models_named", label($0.key))
+            } ?? ""
         Menu {
             ForEach(m.offers) { o in
                 let on = m.own == nil && o.name == m.model
@@ -602,8 +655,10 @@ struct ModelMenu: View {
                     } else {
                         Text(label(o.key))
                     }
-                    Text(String(withOwn(o.entry, AttributedString(about(o.key))).characters) + dot
-                         + (o.have ? L("models_downloaded") : L("models_download_size", mb(o.bytes))))
+                    Text(
+                        String(withOwn(o.entry, AttributedString(about(o.key))).characters) + dot
+                            + (o.have
+                                ? L("models_downloaded") : L("models_download_size", mb(o.bytes))))
                 }
             }
             if let own = m.own {

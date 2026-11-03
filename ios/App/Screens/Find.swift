@@ -188,9 +188,11 @@ struct FindField: View {
                     finder.clear()
                     typing = false
                 } label: {
-                    PkIcon.x.frame(width: 16, height: 16).foregroundStyle(Pk.inkMuted).frame(width: 32, height: 32)
-                        // 44 to a finger, past the field's edges (HIG's least)
-                        .contentShape(Rectangle().inset(by: -6))
+                    PkIcon.x.frame(width: 16, height: 16).foregroundStyle(Pk.inkMuted).frame(
+                        width: 32, height: 32
+                    )
+                    // 44 to a finger, past the field's edges (HIG's least)
+                    .contentShape(Rectangle().inset(by: -6))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(L("find_close"))
@@ -201,13 +203,17 @@ struct FindField: View {
         .frame(minHeight: 40)
         .background(Pk.sunk, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
         .overlay {
-            if typing { RoundedRectangle(cornerRadius: Radius.radiusUi).stroke(Pk.focus, lineWidth: 2) }
+            if typing {
+                RoundedRectangle(cornerRadius: Radius.radiusUi).stroke(Pk.focus, lineWidth: 2)
+            }
         }
         .onAppear { if finder.open && finder.query.isEmpty { typing = true } }
     }
 
     private func step(_ icon: PkIcon, _ label: String, _ d: Int) -> some View {
-        Button { finder.step(hits, d, seek: seek) } label: {
+        Button {
+            finder.step(hits, d, seek: seek)
+        } label: {
             icon.frame(width: 16, height: 16).foregroundStyle(Pk.ink).frame(width: 28, height: 32)
                 // 40 by 44 to a finger, its drawing as narrow as the field
                 // needs it (the layout audit: 28 by 32 was all there was)

@@ -52,7 +52,9 @@ final class Player {
         // its frames, as a FLAC without a seek table: in AliceBench's 12
         // chapters as one FLAC (2:58:51) a read at 1 h was 86.5 s late and
         // one at 2.5 h 219.6 s early, and exact with it (the Mac, 2026-11-01)
-        let item = AVPlayerItem(asset: AVURLAsset(url: url, options: [AVURLAssetPreferPreciseDurationAndTimingKey: true]))
+        let item = AVPlayerItem(
+            asset: AVURLAsset(
+                url: url, options: [AVURLAssetPreferPreciseDurationAndTimingKey: true]))
         item.audioTimePitchAlgorithm = .timeDomain
         let p = AVPlayer(playerItem: item)
         p.volume = Float(muted ? 0 : volume)
@@ -71,13 +73,17 @@ final class Player {
                 }
             }
         }
-        observer = p.addPeriodicTimeObserver(forInterval: CMTime(value: 1, timescale: 30), queue: .main) { [weak self] t in
+        observer = p.addPeriodicTimeObserver(
+            forInterval: CMTime(value: 1, timescale: 30), queue: .main
+        ) { [weak self] t in
             MainActor.assumeIsolated {
                 guard let self, self.seeking == 0 else { return }
                 self.position = t.seconds.isFinite ? t.seconds : 0
             }
         }
-        ended = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
+        ended = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main
+        ) { [weak self] _ in
             MainActor.assumeIsolated { self?.playing = false }
         }
     }
@@ -125,7 +131,10 @@ final class Player {
         seeking += 1
         let key = loaded
         // done, or given up for the next seek: each is called once
-        player.seek(to: CMTime(seconds: t, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+        player.seek(
+            to: CMTime(seconds: t, preferredTimescale: 600), toleranceBefore: .zero,
+            toleranceAfter: .zero
+        ) { [weak self] _ in
             Task { @MainActor in
                 guard let self, self.loaded == key, self.seeking > 0 else { return }
                 self.seeking -= 1
