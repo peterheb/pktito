@@ -1997,7 +1997,7 @@ function bodyHtml(s, i) {
     const piece = esc(text.slice(a, b));
     out +=
       hi < found.length && found[hi][0] <= a
-        ? `<mark class="pk-hit" data-hit="${i}.${hi}"${found[hi][0] === a ? ` data-at="${a}"` : ""}>${piece}</mark>`
+        ? `<mark class="pk-hit" data-hit="${i}.${hi}"${found[hi][0] === a ? ` data-at="${a}"` : ""}${found[hi][1] === b ? " data-end" : ""}>${piece}</mark>`
         : piece;
   }
   return out + (open >= 0 ? "</span>" : "");
@@ -2818,6 +2818,13 @@ function goHit(k, scroll = true) {
   findCount();
 }
 
+/* the ticks' lane's width, kept as it changes: read after the count is
+   written, it laid the window out again inside each key typed */
+let laneWidth = 0;
+new ResizeObserver(([e]) => {
+  laneWidth = e.contentRect.width;
+}).observe($("ticks"));
+
 /* the count, previous and next, and the ticks */
 function findCount() {
   $("find-n").textContent = query
@@ -2830,7 +2837,7 @@ function findCount() {
   // one tick a pixel of the lane, and the current one: "l" in a 3-hour
   // book has 4,872 matches, and a tick each was 4,872 elements a key typed;
   // a click takes the nearest match by its time, not by its tick
-  const lane = $("ticks").clientWidth || 2000,
+  const lane = laneWidth || 2000,
     taken = new Set();
   $("ticks").innerHTML = dur
     ? hitTimes

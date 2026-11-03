@@ -1073,9 +1073,14 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   overflow-y: auto;
   margin: var(--space-3) 0;
   padding: 0 24px;
-  /* a block, not a flex column: as a column, any change in the header (a
-     search's count) laid all of a 3-hour book's 1,704 rows out again, 9 ms
-     each time in Chromium, against 0.8 as a block (2026-11-03) */
+  /* Its size is the column's (flex: 1), never its rows': contained, a
+     change in the header (a search's count) no longer lays all of a 3-hour
+     book's 1,704 rows out again. In WebView2 on rtxspark that was 44-127 ms
+     each time, two or three times a key typed in Find; contained, 3 ms, and
+     a key to its paint 216-912 ms -> 16-72 (pktito-9950x, 2026-11-03). A
+     block, not a flex column, for the same reason: 9 ms -> 0.8 in Chromium
+     headless. */
+  contain: strict;
 }
 .pk-msg {
   margin: 16px 24px 0;
@@ -2122,19 +2127,41 @@ html:not([data-chrome="win"]) .pk-head > #stop {
    2026-10-22). */
 .pk-hit {
   --hl: color-mix(in srgb, var(--plume) 45%, var(--ground));
+  --ring: 0 0 0 2px var(--hl);
   background: var(--hl);
   color: inherit;
   border-radius: 3px;
-  box-shadow: 0 0 0 2px var(--hl);
+  box-shadow: var(--ring);
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
+/* A match across words is a mark a piece (a word, the space after it). A
+   piece after the first draws its ring above, below and to the right only,
+   so that it doesn't cover the end of the letter before it, which it
+   paints over ("MOCK TURTLE"'s K, on rtxspark, 2026-11-03); clipped at its
+   left edge instead, WebKit drew a seam across the bar of ink. Only the
+   match's own ends are rounded. */
+.pk-hit:not([data-at]) {
+  --ring:
+    0 -2px 0 var(--hl), 0 2px 0 var(--hl), 2px 0 0 var(--hl),
+    2px -2px 0 var(--hl), 2px 2px 0 var(--hl);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.pk-hit:not([data-end]) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
 .pk-hit.is-on {
   --hl: var(--plume);
+  --bar: 0 4px 0 0 var(--ink);
   color: var(--on-plume);
-  box-shadow:
-    0 0 0 2px var(--hl),
-    0 4px 0 0 var(--ink);
+  box-shadow: var(--ring), var(--bar);
+}
+/* the bar 2 px past each piece but the last, so that pieces of fractional
+   widths meet without a seam */
+.pk-hit.is-on:not([data-end]) {
+  --bar: 2px 4px 0 0 var(--ink);
 }
 /* each row's time above its text up to 619 px of the work (a window's
    width in one column): beside it, the times' column left 51 characters a

@@ -25,11 +25,16 @@ check=0
 bad=0
 skip() { echo "fmt: $1 skipped: $2" >&2; }
 
-# JavaScript, CSS, HTML, JSON, Markdown
-if command -v npx >/dev/null; then
-  if [ $check = 1 ]; then npx --yes $PRETTIER --check --log-level warn . || bad=1
-  else npx --yes $PRETTIER --write --log-level warn .; fi
-else skip prettier "no npx (Node.js)"; fi
+# JavaScript, CSS, HTML, JSON, Markdown: the files git has, as for the
+# others, less .prettierignore's (build outputs, Gradle's reports among
+# them, aren't git's)
+web=$(git ls-files '*.js' '*.mjs' '*.css' '*.html' '*.json' '*.md')
+if [ -n "$web" ]; then
+  if command -v npx >/dev/null; then
+    if [ $check = 1 ]; then npx --yes $PRETTIER --check --log-level warn $web || bad=1
+    else npx --yes $PRETTIER --write --log-level warn $web; fi
+  else skip prettier "no npx (Node.js)"; fi
+fi
 
 # Rust
 if command -v cargo >/dev/null; then
@@ -75,7 +80,12 @@ if [ -n "$kt" ]; then
         mv "$KTFMT_JAR.part" "$KTFMT_JAR"
     fi
     if [ $check = 1 ]; then "$java" -jar "$KTFMT_JAR" --kotlinlang-style --dry-run --set-exit-if-changed $kt || bad=1
-    else "$java" -jar "$KTFMT_JAR" --kotlinlang-style --quiet $kt; fi
+    else
+      # twice: ktfmt 0.64 settles some forms (runCatching { ... }.getOrNull())
+      # only on a second pass, and --check refuses the first's
+      "$java" -jar "$KTFMT_JAR" --kotlinlang-style --quiet $kt
+      "$java" -jar "$KTFMT_JAR" --kotlinlang-style --quiet $kt
+    fi
   else skip Kotlin "no java"; fi
 fi
 

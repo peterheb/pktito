@@ -15,3 +15,5 @@ ios/App/Assets.xcassets/
 ios/App/notices.json
 # android/notices.py's
 android/app/src/main/assets/notices.json
+# Gradle's outputs
+**/build/
