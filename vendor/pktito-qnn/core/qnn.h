@@ -50,4 +50,13 @@ uint32_t pk_qnn_encode(pk_qnn *e, const float *feat, uint32_t T0, float *x);
  * (pk_qnn_chip): 0, or -1 where QNN finds no NPU, and why in err */
 int pk_qnn_target(char *out, size_t n, char *err, size_t errlen);
 
+/* Whether a compiled graph's file is one pk_qnn_open hands to QNN, for
+ * model m at frames frames (0 for 3072) on the NPU chip, in
+ * PKTITO_QNN_TARGET's words (NULL or "" for any): the checks of its
+ * header (docs/MEMORY_SAFETY.md), made of its first n bytes, at head, in a
+ * file of size bytes, with none of QNN's libraries. 0, or -1 and why in
+ * err. For tests/pkfcheck.c. */
+int pk_qnn_check(const pk_model *m, uint32_t frames, const char *chip, const void *head, size_t n,
+                 uint64_t size, char *err, size_t errlen);
+
 #endif
