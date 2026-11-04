@@ -14,31 +14,27 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 const USAGE: &str = "\
-usage: pktito-cli [options] FILE...    transcribe audio or video: one file's
-                                      transcript on the terminal, several's
-                                      each beside its file
-       pktito-cli models               the models, which are here, which is in use
-       pktito-cli download MODEL       a model, for the app and pktito-cli both:
-                                      on a Mac its edition for the Neural
-                                      Engine, with --cpu the one for any CPU
-       pktito-cli bench PATH...        how fast this computer transcribes: each
-                                      file, or a folder's audio and video,
-                                      timed, and the whole as times real time
-  -m, --model MODEL    a model's name (pktito-cli models lists them) or a .pkf
-                       file (default: the one the app uses)
-  -f, --format F       txt, md, srt, vtt or json (default txt); or --txt, --md,
-                       --srt, --vtt, --json
-      --times          each sentence's time before it, in txt and md
-  -o, --output PATH    one file's transcript to PATH; several's into the
-                       folder PATH
-  -t, --threads N      threads (default: one a core)
-      --cpu            the encoder on the CPU, on a Mac whose model has its
-                       Neural Engine encoder (which it uses otherwise)
-  -q, --quiet          no progress
-bench takes -m, -t, -q, --cpu, --json (its results as JSON, each file's with a
-SHA-256 of its transcript) and --ref DIR: each file's transcript against
-DIR/NAME.txt, its reference (NAME the file's without its extension), as
-the same or by its word error rate and its character edits.
+usage: pktito-cli [options] FILE...        transcribe
+       pktito-cli bench [options] PATH...  time a transcription
+       pktito-cli models                   list the models, here and in use
+       pktito-cli download [--cpu] MODEL   download a model
+FILE is audio or video; one goes to stdout, several each beside its file.
+PATH is a file or a folder of them.
+
+  -m, --model MODEL   name (see pktito-cli models) or .pkf file
+                      (default: the app's)
+  -f, --format F      txt, md, srt, vtt or json (txt); or --txt, --md, ...
+      --times         each sentence's start time, in txt and md
+  -o, --output PATH   write to PATH; with several files, into folder PATH
+  -t, --threads N     threads (default: one per core)
+      --cpu           on a Mac, the CPU instead of the Neural Engine; with
+                      download, the model for any CPU
+  -q, --quiet         no progress
+
+bench takes -m, -t, -q, --cpu and:
+      --json          results as JSON, with each transcript's SHA-256
+      --ref DIR       score each against DIR/NAME.txt (word error rate and
+                      character edits)
 ";
 
 fn main() {
@@ -88,7 +84,7 @@ fn run(args: &[String]) -> Result<i32, String> {
             let name = args[1..]
                 .iter()
                 .find(|a| *a != "--cpu")
-                .ok_or("download needs a model name (pktito-cli models shows the list)")?;
+                .ok_or("download needs a model name (see pktito-cli models)")?;
             return fetch(name, cpu || !cfg!(target_os = "macos"));
         }
         _ => {}
