@@ -21,7 +21,12 @@ use serde::{Deserialize, Serialize};
 /// a pause of 0.3 s or more (47%), with 0.17 lines under 5 s beside a break
 /// an hour; the 20 s cut broke 11.4 an hour, 79% at neither. Cutting at
 /// 20 s / 6-14, at 40 s / 15-25, at 250 characters, at pauses alone, or into
-/// even parts each measured worse on one of those or on line length.
+/// even parts each measured worse on one of those or on line length. With
+/// v3 on 10.3 h of LibriVox in German, French, Italian, Dutch, Polish,
+/// Portuguese and Spanish (the app's own lines, 2026-11-04): 16.4 breaks an
+/// hour, most in Cervantes's Spanish and in Dutch, where 13% and 9% of
+/// sentences run past 30 s; 1% at neither mark nor pause, against the 20 s
+/// cut's 78% (33.1 an hour).
 const SENTENCE_MAX_S: f64 = 30.0;
 const PART_MIN_S: f64 = 10.0;
 const PART_MAX_S: f64 = 20.0;
