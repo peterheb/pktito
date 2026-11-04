@@ -111,7 +111,9 @@ fun startsWord(text: String, j: Int, q: String) =
 private fun wordChar(c: Char) =
     c.isLetterOrDigit() ||
         Character.getType(c).let {
-            it == Character.NON_SPACING_MARK.toInt() ||
+            it == Character.LETTER_NUMBER.toInt() ||
+                it == Character.OTHER_NUMBER.toInt() ||
+                it == Character.NON_SPACING_MARK.toInt() ||
                 it == Character.COMBINING_SPACING_MARK.toInt() ||
                 it == Character.ENCLOSING_MARK.toInt()
         }

@@ -52,8 +52,14 @@ func startsWord(_ text: [Character], _ j: Int, _ q: [Character]) -> Bool {
 
 private func wordChar(_ c: Character) -> Bool {
     c.unicodeScalars.contains {
-        $0.properties.isAlphabetic || $0.properties.numericType != nil
-            || $0.properties.generalCategory == .nonspacingMark
+        switch $0.properties.generalCategory {
+        case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .modifierLetter, .otherLetter,
+            .decimalNumber, .letterNumber, .otherNumber,
+            .nonspacingMark, .spacingMark, .enclosingMark:
+            return true
+        default:
+            return false
+        }
     }
 }
 
