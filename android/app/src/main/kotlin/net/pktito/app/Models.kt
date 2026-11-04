@@ -69,8 +69,8 @@ class Offer(
     /**
      * The NPU's edition for a whole model here (Manage models, Faster): the bytes of its files not
      * here yet, the slim one and the graph, which take the whole file's place once the NPU has run
-     * the graph through a transcription (Transcriber.ran): 728 MB of English on the Googlebook,
-     * where the whole file and the graph kept 1341. 0 where none is offered.
+     * the graph through a transcription (Transcriber.ran): 727 MB of English on the Googlebook,
+     * where the whole file and the graph keep 1339. 0 where none is offered.
      */
     val faster: Long,
 ) {

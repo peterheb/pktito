@@ -136,11 +136,24 @@ static int fail(char *err, size_t errlen, const char *what, Qnn_ErrorHandle_t e)
  * of each run, an event a line on stderr - "qnn-prof", its depth among the
  * events, its type, unit (1 us, 3 cycles), value and name - the ops named
  * for their block and type (op_name). (The HTP's own linting level crashed
- * the NPU's process on this graph: tools/qnn/CLIMB.md, 2026-11-02.) */
-static Qnn_ProfileHandle_t profile(const pk_qnn *e) {
+ * the NPU's process on this graph: tools/qnn/CLIMB.md, 2026-11-02.)
+ * PKTITO_QNN_PROFILE=optrace: the same, and the compile writes the graph's
+ * schematic, encoder_schematic.bin in the working directory, from which
+ * Qualcomm's qnn-profile-viewer lays out a chunk's ops in time, the chunk
+ * run with qnn-net-run's optrace (tools/qnn/CLIMB.md, 2026-11-03) */
+static Qnn_ProfileHandle_t profile(const pk_qnn *e, int compile) {
+    const char *v = getenv("PKTITO_QNN_PROFILE");
     Qnn_ProfileHandle_t p = NULL;
-    if (getenv("PKTITO_QNN_PROFILE") && e->q.profileCreate(e->backend, QNN_PROFILE_LEVEL_DETAILED, &p))
+    if (v && e->q.profileCreate(e->backend, QNN_PROFILE_LEVEL_DETAILED, &p))
         p = NULL;
+    if (p && compile && !strcmp(v, "optrace")) {
+        QnnProfile_Config_t c = QNN_PROFILE_CONFIG_INIT;
+        c.option = QNN_PROFILE_CONFIG_OPTION_ENABLE_OPTRACE;
+        c.enableOptrace = 1;
+        const QnnProfile_Config_t *cl[] = { &c, NULL };
+        if (!e->q.profileSetConfig || e->q.profileSetConfig(p, cl))
+            fprintf(stderr, "qnn: this QNN writes no schematic\n");
+    }
     return p;
 }
 
@@ -391,6 +404,16 @@ static void node(build *b, const char *type, const val *in, uint32_t nin, const 
 
 /* ------------------------------------------------------------- the ops --- */
 
+/* Each op adds its node as it is called, and it and its tensors are named
+ * by how many came before (build's count): the graph is the order of the
+ * calls, and QNN compiles another order to another binary. C leaves the
+ * order of a call's arguments, and of an initializer's elements, to the
+ * compiler - gcc 15 evaluated make_graph's arguments last first, clang 21
+ * first first - so no call here takes more than one argument that adds to
+ * the graph: the others are made before it, in the order the code reads,
+ * and a gcc build and a clang build compile the same binary
+ * (tools/qnn/CLIMB.md, 2026-11-03). */
+
 /* x [..][in] W^T, plus bias where there is one: [..][rows] */
 static val fc(build *b, val x, const pk_q8 *w, uint32_t r0, uint32_t rows, float k, const val *bias) {
     val in[3] = { x, weights(b, w, r0, rows, k) };
@@ -514,7 +537,8 @@ static val softmax(build *b, val x) {
  * a tensor of type (the graph's output, for the last) */
 static val norm(build *b, val x, const float *w, const float *bb, float k, float eps, Qnn_TensorType_t type) {
     const uint32_t D = x.d[x.rank - 1], axis = x.rank - 1, one = 1;
-    val in[3] = { x, scaled(b, w, D, k), scaled(b, bb, D, k) };
+    val gamma = scaled(b, w, D, k), beta = scaled(b, bb, D, k);
+    val in[3] = { x, gamma, beta };
     val y = tensor(b, type, QNN_DATATYPE_FLOAT_32, x.rank, x.d, NULL, 0);
     Qnn_Param_t p[2] = { scalar_f32(QNN_OP_LAYER_NORM_PARAM_EPSILON, eps),
                          ints(b, QNN_OP_LAYER_NORM_PARAM_AXES, 1, &one, &axis) };
@@ -530,10 +554,10 @@ static val conv(build *b, val x, val filt, val bias, uint32_t s, uint32_t ph, ui
     const uint32_t d[4] = { 1, (x.d[1] + 2 * ph - kh) / s + 1, (x.d[2] + 2 * pw - kw) / s + 1, filt.d[3] };
     val y = native(b, 4, d);
     const uint32_t two = 2, two2[2] = { 2, 2 }, stride[2] = { s, s }, pad[4] = { ph, ph, pw, pw };
-    Qnn_Param_t p[2] = { ints(b, depthwise ? QNN_OP_DEPTH_WISE_CONV_2D_PARAM_STRIDE : QNN_OP_CONV_2D_PARAM_STRIDE,
-                              1, &two, stride),
-                         ints(b, depthwise ? QNN_OP_DEPTH_WISE_CONV_2D_PARAM_PAD_AMOUNT
-                                           : QNN_OP_CONV_2D_PARAM_PAD_AMOUNT, 2, two2, pad) };
+    Qnn_Param_t p[2];
+    p[0] = ints(b, depthwise ? QNN_OP_DEPTH_WISE_CONV_2D_PARAM_STRIDE : QNN_OP_CONV_2D_PARAM_STRIDE, 1, &two, stride);
+    p[1] = ints(b, depthwise ? QNN_OP_DEPTH_WISE_CONV_2D_PARAM_PAD_AMOUNT : QNN_OP_CONV_2D_PARAM_PAD_AMOUNT, 2, two2,
+                pad);
     val in[3] = { x, filt, bias };
     node(b, depthwise ? QNN_OP_DEPTH_WISE_CONV_2D : QNN_OP_CONV_2D, in, 3, &y, p, 2);
     return y;
@@ -549,6 +573,13 @@ static val taps3(build *b, const float *w, uint32_t C) {
                 f[(size_t)k * C + c] = w[(size_t)c * 9 + k];
     const uint32_t d[4] = { 3, 3, 1, C };
     return constant(b, 4, d, f ? f : w);
+}
+
+/* the subsampling's 3x3 convolution of C channels, stride 2, padded 1:
+ * reference's taps w and bias wb */
+static val conv3(build *b, val x, const float *w, const float *wb, uint32_t C, int depthwise) {
+    val filt = taps3(b, w, C), bias = constant(b, 1, &C, wb);
+    return conv(b, x, filt, bias, 2, 1, 1, depthwise);
 }
 
 /* ------------------------------------------------------------- the graph --- */
@@ -604,7 +635,8 @@ static val layer(build *b, const pk_model *m, const common *c, const pk_layer *L
         /* head h's columns of q + v, turned (two products with W_pos as
          * one, then the tables) and multiplied by pe */
         const uint32_t lo[2] = { 0, h * dk }, hi[2] = { T, (h + 1) * dk }, d3[3] = { 1, T, T };
-        val u = fc_const(b, slice(b, qv, lo, hi), pos_turn(b, &L->pos, h, dk));     /* [T][2D] */
+        val qh = slice(b, qv, lo, hi), turn = pos_turn(b, &L->pos, h, dk);
+        val u = fc_const(b, qh, turn);                                              /* [T][2D] */
         bdh[h] = reshape(b, fc_const(b, mul(b, u, c->cs), c->pe), 3, d3);           /* [1][T][T] */
     }
     val bd = concat(b, bdh, H, 0);                                 /* 1/sqrt(dk) in pe */
@@ -613,17 +645,25 @@ static val layer(build *b, const pk_model *m, const common *c, const pk_layer *L
     val o = unheads(b, matmul(b, p, Vh, 0));                       /* [T][D] */
     x = add(b, x, fc(b, o, &L->o, 0, D, c->s, NULL));
 
-    /* convolution module: GLU, the padding zeroed, depthwise K, SiLU */
+    /* convolution module: GLU, the padding zeroed, depthwise K, SiLU. The
+     * depthwise runs along the width, time there, [1][1][T][D]: along the
+     * height, [1][T][1][D], a width of 1, the SM8650 took 1.96 M cycles a
+     * layer for the SiLU after it to 0.41 this way, 0.77 for the depthwise
+     * to 0.60 and 0.25 for the reshape into it to none, and a chunk 5.5 ms
+     * longer, the SM8750's 7.0 and the X1E80100's 6.4 (tools/qnn/CLIMB.md,
+     * 2026-11-03, at compile()'s P point) */
     b->block = "conv";
     n = norm(b, x, L->conv_nw, L->conv_nb, 1, c->eps, QNN_TENSOR_TYPE_NATIVE);
-    val g = mul(b, mul(b, fc(b, n, &L->pw1, 0, D, 1, NULL), sigmoid(b, fc(b, n, &L->pw1, D, D, 1, NULL))), c->m3);
-    const uint32_t d4[4] = { 1, T, 1, D }, d2[2] = { T, D }, fd[4] = { K, 1, 1, D };
+    val lin = fc(b, n, &L->pw1, 0, D, 1, NULL), gate = sigmoid(b, fc(b, n, &L->pw1, D, D, 1, NULL));
+    val g = mul(b, mul(b, lin, gate), c->m3);
+    const uint32_t d4[4] = { 1, 1, T, D }, d2[2] = { T, D }, fd[4] = { 1, K, 1, D };
     float *f = keep(b, (size_t)K * D * sizeof *f);
     if (f)
         for (uint32_t ch = 0; ch < D; ch++)
             for (uint32_t j = 0; j < K; j++)
                 f[(size_t)j * D + ch] = L->dw[(size_t)ch * K + j];
-    g = conv(b, reshape(b, g, 4, d4), constant(b, 4, fd, f), constant(b, 1, &D, L->dw_b), 1, K / 2, 0, 1);
+    val g4 = reshape(b, g, 4, d4), filt = constant(b, 4, fd, f), bias = constant(b, 1, &D, L->dw_b);
+    g = conv(b, g4, filt, bias, 1, 0, K / 2, 1);
     g = reshape(b, silu(b, g), 2, d2);
     x = add(b, x, fc(b, g, &L->pw2, 0, D, c->s, NULL));
 
@@ -675,13 +715,13 @@ static int make_graph(pk_qnn *e, const pk_model *m, char *err, size_t errlen) {
     e->in[0] = mel.t, e->in[1] = m1.t, e->in[2] = m2.t, e->in[3] = c.m3.t, e->in[4] = c.kbias.t;
 
     /* subsampling: [1][time][frequency][C] at each stage */
-    val x = relu(&b, conv(&b, mel, taps3(&b, m->conv0_w, C), constant(&b, 1, &C, m->conv0_b), 2, 1, 1, 0));
+    val x = relu(&b, conv3(&b, mel, m->conv0_w, m->conv0_b, C, 0));
     x = mul(&b, x, m1);
-    x = conv(&b, x, taps3(&b, m->dw1_w, C), constant(&b, 1, &C, m->dw1_b), 2, 1, 1, 1);
+    x = conv3(&b, x, m->dw1_w, m->dw1_b, C, 1);
     val pw1_b = constant(&b, 1, &C, m->pw1_b), pw2_b = constant(&b, 1, &C, m->pw2_b);
     const uint32_t d2[4] = { 1, T2, F2, C }, d3[4] = { 1, T3, F3, C }, flat[2] = { T3, F3 * C };
     x = mul(&b, reshape(&b, relu(&b, fc(&b, x, &m->sub_pw1, 0, C, 1, &pw1_b)), 4, d2), m2);
-    x = conv(&b, x, taps3(&b, m->dw2_w, C), constant(&b, 1, &C, m->dw2_b), 2, 1, 1, 1);
+    x = conv3(&b, x, m->dw2_w, m->dw2_b, C, 1);
     x = reshape(&b, relu(&b, fc(&b, x, &m->sub_pw2, 0, C, 1, &pw2_b)), 4, d3);
     /* row t is frame t's [F3][C], sub.out's input order (encoder.c's s5).
      * The frames past the end are left as they come, not zeroed: a frame
@@ -719,7 +759,7 @@ static int make_graph(pk_qnn *e, const pk_model *m, char *err, size_t errlen) {
     if (b.status)
         rc = fail(err, errlen, b.failed, b.status);
     else {
-        Qnn_ProfileHandle_t prof = profile(e);
+        Qnn_ProfileHandle_t prof = profile(e, 1);
         Qnn_ErrorHandle_t s = e->q.graphFinalize(e->graph, prof, NULL);
         profile_done(e, prof);
         if (s)
@@ -747,10 +787,13 @@ static int make_graph(pk_qnn *e, const pk_model *m, char *err, size_t errlen) {
  * beside the key, not in it: QNN reads an older QNN's graph and not a
  * newer one's (QAIRT 2.51's HTP backend guide, its table of SDK 2.42's
  * and 2.43's), and contextCreateFromBinary says which. PK_QNN_GRAPH's
- * number changes with this header and with what make_graph writes; 1 is
- * the first the app downloads, the development's having been "pktito-qnn
- * 1" to "pktito-qnn 6". Little-endian, 616 bytes, as tools read it. */
-#define PK_QNN_GRAPH "pktito-qnn-graph 1"
+ * number changes with this header and with the graph make_graph and
+ * compile() make, so that an older one's file is made or downloaded
+ * again, not run: 2 has the depthwise along the width and P point 13
+ * (tools/qnn/CLIMB.md, 2026-11-03), 1 was the first the app downloaded,
+ * the development's having been "pktito-qnn 1" to "pktito-qnn 6".
+ * Little-endian, 616 bytes, as tools read it. */
+#define PK_QNN_GRAPH "pktito-qnn-graph 2"
 
 /* the commit the Makefile built qnn.o from, for the header's made */
 #ifndef PK_COMMIT
@@ -1093,17 +1136,29 @@ static int compile(pk_qnn *e, const pk_model *m, const char *cache, char *err, s
     last_error[0] = 0;           /* not a cache's refusal (read_cache) */
     if ((s = e->q.contextCreate(e->backend, e->device, NULL, &e->context)))
         return fail(err, errlen, "contextCreate", s);
-    /* the compiler's highest optimization, and the HTP's fp16 sigmoid of
-     * high precision (SiLU's, GLU's) */
-    QnnHtpGraph_CustomConfig_t opt = QNN_HTP_GRAPH_CUSTOM_CONFIG_INIT, sig = QNN_HTP_GRAPH_CUSTOM_CONFIG_INIT;
+    /* the compiler's highest optimization; the HTP's fp16 sigmoid of high
+     * precision (SiLU's, GLU's); and at O=3 the compiler's P point 13, one
+     * of the "pre-defined point[s] in the compiler's internal configuration
+     * space" QNN's HTP guide leaves to be measured. With it the SM8750's
+     * chunk is 94.7 ms to 134.0 without, the SM8650's 110.3 to 111.8 and the
+     * X1E80100's 172.7 to 172.2, and test.wav's numbers are the same to
+     * every digit (tools/qnn/CLIMB.md, 2026-11-03). What a P point does can
+     * change from one QNN to the next: a new QAIRT measures them again. */
+    QnnHtpGraph_CustomConfig_t opt = QNN_HTP_GRAPH_CUSTOM_CONFIG_INIT, sig = QNN_HTP_GRAPH_CUSTOM_CONFIG_INIT,
+                               pp = QNN_HTP_GRAPH_CUSTOM_CONFIG_INIT;
     opt.option = QNN_HTP_GRAPH_CONFIG_OPTION_OPTIMIZATION;
     opt.optimizationOption.type = QNN_HTP_GRAPH_OPTIMIZATION_TYPE_FINALIZE_OPTIMIZATION_FLAG;
     opt.optimizationOption.floatValue = 3;
     sig.option = QNN_HTP_GRAPH_CONFIG_OPTION_HIGH_PRECISION_SIGMOID;
     sig.highPrecisionSigmoid = true;
+    pp.option = QNN_HTP_GRAPH_CONFIG_OPTION_FINALIZE_CONFIG;
+    pp.finalizeConfig.key = "P";
+    pp.finalizeConfig.value.dataType = QNN_DATATYPE_UINT_32;
+    pp.finalizeConfig.value.uint32Value = 13;
     QnnGraph_Config_t g_opt = { .option = QNN_GRAPH_CONFIG_OPTION_CUSTOM, .customConfig = &opt };
     QnnGraph_Config_t g_sig = { .option = QNN_GRAPH_CONFIG_OPTION_CUSTOM, .customConfig = &sig };
-    const QnnGraph_Config_t *gcfg[] = { &g_opt, &g_sig, NULL };
+    QnnGraph_Config_t g_pp = { .option = QNN_GRAPH_CONFIG_OPTION_CUSTOM, .customConfig = &pp };
+    const QnnGraph_Config_t *gcfg[] = { &g_opt, &g_sig, &g_pp, NULL };
     if ((s = e->q.graphCreate(e->context, "encoder", gcfg, &e->graph)))
         return fail(err, errlen, "graphCreate", s);
     if (make_graph(e, m, err, errlen))
@@ -1227,7 +1282,7 @@ uint32_t pk_qnn_encode(pk_qnn *e, const float *feat, uint32_t T0, float *x) {
         e->buf[3][t] = t < T3;
         e->buf[4][t] = t < T3 ? 0.0f : -10000.0f;
     }
-    Qnn_ProfileHandle_t prof = profile(e);
+    Qnn_ProfileHandle_t prof = profile(e, 0);
     Qnn_ErrorHandle_t s = e->q.graphExecute(e->graph, e->in, 5, &e->out, 1, prof, NULL);
     profile_done(e, prof);
     if (s)

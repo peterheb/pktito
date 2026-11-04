@@ -79,12 +79,13 @@ pub struct Coreml {
 /// Qualcomm's QNN compiled on a PC from the whole .pkf for that chip
 /// (core/qnn.h, PKTITO_QNN_TARGET), which the qnn branch reads with
 /// Coreml's slim file, the same file, as with the whole model. No phone
-/// compiles one: the Android app ships no compiler. For v2 728 MB with the
+/// compiles one: the Android app ships no compiler. For v2 727 MB with the
 /// slim file where its .pkf is 624. With the PC's graph the Galaxy S24
-/// Ultra (SM8650) ran AliceBench at 177x, word for word what its own compile
-/// wrote, and the Googlebook (X1E80100) the slim file word for word what
-/// the whole one wrote with the same graph (the qnn branch's
-/// tools/qnn/CLIMB.md, 2026-11-02 and 11-03).
+/// Ultra (SM8650) ran AliceBench at 167x and the Galaxy S25 Ultra (SM8750)
+/// at 206x, each phone's test.wav to every digit what its own compile of
+/// the graph wrote; with graph 1 the Googlebook (X1E80100) wrote the slim
+/// file's transcript word for word what the whole one wrote with the same
+/// graph (the qnn branch's tools/qnn/CLIMB.md, 2026-11-03).
 #[derive(Clone, Copy, Serialize)]
 pub struct Graph {
     /// The chip it is for, as its QNN describes it (pk_qnn_chip): the SoC's
@@ -119,15 +120,16 @@ pub const CATALOG: &[Entry] = &[
                 sha256: "8a11f959618e9463386ca9ff5234bec82d535c6a0b1e1b2101cd507c8549297c",
             },
         },
-        // compiled on the 9950X by QAIRT 2.51.0.260929 (2026-11-03)
+        // pktito-qnn-graph 2, compiled by pktito 88f5a6d on the 9950X with QAIRT 2.51.0.260929
+        // (2026-11-03)
         qnn: &[
             // the Galaxy S24's Snapdragon 8 Gen 3
             Graph {
                 chip: "57,75,8,1,0",
                 part: Part {
                     file: "parakeet-tdt-0.6b-v2-sm8650.qnn",
-                    bytes: 717_939_304,
-                    sha256: "f12c6b55f288c515f11f9e63fa06c230424f23b7b39b39f474a38b2ab91b16f3",
+                    bytes: 714_506_856,
+                    sha256: "3f690d2cdd0ad6dc3b805f627f5c8e0b7701af20135bc275ebcc8f55877263a1",
                 },
             },
             // the Galaxy S25's Snapdragon 8 Elite
@@ -135,8 +137,8 @@ pub const CATALOG: &[Entry] = &[
                 chip: "69,79,8,1,0",
                 part: Part {
                     file: "parakeet-tdt-0.6b-v2-sm8750.qnn",
-                    bytes: 715_403_880,
-                    sha256: "b2293ca9d91cade115af956dadf3fcc495e24db5b17c6aab60a002d841eadad6",
+                    bytes: 713_568_872,
+                    sha256: "40a5b75f37954b528f04944c57096ba0215783cea23b50ef659a981b5995456c",
                 },
             },
             // the Googlebook's Snapdragon X Elite
@@ -144,8 +146,8 @@ pub const CATALOG: &[Entry] = &[
                 chip: "60,73,8,1,1",
                 part: Part {
                     file: "parakeet-tdt-0.6b-v2-x1e80100.qnn",
-                    bytes: 716_317_288,
-                    sha256: "48ccb9089cce638ed0555dfbf1dbcff805e17a0a657fb270d05d795ed8de5bd4",
+                    bytes: 714_523_240,
+                    sha256: "dab2d4d69028caba976c0b82316f83ad49bd3d4bac01b39992cd66904d216513",
                 },
             },
         ],
@@ -180,24 +182,24 @@ pub const CATALOG: &[Entry] = &[
                 chip: "57,75,8,1,0",
                 part: Part {
                     file: "parakeet-tdt-0.6b-v3-sm8650.qnn",
-                    bytes: 717_939_304,
-                    sha256: "589170fab8e81f64334d4b3fc7ea3dfcaf8fbd1758b07e43d628b9468d298429",
+                    bytes: 714_506_856,
+                    sha256: "84aae2af7273132997bb71af73550f1a9a037de35b3d45d9e95a9390a796324e",
                 },
             },
             Graph {
                 chip: "69,79,8,1,0",
                 part: Part {
                     file: "parakeet-tdt-0.6b-v3-sm8750.qnn",
-                    bytes: 715_403_880,
-                    sha256: "725c8414d6bbeeca26e2fbb5ac161cc076df3dc707f12878236d6b5eabdc9556",
+                    bytes: 713_568_872,
+                    sha256: "d5cf8b7659ea176f66937a94e72c80bb11caac60d18811b0f500b6b1eaa73113",
                 },
             },
             Graph {
                 chip: "60,73,8,1,1",
                 part: Part {
                     file: "parakeet-tdt-0.6b-v3-x1e80100.qnn",
-                    bytes: 716_317_288,
-                    sha256: "02a6cd893573211484344d9f4ca2adc9e7728012ce92cbd47d8fb0e59ce3ae61",
+                    bytes: 714_523_240,
+                    sha256: "1208ddc1b2c63e68568d692780297d142ad5f57ee3bb05dd86218347edd7809f",
                 },
             },
         ],

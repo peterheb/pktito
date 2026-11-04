@@ -21,12 +21,13 @@ enum class Edition {
 /**
  * Which edition of a model this phone runs, chosen for whoever uses the app, as iOS's
  * Editions.swift chooses: the NPU's - the slim model file and the graph a PC compiled for the
- * phone's chip (model.rs, Graph), 728 MB for English where the whole file is 624; with the NPU's
- * encoder the app on a Galaxy S24 Ultra transcribed chapter 1 of Alice in 3.5 s, where its CPU took
- * 22.6 (2026-11-02) - where the catalog has a graph for the chip and the NPU has not refused that
- * graph here, on this system with this build of the app; else the CPU's, the whole model file. The
- * chip is QNN's word for it (Engine.npuChip), asked once a system and build, off the main thread:
- * QNN loads the NPU's own library to say, 137 to 168 ms on the Googlebook (2026-11-03).
+ * phone's chip (model.rs, Graph), 727 MB for English where the whole file is 624; with the NPU's
+ * encoder the app on a Galaxy S24 Ultra transcribed chapter 1 of Alice in 3.2 s (2026-11-03), where
+ * its CPU took 22.6 (2026-11-02) - where the catalog has a graph for the chip and the NPU has not
+ * refused that graph here, on this system with this build of the app; else the CPU's, the whole
+ * model file. The chip is QNN's word for it (Engine.npuChip), asked once a system and build, off
+ * the main thread: QNN loads the NPU's own library to say, 137 to 168 ms on the Googlebook
+ * (2026-11-03).
  */
 object Editions {
     /** The chip, "" for none; null until it is known for this system and build. */

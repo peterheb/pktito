@@ -2,13 +2,14 @@
 """The NPU's graphs in DIR held to the catalog (src-tauri/src/model.rs, each
 Entry's qnn) before they go to models.pktito.net: each file's size and
 SHA-256 the catalog's, and its header as the qnn branch's core/qnn.c writes
-it ("pktito-qnn-graph 1", 616 bytes, little-endian) saying what the catalog
-says the file is - the chip it lists the graph under, and the model: the key
-the engine makes from the slim file the app downloads with the graph (in DIR
-too, and held to the catalog as well), its checkpoint and conversion, the
-whole length (3072 feature frames, PK_QNN_FRAMES) and every layer. A phone
-whose chip has a graph downloads it without trying it first, so a file
-under the wrong chip or model is a model that fails there for everyone.
+it (the vendored copy's PK_QNN_GRAPH, 616 bytes, little-endian) saying what
+the catalog says the file is - the chip it lists the graph under, and the
+model: the key the engine makes from the slim file the app downloads with
+the graph (in DIR too, and held to the catalog as well), its checkpoint and
+conversion, the whole length (3072 feature frames, PK_QNN_FRAMES) and every
+layer. A phone whose chip has a graph downloads it without trying it first,
+so a file under the wrong chip or model is a model that fails there for
+everyone.
 
     scripts/qnn-graphs.py DIR
 """
@@ -20,7 +21,13 @@ import struct
 import sys
 
 here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MAGIC = "pktito-qnn-graph 1"
+# the graph the vendored engine reads (vendor/pktito-qnn/core/qnn.c)
+MAGIC = re.search(
+    r'#define PK_QNN_GRAPH "([^"]+)"',
+    open(
+        os.path.join(here, "vendor", "pktito-qnn", "core", "qnn.c"), encoding="utf-8"
+    ).read(),
+).group(1)
 # magic, key, chip, made, built, names[6][16], id[6], rank[6], dims[6][4], bytes
 HEAD = struct.Struct("<32s176s32s64s64s96s6I6I24IQ")
 FRAMES = 3072  # the length the engine asks for (core/qnn.h, PK_QNN_FRAMES)
