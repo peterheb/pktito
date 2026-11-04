@@ -54,34 +54,40 @@ class TranscribeService : Service() {
                 getSystemService(PowerManager::class.java)
                     .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "pktito:transcribe")
             wake.acquire(LIMIT_MS)
+            // the NPU's failure with a slim model, which has no encoder to go
+            // on with: its words, and the recording transcribed again once the
+            // model's CPU's edition is here (Transcriber.again)
+            var npu: String? = null
             try {
                 transcribe(uri)
             } catch (e: Exception) {
                 // a recording that can't be read in the app's words, what
                 // said so only here in the log (Engine.problem); the NPU's
-                // failure with a slim model, which has no encoder to go on
-                // with, is the NPU's to deal with (Transcriber.npuFailed)
+                // failure is the NPU's to deal with (Transcriber.npuFailed)
                 Log.w(TAG, "transcribing ${Transcriber.name}", e)
                 val key = Engine.problem(e)
-                val why =
-                    when (key) {
-                        "npu.failed" ->
-                            Transcriber.npuFailed(
-                                this,
-                                runCatching { JSONObject(e.message ?: "").getString("detail") }
-                                    .getOrDefault(""),
-                            )
-                        null -> e.message ?: e.toString()
-                        else -> words(resources, key)
+                if (e is NpuFailed) npu = e.message ?: ""
+                else if (key == "npu.failed")
+                    npu =
+                        Transcriber.npuFailed(
+                            this,
+                            runCatching { JSONObject(e.message ?: "").getString("detail") }
+                                .getOrDefault(""),
+                        )
+                else {
+                    val why = if (key == null) e.message ?: e.toString() else words(resources, key)
+                    Transcriber.post {
+                        error = why
+                        step = "error"
                     }
-                Transcriber.post {
-                    error = why
-                    step = "error"
                 }
             } finally {
                 wake.release()
                 stop(startId)
             }
+            // once this service is stopped, so that the screen's start of the
+            // recording again is a start of its own
+            npu?.let { why -> Transcriber.post { again(uri, why) } }
         }
         return START_NOT_STICKY
     }

@@ -146,8 +146,9 @@ class MainActivity : ComponentActivity() {
      */
     private var shareToken: String? = null
     /**
-     * A recording opened or shared before there was a model to transcribe it with: transcribed once
-     * there is.
+     * A recording opened or shared before there was a model to transcribe it with, or one the NPU
+     * failed before its model's CPU's edition was here (Transcriber.again): transcribed once there
+     * is.
      */
     private var waiting by mutableStateOf<Uri?>(null)
     /** The search of the transcript on the screen. */
@@ -418,6 +419,14 @@ class MainActivity : ComponentActivity() {
             Models.news?.let {
                 toast = it
                 Models.news = null
+            }
+        }
+        // a recording the NPU failed, waiting for its model's CPU's edition as
+        // one opened before there was a model waits (Transcriber.again)
+        LaunchedEffect(t.resume) {
+            t.resume?.let {
+                waiting = it
+                t.resume = null
             }
         }
         // the recording that waited for a model, once there is one

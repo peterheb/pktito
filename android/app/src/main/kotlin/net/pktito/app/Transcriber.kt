@@ -22,6 +22,12 @@ class Word(val text: String, val start: Double, val end: Double)
 class Seg(val start: Double, val end: Double, val text: String, val words: List<Word> = emptyList())
 
 /**
+ * The NPU's failure with a slim model, which has no encoder of its own to go on with
+ * (Transcriber.model): its words, as Transcriber.failed says it.
+ */
+class NpuFailed(message: String) : IOException(message)
+
+/**
  * The one transcription at a time, as the screen shows it, in the steps the desktop's window names:
  * loading (the model), reading (the audio), transcribing, then done, stopped or error; or a
  * transcript of the recent list, opened again, done. TranscribeService's thread tells it through
@@ -61,6 +67,11 @@ object Transcriber {
      */
     var why by mutableStateOf<String?>(null)
     var locate by mutableStateOf(false)
+    /**
+     * A recording whose transcription the NPU failed (again), for the screen to keep as it keeps
+     * one opened before there was a model, and to transcribe once its model is here.
+     */
+    var resume by mutableStateOf<Uri?>(null)
 
     val running: Boolean
         get() = step == "loading" || step == "reading" || step == "transcribing"
@@ -105,6 +116,20 @@ object Transcriber {
     fun clear() {
         begin("", null)
         step = ""
+    }
+
+    /**
+     * The NPU's failure of uri's transcription with a slim model, which has no encoder of its own
+     * to go on with, why its words (TranscribeService): its model is in its CPU's edition now, its
+     * whole file downloading where it isn't here (npuFailed), and the recording is transcribed
+     * again once it is, as the words promise (Peter, 2026-11-04). Its words in a toast, and the
+     * start screen, the setup's while the file downloads, with the recording waiting there
+     * (resume). On the main thread.
+     */
+    fun again(uri: Uri, why: String) {
+        clear()
+        Models.news = why
+        resume = uri
     }
 
     /**
@@ -243,10 +268,16 @@ object Transcriber {
                 } catch (e: IOException) {
                     val refused = npuFailed(context, o, e.message ?: "")
                     // the whole model's encoder runs it, as its CPU's edition,
-                    // which the model is in now; a slim model has none
+                    // which the model is in now, said so in a toast; a slim
+                    // model has none, and its transcription waits for the
+                    // whole file (again)
                     if (!o.whole.here) {
                         free()
-                        throw IOException(failed(context, refused))
+                        throw NpuFailed(failed(context, refused))
+                    }
+                    if (refused) {
+                        val app = context.applicationContext
+                        main.post { Models.news = Editions.cpuWords(app) }
                     }
                     if (use.file != o.whole.file) {
                         free()
@@ -290,7 +321,7 @@ object Transcriber {
     /**
      * A transcription's failure on the NPU with the slim model, which has no encoder of its own to
      * go on with (Engine.transcribe's npu.failed), for why: the model let go, its failure the NPU's
-     * (npuFailed). Its words, for the screen. On the transcription's thread.
+     * (npuFailed). Its words, for again. On the transcription's thread.
      */
     @Synchronized
     fun npuFailed(context: Context, why: String): String {
@@ -311,10 +342,11 @@ object Transcriber {
      * (Engine.transcribe's npu.failed), for why: the graph is deleted. One that is not the
      * catalog's, an older one of the same size an update of the app left, is downloaded again, its
      * model's edition still the NPU's. The catalog's is the NPU's refusal, remembered for this
-     * system and build (Editions.refused), and the model is the CPU's edition: with its whole file
-     * here, it goes on with that, said so in a toast; else its whole file is downloaded. Not tried
-     * twice: no failure of QNN's has been seen to pass. Whether it was the NPU's refusal. Any
-     * thread.
+     * system and build (Editions.refused), and the model is the CPU's edition, its whole file
+     * downloaded where it isn't here. What the person is told is the caller's: a toast where the
+     * transcription goes on with the whole file (model), the toast and the recording waiting for
+     * the file where it can't (again). Not tried twice: no failure of QNN's has been seen to pass.
+     * Whether it was the NPU's refusal. Any thread.
      */
     private fun npuFailed(context: Context, o: Offer, why: String): Boolean {
         val graph = o.graph ?: return false
@@ -330,7 +362,6 @@ object Transcriber {
             Models.refresh(app)
             val now = Models.offers.find { it.name == o.name } ?: return@post
             if (!now.have) Downloads.start(app, now)
-            else if (refused) Models.news = Editions.cpuWords(app)
         }
         return refused
     }
