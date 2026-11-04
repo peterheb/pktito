@@ -2,6 +2,7 @@ package net.pktito.app
 
 import net.pktito.app.ui.Finder
 import net.pktito.app.ui.Hit
+import net.pktito.app.ui.findIn
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -110,5 +111,21 @@ class FindTest {
         f.query = "ra"
         f.settle(twins, 0.0, f.seek(twins, ArrayList()))
         assertEquals("the seek first, which puts the reader on the second, then the first", 0, f.at)
+    }
+
+    /** Each search's matches start a word (startsWord), as the desktop's and iOS's do. */
+    @Test
+    fun aMatchStartsAWord() {
+        fun at(text: String, q: String) = findIn(listOf(Seg(0.0, 1.0, text)), q).map { it.start }
+        assertEquals(listOf(4, 21), at("The cat concatenates cats", "cat"))
+        assertEquals(listOf(0), at("Cat scat", "cat"))
+        assertEquals("an apostrophe ends a word", listOf(14), at("o'clock and O’Neill", "neill"))
+        assertEquals(
+            "a search not starting with a letter",
+            listOf(5, 13),
+            at("covid-19 and -19", "-19"),
+        )
+        assertEquals(listOf(5), at("x123 123", "123"))
+        assertEquals(listOf(0, 5), at("Café caféine", "caf"))
     }
 }

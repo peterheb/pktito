@@ -68,7 +68,7 @@ class Hit(val row: Int, val start: Int, val end: Int, val time: Double)
 /**
  * Each match of query in rows, sentences or cues, as the desktop finds them (app.js, bodyHtml and
  * runFind): its words trimmed, without regard to case, a cue's line break read as the space it
- * stands for, each match after the one before it.
+ * stands for, each match at a word's start (startsWord) and after the one before it.
  */
 fun findIn(rows: List<Seg>, query: String): List<Hit> {
     val sought = query.trim()
@@ -87,12 +87,34 @@ fun findIn(rows: List<Seg>, query: String): List<Hit> {
         while (true) {
             val j = low.indexOf(q, from)
             if (j < 0) break
-            hits += Hit(i, j, j + q.length, timeAt(s, j))
-            from = j + q.length
+            if (startsWord(low, j, q)) {
+                hits += Hit(i, j, j + q.length, timeAt(s, j))
+                from = j + q.length
+            } else {
+                from = j + 1
+            }
         }
     }
     return hits
 }
+
+/**
+ * Whether a match of q at j in text starts a word, as every match must: "cat" finds "Cat" and
+ * "cats", not "concatenate" or "scat" (Peter, 2026-11-04; app.js, startsWord). At the text's start
+ * or after a character that is no letter, digit or mark, an apostrophe too ("neill" finds
+ * "O'Neill", "homme" "l'homme"); a search that itself begins with no letter or digit ("'s", "-19")
+ * matches anywhere.
+ */
+fun startsWord(text: String, j: Int, q: String) =
+    j == 0 || !wordChar(q[0]) || !wordChar(text[j - 1])
+
+private fun wordChar(c: Char) =
+    c.isLetterOrDigit() ||
+        Character.getType(c).let {
+            it == Character.NON_SPACING_MARK.toInt() ||
+                it == Character.COMBINING_SPACING_MARK.toInt() ||
+                it == Character.ENCLOSING_MARK.toInt()
+        }
 
 /**
  * The start of the word of s at offset in its text, its words found in it in order; s's own before

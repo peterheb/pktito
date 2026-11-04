@@ -1932,9 +1932,10 @@ function segHtml(s, i, filling) {
    one was open (Peter, 2026-10-22). A match across words is a mark in each
    piece: the first carries its place in the text (data-at), every piece its
    number (data-hit), so that the current one lights whole. */
-/* Row s's matches of the search, each [start, end) in its text. A cue's
-   line break reads as the space it stands for. Each row's lowercase is
-   kept: a search runs on every key typed, over every row. */
+/* Row s's matches of the search, each [start, end) in its text and at a
+   word's start (startsWord). A cue's line break reads as the space it
+   stands for. Each row's lowercase is kept: a search runs on every key
+   typed, over every row. */
 const lowered = new WeakMap();
 function matchesIn(s) {
   if (!query) return [];
@@ -1952,9 +1953,23 @@ function matchesIn(s) {
   }
   const q = l.as ? query : query.toLowerCase(),
     found = [];
-  for (let from = 0, j; (j = l.low.indexOf(q, from)) >= 0; from = j + q.length)
-    found.push([j, j + q.length]);
+  for (let from = 0, j; (j = l.low.indexOf(q, from)) >= 0; )
+    if (startsWord(l.low, j, q)) {
+      found.push([j, j + q.length]);
+      from = j + q.length;
+    } else from = j + 1;
   return found;
+}
+
+/* Whether a match of q at j in text starts a word, as every search's match
+   must: "cat" finds "Cat" and "cats", not "concatenate" or "scat" (Peter,
+   2026-11-04; Android's and iOS's Find the same). At the text's start or
+   after a character that is no letter, digit or mark, an apostrophe too
+   ("neill" finds "O'Neill", "homme" "l'homme"); a search that itself begins
+   with no letter or digit ("'s", "-19") matches anywhere. */
+const wordChar = /[\p{L}\p{N}\p{M}]/u;
+function startsWord(text, j, q) {
+  return j === 0 || !wordChar.test(q[0]) || !wordChar.test(text[j - 1]);
 }
 
 function bodyHtml(s, i) {

@@ -12,7 +12,7 @@ struct Hit: Equatable {
 /// Each match of query in rows, sentences or cues, as the desktop finds them
 /// (app.js, runFind; Android's Find.kt): its words trimmed, without regard
 /// to case, a cue's line break read as the space it stands for, each match
-/// after the one before it.
+/// at a word's start (startsWord) and after the one before it.
 func findIn(_ rows: [Segment], _ query: String) -> [Hit] {
     let sought = query.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !sought.isEmpty else { return [] }
@@ -29,11 +29,32 @@ func findIn(_ rows: [Segment], _ query: String) -> [Hit] {
         var from = 0
         while from + q.count <= low.count {
             guard let j = index(of: q, in: low, from: from) else { break }
-            hits.append(Hit(row: i, start: j, end: j + q.count, time: timeAt(s, j)))
-            from = j + q.count
+            if startsWord(low, j, q) {
+                hits.append(Hit(row: i, start: j, end: j + q.count, time: timeAt(s, j)))
+                from = j + q.count
+            } else {
+                from = j + 1
+            }
         }
     }
     return hits
+}
+
+/// Whether a match of q at j in text starts a word, as every match must:
+/// "cat" finds "Cat" and "cats", not "concatenate" or "scat" (Peter,
+/// 2026-11-04; app.js, startsWord). At the text's start or after a character
+/// that is no letter, digit or mark, an apostrophe too ("neill" finds
+/// "O'Neill", "homme" "l'homme"); a search that itself begins with no letter
+/// or digit ("'s", "-19") matches anywhere.
+func startsWord(_ text: [Character], _ j: Int, _ q: [Character]) -> Bool {
+    j == 0 || !wordChar(q[0]) || !wordChar(text[j - 1])
+}
+
+private func wordChar(_ c: Character) -> Bool {
+    c.unicodeScalars.contains {
+        $0.properties.isAlphabetic || $0.properties.numericType != nil
+            || $0.properties.generalCategory == .nonspacingMark
+    }
 }
 
 private func index(of q: [Character], in s: [Character], from: Int) -> Int? {
