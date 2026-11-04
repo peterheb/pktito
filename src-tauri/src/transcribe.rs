@@ -15,6 +15,13 @@ use serde::{Deserialize, Serialize};
 /// of PART_MIN_S to PART_MAX_S. Cutting at whichever word crossed 20 s, as
 /// before, left 16 tails under 5 s on AliceBench's whole book with v2 ("of
 /// the mock turtle's heavy sobs."); 15 of its 1,687 sentences run past 30 s.
+/// Over 343 h of other English (lectures, two parliaments, meetings, doctor
+/// visits, courts, NASA; v2, simulated on pktito-c's words, 2026-11-04) this
+/// rule broke 2.8 sentences an hour, every break at a , ; : or dash (52%) or
+/// a pause of 0.3 s or more (47%), with 0.17 lines under 5 s beside a break
+/// an hour; the 20 s cut broke 11.4 an hour, 79% at neither. Cutting at
+/// 20 s / 6-14, at 40 s / 15-25, at 250 characters, at pauses alone, or into
+/// even parts each measured worse on one of those or on line length.
 const SENTENCE_MAX_S: f64 = 30.0;
 const PART_MIN_S: f64 = 10.0;
 const PART_MAX_S: f64 = 20.0;
@@ -230,11 +237,16 @@ fn sentences(
         open.toks.extend_from_slice(run);
         open.ntoks.push(run.len());
         open.words.push(Word { start, end, text });
-        if sentence_end {
-            out.extend(open.close(model));
-        } else if end - open.start > SENTENCE_MAX_S && open.words.len() > 1 {
+        // the length first: a sentence whose last word took it past
+        // SENTENCE_MAX_S, or came after a long silence ("Um", 136 s of
+        // nothing, "Order." in a Northern Ireland Assembly sitting), is broken
+        // like any other
+        if end - open.start > SENTENCE_MAX_S && open.words.len() > 1 {
             let n = open.part_end();
             out.push(open.close_part(model, n));
+        }
+        if sentence_end {
+            out.extend(open.close(model));
         }
     }
     out
