@@ -102,6 +102,7 @@ try {
     $files = 'pktito-app.exe', 'pktito-cli.exe', 'WebView2Loader.dll'
     # the NPU's, where the build has them (src-tauri/windows/qnn.conf.json)
     $npu = 'QnnHtp.dll', 'QnnSystem.dll', 'QnnHtpV73Stub.dll', 'libQnnHtpV73Skel.so', 'libqnnhtpv73.cat',
+        'QnnHtpV81Stub.dll', 'libQnnHtpV81Skel.so', 'libqnnhtpv81.cat',
         'licenses\QNN_NOTICE.txt', 'licenses\QNN_NOTICE_WINDOWS.txt', 'licenses\QNN_VERSION.txt'
     if ($Setup) {
         $7z = (Get-Command 7z -EA SilentlyContinue).Source
