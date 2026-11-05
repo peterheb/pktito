@@ -83,10 +83,10 @@ android {
         compose = true
     }
     // Qualcomm's QNN libraries beside libpktito_app.so, where a QNN build
-    // put them (the encoder on a Snapdragon's NPU): extracted on install,
-    // as the NPU reads its half (the skel) from a file in the app's native
-    // library folder, and packaged as Qualcomm built them, the Hexagon ones
-    // not being Arm code for the NDK's strip
+    // put them (the encoder on a Snapdragon's NPU): extracted on install, as
+    // when the NPU's skels were among them (they are in the assets now,
+    // android/native.sh; packaged in place is untried), and packaged as
+    // Qualcomm built them, unstripped
     packaging {
         jniLibs {
             useLegacyPackaging = true

@@ -108,8 +108,9 @@ object Editions {
      * own, its skels, copied out of the app's assets on a Snapdragon the first time, then the app's
      * native library folder for the rest. The skels come in the assets, not that folder, where Play
      * refuses their 4 KB pages (android/native.sh). Kept in the code cache, which Android empties
-     * when the app is updated, and copied again for each system and install (here): the three, 39
-     * MB, in 0.12 to 0.16 s on the Googlebook and the Galaxy S24 and S25 Ultras (2026-11-04).
+     * when the app is updated, and copied again for each system and install (here): the three of
+     * V73 to V79, 39 MB, in 0.12 to 0.16 s on the Googlebook and the Galaxy S24 and S25 Ultras, and
+     * the four with V81's, 53 MB, in 0.14 s on a Galaxy S26 Ultra (2026-11-04).
      */
     @Synchronized
     fun libs(context: Context): String {

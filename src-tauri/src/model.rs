@@ -121,7 +121,7 @@ pub const CATALOG: &[Entry] = &[
             },
         },
         // pktito-qnn-graph 2, compiled by pktito 88f5a6d on the 9950X with QAIRT 2.51.0.260929
-        // (2026-11-03)
+        // (2026-11-03; the S26's 2026-11-04)
         qnn: &[
             // the Galaxy S24's Snapdragon 8 Gen 3
             Graph {
@@ -139,6 +139,15 @@ pub const CATALOG: &[Entry] = &[
                     file: "parakeet-tdt-0.6b-v2-sm8750.qnn",
                     bytes: 713_568_872,
                     sha256: "40a5b75f37954b528f04944c57096ba0215783cea23b50ef659a981b5995456c",
+                },
+            },
+            // the Galaxy S26's Snapdragon 8 Elite Gen 5
+            Graph {
+                chip: "87,81,8,1,0",
+                part: Part {
+                    file: "parakeet-tdt-0.6b-v2-sm8850.qnn",
+                    bytes: 714_412_648,
+                    sha256: "08388c7f4b9cbb562330111ed6e0b026d00512168cee589b04578f50673b1aff",
                 },
             },
             // the Googlebook's Snapdragon X Elite
@@ -192,6 +201,14 @@ pub const CATALOG: &[Entry] = &[
                     file: "parakeet-tdt-0.6b-v3-sm8750.qnn",
                     bytes: 713_568_872,
                     sha256: "d5cf8b7659ea176f66937a94e72c80bb11caac60d18811b0f500b6b1eaa73113",
+                },
+            },
+            Graph {
+                chip: "87,81,8,1,0",
+                part: Part {
+                    file: "parakeet-tdt-0.6b-v3-sm8850.qnn",
+                    bytes: 714_412_648,
+                    sha256: "68eb09b667c7f9f6f36bb7eb7812945078150d8ff9984c61ce169d1bdfe99eab",
                 },
             },
             Graph {

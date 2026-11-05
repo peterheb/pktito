@@ -11,7 +11,7 @@
 #
 # With QNN_SDK naming Qualcomm's AI Runtime SDK, the engine runs its
 # encoder on a Snapdragon's NPU too (src-tauri/build.rs), and Qualcomm's
-# libraries for it go with the app, 46 MB: beside the Arm64 one QNN's HTP
+# libraries for it go with the app, 61 MB: beside the Arm64 one QNN's HTP
 # backend and, for each NPU the catalog has graphs for (src-tauri/src/
 # model.rs, Graph), its stub, the Arm side of the call to the NPU; and its
 # skel, the NPU's own, into app/src/main/assets/qnn. Android never loads a
@@ -54,7 +54,7 @@ rm -rf "$qnn"
 if [ -n "${QNN_SDK:-}" ]; then
   mkdir -p "$qnn"
   cp "$QNN_SDK/lib/aarch64-android/libQnnHtp.so" "$lib/"
-  for v in 73 75 79; do
+  for v in 73 75 79 81; do
     cp "$QNN_SDK/lib/aarch64-android/libQnnHtpV${v}Stub.so" "$lib/"
     cp "$QNN_SDK/lib/hexagon-v$v/unsigned/libQnnHtpV${v}Skel.so" "$qnn/"
   done
