@@ -176,7 +176,7 @@
                 }
                 #if DEBUG
                     // for a device with no one tapping, through devicectl:
-                    // -bench KEY [FILE] gets and prepares the catalog model KEY
+                    // -bench KEY [FILE] [-fresh] gets and prepares the catalog model KEY
                     // ("english", "multilingual") as this device runs it, then
                     // transcribes FILE from Application Support/bench, printing each step
                     .task {
@@ -198,6 +198,15 @@
                 let say = { (s: String) in
                     print(String(format: "bench %6.1f s: %@", Date().timeIntervalSince(t0), s))
                     fflush(stdout)
+                }
+                // -fresh: this model's files deleted first, so that its edition
+                // is downloaded, checked and unpacked as a first install's is
+                if CommandLine.arguments.contains("-fresh") {
+                    for f in [Store.file(e.pkf), Store.file(e.coreml.slim), Store.encoder(e)] {
+                        try? FileManager.default.removeItem(at: f)
+                        try? FileManager.default.removeItem(at: Store.marker(f))
+                    }
+                    say("deleted \(e.name)'s files (-fresh)")
                 }
                 say(
                     "\(e.name), edition for this device: \(Editions.preferred(e).rawValue)\(Editions.failure(e).map { " (Neural Engine failed before: \($0))" } ?? "")"
