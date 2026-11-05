@@ -3236,7 +3236,14 @@ function openMenu(anchor, keys, html, place, wire) {
   let top = place.includes("up") ? r.top - h - 6 : r.bottom + 6;
   if (top + h > innerHeight - 12) top = r.top - h - 6;
   m.style.left = `${Math.max(12, Math.min(innerWidth - w - 12, left))}px`;
-  m.style.top = `${Math.max(12, top)}px`;
+  // never under the window's own controls (app.css, --chrome-clear)
+  const clear =
+    parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue(
+        "--chrome-clear",
+      ),
+    ) || 0;
+  m.style.top = `${Math.max(12, clear, top)}px`;
   const first = m.querySelector("button, input");
   if (first && keys) first.focus({ preventScroll: true });
 }

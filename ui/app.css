@@ -304,6 +304,20 @@ button.pk-wm:focus-visible {
 html[data-chrome="mac"] {
   --lights: 100px;
 }
+/* How far down the window's own controls reach, which nothing laid over
+   the whole window may run under (Peter, 2026-11-05: the licenses' sheet
+   covered the lights in a short window): the lights' bottom, 38 px, and a
+   gap, on a Mac; on Windows the caption buttons' 32 px and a gap; none
+   where the system draws a title bar of its own, or in full screen */
+:root {
+  --chrome-clear: 0px;
+}
+html[data-chrome="mac"]:not([data-fullscreen]) {
+  --chrome-clear: 52px;
+}
+html[data-chrome="win"] {
+  --chrome-clear: 44px;
+}
 html[data-chrome="mac"]:not([data-fullscreen]) .pk-head {
   padding-left: var(--lights);
 }
@@ -1563,7 +1577,7 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   position: fixed;
   inset: 0;
   z-index: 50;
-  padding: 12px;
+  padding: max(12px, var(--chrome-clear)) 12px 12px;
   background: var(--plume-press);
   color: var(--on-plume);
 }
@@ -1794,7 +1808,8 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   z-index: 35;
   display: grid;
   place-items: center;
-  padding: 24px;
+  /* as far below as above, so that a sheet that fits stays centred */
+  padding: max(24px, var(--chrome-clear)) 24px;
   background: var(--scrim);
 }
 .pk-notices-box {
