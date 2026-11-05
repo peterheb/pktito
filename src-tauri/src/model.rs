@@ -29,6 +29,92 @@ pub const DEFAULT_BASE: &str = "https://models.pktito.net/";
 /// runs, on the Neural Engine too once its encoder is beside it.
 pub const NEURAL: bool = cfg!(target_os = "macos");
 
+/// This PC's NPU as QNN describes it (pktito::qnn_chip), on Windows on Arm,
+/// asked once: QNN loads the NPU's library to say. None where it finds none
+/// (a Snapdragon 7c, whose Hexagon QNN refuses), where the app's folder has
+/// no QNN DLLs, and on every other system, whose download is decided at
+/// build time (NEURAL).
+pub fn chip() -> Option<&'static str> {
+    #[cfg(all(windows, target_arch = "aarch64"))]
+    {
+        static CHIP: OnceLock<Option<String>> = OnceLock::new();
+        CHIP.get_or_init(|| {
+            crate::pktito::qnn_chip()
+                .map_err(|why| eprintln!("pktito: no NPU: {why}"))
+                .ok()
+        })
+        .as_deref()
+    }
+    #[cfg(not(all(windows, target_arch = "aarch64")))]
+    None
+}
+
+/// e's graph for this PC's NPU (graph_for), where it has one and QNN has
+/// not refused one here (refuse_npu): on Windows on Arm the download is
+/// then the slim file and that graph, for v2 727 MB where the .pkf is 624,
+/// whose encoder ran a chapter at 155x to the CPU's 115x on a Snapdragon X
+/// Elite with 1/22 the CPU time (snappy, ch01, 2026-11-05).
+pub fn graph(dir: &Path, e: &Entry) -> Option<&'static Graph> {
+    let chip = chip()?;
+    if dir.join(REFUSED).is_file() {
+        return None;
+    }
+    graph_for(e, chip)
+}
+
+/// The catalog's graph of e for chip, in QNN's words for it
+/// (soc,arch,vtcm,dlbc,signed), as the Android app picks one (its
+/// Models.graphFor): the one compiled for it, else one compiled for
+/// another SoC of its Hexagon with no more VTCM than it has, which QNN may
+/// run or refuse. A Snapdragon X's QNN on Windows names no SoC
+/// (2147483647,73,8,1,1 on snappy's X1E, 2026-11-05), and takes the
+/// X1E80100's graph by its Hexagon.
+pub fn graph_for(e: &Entry, chip: &str) -> Option<&'static Graph> {
+    let numbers = |c: &str| -> Option<Vec<u64>> {
+        let n: Vec<u64> = c
+            .split(',')
+            .map(|x| x.parse().ok())
+            .collect::<Option<_>>()?;
+        (n.len() == 5).then_some(n)
+    };
+    let mine = numbers(chip)?;
+    let e: &'static Entry = entry(e.name)?;
+    e.qnn.iter().find(|g| g.chip == chip).or_else(|| {
+        e.qnn.iter().find(|g| {
+            numbers(g.chip).is_some_and(|theirs| theirs[1] == mine[1] && theirs[2] <= mine[2])
+        })
+    })
+}
+
+/// Where the models folder records that QNN refused a graph here, and why:
+/// from then on a download is the whole model, whose encoder runs on the
+/// CPU. Deleting it tries the NPU again.
+const REFUSED: &str = "npu-refused.txt";
+
+/// QNN refused a graph of e's on this PC (why): recorded (REFUSED), so
+/// that a download offers the whole model, and the graphs deleted. The slim
+/// file, 12 MB, stays until e is deleted: the engine still has it open.
+/// Only Windows on Arm asks.
+pub fn refuse_npu(dir: &Path, e: &Entry, why: &str) {
+    let _ = fs::write(
+        dir.join(REFUSED),
+        format!("{}\n{why}\n", chip().unwrap_or("")),
+    );
+    for g in e.qnn {
+        let _ = fs::remove_file(Wanted::part(dir, e, &g.part).dst);
+    }
+}
+
+/// The NPU's encoder for a model file of e's in dir, beside it: the Core
+/// ML encoder on a Mac, unpacked, or on Windows on Arm this PC's graph,
+/// downloaded.
+fn have_npu_encoder(dir: &Path, e: &Entry) -> bool {
+    if NEURAL {
+        return have_encoder(dir, e);
+    }
+    graph(dir, e).is_some_and(|g| Wanted::part(dir, e, &g.part).here())
+}
+
 #[derive(Clone, Copy, Serialize)]
 pub struct Entry {
     pub name: &'static str,
@@ -276,9 +362,18 @@ pub fn copy_of(path: &Path) -> Option<&'static Entry> {
 
 /// The Core ML encoder for the model file at path, on a Mac: a catalog
 /// model's beside it (encoder_for), or for a file of the user's own that is
-/// a catalog model's copy (Settings::model_file_is), that model's.
+/// a catalog model's copy (Settings::model_file_is), that model's. On
+/// Windows on Arm, a catalog model's graph for this PC's NPU beside its
+/// file, whole or slim (graph).
 pub fn encoder_of(data: &Path, path: &Path) -> Option<PathBuf> {
     let dir = data.join("models");
+    if chip().is_some() {
+        let e = CATALOG
+            .iter()
+            .find(|e| same_file(&file_in(&dir, e), path) || same_file(&slim_in(&dir, e), path))?;
+        let w = Wanted::part(&dir, e, &graph(&dir, e)?.part);
+        return w.here().then_some(w.dst);
+    }
     if let Some(enc) = encoder_for(&dir, path) {
         return Some(enc);
     }
@@ -319,11 +414,12 @@ pub fn usable(data: &Path, s: &Settings) -> Option<PathBuf> {
 }
 
 /// e's model file in dir, if it is here: the whole one, else on a Mac its
-/// Neural Engine edition's, whose encoder is beside it.
+/// Neural Engine edition's, whose encoder is beside it, and on Windows on
+/// Arm the slim one beside this PC's graph.
 pub fn file_of(dir: &Path, e: &Entry) -> Option<PathBuf> {
     if have(dir, e) {
         Some(file_in(dir, e))
-    } else if NEURAL && have_neural(dir, e) {
+    } else if have_neural(dir, e) {
         Some(slim_in(dir, e))
     } else {
         None
@@ -337,12 +433,18 @@ pub fn have_any(dir: &Path, e: &Entry) -> bool {
 
 /// The files a download of e fetches on this system, in order: on a Mac its
 /// Neural Engine edition (the slim model file, then the encoder's archive,
-/// unpacked once it checks), elsewhere the whole model.
+/// unpacked once it checks), on Windows on Arm with a graph for its NPU the
+/// slim file and that graph, elsewhere the whole model.
 pub fn edition(dir: &Path, e: &Entry) -> Vec<Wanted> {
     if NEURAL {
         vec![
             Wanted::part(dir, e, &e.coreml.slim),
             Wanted::part(dir, e, &e.coreml.encoder),
+        ]
+    } else if let Some(g) = graph(dir, e) {
+        vec![
+            Wanted::part(dir, e, &e.coreml.slim),
+            Wanted::part(dir, e, &g.part),
         ]
     } else {
         vec![Wanted::model(dir, e)]
@@ -354,15 +456,18 @@ pub fn edition(dir: &Path, e: &Entry) -> Vec<Wanted> {
 pub fn bytes_of(dir: &Path, e: &Entry) -> u64 {
     let whole = if have(dir, e) { e.bytes } else { 0 };
     // the edition's files, or an encoder fetched for a whole file alone
-    let slim = if NEURAL && Wanted::part(dir, e, &e.coreml.slim).here() {
+    let npu = NEURAL || graph(dir, e).is_some();
+    let slim = if npu && Wanted::part(dir, e, &e.coreml.slim).here() {
         e.coreml.slim.bytes
     } else {
         0
     };
-    let encoder = if NEURAL && have_encoder(dir, e) {
+    let encoder = if !have_npu_encoder(dir, e) {
+        0
+    } else if NEURAL {
         e.coreml.encoder.bytes
     } else {
-        0
+        graph(dir, e).map_or(0, |g| g.part.bytes)
     };
     let neural = if whole > 0 || slim > 0 {
         slim + encoder
@@ -391,7 +496,7 @@ pub fn kept(dir: &Path, e: &Entry) -> u64 {
 pub fn remove_parts(dir: &Path, e: &Entry) -> Result<(), String> {
     for w in edition(dir, e) {
         // a slim file checked but its encoder not yet: part of the download
-        let done = NEURAL && !have_encoder(dir, e) && w.here();
+        let done = (NEURAL || graph(dir, e).is_some()) && !have_npu_encoder(dir, e) && w.here();
         for f in [Some(&w.part), done.then_some(&w.dst)]
             .into_iter()
             .flatten()
@@ -547,10 +652,12 @@ pub fn slim_in(dir: &Path, e: &Entry) -> PathBuf {
     Wanted::part(dir, e, &e.coreml.slim).dst
 }
 
-/// Whether e's edition for the Neural Engine is in dir: its slim model file
-/// and its Core ML encoder, unpacked.
+/// Whether e's edition for the NPU is in dir: its slim model file and its
+/// Core ML encoder, unpacked, or on Windows on Arm this PC's graph.
 pub fn have_neural(dir: &Path, e: &Entry) -> bool {
-    Wanted::part(dir, e, &e.coreml.slim).here() && have_encoder(dir, e)
+    (NEURAL || graph(dir, e).is_some())
+        && Wanted::part(dir, e, &e.coreml.slim).here()
+        && have_npu_encoder(dir, e)
 }
 
 /// Whether e's Core ML encoder is in dir: put in place whole, after it was
@@ -585,8 +692,13 @@ pub fn partial(dir: &Path, e: &Entry) -> u64 {
 /// the user's own, set, stays in use instead).
 pub fn delete(data: &Path, e: &Entry) -> Result<Option<&'static Entry>, String> {
     let dir = data.join("models");
-    // the whole file, and on a Mac the Neural Engine edition beside it
-    for file in [file_in(&dir, e), slim_in(&dir, e)] {
+    // the whole file, and the NPU's edition beside it: on a Mac the slim
+    // file and its Core ML encoder, on Windows on Arm the slim file and graphs
+    let graphs = e.qnn.iter().map(|g| Wanted::part(&dir, e, &g.part).dst);
+    for file in [file_in(&dir, e), slim_in(&dir, e)]
+        .into_iter()
+        .chain(graphs)
+    {
         match fs::remove_file(&file) {
             Err(err) if err.kind() != io::ErrorKind::NotFound => {
                 return Err(format!("{err}\n{}", file.display()))
@@ -787,6 +899,8 @@ pub fn trouble(why: &str) -> &'static str {
     let has = |words: &[&str]| words.iter().any(|w| why.contains(w));
     if has(&["out of memory", "not enough memory"]) {
         "problem.memory"
+    } else if has(&["NPU can't run", "Neural Engine can't run"]) {
+        "model_file.npu"
     } else if has(&["model file version", "the architecture is not"]) {
         "model_file.newer"
     } else if has(&[
@@ -1058,6 +1172,25 @@ mod tests {
         let _ = fs::remove_dir_all(&d);
         fs::create_dir_all(&d).unwrap();
         d
+    }
+
+    /// A graph by its chip, as Models.graphFor on Android: the chip's own,
+    /// else its Hexagon's with no more VTCM; snappy's QNN names no SoC
+    #[test]
+    fn graph_by_chip() {
+        let v2 = &CATALOG[0];
+        let file = |chip| graph_for(v2, chip).map(|g| g.part.file);
+        assert_eq!(
+            file("60,73,8,1,1"),
+            Some("parakeet-tdt-0.6b-v2-x1e80100.qnn")
+        );
+        assert_eq!(
+            file("2147483647,73,8,1,1"),
+            Some("parakeet-tdt-0.6b-v2-x1e80100.qnn")
+        );
+        assert_eq!(file("2147483647,73,4,1,1"), None);
+        assert_eq!(file("2147483647,68,8,1,1"), None);
+        assert_eq!(file("snapdragon"), None);
     }
 
     #[test]

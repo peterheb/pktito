@@ -154,12 +154,13 @@ extern "C" {
     fn pk_asr_ane_warm(a: *mut RawAsr, err: *mut c_char, errlen: usize) -> c_int;
 }
 
-// Android's, from the fork's qnn branch (vendor/pktito-qnn): the encoder
-// on a Snapdragon's NPU (core/qnn.h), in a build with QNN_SDK set
+// Android's and Windows on Arm's, from the fork's qnn branch
+// (vendor/pktito-qnn): the encoder on a Snapdragon's NPU (core/qnn.h), in
+// a build with QNN_SDK set
 // (build.rs), without which it says so; the chip it is, for the graph
 // compiled for it; and the fork's slim model file, whose only encoder that
 // graph is
-#[cfg(target_os = "android")]
+#[cfg(any(target_os = "android", all(windows, target_arch = "aarch64")))]
 extern "C" {
     fn pk_model_has_encoder(m: *const RawModel) -> c_int;
     fn pk_asr_use_qnn(
@@ -176,8 +177,10 @@ extern "C" {
 /// it (model::Graph's chip: "57,75,8,1,0"); why not where QNN finds none,
 /// or the build has no QNN. QNN loads the NPU's own library to say, 137 to
 /// 168 ms on the Googlebook (2026-11-03): asked once, off the screen's
-/// thread.
-#[cfg(target_os = "android")]
+/// thread. A Snapdragon X's QNN on Windows knows its Hexagon (73) and not
+/// its SoC, which it gives as 2147483647 (snappy, an X1E, 2026-11-05):
+/// model::graph_for falls back to the Hexagon's graph.
+#[cfg(any(target_os = "android", all(windows, target_arch = "aarch64")))]
 pub fn qnn_chip() -> Result<String, String> {
     let mut chip = [0 as c_char; 64];
     let mut err = [0 as c_char; 1024];
@@ -385,8 +388,13 @@ impl Model {
 
     /// Whether the file holds the encoder: not a slim one (model.rs,
     /// Coreml), which transcribes only with a Core ML encoder (Asr::use_ane)
-    /// or, on Android, an NPU's graph (Asr::use_qnn).
-    #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+    /// or, on Android and Windows on Arm, an NPU's graph (Asr::use_qnn).
+    #[cfg(any(
+        target_os = "macos",
+        target_os = "ios",
+        target_os = "android",
+        all(windows, target_arch = "aarch64")
+    ))]
     pub fn has_encoder(&self) -> bool {
         unsafe { pk_model_has_encoder(self.raw) != 0 }
     }
@@ -517,7 +525,7 @@ impl Asr {
     /// S24 Ultra. Where QNN refuses it, why, and the model's own encoder on
     /// the CPU, which a slim file has not. The app ships no compiler, so a
     /// whole file is never compiled here.
-    #[cfg(target_os = "android")]
+    #[cfg(any(target_os = "android", all(windows, target_arch = "aarch64")))]
     pub fn use_qnn(&mut self, cache: &Path) -> Result<(), String> {
         let c =
             CString::new(cache.to_string_lossy().as_bytes()).map_err(|_| "bad path".to_string())?;

@@ -3421,8 +3421,11 @@ for (const a of $("about").querySelectorAll("a[href]")) {
    built from beside its own code and the models About names, each with its
    copyright and license, and the licenses' texts. notices.js (scripts/notices.py) has every system's;
    this one's are listed. It loads the first time the list opens: 20 KB
-   compressed. */
-function noticesHtml() {
+   compressed. A Windows on Arm build with Qualcomm's libraries for the NPU
+   has their SDK's notice files beside it (npu_notice), whose row is last, as
+   on Android, so that their texts (206 KB in QAIRT 2.51.0) come after the
+   others. */
+function noticesHtml(npu) {
   const bit = NOTICES.systems[st.platform] || 0;
   const here = (x) => !bit || !x[4] || (x[4] & bit) !== 0;
   const extras = NOTICES.extras.filter(here),
@@ -3444,10 +3447,22 @@ function noticesHtml() {
       extras
         .filter((e) => e[0] === "code")
         .map((e) => row(e[1], e[3], e[2]))
-        .concat(crates.map((c) => row(`${c[0]} ${c[1]}`, c[2], c[3], true))),
+        .concat(crates.map((c) => row(`${c[0]} ${c[1]}`, c[2], c[3], true)))
+        .concat(
+          npu
+            ? [
+                row(
+                  `Qualcomm AI Runtime ${npu[0]}`,
+                  "Proprietary",
+                  "Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries",
+                ),
+              ]
+            : [],
+        ),
     )}
     <h3>${esc(t("notices.texts"))}</h3>
-    ${keys.map((k) => `<h4>${esc(NOTICES.texts[k].title)}</h4><pre>${esc(NOTICES.texts[k].text)}</pre>`).join("")}`;
+    ${keys.map((k) => `<h4>${esc(NOTICES.texts[k].title)}</h4><pre>${esc(NOTICES.texts[k].text)}</pre>`).join("")}
+    ${(npu ? npu[1] : []).map(([f, text]) => `<h4>${esc(`Qualcomm AI Runtime: ${f}`)}</h4><pre>${esc(text)}</pre>`).join("")}`;
 }
 
 async function openNotices() {
@@ -3457,9 +3472,10 @@ async function openNotices() {
   } catch (e) {
     return toast(t("notices.failed"), { err: true, detail: String(e) });
   }
+  const npu = await invoke("npu_notice").catch(() => null);
   if (!about) return;
   const body = $("notices-body");
-  if (!body.childElementCount) body.innerHTML = noticesHtml();
+  if (!body.childElementCount) body.innerHTML = noticesHtml(npu);
   openSheet("notices");
 }
 

@@ -103,6 +103,7 @@
   "model_file.not_model": "Not a pktito model",
   "model_file.cant_open": "Can't open the model file",
   "model_file.damaged": "Model file incomplete or damaged",
+  "model_file.npu": "This computer's NPU can't run the model",
 
   "setup.title": "Choose a speech model",
   "setup.legend": "Speech model",

@@ -179,7 +179,8 @@ fn file_dialog(app: &AppHandle) -> FileDialogBuilder<tauri::Wry> {
 
 /// Load the model at path into the engine, unless it is the one there, on
 /// PKTITO_THREADS's threads (transcribe::threads_wanted); on a Mac with its
-/// Core ML encoder where it has one (model::encoder_of, neural).
+/// Core ML encoder where it has one, on Windows on Arm with its graph for
+/// the NPU (model::encoder_of, neural).
 fn ensure_engine<'a>(
     slot: &'a mut Option<Engine>,
     data: &Path,
@@ -234,7 +235,36 @@ fn neural(
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+/// On Windows on Arm, the encoder on a Snapdragon's NPU, the graph at
+/// encoder compiled for its Hexagon (model::encoder_of); whether it runs
+/// there. Where QNN refuses it, that is remembered (model::refuse_npu), and
+/// a whole model file runs its own encoder on the CPU; a slim one has none,
+/// and that is the error, after which Manage models offers the whole file.
+#[cfg(all(windows, target_arch = "aarch64"))]
+fn neural(
+    asr: &mut pktito::Asr,
+    m: &pktito::Model,
+    encoder: Option<&Path>,
+) -> Result<bool, String> {
+    let Some(graph) = encoder else {
+        return Ok(false);
+    };
+    let Err(why) = asr.use_qnn(graph) else {
+        return Ok(true);
+    };
+    let of = |e: &&model::Entry| e.qnn.iter().any(|g| graph.ends_with(g.part.file));
+    if let (Some(dir), Some(e)) = (graph.parent(), model::CATALOG.iter().find(of)) {
+        model::refuse_npu(dir, e, &why);
+    }
+    if m.has_encoder() {
+        eprintln!("pktito: the NPU can't run the encoder ({why}); using the CPU");
+        Ok(false)
+    } else {
+        Err(format!("the NPU can't run the model's encoder: {why}"))
+    }
+}
+
+#[cfg(not(any(target_os = "macos", all(windows, target_arch = "aarch64"))))]
 fn neural(
     _asr: &mut pktito::Asr,
     _m: &pktito::Model,
@@ -295,6 +325,21 @@ fn set_prefs(app: AppHandle, prefs: model::Prefs) -> Result<(), Problem> {
     let mut s = model::load_settings(&data);
     s.prefs = prefs;
     Ok(model::save_settings(&data, &s)?)
+}
+
+/// Qualcomm's notice files for the open-source code in the NPU's libraries,
+/// where they are beside the exe (scripts/qnn-windows.ps1): the SDK's
+/// version, then each file's name and text, for About's licenses. None in
+/// any build without them.
+#[tauri::command]
+fn npu_notice(app: AppHandle) -> Option<(String, Vec<(String, String)>)> {
+    let dir = app.path().resource_dir().ok()?.join("licenses");
+    let version = fs::read_to_string(dir.join("QNN_VERSION.txt")).ok()?;
+    let texts = ["QNN_NOTICE.txt", "QNN_NOTICE_WINDOWS.txt"]
+        .iter()
+        .filter_map(|f| Some((f.to_string(), fs::read_to_string(dir.join(f)).ok()?)))
+        .collect();
+    Some((version.trim().to_string(), texts))
 }
 
 /// Use a catalog model that is on this computer.
@@ -1945,6 +1990,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             status,
             set_prefs,
+            npu_notice,
             choose_model,
             download_model,
             get_encoder,

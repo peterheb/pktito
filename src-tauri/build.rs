@@ -11,7 +11,8 @@
 //! the qnn branch's (vendor/pktito-qnn), whose encoder can run on a
 //! Snapdragon's NPU (core/qnn.c), in a build with QNN_SDK set, and which
 //! reads the fork's slim model file, whose only encoder is the NPU's graph;
-//! without QNN_SDK it runs on the CPU as pktito's does.
+//! without QNN_SDK it runs on the CPU as pktito's does. Windows on Arm is
+//! the same: the qnn fork, its NPU where QNN_SDK is set, a Snapdragon X's.
 //!
 //! Everything goes into one archive, and the system's libraries come after
 //! it. GNU ld reads each archive once, left to right, taking only what
@@ -78,6 +79,7 @@ fn main() {
     let root = manifest.join(match os.as_str() {
         "macos" | "ios" => "../vendor/pktito-ane",
         "android" => "../vendor/pktito-qnn",
+        "windows" if arch == "aarch64" => "../vendor/pktito-qnn",
         _ => "../vendor/pktito",
     });
     println!("cargo:rerun-if-changed=../vendor/pktito");
@@ -86,11 +88,12 @@ fn main() {
     println!("cargo:rerun-if-changed=native");
     println!("cargo:rerun-if-env-changed=QNN_SDK");
     // Qualcomm's AI Runtime SDK, where QNN_SDK names it: the encoder on a
-    // Snapdragon's NPU too (core/qnn.c), on Android's Arm64. Only its
-    // headers are read here; its libraries are loaded at run time (dlopen)
-    // from the app's own native ones
+    // Snapdragon's NPU too (core/qnn.c), on Android's Arm64 and Windows's.
+    // Only its headers are read here; its libraries are loaded at run time
+    // (dlopen; LoadLibraryEx on Windows) from the app's own native ones, or
+    // the DLLs beside the exe
     let qnn = env::var_os("QNN_SDK")
-        .filter(|_| os == "android" && arch == "aarch64")
+        .filter(|_| (os == "android" || os == "windows") && arch == "aarch64")
         .map(PathBuf::from);
 
     let family: Vec<(&str, Vec<&str>)> = match arch.as_str() {
@@ -225,7 +228,7 @@ fn main() {
     for lib in system {
         println!("cargo:rustc-link-lib={lib}");
     }
-    if qnn.is_some() {
+    if qnn.is_some() && os == "android" {
         println!("cargo:rustc-link-lib=dl");
     }
     // the engine's pool runs on pthreads, which Rust's std brings along on
