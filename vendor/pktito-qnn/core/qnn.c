@@ -1286,9 +1286,16 @@ static int open_device(pk_qnn *e, target *t, char *err, size_t errlen) {
     if ((s = e->q.backendCreate(e->log, NULL, &e->backend)))
         return fail(err, errlen, "backendCreate", s);
     /* a chip named to compile for is a PC's to be told, which has no NPU
-     * of its own to ask (PKTITO_QNN_TARGET): a phone runs its own */
+     * of its own to ask (PKTITO_QNN_TARGET): a phone runs its own. An x86
+     * build is a PC's, though its QNN describes a chip: the one it emulates
+     * (30,68,4,0,0 in QNN 2.51), which no graph is compiled for */
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
+    const int pc = 1;
+#else
+    const int pc = 0;
+#endif
     char own[32];
-    if (t && own_chip(e, own, sizeof own) == 0) {
+    if (t && !pc && own_chip(e, own, sizeof own) == 0) {
         snprintf(err, errlen, "PKTITO_QNN_TARGET names a chip for a PC to compile for, and this one has an NPU, %s", own);
         return -1;
     }

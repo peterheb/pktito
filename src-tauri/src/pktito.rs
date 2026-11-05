@@ -49,12 +49,14 @@ struct ChunkOut {
     retried: c_int,
     done: i64,
     total: i64,
+    at_frame: i32,
 }
 
 /// A chunk of a recording, transcribed: its samples in the recording, its
 /// tokens (frames from its start, a retried stretch's among them), whether
-/// it is the last, and the samples of the chunks done so far, of all of
-/// them.
+/// it is the last, the samples of the chunks done so far, of all of them,
+/// and its start in encoder frames, rounded (pk_chunk_out.at_frame), which
+/// counts its tokens' frames from the recording's start for pk_sentences.
 pub struct Done<'a> {
     pub start: i64,
     pub end: i64,
@@ -62,6 +64,7 @@ pub struct Done<'a> {
     pub last: bool,
     pub done: i64,
     pub total: i64,
+    pub at_frame: i32,
 }
 
 /// A sentence (pk_sentence): tokens [first, first + n) of those given;
@@ -121,7 +124,7 @@ extern "C" {
     fn pk_captions(
         w: *const CapWord,
         n: usize,
-        english: c_int,
+        lang: *const c_char,
         media_end: i64,
         out: *mut Cue,
     ) -> c_long;
@@ -211,14 +214,23 @@ pub fn language(words: &[&str]) -> Option<String> {
     Some(unsafe { CStr::from_ptr(l) }.to_string_lossy().into_owned())
 }
 
+/// The language whose subtitle rules words take: "en" for english 1 (a
+/// model of English alone), none for 0, and for -1 the words' own as
+/// pk_language finds it (the multilingual model's).
+pub fn captions_lang(words: &[(String, i64, i64)], english: i32) -> Option<String> {
+    match english {
+        1 => Some("en".into()),
+        0 => None,
+        _ => language(&words.iter().map(|w| w.0.trim()).collect::<Vec<_>>()),
+    }
+}
+
 /// The cues of a subtitle track for words and their times in milliseconds,
-/// as the CLI's --srt has them (core/captions.c): English's rules for
-/// english 1, punctuation and pauses alone for 0, and for -1 English's if
-/// the words are English by their commonest (core/language.c), as the
-/// multilingual model's may be.
+/// as the CLI's --srt has them (core/captions.c): English's rules where
+/// lang is "en", punctuation and pauses alone for any other or None.
 pub fn captions(
     words: &[(String, i64, i64)],
-    english: i32,
+    lang: Option<&str>,
     media_end: i64,
 ) -> Result<Vec<Cue>, String> {
     // a NUL inside a word would end it early: none comes from pk_text
@@ -235,12 +247,13 @@ pub fn captions(
             end: w.2,
         })
         .collect();
+    let lang = lang.map(|l| CString::new(l).unwrap());
     let mut out = vec![Cue::default(); words.len().max(1)];
     let n = unsafe {
         pk_captions(
             raw.as_ptr(),
             raw.len(),
-            english as c_int,
+            lang.as_ref().map_or(ptr::null(), |l| l.as_ptr()),
             media_end,
             out.as_mut_ptr(),
         )
@@ -434,6 +447,7 @@ impl Asr {
                 last: c.i + 1 == c.n,
                 done: c.done,
                 total: c.total,
+                at_frame: c.at_frame,
             };
             // a panic can't unwind through C: it stops the run, and goes on
             // from transcribe()

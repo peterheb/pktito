@@ -154,7 +154,8 @@ pub fn cues(t: &Transcript) -> Result<Vec<Cue>, String> {
         Some(e) if e.languages == ["en"] => 1,
         _ => -1,
     };
-    Ok(pktito::captions(&timed, english, ms(t.duration))?
+    let lang = pktito::captions_lang(&timed, english);
+    Ok(pktito::captions(&timed, lang.as_deref(), ms(t.duration))?
         .iter()
         .map(|c| {
             let (first, n) = (c.first as usize, c.n as usize);

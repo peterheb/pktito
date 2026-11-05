@@ -1066,7 +1066,8 @@ fn captions(
         .into_iter()
         .map(|w| (w.text, ms(w.start), ms(w.end)))
         .collect();
-    Ok(pktito::captions(&w, english, ms(duration))?)
+    let lang = pktito::captions_lang(&w, english);
+    Ok(pktito::captions(&w, lang.as_deref(), ms(duration))?)
 }
 
 /// pktito-cli on the PATH, from the macOS menu bar's Install Command Line

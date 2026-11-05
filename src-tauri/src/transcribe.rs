@@ -99,7 +99,6 @@ pub fn run_windows(
     stop: impl Fn() -> bool,
 ) -> Result<(Vec<Segment>, Vec<Window>, bool), String> {
     let rate = model.rate() as f64;
-    let frame = model.frame_seconds();
     let mut all = Vec::new();
     let mut windows = Vec::new();
     if stop() {
@@ -112,7 +111,14 @@ pub fn run_windows(
         let held = open.words(model);
         // the recording's end, or where it stops: the sentence still open ends
         let end = c.last || stopping;
-        let segs = sentences(model, c.toks, c.start as f64 / rate, frame, end, &mut open);
+        let segs = sentences(
+            model,
+            c.toks,
+            c.start as f64 / rate,
+            c.at_frame,
+            end,
+            &mut open,
+        );
         // its words: those it ended in sentences and those it left open,
         // less the ones open from before it
         let words = (segs.iter().map(|s| s.words.len()).sum::<usize>() + open.words(model))
@@ -192,19 +198,19 @@ fn segment(model: &Model, toks: &[Tok], at: &[(f64, i32)]) -> Segment {
 }
 
 /// A chunk's tokens as sentences, after the tokens open before it
-/// (pk_sentences); done, whether they end the recording. The tokens after
+/// (pk_sentences): the chunk starting offset seconds and base frames into
+/// the recording; done, whether they end the recording. The tokens after
 /// the last sentence are left open, for the next chunk.
 fn sentences(
     model: &Model,
     toks: &[Tok],
     offset: f64,
-    frame: f64,
+    base: i32,
     done: bool,
     open: &mut Open,
 ) -> Vec<Segment> {
     // the chunk's frames from the recording's start, as pk_sentences counts
-    // them: its start in whole frames
-    let base = (offset / frame).round() as i32;
+    // them: plus its start in whole frames (base, pk_chunk_out.at_frame)
     for t in toks {
         open.toks.push(Tok {
             frame: t.frame + base,
