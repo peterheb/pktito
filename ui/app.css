@@ -1058,10 +1058,12 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 .pk-strip-wrap {
   padding: 0 24px;
 }
-/* 16 px over the first row, under the views, the strip or the message
+/* 8 px over the first row, under the views, the strip or the message
    alike, a margin outside the scroll: inside it, a transcript scrolled down
-   ran up against the views (Peter's screenshot, 2026-10-22); at work the
-   views are hidden, and 8 px left the rows against the strip. 16 px under
+   ran up against the views (Peter's screenshot, 2026-10-22). With the row's
+   own 8 px over its text that is the gutter's 16 px to the text, and the
+   playing row's box 8 px under the views; 16 px here put 24 px over the
+   first row's text, its padding a second gutter (Peter, 2026-11-05). 16 px under
    the last, outside it too, so that the rows stop short of the window's
    edge as they scroll by. Its rows on the strip's edges, 24 px in, and
    their times on play's, 16 px further: boxed 12 px past the strip, the
@@ -1071,7 +1073,7 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  margin: var(--space-3) 0;
+  margin: var(--space-2) 0 var(--space-3);
   padding: 0 24px;
   /* Its size is the column's (flex: 1), never its rows': contained, a
      change in the header (a search's count) no longer lays all of a 3-hour
