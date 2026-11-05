@@ -37,7 +37,11 @@
  *  - the attention's 1/sqrt(dk) is folded into K's scales and into pe.
  */
 #include <assert.h>              /* the HTP headers' static_assert */
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <dlfcn.h>
+#endif
 #include <math.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -52,6 +56,7 @@
 #include "QnnOpDef.h"
 
 #include "model.h"
+#include "os.h"
 #include "pkf.h"
 #include "qnn.h"
 
@@ -953,7 +958,7 @@ static int check_head(const pk_qnn *e, const pk_model *m, const void *head, size
 /* 0 if the cache held this graph and the NPU took it; -1, and why in err */
 static int read_cache(pk_qnn *e, const pk_model *m, const char *path, char *err, size_t errlen) {
     last_error[0] = 0;
-    FILE *f = fopen(path, "rb");
+    FILE *f = pk_os_fopen(path, "rb");
     if (!f) {
         snprintf(err, errlen, "no compiled graph at %s", path);
         return -1;
@@ -1012,7 +1017,7 @@ static int read_cache(pk_qnn *e, const pk_model *m, const char *path, char *err,
  * never another file, such as a model's, nor another model's or chip's
  * graph, which another run may want (a second PKTITO_QNN_TARGET's) */
 static int replaceable(const pk_qnn *e, const pk_model *m, const char *path) {
-    FILE *f = fopen(path, "rb");
+    FILE *f = pk_os_fopen(path, "rb");
     if (!f)
         return 1;
     cache_head h;
@@ -1060,14 +1065,14 @@ static void write_cache(pk_qnn *e, const pk_model *m, const char *path) {
     if (tmp && bin) {
         memcpy(tmp, path, len);
         memcpy(tmp + len, ".tmp", sizeof ".tmp");
-        f = fopen(tmp, "wb");
+        f = pk_os_fopen(tmp, "wb");
     }
     if (f) {
         int ok = !e->q.contextGetBinary(e->context, bin, n, &got) && (h.bytes = got) > 0 &&
                  fwrite(&h, sizeof h, 1, f) == 1 && fwrite(bin, 1, got, f) == got;
         ok = !fclose(f) && ok;
-        if (!ok || rename(tmp, path))
-            remove(tmp);
+        if (!ok || pk_os_rename(tmp, path))
+            pk_os_remove(tmp);
     }
     free(tmp);
     free(bin);
@@ -1261,17 +1266,35 @@ static int own_chip(pk_qnn *e, char *out, size_t n) {
     return rc;
 }
 
+/* why the HTP library didn't load */
+static const char *dl_why(void) {
+#ifdef _WIN32
+    static char m[64];
+    snprintf(m, sizeof m, "QnnHtp.dll did not load (error %lu)", (unsigned long)GetLastError());
+    return m;
+#else
+    return dlerror();
+#endif
+}
+
 /* QNN's HTP library loaded, and its log, backend and device made: for the
  * chip QNN runs on, or with t for the one t describes. 0, or -1 with why
  * in err */
 static int open_device(pk_qnn *e, target *t, char *err, size_t errlen) {
     last_error[0] = 0;
+    /* Windows on Snapdragon: QnnHtp.dll, from the exe's folder, which also
+     * holds QnnSystem.dll, QnnHtpV73Stub.dll and the DSP's skel and .cat */
+#ifdef _WIN32
+    e->lib = (void *)LoadLibraryExA("QnnHtp.dll", NULL, LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+    get_providers_fn gp = e->lib ? (get_providers_fn)(void (*)(void))GetProcAddress((HMODULE)e->lib, "QnnInterface_getProviders") : NULL;
+#else
     e->lib = dlopen("libQnnHtp.so", RTLD_NOW | RTLD_LOCAL);
     get_providers_fn gp = e->lib ? (get_providers_fn)dlsym(e->lib, "QnnInterface_getProviders") : NULL;
+#endif
     const QnnInterface_t **prov = NULL;
     uint32_t np = 0;
     if (!gp || gp(&prov, &np) || np == 0 || prov[0]->apiVersion.coreApiVersion.major != QNN_API_VERSION_MAJOR) {
-        snprintf(err, errlen, "no QNN HTP library: %s", e->lib ? "no provider of QNN 2" : dlerror());
+        snprintf(err, errlen, "no QNN HTP library: %s", e->lib ? "no provider of QNN 2" : dl_why());
         return -1;
     }
     e->q = prov[0]->QNN_INTERFACE_VER_NAME;
