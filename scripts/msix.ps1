@@ -43,14 +43,13 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
 $tauri = Join-Path $root 'src-tauri'
 
-# the Store's values, from Partner Center's Product identity page. Name and
-# Publisher are still to copy from there; until then, placeholders that make
-# a package the Store would refuse. The Store wants the reserved name as the
-# DisplayName.
+# the Store's values, from Partner Center's Product identity page (Store ID
+# 9MW58B2T1ZVW, package family PeterHebert.Pktito_ff8200zn03b0w). The Store
+# wants the reserved name as the DisplayName.
 $identities = @{
     store = @{
-        Name = 'TODO.Pktito'
-        Publisher = 'CN=TODO'
+        Name = 'PeterHebert.Pktito'
+        Publisher = 'CN=888FC3C8-DF5F-4348-8575-767E3FF54C42'
         Display = 'Pktito'
         PublisherDisplay = 'Peter Hebert'
     }

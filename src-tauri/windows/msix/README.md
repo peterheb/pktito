@@ -117,10 +117,10 @@ needs a higher `-Version`, or Windows keeps the last one's icons.
 
 ## Before the first submission
 
-- Partner Center:
-  - Copy the product's Package/Identity/Name and Publisher (Product
-    identity) into msix.ps1's store identity.
-  - Its Display must be the reserved name, exactly.
+- Partner Center: the product is an "MSIX or PWA app", Store ID
+  9MW58B2T1ZVW. Its identity is msix.ps1's store identity (copied from
+  Product identity, 2026-11-05), and its Display must be the reserved name,
+  Pktito, exactly.
 - The listing:
   - a description;
   - screenshots of at least 1366×768 (the site's standard shots, 682×832,
