@@ -21,7 +21,10 @@ pub const DEFAULT_BASE: &str = "https://models.pktito.net/";
 /// (Coreml: the model file without its encoder, and its Core ML encoder)
 /// where it downloads one: the Mac's, every one of which has it (macOS 12
 /// on Apple silicon, the app's floor), at 3x the CPU's speed for v2 on an
-/// M4 Pro (AliceBench, 349x to 117x, WER 0.059% apart, 2026-11-02). The
+/// M4 Pro with 0.9.5's encoder (AliceBench, 349x to 117x, WER 0.059% apart,
+/// 2026-11-02); 0.9.6's, with the position term folded, takes 16% less
+/// time on an M4 (AliceBench v2, 354x to 423x, 6 words of 27,118
+/// different; the ane fork's tools/ane/CLIMB.md, 2026-11-03). The
 /// iOS app downloads its own, in Swift. A whole .pkf already here still
 /// runs, on the Neural Engine too once its encoder is beside it.
 pub const NEURAL: bool = cfg!(target_os = "macos");
@@ -66,9 +69,9 @@ pub struct Part {
 /// fork loads (its qnn branch too, Android's), and the encoder as a compiled Core ML model, int8, in an
 /// Apple Archive (tools/ane/encoder.py, then `aa archive`), made from the
 /// same checkpoint, whose SHA-256 each names and the fork holds them to.
-/// For v2 589 MB in all where its .pkf is 624; the same transcript as the
-/// .pkf with that encoder, which runs at 254x on an M1 iPad (the fork's
-/// tools/ane/CLIMB.md).
+/// For v2 559 MB in all where its .pkf is 624; the same transcript as the
+/// .pkf with that encoder, which runs at 271x on an M1 iPad (AliceBench v2,
+/// against 0.9.5's 242x; the fork's tools/ane/CLIMB.md, 2026-11-03).
 #[derive(Clone, Copy, Serialize)]
 pub struct Coreml {
     pub slim: Part,
@@ -116,8 +119,8 @@ pub const CATALOG: &[Entry] = &[
             },
             encoder: Part {
                 file: "parakeet-tdt-0.6b-v2-encoder.mlmodelc.aar",
-                bytes: 577_037_560,
-                sha256: "8a11f959618e9463386ca9ff5234bec82d535c6a0b1e1b2101cd507c8549297c",
+                bytes: 546_910_291,
+                sha256: "70272da7508aff518225caeaea3f0dc7dedb5bf0cc829da72876c9ecae5159a1",
             },
         },
         // pktito-qnn-graph 2, compiled by pktito 88f5a6d on the 9950X with QAIRT 2.51.0.260929
@@ -182,8 +185,8 @@ pub const CATALOG: &[Entry] = &[
             },
             encoder: Part {
                 file: "parakeet-tdt-0.6b-v3-encoder.mlmodelc.aar",
-                bytes: 575_464_480,
-                sha256: "64cf1a407ada158ee22450e8f258258373fe8e2ba3ac4ba0f482a91f0c122cdc",
+                bytes: 545_275_075,
+                sha256: "a7eef40e28b009fee25548fe869124d2b9ba7be8c00c2dcb1b2e8e8973524571",
             },
         },
         qnn: &[

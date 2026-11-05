@@ -2,8 +2,8 @@ import UIKit
 
 /// Which edition of a model this device runs, chosen for whoever uses the
 /// app: the Neural Engine's (the slim .pkf and its Core ML encoder: on an
-/// M1 iPad 254x real time on 0.6 of a core, where pktito's CPU encoder is
-/// about 50x on all eight), and where the Neural Engine can't run its
+/// M1 iPad 254x real time on 0.6 of a core with 0.9.5's encoder, 271x with
+/// 0.9.6's, where pktito's CPU encoder is about 50x on all eight), and where the Neural Engine can't run its
 /// encoder, the CPU's (the whole .pkf), as the demo found (the ane fork's
 /// tools/ane/CLIMB.md; pktito-app's ios-demo branch).
 enum Editions {

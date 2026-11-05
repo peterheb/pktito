@@ -6,7 +6,7 @@ import System
 /// models.pktito.net serves, `aa archive` of the compiled model), into
 /// Store.encoder: unpacked beside it first and renamed into place whole, so
 /// that an encoder in place is a whole one, and the archive deleted after,
-/// 577 MB for v2's. Only an archive whose SHA-256 checked comes here
+/// 547 MB for v2's. Only an archive whose SHA-256 checked comes here
 /// (Downloader), so its contents are the ones published.
 enum Unpack {
     static func encoder(_ e: CatalogEntry, from archive: URL) throws {

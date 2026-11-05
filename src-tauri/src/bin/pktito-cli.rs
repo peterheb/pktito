@@ -647,7 +647,7 @@ fn fetch(m: &str, cpu: bool) -> Result<i32, String> {
     let data = model::data_dir().ok_or("no data folder for the app on this system")?;
     let dir = data.join("models");
     // on a Mac, as the iOS app has it: the model file without its encoder
-    // and its Core ML encoder, 589 MB for v2 where the whole is 624, the
+    // and its Core ML encoder, 559 MB for v2 where the whole is 624, the
     // encoder on the Neural Engine (3x the CPU's speed on an M4 Pro,
     // AliceBench); --cpu, or anywhere else, the whole model
     let here = if cpu {

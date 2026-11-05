@@ -476,7 +476,7 @@ private struct Downloading: View {
     }
 
     /// How far a download has got, in the desktop's words (app.js,
-    /// updateDownload): "262 of 589 MB · 12.3 MB/s · about 30 s left".
+    /// updateDownload): "262 of 559 MB · 12.3 MB/s · about 30 s left".
     private func progressLine(_ d: DownloadState) -> String {
         let got = mb(d.got)
         let total = mb(d.total)
