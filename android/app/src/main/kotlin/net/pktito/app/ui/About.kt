@@ -534,7 +534,9 @@ private class Notice(
 
 /**
  * assets/notices.json, which android/notices.py makes: the typefaces and icons, the libraries, and
- * the texts by key.
+ * the texts by key. A build with Qualcomm's libraries for the NPU (android/native.sh with QNN_SDK)
+ * also has their SDK's notice file, assets/qnn/QNN_NOTICE.txt, for the open-source code in them.
+ * Their row is the last, so that its text (130 KB in QAIRT 2.51.0) comes after the others.
  */
 private class Notices(
     val type: List<Notice>,
@@ -557,13 +559,29 @@ private class Notices(
                     )
                 }
             val t = j.getJSONObject("texts")
-            return Notices(
-                rows(j.getJSONArray("type"), false),
-                rows(j.getJSONArray("libraries"), null),
-                t.keys().asSequence().associateWith {
-                    t.getJSONObject(it).let { x -> x.getString("title") to x.getString("text") }
-                },
-            )
+            val libraries = rows(j.getJSONArray("libraries"), null).toMutableList()
+            val texts =
+                t.keys()
+                    .asSequence()
+                    .associateWith {
+                        t.getJSONObject(it).let { x -> x.getString("title") to x.getString("text") }
+                    }
+                    .toMutableMap()
+            if ("QNN_NOTICE.txt" in context.assets.list("qnn").orEmpty()) {
+                fun qnn(name: String) =
+                    context.assets.open("qnn/$name").use { String(it.readBytes()) }
+                libraries +=
+                    Notice(
+                        "Qualcomm AI Runtime ${qnn("VERSION").trim()}".trim(),
+                        "Proprietary",
+                        "Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries",
+                        listOf("qnn/QNN_NOTICE.txt"),
+                        false,
+                    )
+                texts["qnn/QNN_NOTICE.txt"] =
+                    "Qualcomm AI Runtime: QNN_NOTICE.txt" to qnn("QNN_NOTICE.txt")
+            }
+            return Notices(rows(j.getJSONArray("type"), false), libraries, texts)
         }
     }
 }

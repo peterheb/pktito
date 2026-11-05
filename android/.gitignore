@@ -1,6 +1,8 @@
-# Gradle's, and native.sh's libraries, built from src-tauri
+# Gradle's, and native.sh's: the libraries, built from src-tauri, and
+# Qualcomm's notice for theirs
 /.gradle/
 /build/
 /app/build/
 /app/src/main/jniLibs/
+/app/src/main/assets/qnn/
 /local.properties

@@ -17,7 +17,11 @@
 # loads from the app's native library folder (ADSP_LIBRARY_PATH): 46 MB.
 # Not the compiler, libQnnHtpPrepare.so (88 MB), as the graphs come
 # compiled on a PC, nor libQnnHtpV73.so and its like, which a compiled
-# graph runs without (the Googlebook, 2026-11-03).
+# graph runs without (the Googlebook, 2026-11-03). With them goes the SDK's
+# notice file for the open-source code in them, as the SDK has it, into
+# app/src/main/assets/qnn with the SDK's version, for About's licenses: QTI's
+# license (its "Third Party Notices") leaves those licenses to the app, and
+# the file unaltered.
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 NDK=${NDK:-${ANDROID_NDK_HOME:-}}
@@ -39,10 +43,15 @@ for abi in arm64-v8a x86_64; do
   cp "$here/../src-tauri/target/$t/$profile/libpktito_app.so" "$here/app/src/main/jniLibs/$abi/"
 done
 lib=$here/app/src/main/jniLibs/arm64-v8a
+qnn=$here/app/src/main/assets/qnn
 rm -f "$lib"/libQnn*.so
+rm -rf "$qnn"
 if [ -n "${QNN_SDK:-}" ]; then
   cp "$QNN_SDK/lib/aarch64-android/libQnnHtp.so" "$lib/"
   for v in 73 75 79; do
     cp "$QNN_SDK/lib/aarch64-android/libQnnHtpV${v}Stub.so" "$QNN_SDK/lib/hexagon-v$v/unsigned/libQnnHtpV${v}Skel.so" "$lib/"
   done
+  mkdir -p "$qnn"
+  cp "$QNN_SDK/QNN_NOTICE.txt" "$qnn/"
+  sed -n 's/^version: *//p' "$QNN_SDK/sdk.yaml" > "$qnn/VERSION"
 fi
