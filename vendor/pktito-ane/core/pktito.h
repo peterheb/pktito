@@ -25,6 +25,7 @@
  *                                 transcribes them, each chunk's decoder
  *                                 beside the next one's encoder
  *   captions     pk_captions      words with times to a subtitle track's cues
+ *   sentences    pk_sentences     tokens to the sentences a transcript reads in
  *
  * A model is read-only once loaded and may be shared by any number of
  * transcribers on any number of threads; a transcriber belongs to one
@@ -68,10 +69,10 @@ const char *pk_model_meta(const pk_model *m, const char *key);
 /* The i-th metadata pair, for listing: 0, or -1 past the last. */
 int pk_model_meta_at(const pk_model *m, int i, const char **key, const char **value);
 
-/* 0 for a slim model file (the ane fork's, `pktito-tools slim`; a build
- * with ANE=1 loads one), which leaves its encoder out for a Core ML
- * model's: it transcribes only with the encoder pk_asr_use_ane gives it,
- * and without one pk_asr_run returns -1. 1 for every other. */
+/* 0 for a slim model file (`pktito-tools slim`; a build with ANE=1 or
+ * QNN=1 loads one), which leaves its encoder out for an accelerator's: it
+ * transcribes only with the encoder pk_asr_use_ane or pk_asr_use_qnn gives
+ * it, and without one pk_asr_run returns -1. 1 for every other. */
 int pk_model_has_encoder(const pk_model *m);
 
 /* The architecture's numbers, for printing (`pktito-c info`). */
@@ -136,6 +137,34 @@ int     pk_asr_use_ane(pk_asr *a, const char *path, char *err, size_t errlen);
  * the full model file, whose encoder is pktito's own. */
 int     pk_asr_ane_warm(pk_asr *a, char *err, size_t errlen);
 
+/* The encoder on Qualcomm's Hexagon NPU (a build with QNN=1; Android on a
+ * Snapdragon), on: a graph built from the model's own weights
+ * (core/qnn.h), which QNN compiles now, in a minute or two (94 to 114 s
+ * on a Galaxy S24 Ultra, tools/qnn/CLIMB.md); with cache a path, the
+ * compiled graph is kept there and read back the next time, in a second
+ * or two.
+ * Off (on 0) the CPU's again. An input longer than its 30.72 s still
+ * takes the CPU's encoder. A slim model's (pk_model_has_encoder 0) is
+ * the graph in cache alone, compiled ahead of time for this chip (on a
+ * PC, PKTITO_QNN_TARGET: tools/qnn/CLIMB.md), and with no CPU encoder an
+ * input longer than the graph's is not transcribed. Where QNN refuses the
+ * graph there - made for another chip, or by a QNN this one does not
+ * read - err says so and the QNN that made it, for the caller to fetch
+ * the graph again. Its arithmetic is fp16 against the model's int8
+ * weights, not the int8 every backend computes the same bits of: a
+ * transcript can differ from pktito's, and from one chip's to another's.
+ * 0, or -1 with why in err. */
+int     pk_asr_use_qnn(pk_asr *a, int on, const char *cache, char *err, size_t errlen);
+
+/* The NPU here as QNN describes it to a PC that compiles a graph for it
+ * (PKTITO_QNN_TARGET): "57,75,8,1,0", the SoC's number in QNN's table,
+ * its Hexagon's version, its VTCM in MB, and whether it has DLBC and a
+ * signed PD, into chip, cap bytes; for the caller to fetch the graph
+ * compiled for this chip, which pk_asr_use_qnn reads. 0, or -1 where QNN
+ * finds none (a PC's QNN has no NPU to ask) or the build has no QNN, with
+ * why in err. */
+int     pk_qnn_chip(char *chip, size_t cap, char *err, size_t errlen);
+
 /* One token of a transcript: a piece of the vocabulary, the encoder frame
  * it was emitted at, and the number of frames TDT says it lasts. */
 typedef struct {
@@ -146,9 +175,9 @@ typedef struct {
  * utterance: the whole of it through the encoder at once, as NeMo's
  * transcribe() does with a file. *toks points at the tokens, which belong to
  * the transcriber and last until its next call. Returns their count, or -1
- * if memory runs out or the encoder can't run (a slim model's with no Core
- * ML encoder given, or Core ML failing it). A sample that is not finite is
- * read as 0.
+ * if memory runs out or the encoder can't run (a slim model's with no
+ * accelerator's encoder given, the accelerator failing it, or an input
+ * longer than it takes). A sample that is not finite is read as 0.
  *
  * The encoder's attention costs grow with the square of the length, and
  * its working memory with the length: a minute is about 60 MB. Long
@@ -235,6 +264,51 @@ typedef int (*pk_transcribe_fn)(void *arg, const pk_chunk_out *c);
 int pk_asr_transcribe(pk_asr *a, const float *x, size_t n, const pk_transcribe_opts *o,
                       pk_transcribe_fn fn, void *arg);
 
+/* pk_asr_transcribe in steps, for a caller who runs the transcribing
+ * itself: on threads of its own, over several transcribers, with several
+ * recordings' chunks dealt among them, as a server's queue would.
+ * pk_steps_new runs the VAD and cuts the chunks, on a's threads, and the
+ * rest is jobs, each a stretch of x to hear: a chunk whole, or a stretch
+ * of one that the retry hears again. The caller hears a job with
+ * pk_asr_run on any transcriber of the same model and mode, on any thread,
+ * and hands its tokens back with pk_steps_put, the jobs in any order;
+ * pk_steps_take has each chunk in order once its job and its retries are
+ * in. They are the bits pk_asr_transcribe's fn has: pk_asr_run's are the
+ * same on every transcriber, and pk_asr_transcribe is these steps, its
+ * chunks heard as pk_asr_run_chunks hears them.
+ *
+ * pk_steps_job hands out the next job, a stretch the retry hears again
+ * before the next chunk, since a chunk waits for its retries. It returns
+ * 1, 0 when there is none to hand out now, or -1 if memory runs out. With
+ * every chunk handed out, the retry's stretches come as the chunks are
+ * taken: a chunk's once its tokens are in and the chunk before is taken,
+ * and one at a time, since each is heard only while the recording's
+ * budget for them lasts, which the last one's tokens decide
+ * (core/transcribe.c, RETRY_SHARE). pk_steps_put returns 0, or -1 if
+ * memory runs out, count is -1 (pk_asr_run failed), or j is not a job of
+ * s's that is out, as pk_steps_job handed it out. pk_steps_take returns 1
+ * with the next chunk in *out, its tokens lasting until the next call on
+ * s; 0 while that chunk is not done; -1 if memory runs out. The run is
+ * over after pk_steps_chunks(s) of them, or at any call's -1, after which
+ * every call on s returns -1 and s is for pk_steps_free alone. x must last as long as s, which belongs to one thread
+ * at a time, and holds what a pk_asr_transcribe call holds (above) and the
+ * tokens of chunks put and not yet taken. pk_steps_new returns NULL if
+ * memory runs out or max_chunk_s is under a second. */
+typedef struct pk_steps pk_steps;
+
+typedef struct {
+    size_t chunk;               /* the chunk it is for */
+    int    retry;               /* 0: the chunk whole; 1: a stretch of it heard again */
+    pk_seg at;                  /* the samples to hear, x[at.start, at.end) */
+} pk_job;
+
+pk_steps *pk_steps_new(pk_asr *a, const float *x, size_t n, const pk_transcribe_opts *o);
+size_t    pk_steps_chunks(const pk_steps *s);
+int       pk_steps_job(pk_steps *s, pk_job *j);
+int       pk_steps_put(pk_steps *s, const pk_job *j, const pk_tok *toks, long count);
+int       pk_steps_take(pk_steps *s, pk_chunk_out *out);
+void      pk_steps_free(pk_steps *s);
+
 /* The text of n tokens, UTF-8 and NUL-terminated in out[cap]: SentencePiece's
  * decoding with NeMo's one change to it, the space before punctuation taken
  * away. Returns the text's length; if that is cap or more, out holds as much
@@ -303,6 +377,23 @@ void pk_seg_defaults(pk_seg_params *p);
  * if that is more than cap, out is unfinished. 2n + 1 is always enough. */
 size_t pk_segments(const float *probs, size_t n, int rate, int64_t n_samples,
                    const pk_seg_params *p, pk_seg *out, size_t cap);
+
+/* Silero over a recording of any length, x[0, n), as pk_asr_transcribe
+ * runs it: the transcriber's own stream made new, its encoder over the
+ * transcriber's threads and its LSTM on the calling thread, and the last
+ * frame padded with silence. P(speech) for each 32 ms frame into probs,
+ * (n + 511) / 512 of them, the bits pk_vad_probs gives from a new stream,
+ * 1.9 times as fast as one thread on a 9950X's 16 and a Pi 5's 4, 2.9 on
+ * an M5 Ultra's 36 (backend/avx2/CLIMB.md, 2026-11-02). Returns their
+ * count, or -1 if memory runs out. */
+long pk_asr_vad(pk_asr *a, const float *x, size_t n, float *probs);
+
+/* The speech in x[0, n): pk_asr_vad's probabilities through pk_segments
+ * with p, Silero's defaults where p is NULL. Returns how many segments
+ * there are, out unfinished if that is more than cap (twice the frames
+ * plus one is always enough), or -1 if memory runs out. */
+long pk_asr_speech(pk_asr *a, const float *x, size_t n, const pk_seg_params *p, pk_seg *out,
+                   size_t cap);
 
 /* VADIterator: speech starts and ends as they happen. */
 typedef struct {
@@ -386,5 +477,41 @@ long pk_captions(const pk_capword *w, size_t n, int english, int64_t media_end, 
  * in (core/language.c). NULL for words too few, or no language ahead by
  * enough. Only the words' text is read. */
 const char *pk_language(const pk_capword *w, size_t n);
+
+/* ------------------------------------------------------------ sentences --- */
+
+/* A sentence: tokens [first, first + n) of those pk_sentences was given. */
+typedef struct {
+    int32_t first, n, flags;
+} pk_sentence;
+
+enum {
+    PK_SENTENCE_LONG = 1,   /* broken because it ran past 30 s, at a comma or a pause, not at its end */
+};
+
+/* The sentences of n tokens in order, their frames counted from one start:
+ * a recording's chunks laid end to end, each chunk's frames plus its
+ * at.start in frames (pk_model_frame_seconds). A sentence ends at a word
+ * ending in . ? ! or an ellipsis, unless the next word starts with a small
+ * letter, or the word is shaped like an abbreviation ("Dr.", "F.", "U.S.")
+ * and its times say no sentence ended there; and one that runs past 30 s is
+ * broken after a comma, semicolon, colon or dash that leaves a first part of
+ * 10 to 20 s, else at the longest pause there (core/sentences.c; README,
+ * "Sentences", has the measurements). lang is the words' language as
+ * pk_language names it, for the rules of one language's ("en", "de"), or
+ * NULL.
+ *
+ * done is 1 when the tokens run to the recording's end, so that the words
+ * after the last sentence's end make one too, and 0 when more may come:
+ * then those words are no sentence yet, and a caller hearing a recording
+ * chunk by chunk passes them again with the next chunk's tokens. A
+ * sentence's end depends on its own words and the word after it alone, so
+ * the sentences are the same however the tokens come.
+ *
+ * Returns the count; out has room for n. -1 if memory runs out (five times
+ * the first power of two past the longest word's text, 320 bytes at least,
+ * given back before it returns). */
+long pk_sentences(const pk_model *m, const pk_tok *t, size_t n, const char *lang, int done,
+                  pk_sentence *out);
 
 #endif /* PKTITO_H */

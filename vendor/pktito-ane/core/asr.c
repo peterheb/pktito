@@ -17,6 +17,9 @@
 #include "ane.h"
 #include <dispatch/dispatch.h>
 #endif
+#ifdef PK_QNN
+#include "qnn.h"
+#endif
 
 static size_t up16z(size_t x) { return (x + 15) & ~(size_t)15; }
 
@@ -178,6 +181,36 @@ int pk_asr_ane_warm(pk_asr *a, char *err, size_t errlen) {
 #endif
 }
 
+int pk_asr_use_qnn(pk_asr *a, int on, const char *cache, char *err, size_t errlen) {
+#ifdef PK_QNN
+    pk_qnn *e = NULL;
+    if (on && !(e = pk_qnn_open(a->m, 0, cache, err, errlen)))
+        return -1;
+    pk_qnn_free(a->qnn);
+    a->qnn = e;
+    return 0;
+#else
+    (void)a;
+    (void)on;
+    (void)cache;
+    if (err && errlen)
+        snprintf(err, errlen, "this pktito was built without QNN=1");
+    return -1;
+#endif
+}
+
+int pk_qnn_chip(char *chip, size_t cap, char *err, size_t errlen) {
+#ifdef PK_QNN
+    return pk_qnn_target(chip, cap, err, errlen);
+#else
+    (void)chip;
+    (void)cap;
+    if (err && errlen)
+        snprintf(err, errlen, "this pktito was built without QNN=1");
+    return -1;
+#endif
+}
+
 void pk_asr_free(pk_asr *a) {
     if (!a)
         return;
@@ -193,6 +226,9 @@ void pk_asr_free(pk_asr *a) {
         free(a->ane_feat[k]);
         free(a->ane_x[k]);
     }
+#endif
+#ifdef PK_QNN
+    pk_qnn_free(a->qnn);
 #endif
     free(a->tws);
     free(a->mem);
@@ -210,8 +246,9 @@ void pk_asr_free(pk_asr *a) {
 
 /* A chunk up to its search: its features, the encoder, and the joint's
  * encoder half of its frames, into f. Returns its encoder frames, or -1
- * where the encoder can't run: a slim model's with no Core ML encoder
- * given, or Core ML failing it. */
+ * where the encoder can't run: a slim model's with no accelerator's
+ * encoder given, the accelerator failing it, or an input longer than it
+ * takes. */
 static long encode(pk_asr *a, const float *x, size_t n, float *f) {
     const size_t T0 = pk_mel_frames(a->m, n);
     if (T0 == 0)
@@ -476,9 +513,9 @@ int pk_run_chunks_with(pk_asr *a, const float *x, const pk_seg *c, size_t n,
     if (a->ane && n > 1 && ane_depth() > 1)
         return ane_chunks(a, x, c, n, most, ane_depth(), each, arg);
 #endif
-    /* one lane with the Neural Engine: a lane's transcriber has the CPU's
-     * encoder, so a chunk's bits would be the lane's it fell to */
-    int k = a->ane ? 1 : lanes_for(a, c, n);
+    /* one lane with the Neural Engine or the NPU: a lane's transcriber has
+     * the CPU's encoder, so a chunk's bits would be the lane's it fell to */
+    int k = a->ane || a->qnn ? 1 : lanes_for(a, c, n);
     if (k > 1 && (k = lanes_ready(a, k, most)) > 1)
         return run_lanes(a, x, c, n, k, each, arg);
     pk_os_throttle was = pk_os_unthrottle();  /* this thread runs a share of every job */

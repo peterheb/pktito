@@ -491,14 +491,17 @@ static int bind_layer(pk_file *f, pk_model *m, uint32_t i, pk_layer *L) {
 static int bind(pk_file *f, pk_model *m) {
     if (bind_params(f, m))
         return -1;
-#ifdef PK_ANE
+#if defined(PK_ANE) || defined(PK_QNN)
     /* A slim file (pktito-tools slim): the model with its encoder's tensors
-     * left out, for the encoder a Core ML model's (tools/ane/encoder.py),
-     * given to a transcriber with pk_asr_use_ane - the subsampling and the
-     * layers, 612 MB of a v2 file's 624. One that holds any of them anyway
-     * is refused below, as holding what is not the model's. A build without
-     * ANE=1 refuses the param itself, as one it does not know: a file it
-     * could not run. */
+     * left out - the subsampling and the layers, 612 MB of a v2 file's 624 -
+     * for an encoder that brings its own weights: a Core ML model's
+     * (tools/ane/encoder.py), given to a transcriber with pk_asr_use_ane, or
+     * the NPU's graph compiled ahead of time, read from pk_asr_use_qnn's
+     * cache. The param's name is the ane fork's, whose encoder came first;
+     * the file is the same for both. One that holds any of the encoder's
+     * tensors anyway is refused below, as holding what is not the model's.
+     * A build with neither refuses the param itself, as one it does not
+     * know: a file it could not run. */
     pk_param q;
     if (param(f, "encoder_coreml", &q)) {
         if (q.kind != PK_PARAM_U32 || q.v.u != 1)

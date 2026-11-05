@@ -83,7 +83,8 @@ struct pk_model {
     float    ln_eps;
     const float *pos_freq;     /* [d_model/2] */
     int      encoder_coreml;   /* a slim file (core/model.c): none of what follows, the
-                                  encoder a Core ML model's, given with pk_asr_use_ane */
+                                  encoder a Core ML model's, given with pk_asr_use_ane,
+                                  or the NPU's compiled graph, with pk_asr_use_qnn */
     const float *conv0_w, *conv0_b, *dw1_w, *dw1_b, *pw1_b, *dw2_w, *dw2_b, *pw2_b, *out_b;
     pk_q8    sub_pw1, sub_pw2, sub_out;
     pk_layer *layers;
