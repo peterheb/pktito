@@ -7,6 +7,9 @@
       "target/qnn/QnnHtpV73Stub.dll": "QnnHtpV73Stub.dll",
       "target/qnn/libQnnHtpV73Skel.so": "libQnnHtpV73Skel.so",
       "target/qnn/libqnnhtpv73.cat": "libqnnhtpv73.cat",
+      "target/qnn/QnnHtpV81Stub.dll": "QnnHtpV81Stub.dll",
+      "target/qnn/libQnnHtpV81Skel.so": "libQnnHtpV81Skel.so",
+      "target/qnn/libqnnhtpv81.cat": "libqnnhtpv81.cat",
       "target/qnn/QNN_NOTICE.txt": "licenses/QNN_NOTICE.txt",
       "target/qnn/NOTICE_WINDOWS.txt": "licenses/QNN_NOTICE_WINDOWS.txt",
       "target/qnn/VERSION": "licenses/QNN_VERSION.txt"

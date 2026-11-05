@@ -60,10 +60,20 @@ class ModelsTest {
     fun anOwnFileAloneLeavesNone() =
         assertNull(Models.next(listOf(offer("v2", false), offer("v3", false)), "v2", null))
 
-    // the catalog's chips (model.rs, Graph): the SM8650's, the SM8750's and the X1E80100's
+    // the catalog's chips (model.rs, Graph) and their systems: the SM8650's, the SM8750's, the
+    // SM8850's, the X1E80100's, and the X2 Elite's, for Windows alone
+    private fun graph(chip: String, vararg systems: String) =
+        JSONObject().put("chip", chip).put("systems", JSONArray(systems.toList()))
+
     private val graphs =
         JSONArray(
-            listOf("57,75,8,1,0", "69,79,8,1,0", "60,73,8,1,1").map { JSONObject().put("chip", it) }
+            listOf(
+                graph("57,75,8,1,0", "android"),
+                graph("69,79,8,1,0", "android"),
+                graph("88,81,8,1,1", "windows"),
+                graph("87,81,8,1,0", "android"),
+                graph("60,73,8,1,1", "android", "windows"),
+            )
         )
 
     private fun graphOf(chip: String?) = Models.graphFor(graphs, chip)?.getString("chip")
@@ -74,6 +84,13 @@ class ModelsTest {
     @Test fun anotherSocGetsItsHexagonsGraph() = assertEquals("60,73,8,1,1", graphOf("43,73,8,1,0"))
 
     @Test fun lessVtcmThanTheGraphsGetsNone() = assertNull(graphOf("43,73,4,1,0"))
+
+    // QNN's SoC 97, the SM8845, a v81: the S26's graph, never the PC's listed before it
+    @Test
+    fun anotherV81PhoneGetsThePhonesGraph() = assertEquals("87,81,8,1,0", graphOf("97,81,8,1,0"))
+
+    @Test
+    fun aPcsChipOnAPhoneGetsThePhonesGraph() = assertEquals("87,81,8,1,0", graphOf("88,81,8,1,1"))
 
     // QNN's SoC 36, the SM8450, a v69
     @Test fun anotherHexagonGetsNone() = assertNull(graphOf("36,69,8,1,0"))

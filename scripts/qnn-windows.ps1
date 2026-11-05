@@ -13,11 +13,12 @@
 #
 # The DLLs are QNN's HTP backend, QnnSystem, which it loads to read a
 # compiled graph, and the stub for each Hexagon the catalog has a graph
-# for on Windows (73: the X1E80100's), with that Hexagon's skel and its
-# catalog file (.cat), which the NPU's driver checks the skel against:
-# snappy's Snapdragon X Elite ran the catalog's graph with these alone
-# beside the exe (2026-11-05). Not the compiler, QnnHtpPrepare.dll, as the graphs come
-# compiled on a PC. With them go the SDK's notice files for the open-source
+# for on Windows (73, the X1E80100's; 81, the X2 Elite's), with that
+# Hexagon's skel and its catalog file (.cat), which the NPU's driver checks
+# the skel against: snappy's Snapdragon X Elite ran the catalog's graph
+# with V73's alone beside the exe, from an installed MSIX too (2026-11-05);
+# no X2 has run V81's yet. Not the compiler, QnnHtpPrepare.dll, as the
+# graphs come compiled on a PC. With them go the SDK's notice files for the open-source
 # code in them, as the SDK has them, and its version, for About's licenses:
 # QTI's license (its "Third Party Notices") leaves those licenses to the
 # app, and the files unaltered. QNN_NOTICE.txt is the one the Android app
@@ -30,7 +31,7 @@ Remove-Item -Recurse -Force $out -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $out | Out-Null
 $lib = Join-Path $Sdk 'lib\aarch64-windows-msvc'
 Copy-Item "$lib\QnnHtp.dll", "$lib\QnnSystem.dll" $out
-foreach ($v in 73) {
+foreach ($v in 73, 81) {
     Copy-Item "$lib\QnnHtpV${v}Stub.dll" $out
     Copy-Item "$Sdk\lib\hexagon-v$v\unsigned\libQnnHtpV${v}Skel.so", "$Sdk\lib\hexagon-v$v\unsigned\libqnnhtpv$v.cat" $out
 }

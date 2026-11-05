@@ -210,11 +210,21 @@ object Models {
      * untried, each Hexagon here being one SoC's (v73 the X1E80100's, v75 the SM8650's, v79 the
      * SM8750's). A refusal is remembered and the model goes to its CPU's edition, its whole file
      * downloaded where it isn't here (Transcriber.npuFailed): a new SoC's phone tries its NPU at
-     * the cost of that download. Null for none, and while the chip isn't known.
+     * the cost of that download. Null for none, and while the chip isn't known. Only the graphs the
+     * catalog lists for Android (Graph's systems) are candidates, so that a phone never takes a
+     * PC's graph of its Hexagon, as the S26 might the X2 Elite's; with one graph a Hexagon on a
+     * system (model.rs, one_graph_a_hexagon_a_system), the catalog's order never chooses.
      */
     internal fun graphFor(graphs: JSONArray, chip: String?): JSONObject? {
         if (chip.isNullOrEmpty()) return null
-        val all = (0 until graphs.length()).map { graphs.getJSONObject(it) }
+        val all =
+            (0 until graphs.length())
+                .map { graphs.getJSONObject(it) }
+                .filter { g ->
+                    g.optJSONArray("systems")?.let { s ->
+                        (0 until s.length()).any { s.getString(it) == "android" }
+                    } == true
+                }
         val mine = numbers(chip)
         return all.find { it.getString("chip") == chip }
             ?: all.find { g ->

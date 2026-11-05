@@ -65,8 +65,19 @@ pub fn graph(dir: &Path, e: &Entry) -> Option<&'static Graph> {
 /// another SoC of its Hexagon with no more VTCM than it has, which QNN may
 /// run or refuse. A Snapdragon X's QNN on Windows names no SoC
 /// (2147483647,73,8,1,1 on snappy's X1E, 2026-11-05), and takes the
-/// X1E80100's graph by its Hexagon.
+/// X1E80100's graph by its Hexagon, as an X2 the SC8480XP's. Only the
+/// graphs for this system are candidates (graph_on).
 pub fn graph_for(e: &Entry, chip: &str) -> Option<&'static Graph> {
+    graph_on(e, chip, std::env::consts::OS)
+}
+
+/// graph_for on the system named system, among the graphs for it alone
+/// (Graph::systems). Which one is never the catalog's order: on a system
+/// the catalog has one graph a Hexagon (one_graph_a_hexagon_a_system), so
+/// the exact chip and its Hexagon's name the same graph or there is one
+/// candidate. A second graph of one Hexagon on one system needs a rule for
+/// choosing between them first.
+pub fn graph_on(e: &Entry, chip: &str, system: &str) -> Option<&'static Graph> {
     let numbers = |c: &str| -> Option<Vec<u64>> {
         let n: Vec<u64> = c
             .split(',')
@@ -76,8 +87,9 @@ pub fn graph_for(e: &Entry, chip: &str) -> Option<&'static Graph> {
     };
     let mine = numbers(chip)?;
     let e: &'static Entry = entry(e.name)?;
-    e.qnn.iter().find(|g| g.chip == chip).or_else(|| {
-        e.qnn.iter().find(|g| {
+    let mut here = e.qnn.iter().filter(|g| g.systems.contains(&system));
+    here.clone().find(|g| g.chip == chip).or_else(|| {
+        here.find(|g| {
             numbers(g.chip).is_some_and(|theirs| theirs[1] == mine[1] && theirs[2] <= mine[2])
         })
     })
@@ -118,7 +130,9 @@ pub fn refuse_npu(dir: &Path, e: &Entry, why: &str) {
         let _ = fs::write(refused_in(dir, g), format!("{}{why}\n", refusal_key(g)));
     }
     for g in e.qnn {
-        let _ = fs::remove_file(Wanted::part(dir, e, &g.part).dst);
+        let dst = Wanted::part(dir, e, &g.part).dst;
+        let _ = fs::remove_file(&dst);
+        unmark(&dst);
     }
 }
 
@@ -199,6 +213,12 @@ pub struct Graph {
     /// whether it has DLBC and a signed PD
     pub chip: &'static str,
     pub part: Part,
+    /// The systems whose QNN it is for, as Rust names them
+    /// (std::env::consts::OS: "android", "windows"): a graph is offered on
+    /// no other, whatever its chip, so that a phone never takes a PC's graph
+    /// of its Hexagon, nor a PC a phone's (graph_for). The X1E80100's is
+    /// both, the Googlebook's and snappy's.
+    pub systems: &'static [&'static str],
 }
 
 /// The models models.pktito.net serves: pktito-tools' conversions of NVIDIA's
@@ -237,6 +257,7 @@ pub const CATALOG: &[Entry] = &[
                     bytes: 714_506_856,
                     sha256: "3f690d2cdd0ad6dc3b805f627f5c8e0b7701af20135bc275ebcc8f55877263a1",
                 },
+                systems: &["android"],
             },
             // the Galaxy S25's Snapdragon 8 Elite
             Graph {
@@ -246,6 +267,7 @@ pub const CATALOG: &[Entry] = &[
                     bytes: 713_568_872,
                     sha256: "40a5b75f37954b528f04944c57096ba0215783cea23b50ef659a981b5995456c",
                 },
+                systems: &["android"],
             },
             // the Galaxy S26's Snapdragon 8 Elite Gen 5
             Graph {
@@ -255,6 +277,7 @@ pub const CATALOG: &[Entry] = &[
                     bytes: 714_412_648,
                     sha256: "08388c7f4b9cbb562330111ed6e0b026d00512168cee589b04578f50673b1aff",
                 },
+                systems: &["android"],
             },
             // the Googlebook's Snapdragon X Elite
             Graph {
@@ -264,6 +287,19 @@ pub const CATALOG: &[Entry] = &[
                     bytes: 714_523_240,
                     sha256: "dab2d4d69028caba976c0b82316f83ad49bd3d4bac01b39992cd66904d216513",
                 },
+                systems: &["android", "windows"],
+            },
+            // the Snapdragon X2 Elite's (SC8480XP: SoC 88, V81, 8 MB of VTCM), for
+            // Windows; compiled by pktito bbdcf60 on 2026-11-05, run on no X2 yet
+            // (the qnn branch's tools/qnn/CLIMB.md)
+            Graph {
+                chip: "88,81,8,1,1",
+                part: Part {
+                    file: "parakeet-tdt-0.6b-v2-sc8480xp.qnn",
+                    bytes: 714_445_416,
+                    sha256: "726db8ecde7934510ab0193f52de93601c64506edf1804a240612a823e90d811",
+                },
+                systems: &["windows"],
             },
         ],
     },
@@ -300,6 +336,7 @@ pub const CATALOG: &[Entry] = &[
                     bytes: 714_506_856,
                     sha256: "84aae2af7273132997bb71af73550f1a9a037de35b3d45d9e95a9390a796324e",
                 },
+                systems: &["android"],
             },
             Graph {
                 chip: "69,79,8,1,0",
@@ -308,6 +345,7 @@ pub const CATALOG: &[Entry] = &[
                     bytes: 713_568_872,
                     sha256: "d5cf8b7659ea176f66937a94e72c80bb11caac60d18811b0f500b6b1eaa73113",
                 },
+                systems: &["android"],
             },
             Graph {
                 chip: "87,81,8,1,0",
@@ -316,6 +354,7 @@ pub const CATALOG: &[Entry] = &[
                     bytes: 714_412_648,
                     sha256: "68eb09b667c7f9f6f36bb7eb7812945078150d8ff9984c61ce169d1bdfe99eab",
                 },
+                systems: &["android"],
             },
             Graph {
                 chip: "60,73,8,1,1",
@@ -324,6 +363,19 @@ pub const CATALOG: &[Entry] = &[
                     bytes: 714_523_240,
                     sha256: "1208ddc1b2c63e68568d692780297d142ad5f57ee3bb05dd86218347edd7809f",
                 },
+                systems: &["android", "windows"],
+            },
+            // the Snapdragon X2 Elite's (SC8480XP: SoC 88, V81, 8 MB of VTCM), for
+            // Windows; compiled by pktito bbdcf60 on 2026-11-05, run on no X2 yet
+            // (the qnn branch's tools/qnn/CLIMB.md)
+            Graph {
+                chip: "88,81,8,1,1",
+                part: Part {
+                    file: "parakeet-tdt-0.6b-v3-sc8480xp.qnn",
+                    bytes: 714_445_416,
+                    sha256: "237a5a6c51abfcb969310d494f70b2663c568a43174b70b9fd3f6d624c6caa7a",
+                },
+                systems: &["windows"],
             },
         ],
     },
@@ -529,6 +581,9 @@ pub fn remove_parts(dir: &Path, e: &Entry) -> Result<(), String> {
                 _ => {}
             }
         }
+        if done {
+            unmark(&w.dst);
+        }
     }
     Ok(())
 }
@@ -584,6 +639,7 @@ pub fn unpack_encoder(archive: &Path, dst: &Path) -> Result<(), String> {
     fs::rename(&work, dst)
         .map_err(|err| format!("couldn't put {} in place: {err}", dst.display()))?;
     let _ = fs::remove_file(archive);
+    let _ = fs::rename(marker_of(archive), marker_of(dst));
     Ok(())
 }
 
@@ -726,6 +782,7 @@ pub fn delete(data: &Path, e: &Entry) -> Result<Option<&'static Entry>, String> 
             }
             _ => {}
         }
+        unmark(&file);
     }
     let encoder = encoder_in(&dir, e);
     match fs::remove_dir_all(&encoder) {
@@ -734,6 +791,7 @@ pub fn delete(data: &Path, e: &Entry) -> Result<Option<&'static Entry>, String> 
         }
         _ => {}
     }
+    unmark(&encoder);
     let mut s = load_settings(data);
     if s.model.as_deref() != Some(e.name) {
         return Ok(None);
@@ -1027,7 +1085,32 @@ pub fn download_file(
     }
     let dst = w.dst.clone();
     fs::rename(&part, &dst).map_err(|err| written(&dst, err))?;
+    mark(&dst, w.sha256);
     Ok(dst)
+}
+
+/// Where the SHA-256 that a file of the catalog's checked against is kept,
+/// beside it (its name with .sha256 after it), and beside a Core ML
+/// encoder's folder the archive's it was unpacked from: so that a later
+/// app can tell the file it has from a newer one its catalog names, even of
+/// the same size, without reading 714 MB again. It says something only
+/// beside its file.
+pub fn marker_of(path: &Path) -> PathBuf {
+    let mut m = path.as_os_str().to_owned();
+    m.push(".sha256");
+    PathBuf::from(m)
+}
+
+/// Record the SHA-256 path checked against (marker_of): kept if it can be,
+/// a file without one being only a file whose version a later app must
+/// read for itself.
+fn mark(path: &Path, sha256: &str) {
+    let _ = fs::write(marker_of(path), format!("{sha256}\n"));
+}
+
+/// Delete path's record too, where there is one (marker_of).
+fn unmark(path: &Path) {
+    let _ = fs::remove_file(marker_of(path));
 }
 
 /// The rest of w into file, which holds its first `got` bytes; how many it
@@ -1202,7 +1285,7 @@ mod tests {
     #[test]
     fn graph_by_chip() {
         let v2 = &CATALOG[0];
-        let file = |chip| graph_for(v2, chip).map(|g| g.part.file);
+        let file = |chip| graph_on(v2, chip, "windows").map(|g| g.part.file);
         assert_eq!(
             file("60,73,8,1,1"),
             Some("parakeet-tdt-0.6b-v2-x1e80100.qnn")
@@ -1214,6 +1297,87 @@ mod tests {
         assert_eq!(file("2147483647,73,4,1,1"), None);
         assert_eq!(file("2147483647,68,8,1,1"), None);
         assert_eq!(file("snapdragon"), None);
+    }
+
+    /// A file whose SHA-256 checked has it beside it, and deleting its model
+    /// deletes that too (marker_of)
+    #[test]
+    fn a_checked_file_keeps_its_sha256_until_deleted() {
+        let data = scratch("marker");
+        let dir = data.join("models");
+        fs::create_dir_all(&dir).unwrap();
+        let body = b"not a model, but the bytes it was published as";
+        let sha = format!("{:x}", Sha256::digest(body));
+        let w = Wanted {
+            name: CATALOG[0].name.into(),
+            url: String::new(),
+            bytes: body.len() as u64,
+            sha256: Box::leak(sha.clone().into_boxed_str()),
+            part: dir.join("x.pkf.part"),
+            dst: file_in(&dir, &CATALOG[0]),
+        };
+        fs::write(&w.part, body).unwrap();
+        // the whole of it is here: no request is made
+        assert_eq!(
+            download_file(&w, &Ctl::default(), |_, _| {}).ok(),
+            Some(w.dst.clone())
+        );
+        assert_eq!(
+            fs::read_to_string(marker_of(&w.dst)).unwrap(),
+            format!("{sha}\n")
+        );
+        delete(&data, &CATALOG[0]).unwrap();
+        assert!(!w.dst.exists() && !marker_of(&w.dst).exists());
+        let _ = fs::remove_dir_all(&data);
+    }
+
+    /// On each system the catalog has one graph a Hexagon, so that which one
+    /// a chip gets is never the catalog's order (graph_on)
+    #[test]
+    fn one_graph_a_hexagon_a_system() {
+        for e in CATALOG {
+            for system in ["android", "windows"] {
+                let mut arches: Vec<&str> = e
+                    .qnn
+                    .iter()
+                    .filter(|g| g.systems.contains(&system))
+                    .map(|g| g.chip.split(',').nth(1).unwrap())
+                    .collect();
+                let n = arches.len();
+                arches.sort();
+                arches.dedup();
+                assert_eq!(
+                    arches.len(),
+                    n,
+                    "{} has two graphs of one Hexagon on {system}",
+                    e.name
+                );
+            }
+        }
+    }
+
+    /// What each chip we know of gets on its system, as its QNN describes it
+    #[test]
+    fn each_chip_gets_its_systems_graph() {
+        for e in CATALOG {
+            let file = |chip, system| graph_on(e, chip, system).map(|g| g.part.file.to_string());
+            let f = |chip: &str| Some(format!("{}-{chip}.qnn", e.name));
+            // phones: the S24, the S25, the S26, the Googlebook
+            assert_eq!(file("57,75,8,1,0", "android"), f("sm8650"));
+            assert_eq!(file("69,79,8,1,0", "android"), f("sm8750"));
+            assert_eq!(file("87,81,8,1,0", "android"), f("sm8850"));
+            assert_eq!(file("60,73,8,1,1", "android"), f("x1e80100"));
+            // another V81 phone (QNN's SM8845) takes the S26's, never the X2's
+            assert_eq!(file("97,81,8,1,0", "android"), f("sm8850"));
+            // Windows names no SoC: snappy's X Elite, an X2 Elite
+            assert_eq!(file("2147483647,73,8,1,1", "windows"), f("x1e80100"));
+            assert_eq!(file("2147483647,81,8,1,1", "windows"), f("sc8480xp"));
+            assert_eq!(file("88,81,8,1,1", "windows"), f("sc8480xp"));
+            // no phone's graph on Windows, nor any graph where there are none
+            assert_eq!(file("2147483647,75,8,1,1", "windows"), None);
+            assert_eq!(file("60,73,8,1,1", "macos"), None);
+            assert_eq!(file("60,73,8,1,1", "linux"), None);
+        }
     }
 
     /// A refusal holds for the chip, the app and the graph it was of: an
