@@ -31,13 +31,12 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.selection.SelectionState
 import androidx.compose.foundation.text.selection.rememberSelectionState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -155,7 +154,7 @@ fun Ready(recent: List<Recents.Item>, a: ReadyActions, model: @Composable () -> 
                 .fillMaxWidth()
                 .then(
                     when {
-                        short -> Modifier.verticalScroll(rememberScrollState())
+                        short -> Modifier.scrolls()
                         listed -> Modifier.fillMaxHeight()
                         else -> Modifier
                     }
@@ -475,7 +474,10 @@ private fun Recent(
                     )
                 }
             if (scrolls)
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                LazyColumn(
+                    Modifier.scrollbar(rememberBar(rememberLazyListState())),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
                     if (live != null) item(key = "live") { LiveRow(live) }
                     itemsIndexed(items, key = { _, r -> r.id }) { i, r -> row(i, r) }
                 }
@@ -1181,7 +1183,9 @@ private fun Rows(
             with(density) { measurer.measure(base.at(base.duration), figures).size.width.toDp() } +
                 10.dp
         }
-    BoxWithConstraints(modifier.fillMaxWidth().padding(top = 16.dp)) {
+    // the list's bar, its thumb to drag on a long transcript (Scrollbar.kt)
+    val bar = rememberBar(follow.list)
+    BoxWithConstraints(modifier.fillMaxWidth().padding(top = 16.dp).scrollbar(bar)) {
         // a column from 620 dp at the default text size, the desktop's
         // (app.css, max-width: 619px), where the text keeps 416 beside 112:
         // the list's 24 dp and the row's 16 either side, and the gap's 12;

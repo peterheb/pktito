@@ -22,11 +22,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -129,7 +128,7 @@ fun About(version: String, onBack: () -> Unit, onLink: (String) -> Unit) {
                             )
                     )
                 },
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                Modifier.fillMaxSize().scrolls(),
             ) { (s, w), c ->
                 val text =
                     w.measure(c.copy(minWidth = 0, minHeight = 0, maxHeight = Constraints.Infinity))
@@ -149,7 +148,7 @@ fun About(version: String, onBack: () -> Unit, onLink: (String) -> Unit) {
                 Column(
                     Modifier.weight(1f)
                         .fillMaxHeight()
-                        .verticalScroll(rememberScrollState())
+                        .scrolls()
                         .padding(
                             if (wide) PaddingValues(40.dp, 32.dp) else PaddingValues(24.dp, 28.dp)
                         ),
@@ -499,8 +498,7 @@ private fun Privacy(onLink: (String) -> Unit, modifier: Modifier) {
         }
     SelectionContainer(modifier) {
         Column(
-            Modifier.verticalScroll(rememberScrollState())
-                .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 28.dp)
+            Modifier.scrolls().padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 28.dp)
         ) {
             para(AnnotatedString(stringResource(R.string.privacy_intro)))
             h3(stringResource(R.string.privacy_internet))
@@ -605,8 +603,10 @@ private fun Licenses(modifier: Modifier) {
             lineHeightStyle = CssLine,
         )
     val h4 = h3.copy(fontSize = 13.sp)
+    val list = rememberLazyListState()
     LazyColumn(
-        modifier,
+        modifier.scrollbar(rememberBar(list)),
+        state = list,
         contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 28.dp),
     ) {
         item {
