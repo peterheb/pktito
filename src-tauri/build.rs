@@ -41,6 +41,24 @@ const CORE: &[&str] = &[
     "sentences.c",
 ];
 
+/// Whether this compiler's assembler takes neon-sve's instructions, as
+/// pktito's Makefile asks it (PROBE_neon-sve): the flags alone say nothing
+/// of them, since the assembly names its own extensions.
+fn assembles_sve(os: &str, root: &PathBuf) -> bool {
+    let dir = PathBuf::from(env::var_os("OUT_DIR").unwrap()).join("probe-sve");
+    let _ = std::fs::create_dir_all(&dir);
+    let probe = dir.join("probe.c");
+    let asm = r#"void pk_probe_sve(void) { __asm__(".arch_extension sve\n.arch_extension i8mm\nmovprfx z0, z1\nsmmla z0.s, z1.b, z2.b"); }"#;
+    std::fs::write(&probe, asm).is_ok()
+        && base(os, root)
+            .flag("-march=armv8.2-a+dotprod")
+            .out_dir(&dir)
+            .file(&probe)
+            .cargo_warnings(false)
+            .try_compile_intermediates()
+            .is_ok()
+}
+
 fn base(os: &str, root: &PathBuf) -> cc::Build {
     let mut b = cc::Build::new();
     // pktito's numbers are the same bits on every backend only without
@@ -97,6 +115,17 @@ fn main() {
         .map(PathBuf::from);
 
     let family: Vec<(&str, Vec<&str>)> = match arch.as_str() {
+        // neon-sve, neon-dp's C with an int8 loop of SVE and I8MM assembly
+        // (SMMLA), on neon-dp's flags as pktito's Makefile builds it: 15 to
+        // 16% over neon-dp on the GB10's ten X925s, 24% on one (pktito's
+        // backend/neon-dp/CLIMB.md, 2026-11-02). Not for Apple's chips,
+        // which have no SVE; pktito picks it at run time only where the
+        // system says the CPU has both (core/os.c, cpu_has)
+        "aarch64" if os != "macos" && os != "ios" => vec![
+            ("neon-sve", vec!["-march=armv8.2-a+dotprod"]),
+            ("neon-dp", vec!["-march=armv8.2-a+dotprod"]),
+            ("neon", vec!["-march=armv8-a"]),
+        ],
         "aarch64" => vec![
             (
                 "neon-dp",
@@ -139,6 +168,7 @@ fn main() {
         if flags
             .iter()
             .all(|f| b.is_flag_supported(f).unwrap_or(false))
+            && (*name != "neon-sve" || assembles_sve(&os, &root))
         {
             for f in flags {
                 b.flag(f);
