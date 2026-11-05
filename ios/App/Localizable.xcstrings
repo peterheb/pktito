@@ -1375,7 +1375,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This build of pktito includes the following open-source software and libraries:"
+            "value": "This build of pktito includes the following software and libraries:"
           }
         }
       }

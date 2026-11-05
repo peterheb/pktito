@@ -304,7 +304,7 @@
 
   "notices.title": "Open source licenses",
   "notices.label": "The projects and their licenses",
-  "notices.intro": "This build of pktito includes the following open-source software and libraries:",
+  "notices.intro": "This build of pktito includes the following software and libraries:",
   "notices.type": "Typefaces and icons",
   "notices.libraries": "Libraries ({system})",
   "notices.texts": "License texts",

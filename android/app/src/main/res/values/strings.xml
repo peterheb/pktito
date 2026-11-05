@@ -129,7 +129,7 @@
     <string name="privacy_updated">Last updated November 1, 2026</string>
     <!-- the licenses (notices.*), from assets/notices.json (android/notices.py) -->
     <string name="notices_title">Open source licenses</string>
-    <string name="notices_intro">This build of pktito includes the following open-source software and libraries:</string>
+    <string name="notices_intro">This build of pktito includes the following software and libraries:</string>
     <string name="notices_type">Typefaces and icons</string>
     <string name="notices_libraries">Libraries (Android)</string>
     <string name="notices_texts">License texts</string>
