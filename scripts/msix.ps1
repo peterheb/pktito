@@ -10,7 +10,10 @@
 # it, so the Store's package holds the very files the download installs.
 # -Exes is a folder holding the three instead (default: a build's,
 # src-tauri\target\release), for a test. The package's architecture is
-# pktito-app.exe's.
+# pktito-app.exe's. An Arm64 setup built with Qualcomm's QNN libraries
+# (scripts/qnn-windows.ps1) has them beside the exes, and their notice
+# files among the licenses: they go into the package as they are, all of
+# them or none.
 #
 # -Identity:
 # - store: the name and publisher Partner Center gives the app (Product
@@ -97,6 +100,9 @@ try {
     }
 
     $files = 'pktito-app.exe', 'pktito-cli.exe', 'WebView2Loader.dll'
+    # the NPU's, where the build has them (src-tauri/windows/qnn.conf.json)
+    $npu = 'QnnHtp.dll', 'QnnSystem.dll', 'QnnHtpV73Stub.dll', 'libQnnHtpV73Skel.so', 'libqnnhtpv73.cat',
+        'licenses\QNN_NOTICE.txt', 'licenses\QNN_NOTICE_WINDOWS.txt', 'licenses\QNN_VERSION.txt'
     if ($Setup) {
         $7z = (Get-Command 7z -EA SilentlyContinue).Source
         if (-not $7z) { $7z = "$env:ProgramFiles\7-Zip\7z.exe" }
@@ -104,11 +110,16 @@ try {
         $Exes = "$work\setup"
         & $7z x -y "-o$Exes" $Setup @files | Out-Null
         if ($LASTEXITCODE) { throw "7-Zip could not read $Setup ($LASTEXITCODE)" }
+        & $7z x -y "-o$Exes" $Setup @npu | Out-Null
     } elseif (-not $Exes) {
         $Exes = "$tauri\target\release"
     }
     foreach ($f in $files) {
         if (-not (Test-Path "$Exes\$f")) { throw "no $f in $Exes" }
+    }
+    $here = @($npu | Where-Object { Test-Path "$Exes\$_" })
+    if ($here.Count -and $here.Count -ne $npu.Count) {
+        throw "$Exes has some of the NPU's files and not all: $($npu | Where-Object { $_ -notin $here })"
     }
     if ($Identity -ne 'test') {
         foreach ($f in 'pktito-app.exe', 'pktito-cli.exe') {
@@ -144,6 +155,7 @@ try {
     # licenses beside the exes, as the setup program installs them
     Copy-Item "$root\ui\fonts\Archivo-OFL.txt", "$root\ui\fonts\CommitMono-OFL.txt" "$layout\licenses"
     Copy-Item "$root\vendor\pktito\LICENSE" "$layout\licenses\pktito-LICENSE.txt"
+    $here | ForEach-Object { Copy-Item "$Exes\$_" "$layout\$_" }
 
     (Get-Content -Raw "$tauri\windows\msix\AppxManifest.xml") `
         -replace '@NAME@', $id.Name -replace '@PUBLISHER@', $id.Publisher `
