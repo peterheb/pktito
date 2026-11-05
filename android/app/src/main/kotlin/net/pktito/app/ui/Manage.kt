@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -443,7 +441,7 @@ private fun Panel(
     val res = LocalResources.current
     Column(
         Modifier.fillMaxWidth()
-            .verticalScroll(rememberScrollState())
+            .scrolls()
             .padding(start = edge, end = edge, top = top, bottom = 20.dp)
     ) {
         Text(
