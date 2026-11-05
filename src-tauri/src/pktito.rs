@@ -1,6 +1,6 @@
 //! pktito's C API (vendor/pktito/core/pktito.h), and safe wrappers for the
 //! parts the app uses: a model, a transcriber and its transcription of a
-//! whole recording, captions.
+//! whole recording, sentences, captions.
 
 use std::ffi::{c_char, c_int, c_long, c_void, CStr, CString};
 use std::path::Path;
@@ -64,6 +64,16 @@ pub struct Done<'a> {
     pub total: i64,
 }
 
+/// A sentence (pk_sentence): tokens [first, first + n) of those given;
+/// flags PK_SENTENCE_LONG where it was broken at 30 s, not at its end.
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct Sentence {
+    pub first: i32,
+    pub n: i32,
+    pub flags: i32,
+}
+
 #[repr(C)]
 struct CapWord {
     text: *const c_char,
@@ -114,6 +124,15 @@ extern "C" {
         english: c_int,
         media_end: i64,
         out: *mut Cue,
+    ) -> c_long;
+    fn pk_language(w: *const CapWord, n: usize) -> *const c_char;
+    fn pk_sentences(
+        m: *const RawModel,
+        t: *const Tok,
+        n: usize,
+        lang: *const c_char,
+        done: c_int,
+        out: *mut Sentence,
     ) -> c_long;
 }
 
@@ -167,6 +186,29 @@ pub fn qnn_chip() -> Result<String, String> {
     Ok(unsafe { CStr::from_ptr(chip.as_ptr()) }
         .to_string_lossy()
         .into_owned())
+}
+
+/// The language of words, as pk_language names it ("en", "de"): the one
+/// their commonest words are commonest in, of the multilingual model's 25
+/// (core/language.c); None for too few words, or none ahead by enough.
+pub fn language(words: &[&str]) -> Option<String> {
+    let texts: Vec<CString> = words
+        .iter()
+        .map(|w| CString::new(w.replace('\0', "")).unwrap())
+        .collect();
+    let raw: Vec<CapWord> = texts
+        .iter()
+        .map(|t| CapWord {
+            text: t.as_ptr(),
+            start: 0,
+            end: 0,
+        })
+        .collect();
+    let l = unsafe { pk_language(raw.as_ptr(), raw.len()) };
+    if l.is_null() {
+        return None;
+    }
+    Some(unsafe { CStr::from_ptr(l) }.to_string_lossy().into_owned())
 }
 
 /// The cues of a subtitle track for words and their times in milliseconds,
@@ -292,6 +334,36 @@ impl Model {
         let n = unsafe { pk_words(self.raw, toks.as_ptr(), toks.len(), out.as_mut_ptr()) };
         out.truncate(n);
         out
+    }
+
+    /// The sentences of toks, their frames counted from the recording's
+    /// start (pk_sentences): lang, pk_language's code for their words or
+    /// None; done, whether they run to the recording's end - if not, the
+    /// words after the last sentence's end are none yet, and come again with
+    /// the next chunk's.
+    pub fn sentences(
+        &self,
+        toks: &[Tok],
+        lang: Option<&str>,
+        done: bool,
+    ) -> Result<Vec<Sentence>, String> {
+        let lang = lang.map(|l| CString::new(l).unwrap());
+        let mut out = vec![Sentence::default(); toks.len()];
+        let n = unsafe {
+            pk_sentences(
+                self.raw,
+                toks.as_ptr(),
+                toks.len(),
+                lang.as_ref().map_or(ptr::null(), |l| l.as_ptr()),
+                done as c_int,
+                out.as_mut_ptr(),
+            )
+        };
+        if n < 0 {
+            return Err("not enough memory to find the sentences".into());
+        }
+        out.truncate(n as usize);
+        Ok(out)
     }
 
     pub fn raw(&self) -> *const RawModel {

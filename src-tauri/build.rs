@@ -37,6 +37,7 @@ const CORE: &[&str] = &[
     "resample.c",
     "captions.c",
     "language.c",
+    "sentences.c",
 ];
 
 fn base(os: &str, root: &PathBuf) -> cc::Build {
