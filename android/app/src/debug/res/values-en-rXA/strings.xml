@@ -87,7 +87,7 @@
     <string name="about_silero"><![CDATA[[Vőįčę ąčțįvįțý ďęțęčțįőń, <a href="https://github.com/snakers4/silero-vad/blob/master/LICENSE">MĮȚ</a><br>Čőpýřįghț (č) 2020-přęșęńț Șįłęřő Țęąm ····· ····· ······]]]></string>
     <string name="about_else">[Ęvęřýțhįńg ęłșę ······]</string>
     <string name="about_else_list">[Jęțpąčk Čőmpőșę, Řűșț čřąțęș, țýpęfąčęș, įčőńș, ęțč. ····· ····· ·]</string>
-    <string name="about_licenses">[Őpęń șőűřčę łįčęńșęș ····· ···]</string>
+    <string name="about_licenses">[Łįčęńșęș ·····]</string>
     <string name="sheet_close">[Čłőșę ··]</string>
     <string name="privacy_title">[Přįvąčý ····]</string>
     <string name="privacy_intro">[pkțįțő įș łőčął țřąńșčřįpțįőń șőfțwąřę — įț țűřńș șpęęčh įńțő țęxț őń țhįș ďęvįčę. Ýőűř męďįą fįłęș ąřę ńőț űpłőąďęď țő čłőűď șęřvęřș, ąńď pkțįțő hąș ńő ąččőűńțș, ąďș őř țřąčkįńg. ····· ····· ····· ····· ····· ····· ····· ····· ···]</string>
@@ -102,7 +102,7 @@
     <string name="privacy_questions">[Qűęșțįőńș ······]</string>
     <string name="privacy_ask"><![CDATA[[Ąșk bý ęmąįł, ąț <a href="mailto:peter.hebert@pktito.net">pęțęř.hębęřț@pkțįțő.ńęț</a>, őř őń <a href="https://github.com/peterheb/pktito/issues">GįțHűb</a>. Țhę fűłł pőłįčý įș ąț <a href="https://pktito.net/privacy">pkțįțő.ńęț/přįvąčý</a>. ····· ····· ····· ····· ···]]]></string>
     <string name="privacy_updated">[Łąșț űpďąțęď Ńővęmbęř 1, 2026 ····· ···]</string>
-    <string name="notices_title">[Őpęń șőűřčę łįčęńșęș ····· ···]</string>
+    <string name="notices_title">[Łįčęńșęș ·····]</string>
     <string name="notices_intro">[Țhįș bűįłď őf pkțįțő įńčłűďęș țhę főłłőwįńg șőfțwąřę ąńď łįbřąřįęș: ····· ····· ······]</string>
     <string name="notices_type">[Țýpęfąčęș ąńď įčőńș ····· ···]</string>
     <string name="notices_libraries">[Łįbřąřįęș (Ąńďřőįď) ····· ···]</string>

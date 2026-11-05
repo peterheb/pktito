@@ -285,7 +285,7 @@
   "about.silero_html": "Voice activity detection, <a href=\"https://github.com/snakers4/silero-vad/blob/master/LICENSE\">MIT</a>",
   "about.else": "Everything else",
   "about.else_list": "Tauri, Rust crates, typefaces, icons, etc.",
-  "about.licenses": "Open source licenses",
+  "about.licenses": "Licenses",
 
   "privacy.title": "Privacy",
   "privacy.label": "pktito's privacy terms",
@@ -302,7 +302,7 @@
   "privacy.ask_html": "Ask by email, at <a href=\"mailto:peter.hebert@pktito.net\">peter.hebert@pktito.net</a>, or on <a href=\"https://github.com/peterheb/pktito/issues\">GitHub</a>. The full policy is at <a href=\"https://pktito.net/privacy\">pktito.net/privacy</a>.",
   "privacy.updated": "Last updated November 1, 2026",
 
-  "notices.title": "Open source licenses",
+  "notices.title": "Licenses",
   "notices.label": "The projects and their licenses",
   "notices.intro": "This build of pktito includes the following software and libraries:",
   "notices.type": "Typefaces and icons",

@@ -735,16 +735,13 @@ class Shots {
     fun privacyWindow() =
         shot("privacy", false, window = true, act = sheet("Privacy"), content = about)
 
-    @Test
-    fun licenses() = shot("licenses", false, act = sheet("Open source licenses"), content = about)
+    @Test fun licenses() = shot("licenses", false, act = sheet("Licenses"), content = about)
 
-    @Test
-    fun licensesDark() =
-        shot("licenses", true, act = sheet("Open source licenses"), content = about)
+    @Test fun licensesDark() = shot("licenses", true, act = sheet("Licenses"), content = about)
 
     @Test
     fun licensesLand() =
-        shot("licenses", false, land = true, act = sheet("Open source licenses"), content = about)
+        shot("licenses", false, land = true, act = sheet("Licenses"), content = about)
 
     @Test fun reading() = shot("reading", false) { work("reading", 0.0, emptyList()) }
 

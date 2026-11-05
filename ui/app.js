@@ -3417,7 +3417,7 @@ for (const a of $("about").querySelectorAll("a[href]")) {
   a.innerHTML = `${esc(text.slice(0, cut))}<span class="pk-nowrap">${esc(text.slice(cut))}${ICON.external}</span>`;
 }
 
-/* Open source licenses, under About's Everything else: what pktito is
+/* Licenses, under About's Everything else: what pktito is
    built from beside its own code and the models About names, each with its
    copyright and license, and the licenses' texts. notices.js (scripts/notices.py) has every system's;
    this one's are listed. It loads the first time the list opens: 20 KB

@@ -107,7 +107,7 @@
     <string name="about_else">Everything else</string>
     <!-- about.else_list: no Tauri on Android -->
     <string name="about_else_list">Jetpack Compose, Rust crates, typefaces, icons, etc.</string>
-    <string name="about_licenses">Open source licenses</string>
+    <string name="about_licenses">Licenses</string>
     <string name="sheet_close">Close</string>
     <!-- Privacy (privacy.*), as Android has it: a device, the system's
          pickers, the app's data deleted from it with the app, and nothing
@@ -128,7 +128,7 @@
     <string name="privacy_ask"><![CDATA[Ask by email, at <a href="mailto:peter.hebert@pktito.net">peter.hebert@pktito.net</a>, or on <a href="https://github.com/peterheb/pktito/issues">GitHub</a>. The full policy is at <a href="https://pktito.net/privacy">pktito.net/privacy</a>.]]></string>
     <string name="privacy_updated">Last updated November 1, 2026</string>
     <!-- the licenses (notices.*), from assets/notices.json (android/notices.py) -->
-    <string name="notices_title">Open source licenses</string>
+    <string name="notices_title">Licenses</string>
     <string name="notices_intro">This build of pktito includes the following software and libraries:</string>
     <string name="notices_type">Typefaces and icons</string>
     <string name="notices_libraries">Libraries (Android)</string>
