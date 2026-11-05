@@ -400,7 +400,7 @@ fn download_model(app: AppHandle, state: State<'_, AppState>, name: String) -> R
 
 /// Manage models' offer on a Mac: name's Core ML encoder alone, for its
 /// whole model file here (or the user's own copy of it), which then runs
-/// on the Neural Engine. "download" events say how it goes, as a model's.
+/// on the Neural Engine; on Windows on Arm its graph for this PC's NPU. "download" events say how it goes, as a model's.
 #[tauri::command]
 fn get_encoder(app: AppHandle, state: State<'_, AppState>, name: String) -> Result<(), Problem> {
     let e = model::entry(&name).ok_or("no such model")?;

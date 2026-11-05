@@ -595,7 +595,8 @@ function renderManage() {
     }
     // on a Mac, a whole model file here without its Core ML encoder: the
     // encoder offered under its model, which it runs on the Neural Engine
-    // (main.rs get_encoder), as Android offers its NPU's
+    // (main.rs get_encoder), as Android offers its NPU's; on Windows on Arm
+    // the graph for the PC's NPU
     if (m.faster) rows.push(fasterRow(m));
   }
   const total =
@@ -616,7 +617,10 @@ function fasterRow(m) {
   const e = enc && enc.name === m.name ? enc : null;
   const sizes = { got: num(mb(e ? e.got : 0)), total: num(mb(m.faster)) };
   const sub = !e
-    ? t("manage.faster_text", { label: labelOf(m), mb: num(mb(m.faster)) })
+    ? t(isWin() ? "manage.faster_pc_text" : "manage.faster_text", {
+        label: labelOf(m),
+        mb: num(mb(m.faster)),
+      })
     : e.step === "checking"
       ? t("download.checking")
       : e.step === "failed"
@@ -627,7 +631,7 @@ function fasterRow(m) {
     ? `<button class="pk-btn" type="button" data-encoder-cancel="1" aria-describedby="${id}">${esc(t("download.cancel"))}</button>`
     : `<button class="pk-btn" type="button" data-encoder="${m.name}" aria-describedby="${id}">${esc(t(e ? "download.try_again" : "manage.get"))}</button>`;
   return (
-    `<li><div class="pk-kept-text"><span class="pk-ui" id="${id}">${esc(t("manage.faster"))}</span><small class="pk-small">${esc(sub)}</small></div>` +
+    `<li><div class="pk-kept-text"><span class="pk-ui" id="${id}">${esc(t(isWin() ? "manage.faster_pc" : "manage.faster"))}</span><small class="pk-small">${esc(sub)}</small></div>` +
     `${button}</li>`
   );
 }

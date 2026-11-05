@@ -50,16 +50,13 @@ pub fn chip() -> Option<&'static str> {
 }
 
 /// e's graph for this PC's NPU (graph_for), where it has one and QNN has
-/// not refused one here (refuse_npu): on Windows on Arm the download is
+/// not refused it here (refused): on Windows on Arm the download is
 /// then the slim file and that graph, for v2 727 MB where the .pkf is 624,
 /// whose encoder ran a chapter at 155x to the CPU's 115x on a Snapdragon X
 /// Elite with 1/22 the CPU time (snappy, ch01, 2026-11-05).
 pub fn graph(dir: &Path, e: &Entry) -> Option<&'static Graph> {
-    let chip = chip()?;
-    if dir.join(REFUSED).is_file() {
-        return None;
-    }
-    graph_for(e, chip)
+    let g = graph_for(e, chip()?)?;
+    (!refused(dir, g)).then_some(g)
 }
 
 /// The catalog's graph of e for chip, in QNN's words for it
@@ -86,20 +83,40 @@ pub fn graph_for(e: &Entry, chip: &str) -> Option<&'static Graph> {
     })
 }
 
-/// Where the models folder records that QNN refused a graph here, and why:
-/// from then on a download is the whole model, whose encoder runs on the
-/// CPU. Deleting it tries the NPU again.
-const REFUSED: &str = "npu-refused.txt";
+/// Where the models folder records that QNN refused graph g here (its file
+/// with .refused after it), and why: from then on a download of its model
+/// is the whole file, whose encoder runs on the CPU.
+fn refused_in(dir: &Path, g: &Graph) -> PathBuf {
+    dir.join(format!("{}.refused", g.part.file))
+}
 
-/// QNN refused a graph of e's on this PC (why): recorded (REFUSED), so
-/// that a download offers the whole model, and the graphs deleted. The slim
-/// file, 12 MB, stays until e is deleted: the engine still has it open.
-/// Only Windows on Arm asks.
+/// What a refusal is of: the chip, this app's version and the graph's
+/// SHA-256, a line each, as the Android app keys its own
+/// (Editions.failure), so that a new app, whose QNN or graphs may be new,
+/// tries the NPU again: a refusal once, from a driver's hiccup or an NPU
+/// short of memory, is not for good.
+fn refusal_key(g: &Graph) -> String {
+    format!(
+        "{}\n{}\n{}\n",
+        chip().unwrap_or(""),
+        env!("CARGO_PKG_VERSION"),
+        g.part.sha256
+    )
+}
+
+/// Whether QNN refused graph g on this PC with this app (refusal_key).
+fn refused(dir: &Path, g: &Graph) -> bool {
+    fs::read_to_string(refused_in(dir, g)).is_ok_and(|t| t.starts_with(&refusal_key(g)))
+}
+
+/// QNN refused e's graph on this PC (why): recorded (refused), so that a
+/// download offers the whole model until the app is updated, and the graphs
+/// deleted, 714 MB for v2's. The slim file, 12 MB, stays until e is
+/// deleted: the engine still has it open. Only Windows on Arm asks.
 pub fn refuse_npu(dir: &Path, e: &Entry, why: &str) {
-    let _ = fs::write(
-        dir.join(REFUSED),
-        format!("{}\n{why}\n", chip().unwrap_or("")),
-    );
+    if let Some(g) = chip().and_then(|c| graph_for(e, c)) {
+        let _ = fs::write(refused_in(dir, g), format!("{}{why}\n", refusal_key(g)));
+    }
     for g in e.qnn {
         let _ = fs::remove_file(Wanted::part(dir, e, &g.part).dst);
     }
@@ -385,12 +402,16 @@ pub fn encoder_of(data: &Path, path: &Path) -> Option<PathBuf> {
 
 /// On a Mac, the bytes of e's Core ML encoder where a whole model file of
 /// e is here without it, to offer (Manage models): one in the models
-/// folder, or the user's own file that is e's copy. None otherwise.
+/// folder, or the user's own file that is e's copy. On Windows on Arm, the
+/// bytes of this PC's graph where e's whole file is in the models folder
+/// without it: every 0.9.5 install's. The whole file stays, as on a Mac:
+/// it is the CPU's where QNN refuses the graph. None otherwise.
 pub fn encoder_offer(data: &Path, e: &Entry) -> Option<u64> {
-    if !NEURAL {
-        return None;
-    }
     let dir = data.join("models");
+    if !NEURAL {
+        let g = graph(&dir, e)?;
+        return (have(&dir, e) && !Wanted::part(&dir, e, &g.part).here()).then_some(g.part.bytes);
+    }
     let s = load_settings(data);
     let own = s.model_file_is.as_deref() == Some(e.name)
         && s.model_file.as_ref().is_some_and(|f| f.is_file());
@@ -899,8 +920,10 @@ pub fn trouble(why: &str) -> &'static str {
     let has = |words: &[&str]| words.iter().any(|w| why.contains(w));
     if has(&["out of memory", "not enough memory"]) {
         "problem.memory"
-    } else if has(&["NPU can't run", "Neural Engine can't run"]) {
+    } else if has(&["the NPU can't run"]) {
         "model_file.npu"
+    } else if has(&["Neural Engine can't run"]) {
+        "model_file.neural_engine"
     } else if has(&["model file version", "the architecture is not"]) {
         "model_file.newer"
     } else if has(&[
@@ -1191,6 +1214,24 @@ mod tests {
         assert_eq!(file("2147483647,73,4,1,1"), None);
         assert_eq!(file("2147483647,68,8,1,1"), None);
         assert_eq!(file("snapdragon"), None);
+    }
+
+    /// A refusal holds for the chip, the app and the graph it was of: an
+    /// app of another version, or a graph of another SHA-256, tries again
+    #[test]
+    fn a_refusal_is_of_one_app_and_graph() {
+        let d = scratch("refused");
+        let g = &CATALOG[0].qnn[3];
+        assert!(!refused(&d, g));
+        fs::write(refused_in(&d, g), format!("{}why\n", refusal_key(g))).unwrap();
+        assert!(refused(&d, g));
+        let old = refusal_key(g).replace(env!("CARGO_PKG_VERSION"), "0.0.1");
+        fs::write(refused_in(&d, g), format!("{old}why\n")).unwrap();
+        assert!(!refused(&d, g));
+        let other = refusal_key(g).replace(g.part.sha256, &"0".repeat(64));
+        fs::write(refused_in(&d, g), format!("{other}why\n")).unwrap();
+        assert!(!refused(&d, g));
+        let _ = fs::remove_dir_all(&d);
     }
 
     #[test]

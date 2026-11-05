@@ -96,6 +96,8 @@
   "manage.cant_delete": "Couldn't delete the model",
   "manage.faster": "Faster on this Mac",
   "manage.faster_text": "The {label} model on this Mac's Neural Engine\u00a0· {mb}\u00a0MB\u00a0more",
+  "manage.faster_pc": "Faster on this PC",
+  "manage.faster_pc_text": "The {label} model on this PC's NPU\u00a0· {mb}\u00a0MB\u00a0more",
   "manage.get": "Download",
 
   "choose.not_downloaded": "Not downloaded yet",
@@ -103,7 +105,8 @@
   "model_file.not_model": "Not a pktito model",
   "model_file.cant_open": "Can't open the model file",
   "model_file.damaged": "Model file incomplete or damaged",
-  "model_file.npu": "This computer's NPU can't run the model",
+  "model_file.npu": "This PC's NPU can't run the model",
+  "model_file.neural_engine": "This Mac's Neural Engine can't run the model",
 
   "setup.title": "Choose a speech model",
   "setup.legend": "Speech model",

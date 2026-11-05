@@ -145,9 +145,13 @@ impl Job {
     }
 
     /// A job for e's Core ML encoder alone, for a whole model file that is
-    /// here without it (model::encoder_offer).
+    /// here without it (model::encoder_offer); on Windows on Arm, for this
+    /// PC's graph.
     pub fn encoder(e: &Entry, dir: &Path) -> Job {
-        Job::for_file(&Wanted::part(dir, e, &e.coreml.encoder))
+        match model::graph(dir, e).filter(|_| !model::NEURAL) {
+            Some(g) => Job::for_file(&Wanted::part(dir, e, &g.part)),
+            None => Job::for_file(&Wanted::part(dir, e, &e.coreml.encoder)),
+        }
     }
 
     /// Run encoder()'s download on a thread: the archive, then unpacked;
@@ -159,6 +163,10 @@ impl Job {
         tell: impl Fn(&State) + Send + 'static,
         done: impl FnOnce(PathBuf) + Send + 'static,
     ) {
+        // the graph, which needs no unpacking
+        if let Some(g) = model::graph(&dir, e).filter(|_| !model::NEURAL) {
+            return self.start_file(Wanted::part(&dir, e, &g.part), tell, done);
+        }
         let archive = Wanted::part(&dir, e, &e.coreml.encoder);
         let dst = model::encoder_in(&dir, e);
         let job = self.clone();
