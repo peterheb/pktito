@@ -164,6 +164,7 @@ final class Models {
         let e = o.entry
         for f in [Store.file(e.pkf), Store.file(e.coreml.slim), Store.encoder(e)] {
             try? FileManager.default.removeItem(at: f)
+            try? FileManager.default.removeItem(at: Store.marker(f))
         }
         Downloads.shared.forget(o.name)
         return taken(inUse ? next(model: model, deleting: o.name) : nil)
@@ -254,6 +255,7 @@ final class Models {
                 let dst = Store.file(same.pkf)
                 try? fm.removeItem(at: dst)
                 try fm.moveItem(at: part, to: dst)
+                try? (sha + "\n").write(to: Store.marker(dst), atomically: true, encoding: .utf8)
                 Task { @MainActor in Models.shared.use(same.name) }
                 return (L("models_using", label(same.key)), true)
             }

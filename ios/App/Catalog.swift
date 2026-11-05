@@ -59,6 +59,16 @@ enum Store {
 
     static func file(_ p: Part) -> URL { models.appendingPathComponent(p.file) }
 
+    /// Where the SHA-256 a file of the catalog's checked against is kept,
+    /// beside it (its name with .sha256 after it), and beside a Core ML
+    /// encoder's folder its archive's, as the core keeps it (model.rs,
+    /// marker_of): so that a later app can tell the file it has from a newer
+    /// one its catalog names, even of the same size. It says something only
+    /// beside its file.
+    static func marker(_ url: URL) -> URL {
+        url.deletingLastPathComponent().appendingPathComponent(url.lastPathComponent + ".sha256")
+    }
+
     /// Where a model's Core ML encoder is unpacked to (Unpack.swift)
     static func encoder(_ e: CatalogEntry) -> URL {
         models.appendingPathComponent(e.name + "-encoder.mlmodelc", isDirectory: true)

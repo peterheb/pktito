@@ -188,6 +188,9 @@ final class Downloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendabl
         } catch {
             throw DownloadProblem(key: "download.cant_save", detail: error.localizedDescription)
         }
+        // kept if it can be: a file without one is only a file whose
+        // version a later app must read for itself
+        try? (h + "\n").write(to: Store.marker(dst), atomically: true, encoding: .utf8)
         return dst
     }
 

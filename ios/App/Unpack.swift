@@ -22,7 +22,10 @@ enum Unpack {
                 throw CoreError("\(archive.lastPathComponent) holds no Core ML model")
             }
             try? fm.removeItem(at: dst)
+            try? fm.removeItem(at: Store.marker(dst))
             try fm.moveItem(at: work, to: dst)
+            // the archive's SHA-256 goes with what was unpacked from it
+            try? fm.moveItem(at: Store.marker(archive), to: Store.marker(dst))
         } catch {
             try? fm.removeItem(at: work)
             throw error
