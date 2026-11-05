@@ -11,10 +11,15 @@
 #
 # With QNN_SDK naming Qualcomm's AI Runtime SDK, the engine runs its
 # encoder on a Snapdragon's NPU too (src-tauri/build.rs), and Qualcomm's
-# libraries for it go beside the Arm64 one: QNN's HTP backend, and for each
-# NPU the catalog has graphs for (src-tauri/src/model.rs, Graph), its stub,
-# the Arm side of the call to the NPU, and its skel, the NPU's own, which it
-# loads from the app's native library folder (ADSP_LIBRARY_PATH): 46 MB.
+# libraries for it go with the app, 46 MB: beside the Arm64 one QNN's HTP
+# backend and, for each NPU the catalog has graphs for (src-tauri/src/
+# model.rs, Graph), its stub, the Arm side of the call to the NPU; and its
+# skel, the NPU's own, into app/src/main/assets/qnn. Android never loads a
+# skel: the NPU's loader reads it from where ADSP_LIBRARY_PATH says, and the
+# app copies it out of its assets for that (Editions.libs). QAIRT 2.51's
+# skels are aligned to 4 KB pages, and Play refuses an app for Android 15
+# or later with any library under 16 KB in lib/ (LiteRT's skels, 2026:
+# google-ai-edge/litert-samples issue 370; DenisovAV/flutter_gemma 529).
 # Not the compiler, libQnnHtpPrepare.so (88 MB), as the graphs come
 # compiled on a PC, nor libQnnHtpV73.so and its like, which a compiled
 # graph runs without (the Googlebook, 2026-11-03). With them goes the SDK's
@@ -47,11 +52,12 @@ qnn=$here/app/src/main/assets/qnn
 rm -f "$lib"/libQnn*.so
 rm -rf "$qnn"
 if [ -n "${QNN_SDK:-}" ]; then
+  mkdir -p "$qnn"
   cp "$QNN_SDK/lib/aarch64-android/libQnnHtp.so" "$lib/"
   for v in 73 75 79; do
-    cp "$QNN_SDK/lib/aarch64-android/libQnnHtpV${v}Stub.so" "$QNN_SDK/lib/hexagon-v$v/unsigned/libQnnHtpV${v}Skel.so" "$lib/"
+    cp "$QNN_SDK/lib/aarch64-android/libQnnHtpV${v}Stub.so" "$lib/"
+    cp "$QNN_SDK/lib/hexagon-v$v/unsigned/libQnnHtpV${v}Skel.so" "$qnn/"
   done
-  mkdir -p "$qnn"
   cp "$QNN_SDK/QNN_NOTICE.txt" "$qnn/"
   sed -n 's/^version: *//p' "$QNN_SDK/sdk.yaml" > "$qnn/VERSION"
 fi

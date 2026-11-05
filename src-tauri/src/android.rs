@@ -125,8 +125,9 @@ pub extern "system" fn Java_net_pktito_app_Engine_about<'a>(
 }
 
 /// Where the NPU's half of QNN, its skel library, is read from: libs, the
-/// app's native library folder, where it comes with the app, then the
-/// system's folders.
+/// app's folders for QNN's libraries (Editions.libs: the skels it copies
+/// out of its assets, then its native library folder), then the system's
+/// folders.
 fn npu_libs(libs: &str) {
     std::env::set_var(
         "ADSP_LIBRARY_PATH",

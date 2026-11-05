@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import java.io.File
 import java.io.IOException
 import kotlin.concurrent.thread
 
@@ -91,7 +92,7 @@ object Editions {
         }
         val c =
             try {
-                Engine.npuChip(context.applicationInfo.nativeLibraryDir)
+                Engine.npuChip(libs(context))
             } catch (e: IOException) {
                 Log.i(TAG, "no NPU QNN runs on: ${e.message}")
                 ""
@@ -100,6 +101,36 @@ object Editions {
         chip = c
         if (c.isNotEmpty()) Log.i(TAG, "the NPU: $c")
         return c
+    }
+
+    /**
+     * The folders QNN's libraries are read from (Engine.npuChip's and Engine.npu's libs): the NPU's
+     * own, its skels, copied out of the app's assets on a Snapdragon the first time, then the app's
+     * native library folder for the rest. The skels come in the assets, not that folder, where Play
+     * refuses their 4 KB pages (android/native.sh). Kept in the code cache, which Android empties
+     * when the app is updated, and copied again for each system and install (here): the three, 39
+     * MB, in 0.12 to 0.16 s on the Googlebook and the Galaxy S24 and S25 Ultras (2026-11-04).
+     */
+    @Synchronized
+    fun libs(context: Context): String {
+        val native = context.applicationInfo.nativeLibraryDir
+        if (Build.VERSION.SDK_INT < 31 || Build.SOC_MANUFACTURER != "QTI") return native
+        val dir = File(context.codeCacheDir, "qnn")
+        val stamp = File(dir, "here")
+        val h = here(context)
+        if (!stamp.isFile || stamp.readText() != h) {
+            val t = System.nanoTime()
+            dir.deleteRecursively()
+            dir.mkdirs()
+            val skels = context.assets.list("qnn").orEmpty().filter { it.endsWith("Skel.so") }
+            for (name in skels) context.assets.open("qnn/$name").use { i ->
+                File(dir, name).outputStream().use { i.copyTo(it) }
+            }
+            // last, so that a copy cut short is made again
+            stamp.writeText(h)
+            Log.i(TAG, "the NPU's skels %s in %.2f s".format(skels, (System.nanoTime() - t) / 1e9))
+        }
+        return "${dir.path};$native"
     }
 
     /**

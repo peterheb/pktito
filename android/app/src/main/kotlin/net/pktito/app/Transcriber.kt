@@ -278,12 +278,7 @@ object Transcriber {
             val o = use.offer
             if (graph != null && o != null)
                 try {
-                    val s =
-                        Engine.npu(
-                            handle,
-                            graph.file.path,
-                            context.applicationInfo.nativeLibraryDir,
-                        )
+                    val s = Engine.npu(handle, graph.file.path, Editions.libs(context))
                     Log.i(TAG, "the NPU's graph for ${o.name} in %.2f s".format(s))
                     // the whole file, which the CPU's edition alone needs,
                     // deleted once the NPU has run the graph (ran)
