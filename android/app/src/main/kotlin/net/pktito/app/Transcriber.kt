@@ -234,6 +234,29 @@ object Transcriber {
     }
 
     /**
+     * After a transcription (TranscribeService): the model let go once no transcription has used it
+     * for IDLE_MS. In the NPU's edition its graph holds DMA buffers that the app's own memory
+     * figures don't show, for as long as the process lives: on the Galaxy S24 Ultra, 39 MiB of them
+     * before a transcription, 898 MiB after it and 858 MiB a minute after Home (2026-11-04). Read
+     * in again, it costs the next transcription 0.8 s (the Galaxy S25 Ultra, chapter 1: 3.71 s
+     * against 2.93 s, 2026-11-04). On the main thread, where running is read.
+     */
+    fun rest() {
+        main.removeCallbacks(idle)
+        main.postDelayed(idle, IDLE_MS)
+    }
+
+    private val idle = Runnable { idleOut() }
+
+    /** rest's model let go, where no transcription has it (letGo). */
+    @Synchronized
+    private fun idleOut() {
+        if (running || handle == 0L) return
+        Log.i(TAG, "the model let go, unused for ${IDLE_MS / 1000} s")
+        free()
+    }
+
+    /**
      * The model in use (Models), loaded once for the process, and again once another is chosen or
      * it is in another edition, the one before let go: on the transcription's thread, before it
      * starts, where nothing else uses it. In the NPU's edition its encoder is the graph a PC
@@ -383,4 +406,5 @@ object Transcriber {
         }
 
     private const val TAG = "pktito"
+    private const val IDLE_MS = 30_000L
 }

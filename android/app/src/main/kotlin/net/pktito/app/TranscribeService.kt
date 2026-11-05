@@ -88,6 +88,8 @@ class TranscribeService : Service() {
             // once this service is stopped, so that the screen's start of the
             // recording again is a start of its own
             npu?.let { why -> Transcriber.post { again(uri, why) } }
+            // the model let go if no transcription uses it soon (Transcriber.rest)
+            Transcriber.post { rest() }
         }
         return START_NOT_STICKY
     }
