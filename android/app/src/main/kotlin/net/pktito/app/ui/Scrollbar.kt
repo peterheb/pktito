@@ -5,11 +5,11 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollIndicatorState
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -18,8 +18,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -94,9 +94,9 @@ internal constructor(
 }
 
 /**
- * A lazy list's bar. Compose measures only the rows near the screen, and its offset and length
- * are estimates from those (calculateContentSize); a thumb dragged to a place goes to the row the
- * same estimate puts there.
+ * A lazy list's bar. Compose measures only the rows near the screen, and its offset and length are
+ * estimates from those (calculateContentSize); a thumb dragged to a place goes to the row the same
+ * estimate puts there.
  */
 @Composable
 fun rememberBar(list: LazyListState): Bar =
@@ -146,7 +146,8 @@ fun Modifier.scrollbar(bar: Bar): Modifier {
     LaunchedEffect(bar) { bar.follow() }
     return this.pointerInput(bar, dir) {
             awaitEachGesture {
-                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                val down =
+                    awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                 val w = size.width.toFloat()
                 val h = size.height.toFloat()
                 val at = thumb(bar, w, h, thin, this, dir)
@@ -180,28 +181,35 @@ fun Modifier.scrollbar(bar: Bar): Modifier {
 
 private fun Modifier.drawWithContentAndBar(bar: Bar, thin: Float, muted: Color, held: Color) =
     drawWithContent {
-            drawContent()
-            val a = bar.shown.value
-            if (a > 0f && bar.place != null) {
-                val r = thumb(bar, size.width, size.height, thin, this, layoutDirection)
-                val color =
-                    when {
-                        bar.held != null -> held
-                        bar.long -> muted
-                        else -> muted.copy(alpha = 0.5f)
-                    }
-                drawRoundRect(
-                    color,
-                    r.topLeft,
-                    r.size,
-                    CornerRadius(r.width / 2),
-                    alpha = a * color.alpha,
-                )
-            }
+        drawContent()
+        val a = bar.shown.value
+        if (a > 0f && bar.place != null) {
+            val r = thumb(bar, size.width, size.height, thin, this, layoutDirection)
+            val color =
+                when {
+                    bar.held != null -> held
+                    bar.long -> muted
+                    else -> muted.copy(alpha = 0.5f)
+                }
+            drawRoundRect(
+                color,
+                r.topLeft,
+                r.size,
+                CornerRadius(r.width / 2),
+                alpha = a * color.alpha,
+            )
         }
+    }
 
 /** The bar's or thumb's rectangle on content of width w and height h, at its end edge. */
-private fun thumb(bar: Bar, w: Float, h: Float, thin: Float, d: Density, dir: LayoutDirection): Rect =
+private fun thumb(
+    bar: Bar,
+    w: Float,
+    h: Float,
+    thin: Float,
+    d: Density,
+    dir: LayoutDirection,
+): Rect =
     with(d) {
         val f = bar.place ?: 0f
         val width = if (bar.long) THUMB_WIDE.toPx() else thin
