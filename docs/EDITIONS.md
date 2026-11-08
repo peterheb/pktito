@@ -198,7 +198,10 @@ When an NPU won't run its edition, the core records it in one file,
 `models/refusals.json`: the model, the edition id, its encoder's SHA-256,
 the device's `here`, and why. A refusal holds while all of those match,
 so a new app, a new system or a rebuilt encoder tries the NPU again.
-The refused edition's encoder is deleted (714 MB for a v2 graph). Its
+The refused edition's encoder is deleted (714 MB for a v2 graph). Only
+the catalog's own encoder is recorded: an Older one that fails says
+nothing of the catalog's, so it is deleted alone, and Update or Download
+offers the catalog's again (android-9950x, 2026-11-08). Its
 model file stays if the CPU edition doesn't have one; then `choose`
 answers the CPU edition, and Manage models offers Download for it.
 

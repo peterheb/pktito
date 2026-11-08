@@ -434,23 +434,28 @@ impl Refusals {
     }
 }
 
-/// An NPU refused ed of e here (why): recorded (Refusals), and its encoder
-/// deleted, 714 MB for v2's graph. Its model file stays: the engine may
-/// have it open, and it goes with the model.
+/// An NPU refused ed of e here (why): its encoder deleted, 714 MB for
+/// v2's graph, and recorded (Refusals) where it was the catalog's. An
+/// Older one refused says nothing of the catalog's, so it is only deleted,
+/// and Update or Download offers the catalog's again (android-9950x,
+/// 2026-11-08). Its model file stays: the engine may have it open, and it
+/// goes with the model.
 pub fn refuse(dir: &Path, e: &Entry, ed: &Edition, d: &Device, why: &str) {
     let Some(enc) = ed.encoder.as_ref() else {
         return;
     };
-    let mut r = Refusals::read(dir);
-    r.0.retain(|x| !(x.model == e.name && x.edition == ed.id));
-    r.0.push(Refusal {
-        model: e.name.into(),
-        edition: ed.id.into(),
-        encoder: enc.sha256.into(),
-        here: d.here.clone(),
-        why: why.into(),
-    });
-    r.write(dir);
+    if have(dir, enc) == Have::Current {
+        let mut r = Refusals::read(dir);
+        r.0.retain(|x| !(x.model == e.name && x.edition == ed.id));
+        r.0.push(Refusal {
+            model: e.name.into(),
+            edition: ed.id.into(),
+            encoder: enc.sha256.into(),
+            here: d.here.clone(),
+            why: why.into(),
+        });
+        r.write(dir);
+    }
     remove_part(dir, enc);
 }
 
@@ -834,6 +839,8 @@ mod tests {
         let v2 = &CATALOG[0];
         let s24 = device("android", (36, 0), Some("57,75,8,1,0"));
         let g = choose(v2, &s24, &Refusals::default());
+        let graph = g.encoder.as_ref().unwrap();
+        put(&dir, graph, Some(graph.sha256));
         refuse(&dir, v2, g, &s24, "QNN: no");
         let r = Refusals::read(&dir);
         assert_eq!(choose(v2, &s24, &r).id, "cpu");
@@ -853,6 +860,26 @@ mod tests {
         assert_eq!(v.offer.unwrap().kind, Kind::Download);
         forget(&dir, v2);
         assert!(Refusals::read(&dir).0.is_empty());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// An Older encoder refused is deleted and not recorded: the catalog's
+    /// is offered again, and tried
+    #[test]
+    fn an_older_encoder_refused_blocks_nothing() {
+        let dir = scratch("older-refused");
+        let v2 = &CATALOG[0];
+        let s24 = device("android", (36, 0), Some("57,75,8,1,0"));
+        let g = choose(v2, &s24, &Refusals::default());
+        let (slim, graph) = (&g.model, g.encoder.as_ref().unwrap());
+        put(&dir, slim, Some(slim.sha256));
+        put(&dir, graph, Some(&"0".repeat(64)));
+        refuse(&dir, v2, g, &s24, "QNN: no");
+        assert!(Refusals::read(&dir).0.is_empty());
+        assert!(!dir.join(graph.file).exists());
+        assert_eq!(choose(v2, &s24, &Refusals::read(&dir)).id, g.id);
+        let o = offer(&dir, v2, &s24, &Refusals::read(&dir)).unwrap();
+        assert_eq!((o.kind, o.files[0].file), (Kind::Download, graph.file));
         let _ = fs::remove_dir_all(&dir);
     }
 
