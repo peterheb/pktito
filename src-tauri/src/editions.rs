@@ -248,6 +248,12 @@ pub fn have(dir: &Path, p: &Part) -> Have {
         at.is_file()
     };
     if present {
+        // a swap cut short after its file's rename: the record it was to
+        // get is still beside the .next that has gone (recover moves it)
+        let next = next_of(&at);
+        if !unpacked(p) && !next.exists() && record(&next).as_deref() == Some(p.sha256) {
+            return Have::Current;
+        }
         return match record(&at) {
             Some(sha) if sha == p.sha256 => Have::Current,
             Some(_) => Have::Older,
@@ -1048,7 +1054,9 @@ mod tests {
         put(&dir, graph, Some(&"0".repeat(64)));
         let next = next_of(&dir.join(graph.file));
         fs::write(marker_of(&next), format!("{}\n", graph.sha256)).unwrap();
-        assert_eq!(have(&dir, graph), Have::Older);
+        // read as it is even before recover runs, so that no first read
+        // offers it again
+        assert_eq!(have(&dir, graph), Have::Current);
         recover(&dir);
         assert_eq!(have(&dir, graph), Have::Current);
         assert!(!marker_of(&next).exists());
