@@ -641,6 +641,14 @@ pub fn refuse(dir: &Path, e: &Entry, ed: &Edition, d: &Device, why: &str) {
             why: why.into(),
         });
         r.write(dir);
+        // nothing runs its slim file while the refusal holds: beside a
+        // whole .pkf it waits for a retry, counted in the model's size;
+        // alone it would be a file Manage models never shows (snappy,
+        // 2026-11-08), so it goes, and a retry fetches it again (12 MB
+        // for v2)
+        if !have(dir, e.whole()).here() {
+            remove_part(dir, &ed.model);
+        }
     }
     remove_part(dir, enc);
 }
@@ -763,7 +771,17 @@ pub fn offer(dir: &Path, e: &Entry, d: &Device, r: &Refusals) -> Option<Offer> {
 /// whole file beside it takes 1,339. One that ran from the whole file keeps
 /// it. Whether the whole file went.
 pub fn ran(dir: &Path, e: &Entry, ed: &Edition, model: &Path) -> bool {
-    if !ed.npu() || !model::same_file(model, &dir.join(ed.model.file)) {
+    if !ed.npu() {
+        return false;
+    }
+    // it ran: a refusal of it recorded before an update is spent
+    let mut r = Refusals::read(dir);
+    let n = r.0.len();
+    r.0.retain(|x| !(x.model == e.name && x.edition == ed.id));
+    if r.0.len() != n {
+        r.write(dir);
+    }
+    if !model::same_file(model, &dir.join(ed.model.file)) {
         return false;
     }
     if have(dir, &ed.model) != Have::Current {
@@ -822,8 +840,8 @@ pub struct View {
     /// Why the NPU refused the edition that fits best, where it did here.
     pub refused: Option<String>,
     pub offer: Option<OfferView>,
-    /// The bytes it takes here: its files here, or the chosen edition's
-    /// once downloaded.
+    /// The bytes it takes here, where it runs: its files here. Where
+    /// nothing runs, the chosen edition's, which its Download fetches.
     pub bytes: u64,
 }
 
@@ -855,7 +873,10 @@ pub fn view(dir: &Path, e: &'static Entry, d: &Device) -> View {
         .filter(|p| have(dir, p).here())
         .map(|p| p.bytes)
         .sum();
-    let bytes = if here > 0 {
+    // where nothing runs, a part here (a download stopped, or a refused
+    // NPU's) isn't what Download fetches (snappy, 2026-11-08: "12 MB" on
+    // the Download of the whole 624 MB file)
+    let bytes = if runs.is_some() {
         here
     } else {
         [Some(&chosen.model), chosen.encoder.as_ref()]
@@ -1047,6 +1068,47 @@ mod tests {
         assert!(v.runs.is_none());
         assert_eq!(v.offer.unwrap().kind, Kind::Download);
         forget(&dir, v2);
+        assert!(Refusals::read(&dir).0.is_empty());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// A refusal recorded with no whole .pkf here leaves no file Manage
+    /// models can't show, and the view's size is the Download's; beside a
+    /// whole file the slim one waits for a retry. A run spends a refusal.
+    #[test]
+    fn a_refusal_with_nothing_else_here_leaves_nothing() {
+        let dir = scratch("refusal-alone");
+        let v2 = &CATALOG[0];
+        let s24 = device("android", (36, 0), Some("57,75,8,1,0"));
+        let g = choose(v2, &s24, &Refusals::default());
+        let (slim, graph) = (&g.model, g.encoder.as_ref().unwrap());
+        put(&dir, slim, Some(slim.sha256));
+        put(&dir, graph, Some(graph.sha256));
+        refuse(&dir, v2, g, &s24, "QNN: no");
+        assert!(!dir.join(slim.file).exists() && !dir.join(graph.file).exists());
+        let v = view(&dir, v2, &s24);
+        assert!(v.runs.is_none());
+        assert_eq!(v.refused.as_deref(), Some("QNN: no"));
+        assert_eq!(v.bytes, v2.whole().bytes);
+        let o = v.offer.unwrap();
+        assert_eq!(
+            (o.kind, o.files.clone()),
+            (Kind::Download, vec![v2.whole().file])
+        );
+        // beside the whole file, the slim one stays
+        let whole = v2.whole();
+        put(&dir, whole, Some(whole.sha256));
+        put(&dir, slim, Some(slim.sha256));
+        put(&dir, graph, Some(graph.sha256));
+        refuse(&dir, v2, g, &s24, "QNN: no");
+        assert!(dir.join(slim.file).exists() && !dir.join(graph.file).exists());
+        let v = view(&dir, v2, &s24);
+        assert_eq!(v.runs.unwrap().edition, "cpu");
+        assert_eq!(v.bytes, whole.bytes + slim.bytes);
+        // the NPU's edition runs again after an update: its refusal goes
+        assert!(!Refusals::read(&dir).0.is_empty());
+        put(&dir, graph, Some(graph.sha256));
+        ran(&dir, v2, g, &dir.join(slim.file));
         assert!(Refusals::read(&dir).0.is_empty());
         let _ = fs::remove_dir_all(&dir);
     }

@@ -206,9 +206,13 @@ so a new app, a new system or a rebuilt encoder tries the NPU again.
 The refused edition's encoder is deleted (714 MB for a v2 graph). Only
 the catalog's own encoder is recorded: an Older one that fails says
 nothing of the catalog's, so it is deleted alone, and Update or Download
-offers the catalog's again (android-9950x, 2026-11-08). Its
-model file stays if the CPU edition doesn't have one; then `choose`
-answers the CPU edition, and Manage models offers Download for it.
+offers the catalog's again (android-9950x, 2026-11-08). A recorded
+refusal's slim file stays beside a whole `.pkf`, for a retry, and counts
+in the model's size; with no whole file beside it nothing can run it, and
+it goes too, so that no file stays that Manage models doesn't show
+(pktito-9950x on snappy, 2026-11-08). Then `choose` answers the CPU
+edition, and the view's `bytes` are what its Download fetches. An NPU
+edition that runs spends its refusals: an update made it run, and they go.
 
 A refusal can leave nothing to run: once the Faster rule has deleted the
 whole `.pkf`, an NPU that stops (the S24's NPU wedging mid-job, or a system

@@ -1970,7 +1970,7 @@ function matchesIn(s) {
   }
   const q = l.as ? query : query.toLowerCase(),
     found = [];
-  for (let from = 0, j; (j = l.low.indexOf(q, from)) >= 0;)
+  for (let from = 0, j; (j = l.low.indexOf(q, from)) >= 0; )
     if (startsWord(l.low, j, q)) {
       found.push([j, j + q.length]);
       from = j + q.length;
