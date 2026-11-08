@@ -86,24 +86,24 @@ pub struct Device {
 }
 ```
 
-| Platform       | `qnn`                                       | `here`                                       |
-| -------------- | ------------------------------------------- | -------------------------------------------- |
-| macOS          | None                                        | macOS version + app version                  |
-| iOS / iPadOS   | None                                        | `UIDevice.systemVersion` + `CFBundleVersion` |
-| Android        | `Engine.npuChip`, as Editions.chip asks now | `Build.FINGERPRINT` + `lastUpdateTime`       |
-| Windows on Arm | `pktito::qnn_chip`, as `model::chip` asks   | OS build + app version                       |
-| Windows x64, Linux | None                                    | app version                                  |
+| Platform           | `qnn`                                       | `here`                                       |
+| ------------------ | ------------------------------------------- | -------------------------------------------- |
+| macOS              | None                                        | macOS version + app version                  |
+| iOS / iPadOS       | None                                        | `UIDevice.systemVersion` + `CFBundleVersion` |
+| Android            | `Engine.npuChip`, as Editions.chip asks now | `Build.FINGERPRINT` + `lastUpdateTime`       |
+| Windows on Arm     | `pktito::qnn_chip`, as `model::chip` asks   | OS build + app version                       |
+| Windows x64, Linux | None                                        | app version                                  |
 
 ## Choosing
 
 `choose(e, device, refusals) -> &Edition`, in Rust only. Each edition
 scores a fit to the device, and the highest that isn't refused wins:
 
-| Fit | When                                                                                         |
-| --- | -------------------------------------------------------------------------------------------- |
-| 3   | Core ML on a system at least its `macos` / `ios`; QNN whose `chip` is the device's exactly    |
-| 2   | QNN for another SoC of the device's Hexagon with no more VTCM, on one of its `systems`       |
-| 1   | CPU: always                                                                                  |
+| Fit | When                                                                                       |
+| --- | ------------------------------------------------------------------------------------------ |
+| 3   | Core ML on a system at least its `macos` / `ios`; QNN whose `chip` is the device's exactly |
+| 2   | QNN for another SoC of the device's Hexagon with no more VTCM, on one of its `systems`     |
+| 1   | CPU: always                                                                                |
 
 The CPU always fits, so `choose` always answers. The catalog's order never
 chooses: a test runs `choose` for every device in a table of the ones we
@@ -117,12 +117,12 @@ Each file of an edition is in one of four states, from the file and its
 marker (`<file>.sha256`, and for an unpacked encoder `<folder>.sha256`
 beside the folder, as 0.9.6 writes them):
 
-| State   | Meaning                                                                         |
-| ------- | ------------------------------------------------------------------------------- |
-| Current | Here, and its marker is the catalog's SHA-256                                   |
+| State   | Meaning                                                                                              |
+| ------- | ---------------------------------------------------------------------------------------------------- |
+| Current | Here, and its marker is the catalog's SHA-256                                                        |
 | Older   | Here, but its marker is another SHA-256, or it has none (see below), or its size isn't the catalog's |
-| Partial | Only its `.part`, with this many bytes                                         |
-| Absent  | Nothing                                                                         |
+| Partial | Only its `.part`, with this many bytes                                                               |
+| Absent  | Nothing                                                                                              |
 
 A flat file with the catalog's size and no marker (any download before
 0.9.6) is hashed once to adopt it. That runs off the main thread the first
@@ -143,11 +143,11 @@ the engine runs with an encoder beside it as well as the slim one.
 - **Offered** in Manage models, one at a time, and only when the user
   taps it (no download starts by itself; Peter, 2026-11-05):
 
-| Offer              | When                                                        | Downloads                                         |
-| ------------------ | ----------------------------------------------------------- | ------------------------------------------------- |
-| Download · N MB    | No edition is here                                          | The chosen edition's files                        |
-| Faster · N MB      | The CPU edition runs and an NPU edition is chosen           | The chosen edition's files not here: its slim file and encoder |
-| Update · N MB      | The chosen edition runs, and one of its files is Older      | Its Older files                                   |
+| Offer           | When                                                   | Downloads                                                      |
+| --------------- | ------------------------------------------------------ | -------------------------------------------------------------- |
+| Download · N MB | No edition is here                                     | The chosen edition's files                                     |
+| Faster · N MB   | The CPU edition runs and an NPU edition is chosen      | The chosen edition's files not here: its slim file and encoder |
+| Update · N MB   | The chosen edition runs, and one of its files is Older | Its Older files                                                |
 
 N is what the download fetches, less what a stopped one kept.
 
@@ -206,10 +206,20 @@ The core gives every platform the same view of each model, as JSON:
 
 ```json
 {
-  "name": "parakeet-tdt-0.6b-v2", "key": "english", "languages": ["en"],
+  "name": "parakeet-tdt-0.6b-v2",
+  "key": "english",
+  "languages": ["en"],
   "chosen": "qnn-sm8650",
-  "runs": { "edition": "cpu", "model": "/…/parakeet-tdt-0.6b-v2.pkf", "encoder": null },
-  "offer": { "kind": "faster", "bytes": 714506856, "files": ["parakeet-tdt-0.6b-v2-sm8650.qnn"] },
+  "runs": {
+    "edition": "cpu",
+    "model": "/…/parakeet-tdt-0.6b-v2.pkf",
+    "encoder": null
+  },
+  "offer": {
+    "kind": "faster",
+    "bytes": 714506856,
+    "files": ["parakeet-tdt-0.6b-v2-sm8650.qnn"]
+  },
   "kept": 0,
   "bytes": 624480196
 }
@@ -234,12 +244,12 @@ again (scripts/pseudo.py).
 
 ## Who does what
 
-| Part                                                                                | Who            |
-| ----------------------------------------------------------------------------------- | -------------- |
-| This document, the core (catalog, `choose`, states, adoption, offers, updates, refusals, the view) and its tests; main.rs | pktito-mac     |
-| macOS window and iOS (ios.rs, Swift)                                                | pktito-mac     |
-| Windows: `Device` from `qnn_chip`, the swap on Windows, x64 and Arm64 builds, snappy | pktito-9950x   |
-| Android: android.rs, Kotlin, Play build, S24/S25                                    | android-9950x  |
+| Part                                                                                                                      | Who           |
+| ------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| This document, the core (catalog, `choose`, states, adoption, offers, updates, refusals, the view) and its tests; main.rs | pktito-mac    |
+| macOS window and iOS (ios.rs, Swift)                                                                                      | pktito-mac    |
+| Windows: `Device` from `qnn_chip`, the swap on Windows, x64 and Arm64 builds, snappy                                      | pktito-9950x  |
+| Android: android.rs, Kotlin, Play build, S24/S25                                                                          | android-9950x |
 
 The core lands first on this branch (`editions`), with `cargo test` and
 desktop builds on macOS, Windows and Linux. Then the three platforms go at
