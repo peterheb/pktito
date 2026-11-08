@@ -1504,6 +1504,40 @@
         }
       }
     },
+    "npu_cpu_get_computer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This computer's NPU can't run the model. pktito can use its processor instead, after a %1$@ MB download."
+          }
+        }
+      }
+    },
+    "npu_cpu_get_phone": {
+      "extractionState": "manual",
+      "comment": "the same, where the processor's edition, the whole file, is not here yet: nothing downloads by itself, so it waits for the setup screen's Download of %1$s MB (iOS's prepare_cpu_get)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This phone's NPU can't run the model. pktito can use its processor instead, after a %1$@ MB download."
+          }
+        }
+      }
+    },
+    "npu_cpu_get_tablet": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This tablet's NPU can't run the model. pktito can use its processor instead, after a %1$@ MB download."
+          }
+        }
+      }
+    },
     "npu_cpu_phone": {
       "extractionState": "manual",
       "comment": "the NPU refused the model, which goes on with the processor, as iOS's prepare_cpu says it of the Neural Engine",

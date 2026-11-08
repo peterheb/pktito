@@ -194,7 +194,7 @@
     <string name="npu_cpu_phone">This phone\'s NPU can\'t run the model, so pktito uses its processor instead</string>
     <string name="npu_cpu_tablet">This tablet\'s NPU can\'t run the model, so pktito uses its processor instead</string>
     <string name="npu_cpu_computer">This computer\'s NPU can\'t run the model, so pktito uses its processor instead</string>
-    <!-- the same, where the processor's edition, the whole file, is not here yet: nothing downloads by itself, so it waits for the setup screen's Download of %1$s MB (iOS's npu_cpu_get) -->
+    <!-- the same, where the processor's edition, the whole file, is not here yet: nothing downloads by itself, so it waits for the setup screen's Download of %1$s MB (iOS's prepare_cpu_get) -->
     <string name="npu_cpu_get_phone">This phone\'s NPU can\'t run the model. pktito can use its processor instead, after a %1$s&#160;MB download.</string>
     <string name="npu_cpu_get_tablet">This tablet\'s NPU can\'t run the model. pktito can use its processor instead, after a %1$s&#160;MB download.</string>
     <string name="npu_cpu_get_computer">This computer\'s NPU can\'t run the model. pktito can use its processor instead, after a %1$s&#160;MB download.</string>
