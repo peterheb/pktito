@@ -86,13 +86,24 @@ pub struct Device {
 }
 ```
 
-| Platform           | `qnn`                                       | `here`                                       |
-| ------------------ | ------------------------------------------- | -------------------------------------------- |
-| macOS              | None                                        | macOS version + app version                  |
-| iOS / iPadOS       | None                                        | `UIDevice.systemVersion` + `CFBundleVersion` |
-| Android            | `Engine.npuChip`, as Editions.chip asks now | `Build.FINGERPRINT` + `lastUpdateTime`       |
-| Windows on Arm     | `pktito::qnn_chip`, as `model::chip` asks   | OS build + app version                       |
-| Windows x64, Linux | None                                        | app version                                  |
+| Platform           | `qnn`                                       | `here`                                            |
+| ------------------ | ------------------------------------------- | ------------------------------------------------- |
+| macOS              | None                                        | macOS version + app version                       |
+| iOS / iPadOS       | None                                        | `UIDevice.systemVersion` + `CFBundleVersion`      |
+| Android            | `Engine.npuChip`, as Editions.chip asks now | `Build.FINGERPRINT` + `lastUpdateTime`            |
+| Windows on Arm     | `pktito::qnn_chip`, as `model::chip` asks   | OS build + app version + the NPU driver's version |
+| Windows x64, Linux | None                                        | app version                                       |
+
+`here` is a string the core only compares, so each platform puts in it
+whatever can change what its NPU runs. On Windows on Arm that is also the
+Hexagon NPU driver's version, which Windows Update and the PC's maker
+update apart from the OS build: a refusal a driver caused shouldn't hold
+past the driver that fixed it (pktito-9950x, 2026-11-07). Android's
+fingerprint already covers the vendor's drivers.
+
+`os` is the system's version as each names it: macOS and iOS their
+major and minor, Android `(Build.VERSION.SDK_INT, 0)`, (36, 0) on the S24.
+Only Core ML's floors compare it today.
 
 ## Choosing
 
@@ -107,8 +118,8 @@ scores a fit to the device, and the highest that isn't refused wins:
 
 The CPU always fits, so `choose` always answers. The catalog's order never
 chooses: a test runs `choose` for every device in a table of the ones we
-know (M1-M5, A18, S24, S25, S26, X1E80100 on Android and Windows, X2,
-7c, x86, Pi) and fails on a tie at the top. It replaces
+know (M1-M5, A18, S24, S25, S26, X1E80100 on Android and on Windows,
+whose one `qnn-x1e80100` edition is for both systems, X2, 7c, x86, Pi) and fails on a tie at the top. It replaces
 `one_graph_a_hexagon_a_system`, which held the same line for QNN alone.
 
 ## What is here
@@ -191,6 +202,15 @@ The refused edition's encoder is deleted (714 MB for a v2 graph). Its
 model file stays if the CPU edition doesn't have one; then `choose`
 answers the CPU edition, and Manage models offers Download for it.
 
+A refusal can leave nothing to run: once the Faster rule has deleted the
+whole `.pkf`, an NPU that stops (the S24's NPU wedging mid-job, or a system
+update) leaves the slim file alone. Then the job ends with that as its
+error, not a CPU retry, and the view says why nothing runs
+(`"runs": null, "refused": "<why>"`), so the screen can say the NPU
+stopped and offer the CPU edition's Download, apart from a model never
+downloaded (`"runs": null` with no `refused`). Where the whole file is
+still here, the job goes on on the CPU, as Android's does since 0.9.6.
+
 0.9.6's three stores are not carried over: each is keyed on the app's
 build, so 0.9.7 would ignore them anyway. They are deleted on the first
 catalog read.
@@ -217,8 +237,11 @@ The core gives every platform the same view of each model, as JSON:
   },
   "offer": {
     "kind": "faster",
-    "bytes": 714506856,
-    "files": ["parakeet-tdt-0.6b-v2-sm8650.qnn"]
+    "bytes": 726622380,
+    "files": [
+      "parakeet-tdt-0.6b-v2-slim.pkf",
+      "parakeet-tdt-0.6b-v2-sm8650.qnn"
+    ]
   },
   "kept": 0,
   "bytes": 624480196
