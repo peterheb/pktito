@@ -19,16 +19,22 @@ use std::time::Duration;
 
 pub const DEFAULT_BASE: &str = "https://models.pktito.net/";
 
-/// Whether this system is a Mac, whose every one (macOS 12 on Apple
-/// silicon, the app's floor) runs a model's Core ML edition on the Neural
-/// Engine, at 3x the CPU's speed for v2 on an M4 Pro with 0.9.5's encoder
-/// (AliceBench, 349x to 117x, WER 0.059% apart, 2026-11-02); 0.9.6's, with
-/// the position term folded, takes 16% less time on an M4 (AliceBench v2,
-/// 354x to 423x, 6 words of 27,118 different; the ane fork's
-/// tools/ane/CLIMB.md, 2026-11-03). The choice itself is editions::choose's;
-/// this says where a user's own copy of a catalog model may borrow its
-/// encoder (encoder_of), and where pktito-cli unpacks one.
-pub const NEURAL: bool = cfg!(target_os = "macos");
+/// Whether this system is a Mac that runs a model's Core ML edition on the
+/// Neural Engine: one on Core ML's floor (COREML) or later, macOS 15, at 3x
+/// the CPU's speed for v2 on an M4 Pro with 0.9.5's encoder (AliceBench,
+/// 349x to 117x, WER 0.059% apart, 2026-11-02); 0.9.6's, with the position
+/// term folded, takes 16% less time on an M4 (AliceBench v2, 354x to 423x,
+/// 6 words of 27,118 different; the ane fork's tools/ane/CLIMB.md,
+/// 2026-11-03). The choice itself is editions::choose's; this says where a
+/// user's own copy of a catalog model may borrow its encoder (encoder_of),
+/// and where pktito-cli downloads and loads one.
+pub fn neural() -> bool {
+    cfg!(target_os = "macos")
+        && CATALOG
+            .iter()
+            .filter_map(Entry::coreml)
+            .any(|ed| editions::fit(ed, Device::this()) > 0)
+}
 
 /// This PC's NPU as QNN describes it (pktito::qnn_chip), on Windows on Arm,
 /// asked once: QNN loads the NPU's library to say. None where it finds none
@@ -128,9 +134,13 @@ pub struct Part {
 // at 155x to the CPU's 115x on a Snapdragon X Elite with 1/22 the CPU time
 // (snappy, ch01, 2026-11-05).
 
-/// The app's floors, where every device has a Neural Engine.
+/// Core ML's floors for the encoder: macOS 15 and iOS 18, whose Core ML
+/// first has what core/ane.m asks of it (MLModelAsset's modelAssetWithURL:
+/// and functionNamesWithCompletionHandler:, MLModelConfiguration's
+/// functionName; the SDK's CoreML headers). A Mac on macOS 12 to 14, above
+/// the app's floor, takes the CPU's edition.
 const COREML: Runtime = Runtime::CoreMl {
-    macos: (12, 0),
+    macos: (15, 0),
     ios: (18, 0),
 };
 
@@ -433,7 +443,7 @@ pub fn choose_file(data: &Path, path: &Path) -> Result<(), String> {
             // a copy of a catalog model, downloaded by hand: on a Mac its
             // Core ML encoder serves it too (encoder_of), and Manage models
             // offers it (Peter, 2026-11-02)
-            s.model_file_is = if NEURAL {
+            s.model_file_is = if neural() {
                 copy_of(path).map(|e| e.name.to_string())
             } else {
                 None
@@ -471,7 +481,7 @@ pub fn encoder_of(data: &Path, path: &Path) -> Option<PathBuf> {
     }
     let s = load_settings(data);
     let own = s.model_file.as_deref().is_some_and(|f| same_file(f, path));
-    let e = entry(s.model_file_is.as_deref().filter(|_| NEURAL && own)?)?;
+    let e = entry(s.model_file_is.as_deref().filter(|_| neural() && own)?)?;
     have_encoder(&dir, e).then(|| encoder_in(&dir, e))
 }
 
@@ -580,7 +590,7 @@ pub fn remove_parts(dir: &Path, e: &Entry) -> Result<(), String> {
 /// The Core ML encoder beside the catalog model whose file path is (whole or
 /// slim), where it has one.
 pub fn encoder_for(dir: &Path, path: &Path) -> Option<PathBuf> {
-    if !NEURAL {
+    if !neural() {
         return None;
     }
     let e = CATALOG

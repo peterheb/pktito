@@ -93,7 +93,7 @@ fn run(args: &[String]) -> Result<i32, String> {
                 }
             }
             let name = name.ok_or("download needs a model name (see pktito-cli models)")?;
-            return fetch(name, cpu || !cfg!(target_os = "macos"), to);
+            return fetch(name, cpu || !model::neural(), to);
         }
         _ => {}
     }
@@ -466,6 +466,11 @@ fn encoder(
             e.name
         ));
     }
+    if !model::neural() {
+        return cpu_or(format!(
+            "the Neural Engine's edition needs macOS 15 or later: {again}"
+        ));
+    }
     if !model::have_encoder(&dir, e) {
         return cpu_or(format!(
             "{}'s Core ML encoder isn't here: pktito-cli download {}",
@@ -591,9 +596,10 @@ fn model_path(arg: Option<&str>) -> Result<PathBuf, String> {
     ))
 }
 
-/// Whether e's Neural Engine edition is in dir, on a Mac, the one place it runs.
+/// Whether e's Neural Engine edition is in dir, on a Mac that runs it
+/// (model::neural).
 fn neural(dir: &Path, e: &model::Entry) -> bool {
-    cfg!(target_os = "macos") && model::have_neural(dir, e)
+    model::neural() && model::have_neural(dir, e)
 }
 
 /// A catalog model by its name, its label ("english", "multilingual") or its

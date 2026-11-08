@@ -103,7 +103,12 @@ fingerprint already covers the vendor's drivers.
 
 `os` is the system's version as each names it: macOS and iOS their
 major and minor, Android `(Build.VERSION.SDK_INT, 0)`, (36, 0) on the S24.
-Only Core ML's floors compare it today.
+Only Core ML's floors compare it today. They are macOS 15 and iOS 18,
+where Core ML first has what core/ane.m asks of it (`MLModelAsset`'s
+`modelAssetWithURL:` and `functionNamesWithCompletionHandler:`,
+`MLModelConfiguration.functionName`). A Mac on macOS 12 to 14 is above the
+app's floor and below Core ML's, and takes the CPU's edition: 0.9.5 and
+0.9.6 gave it the Core ML one.
 
 ## Choosing
 

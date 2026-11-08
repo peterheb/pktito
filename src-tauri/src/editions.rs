@@ -38,8 +38,8 @@ impl Edition {
 pub enum Runtime {
     /// pktito's own encoder, on any CPU.
     Cpu,
-    /// Apple's Neural Engine, from these systems on: the app's floors
-    /// (macOS 12 on Apple silicon, iOS 18), where every device has one.
+    /// Apple's Neural Engine, from these systems on (model::COREML's), on
+    /// every device of theirs: each has one.
     CoreMl { macos: (u32, u32), ios: (u32, u32) },
     /// One Snapdragon's Hexagon, the chip in QNN's words for it
     /// (soc,arch,vtcm,dlbc,signed: pk_qnn_chip), on these systems
@@ -742,6 +742,7 @@ mod tests {
     fn known() -> Vec<(&'static str, Device)> {
         vec![
             ("an M1-M5 Mac", device("macos", (15, 0), None)),
+            ("a Mac on macOS 14", device("macos", (14, 7), None)),
             ("a Mac on macOS 12", device("macos", (12, 0), None)),
             ("an iPhone 16e (A18)", device("ios", (26, 7), None)),
             ("an M1 iPad", device("ios", (26, 5), None)),
@@ -813,7 +814,8 @@ mod tests {
                 .collect();
             let want = [
                 "coreml",
-                "coreml",
+                "cpu",
+                "cpu",
                 "coreml",
                 "coreml",
                 "qnn-sm8650",
