@@ -318,9 +318,20 @@ pub fn adopt(dir: &Path) {
     }
 }
 
-/// A swap cut short, put right: an encoder's old folder put back where
-/// its new one isn't whole yet, else deleted, and half an unpacking gone.
+/// A swap cut short, put right: a file renamed into place whose record
+/// wasn't moved after it gets that record (settle moves the file first, so
+/// the record of a replacement is never beside a file it doesn't describe);
+/// an encoder's old folder put back where its new one isn't whole yet,
+/// else deleted; and half an unpacking gone.
 fn recover(dir: &Path) {
+    for e in CATALOG {
+        for p in parts(e).into_iter().filter(|p| !unpacked(p)) {
+            let (file, next) = (dir.join(p.file), next_of(&dir.join(p.file)));
+            if !next.exists() && marker_of(&next).exists() && file.is_file() {
+                let _ = fs::rename(marker_of(&next), marker_of(&file));
+            }
+        }
+    }
     for e in CATALOG {
         for p in parts(e).into_iter().filter(|p| unpacked(p)) {
             let at = installed(dir, p);
@@ -1025,6 +1036,22 @@ mod tests {
         );
         assert!(!ran(&dir, v2, coreml, &dir.join(v2.whole().file)));
         assert!(dir.join(v2.whole().file).exists());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// A file swap cut short between the file's rename and its record's:
+    /// the record follows it at the next start
+    #[test]
+    fn a_file_swap_cut_short_gets_its_record() {
+        let dir = scratch("recover-file");
+        let graph = CATALOG[0].editions[2].encoder.as_ref().unwrap();
+        put(&dir, graph, Some(&"0".repeat(64)));
+        let next = next_of(&dir.join(graph.file));
+        fs::write(marker_of(&next), format!("{}\n", graph.sha256)).unwrap();
+        assert_eq!(have(&dir, graph), Have::Older);
+        recover(&dir);
+        assert_eq!(have(&dir, graph), Have::Current);
+        assert!(!marker_of(&next).exists());
         let _ = fs::remove_dir_all(&dir);
     }
 
