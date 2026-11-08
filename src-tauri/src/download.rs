@@ -3,6 +3,7 @@
 //! (2 s after it went, then twice as long each time, 30 s at most), and
 //! paused, resumed or cancelled from the window.
 
+use crate::editions;
 use crate::model::{self, Ctl, Entry, Stop, Wanted};
 use crate::strings::Problem;
 use serde::Serialize;
@@ -37,22 +38,18 @@ pub struct Job {
     now: AtomicBool,
     alive: AtomicBool,
     /// the bytes of the files before the one under way, where a download
-    /// is of several (model::edition): its progress is the whole's
+    /// is of several (model::wanted): its progress is the whole's
     before: AtomicU64,
     state: Mutex<State>,
 }
 
 impl Job {
-    /// A job for e's download on this system (model::edition): one file, or
-    /// on a Mac the two of its Neural Engine edition, counted as one.
-    pub fn new(e: &Entry, dir: &Path) -> Job {
-        let files = model::edition(dir, e);
-        let job = Job::for_file(&files[0]);
-        job.set(|s| {
-            s.total = files.iter().map(|w| w.bytes).sum();
-            s.got = model::kept(dir, e);
-        });
-        job
+    /// A job for what Manage models offers for e on this computer
+    /// (model::wanted, editions::offer): a download, Faster's or an
+    /// update's, its files counted as one. None where nothing is offered.
+    pub fn new(e: &Entry, dir: &Path) -> Option<Job> {
+        let files = model::wanted(dir, e);
+        (!files.is_empty()).then(|| Job::files(&files))
     }
 
     /// A job for files of one model's, in turn, counted as one: what the
@@ -144,47 +141,6 @@ impl Job {
         });
     }
 
-    /// A job for e's Core ML encoder alone, for a whole model file that is
-    /// here without it (model::encoder_offer); on Windows on Arm, for this
-    /// PC's graph.
-    pub fn encoder(e: &Entry, dir: &Path) -> Job {
-        match model::graph(dir, e).filter(|_| !model::NEURAL) {
-            Some(g) => Job::for_file(&Wanted::part(dir, e, &g.part)),
-            None => Job::for_file(&Wanted::part(dir, e, &e.coreml.encoder)),
-        }
-    }
-
-    /// Run encoder()'s download on a thread: the archive, then unpacked;
-    /// `done` gets the encoder.
-    pub fn start_encoder(
-        self: &std::sync::Arc<Job>,
-        e: &'static Entry,
-        dir: PathBuf,
-        tell: impl Fn(&State) + Send + 'static,
-        done: impl FnOnce(PathBuf) + Send + 'static,
-    ) {
-        // the graph, which needs no unpacking
-        if let Some(g) = model::graph(&dir, e).filter(|_| !model::NEURAL) {
-            return self.start_file(Wanted::part(&dir, e, &g.part), tell, done);
-        }
-        let archive = Wanted::part(&dir, e, &e.coreml.encoder);
-        let dst = model::encoder_in(&dir, e);
-        let job = self.clone();
-        self.start_file(archive, tell, move |got| {
-            job.set(|s| s.step = "checking");
-            match model::unpack_encoder(&got, &dst) {
-                Ok(()) => {
-                    job.set(|s| s.step = "done");
-                    done(dst);
-                }
-                Err(why) => job.set(|s| {
-                    (s.step, s.speed, s.retry, s.trying) = ("failed", 0.0, false, false);
-                    s.problem = Some(Problem::new("download.damaged").detail(why));
-                }),
-            }
-        });
-    }
-
     /// start() for any file models.pktito.net serves.
     pub fn start_file(
         self: &std::sync::Arc<Job>,
@@ -219,7 +175,7 @@ impl Job {
     /// goes, and state() says how it ended; the checked file, or None where
     /// it stopped short. start runs it on a thread of its own.
     pub fn run(&self, e: &'static Entry, dir: &Path, tell: &impl Fn(&State)) -> Option<PathBuf> {
-        let files = model::edition(dir, e);
+        let files = model::wanted(dir, e);
         let mut before = 0;
         for w in &files {
             if !w.here() {
@@ -235,12 +191,13 @@ impl Job {
             before += w.bytes;
         }
         self.before.store(0, Ordering::Relaxed);
-        // the Neural Engine's encoder out of its archive, said as the check
-        // is, in the while it takes (seconds)
-        if model::NEURAL && !model::have_encoder(dir, e) {
+        // a new Neural Engine encoder out of its archive, said as the check
+        // is, in the while it takes (seconds); one that replaces an encoder
+        // waits for it to be let go (editions::settle)
+        if editions::pending(dir, e) {
             self.set(|s| s.step = "checking");
             tell(&self.state());
-            if let Err(why) = model::unpack_encoder(&files[1].dst, &model::encoder_in(dir, e)) {
+            if let Err(why) = editions::settle_new(dir, e) {
                 self.set(|s| {
                     (s.step, s.speed, s.retry, s.trying) = ("failed", 0.0, false, false);
                     s.problem = Some(Problem::new("download.damaged").detail(why));

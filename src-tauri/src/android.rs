@@ -136,7 +136,7 @@ fn npu_libs(libs: &str) {
 }
 
 /// Engine.npuChip(libs): the phone's NPU as QNN describes it (pktito::
-/// qnn_chip), as model::Graph's chip names the one a graph is for; an
+/// qnn_chip), as editions::Runtime::Qnn's chip names the one a graph is for; an
 /// IOException with why where QNN finds none: a phone of another make, a
 /// Snapdragon whose NPU's library the app does not bring in libs, or a
 /// build without QNN.
@@ -558,8 +558,10 @@ pub extern "system" fn Java_net_pktito_app_Engine_backend<'a>(
 /// path of the part a download gathers.
 #[derive(Serialize)]
 struct Offer {
+    /// 0.9.6's shape, which Kotlin reads until it reads the view
+    /// (editions::view; docs/EDITIONS.md)
     #[serde(flatten)]
-    entry: &'static model::Entry,
+    entry: serde_json::Value,
     have: bool,
     partial: u64,
     file: String,
@@ -580,7 +582,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_catalog<'a>(
             let offers: Vec<Offer> = model::CATALOG
                 .iter()
                 .map(|e| Offer {
-                    entry: e,
+                    entry: model::legacy(e),
                     have: model::have(&dir, e),
                     partial: model::partial(&dir, e),
                     file: model::file_in(&dir, e).to_string_lossy().into_owned(),

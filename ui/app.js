@@ -593,11 +593,12 @@ function renderManage() {
       const got = { got: num(mb(m.partial)), total: num(mb(m.bytes)) };
       rows.push(row(m, esc(t("manage.paused", got)), true));
     }
-    // on a Mac, a whole model file here without its Core ML encoder: the
-    // encoder offered under its model, which it runs on the Neural Engine
-    // (main.rs get_encoder), as Android offers its NPU's; on Windows on Arm
-    // the graph for the PC's NPU
-    if (m.faster) rows.push(fasterRow(m));
+    // what Manage models offers under a model that runs here
+    // (editions::offer, docs/EDITIONS.md): Faster, the NPU's edition where
+    // the CPU's runs, on a Mac its Neural Engine's and on Windows on Arm
+    // the PC's NPU's, as Android offers its NPU's; Update, the catalog's
+    // newer files for the edition that runs. Each only when asked for.
+    if (m.faster || m.update) rows.push(offerRow(m));
   }
   const total =
     used >= 1e9
@@ -608,19 +609,20 @@ function renderManage() {
     : `<p class="pk-small">${esc(t("manage.none"))}</p>`;
 }
 
-/* The encoder's download, in its row alone: a model's download (dl) is the
-   setup screen's. */
+/* Faster's or Update's download, in its row alone: a model's first
+   download (dl) is the setup screen's. */
 let enc = null;
 
-function fasterRow(m) {
-  const id = `faster-${m.key}`;
+function offerRow(m) {
+  const id = `offer-${m.key}`;
+  const bytes = m.faster || m.update;
   const e = enc && enc.name === m.name ? enc : null;
-  const sizes = { got: num(mb(e ? e.got : 0)), total: num(mb(m.faster)) };
+  const sizes = { got: num(mb(e ? e.got : 0)), total: num(mb(bytes)) };
+  const what = { label: labelOf(m), mb: num(mb(bytes)) };
   const sub = !e
-    ? t(isWin() ? "manage.faster_pc_text" : "manage.faster_text", {
-        label: labelOf(m),
-        mb: num(mb(m.faster)),
-      })
+    ? m.update
+      ? t("manage.update_text", what)
+      : t(isWin() ? "manage.faster_pc_text" : "manage.faster_text", what)
     : e.step === "checking"
       ? t("download.checking")
       : e.step === "failed"
@@ -629,9 +631,14 @@ function fasterRow(m) {
   const going = e && e.step !== "failed";
   const button = going
     ? `<button class="pk-btn" type="button" data-encoder-cancel="1" aria-describedby="${id}">${esc(t("download.cancel"))}</button>`
-    : `<button class="pk-btn" type="button" data-encoder="${m.name}" aria-describedby="${id}">${esc(t(e ? "download.try_again" : "manage.get"))}</button>`;
+    : `<button class="pk-btn" type="button" data-encoder="${m.name}" aria-describedby="${id}">${esc(t(e ? "download.try_again" : m.update ? "manage.update_get" : "manage.get"))}</button>`;
+  const title = m.update
+    ? "manage.update"
+    : isWin()
+      ? "manage.faster_pc"
+      : "manage.faster";
   return (
-    `<li><div class="pk-kept-text"><span class="pk-ui" id="${id}">${esc(t(isWin() ? "manage.faster_pc" : "manage.faster"))}</span><small class="pk-small">${esc(sub)}</small></div>` +
+    `<li><div class="pk-kept-text"><span class="pk-ui" id="${id}">${esc(t(title))}</span><small class="pk-small">${esc(sub)}</small></div>` +
     `${button}</li>`
   );
 }
@@ -639,10 +646,10 @@ function fasterRow(m) {
 async function getEncoder(name) {
   const m = st.catalog.find((x) => x.name === name);
   if (!m) return;
-  enc = { name, step: "downloading", got: 0, total: m.faster };
+  enc = { name, step: "downloading", got: 0, total: m.faster || m.update };
   renderManage();
   try {
-    await invoke("get_encoder", { name });
+    await invoke("download_model", { name });
   } catch (e) {
     enc = null;
     renderManage();
@@ -956,7 +963,7 @@ function updateDownload() {
 
 listen("download", async (e) => {
   const s = e.payload;
-  // the encoder's, for Manage models' row
+  // Faster's or Update's, for Manage models' row
   if (enc && enc.name === s.name) {
     const over = s.step === "done" || s.step === "cancelled";
     enc = over ? null : s;

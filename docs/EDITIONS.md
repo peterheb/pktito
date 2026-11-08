@@ -257,6 +257,16 @@ The core gives every platform the same view of each model, as JSON:
   chip question, the skels and the QNN load.
 - Downloads take `offer.files` as they are (Android's `Engine.download`
   already takes a list of names).
+- Until each app reads the view, ios.rs and android.rs give it 0.9.6's
+  catalog JSON (`model::legacy`), so a phone built from this branch works
+  as 0.9.6's until its port lands.
+
+The core is src-tauri/src/editions.rs: `Device`, `fit`, `choose`, `have`,
+`adopt`, `settle`, `Refusals`, `runs`, `offer`, `ran` and `view`. model.rs
+holds the catalog and builds its helpers (`usable`, `encoder_of`,
+`wanted`, `delete`) on it. The desktop puts a waiting download in place
+(`settle`) when it reloads the engine and, from `status`, whenever nothing
+is transcribing or downloading (main.rs `settle_idle`).
 
 ## Words
 

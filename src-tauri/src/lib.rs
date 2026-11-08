@@ -13,6 +13,7 @@ pub mod audio;
 pub mod awake;
 pub mod decode;
 pub mod download;
+pub mod editions;
 pub mod format;
 #[cfg(target_os = "ios")]
 pub mod ios;

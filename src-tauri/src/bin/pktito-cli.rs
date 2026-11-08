@@ -630,7 +630,7 @@ fn models() -> Result<i32, String> {
             e.name,
             e.label,
             e.about,
-            (e.bytes as f64 / 1e6).round()
+            (e.whole().bytes as f64 / 1e6).round()
         );
     }
     if let Some(own) = s.model_file.as_ref().filter(|p| p.is_file()) {
@@ -666,11 +666,18 @@ fn fetch(m: &str, cpu: bool) -> Result<i32, String> {
         if cpu {
             fetch_file(&model::Wanted::model(&dir, e))?;
         } else {
-            let slim = model::Wanted::part(&dir, e, &e.coreml.slim);
+            let ne = e
+                .coreml()
+                .ok_or_else(|| format!("{} has no Neural Engine edition", e.name))?;
+            let slim = model::Wanted::part(&dir, e, &ne.model);
             if !slim.here() {
                 fetch_file(&slim)?;
             }
-            let archive = model::Wanted::part(&dir, e, &e.coreml.encoder);
+            let enc = ne
+                .encoder
+                .as_ref()
+                .ok_or("a Neural Engine edition without its encoder")?;
+            let archive = model::Wanted::part(&dir, e, enc);
             if !model::have_encoder(&dir, e) {
                 let got = fetch_file(&archive)?;
                 unpack(&got, &model::encoder_in(&dir, e))?;

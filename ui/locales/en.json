@@ -99,6 +99,9 @@
   "manage.faster_pc": "Faster on this PC",
   "manage.faster_pc_text": "The {label} model on this PC's NPU\u00a0· {mb}\u00a0MB\u00a0more",
   "manage.get": "Download",
+  "manage.update": "Newer build",
+  "manage.update_text": "A newer build of the {label} model\u00a0· {mb}\u00a0MB",
+  "manage.update_get": "Update",
 
   "choose.not_downloaded": "Not downloaded yet",
   "model_file.newer": "Needs a newer version of pktito",

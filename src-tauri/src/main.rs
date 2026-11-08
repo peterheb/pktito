@@ -8,7 +8,7 @@
 
 use pktito_app::strings::{t, Problem};
 use pktito_app::{
-    audio, awake, decode, download, format, model, pktito, recent, strings, transcribe,
+    audio, awake, decode, download, editions, format, model, pktito, recent, strings, transcribe,
 };
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -158,20 +158,24 @@ fn audio_dir(app: &AppHandle) -> Result<PathBuf, String> {
         .map_err(|e| e.to_string())
 }
 
-/// A catalog model as the window offers it: its entry, with `bytes` what it
-/// takes on this computer (model::bytes_of: on a Mac its Neural Engine
-/// edition's, unless the whole file is here).
+/// A catalog model as the window offers it (editions::view): its entry,
+/// with `bytes` what it takes on this computer.
 #[derive(Serialize)]
 struct Offer {
     #[serde(flatten)]
     entry: serde_json::Value,
-    /// Downloaded and on this computer, in either edition.
+    /// Downloaded and on this computer, in an edition that runs.
     have: bool,
-    /// Bytes kept from a download that stopped.
+    /// Bytes kept from a download of it that stopped.
     partial: u64,
-    /// On a Mac, the bytes of its Core ML encoder, which Manage models
-    /// offers where a whole file of it is here without one.
+    /// The bytes of the NPU's edition, which Manage models offers where the
+    /// CPU's runs here: Faster (editions::Kind).
     faster: Option<u64>,
+    /// The bytes of the catalog's newer files for the edition that runs
+    /// here, which Manage models offers: Update.
+    update: Option<u64>,
+    /// Why the NPU refused the edition that fits best, where it did.
+    refused: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -225,6 +229,17 @@ fn ensure_engine<'a>(
     data: &Path,
     path: &Path,
 ) -> Result<&'a mut Engine, String> {
+    // a download that replaces one of its files, put in place now that
+    // nothing is transcribing with it (editions::settle)
+    if let Some(e) = model::catalog_file(data, path) {
+        let dir = data.join("models");
+        if editions::pending(&dir, e) {
+            *slot = None;
+            if let Err(why) = editions::settle(&dir, e) {
+                eprintln!("pktito: {why}");
+            }
+        }
+    }
     let encoder = model::encoder_of(data, path);
     let stale = |e: &Engine| e.path != path || (encoder.is_some() && !e.neural);
     if slot.as_ref().map(stale).unwrap_or(true) {
@@ -258,10 +273,16 @@ fn neural(
     let Some(encoder) = encoder else {
         return Ok(false);
     };
-    match asr.use_ane(Some(encoder)) {
+    let tried = if editions::refusing_for_test() {
+        Err("PKTITO_REFUSE_NPU=1".to_string())
+    } else {
+        asr.use_ane(Some(encoder))
+    };
+    match tried {
         Ok(()) => Ok(true),
         Err(why) => {
             let _ = asr.use_ane(None);
+            model::refuse_npu(encoder, &why);
             if m.has_encoder() {
                 eprintln!("pktito: the Neural Engine can't run the encoder ({why}); using the CPU");
                 Ok(false)
@@ -288,13 +309,15 @@ fn neural(
     let Some(graph) = encoder else {
         return Ok(false);
     };
-    let Err(why) = asr.use_qnn(graph) else {
+    let tried = if editions::refusing_for_test() {
+        Err("PKTITO_REFUSE_NPU=1".to_string())
+    } else {
+        asr.use_qnn(graph)
+    };
+    let Err(why) = tried else {
         return Ok(true);
     };
-    let of = |e: &&model::Entry| e.qnn.iter().any(|g| graph.ends_with(g.part.file));
-    if let (Some(dir), Some(e)) = (graph.parent(), model::CATALOG.iter().find(of)) {
-        model::refuse_npu(dir, e, &why);
-    }
+    model::refuse_npu(graph, &why);
     if m.has_encoder() {
         eprintln!("pktito: the NPU can't run the encoder ({why}); using the CPU");
         Ok(false)
@@ -312,6 +335,42 @@ fn neural(
     Ok(false)
 }
 
+/// Downloads that replace a model's files put in place (editions::settle)
+/// while nothing is transcribing and no download is under way: the engine
+/// lets go of those files first, so that Windows can rename over them, and
+/// the next transcription loads the new ones.
+fn settle_idle(state: &AppState, dir: &Path) {
+    if state.transcribing.lock().unwrap().is_some() {
+        return;
+    }
+    if state
+        .download
+        .lock()
+        .unwrap()
+        .as_ref()
+        .is_some_and(|j| j.alive())
+    {
+        return;
+    }
+    let Ok(mut slot) = state.engine.try_lock() else {
+        return;
+    };
+    for e in model::CATALOG {
+        if !editions::pending(dir, e) {
+            continue;
+        }
+        if slot.as_ref().is_some_and(|en| {
+            model::catalog_file(dir.parent().unwrap_or(dir), &en.path)
+                .is_some_and(|x| x.name == e.name)
+        }) {
+            *slot = None;
+        }
+        if let Err(why) = editions::settle(dir, e) {
+            eprintln!("pktito: {why}");
+        }
+    }
+}
+
 #[tauri::command]
 fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, Problem> {
     let data = data_dir(&app)?;
@@ -322,6 +381,7 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, Problem>
         model::save_settings(&data, &s)?;
     }
     let dir = data.join("models");
+    settle_idle(&state, &dir);
     let in_package = data_in_package(&data);
     let download = state
         .download
@@ -337,13 +397,17 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, Problem>
         catalog: model::CATALOG
             .iter()
             .map(|e| {
+                let v = editions::view(&dir, e, editions::Device::this());
                 let mut entry = serde_json::to_value(e).unwrap_or_default();
-                entry["bytes"] = model::bytes_of(&dir, e).into();
+                entry["bytes"] = v.bytes.into();
+                let of = |k| v.offer.as_ref().filter(|o| o.kind == k);
                 Offer {
                     entry,
-                    have: model::have_any(&dir, e),
-                    partial: model::kept(&dir, e),
-                    faster: model::encoder_offer(&data, e),
+                    have: v.runs.is_some(),
+                    partial: of(editions::Kind::Download).map_or(0, |o| o.kept),
+                    faster: of(editions::Kind::Faster).map(|o| o.bytes),
+                    update: of(editions::Kind::Update).map(|o| o.bytes),
+                    refused: v.refused,
                 }
             })
             .collect(),
@@ -418,7 +482,12 @@ fn download_model(app: AppHandle, state: State<'_, AppState>, name: String) -> R
             std::thread::sleep(Duration::from_millis(20));
         }
     }
-    let job = Arc::new(download::Job::new(e, &dir));
+    // what Manage models offers: a download, Faster or an update
+    let fresh = model::runs(&dir, e).is_none();
+    let Some(job) = download::Job::new(e, &dir) else {
+        return Ok(());
+    };
+    let job = Arc::new(job);
     *slot = Some(job.clone());
     let (tell, done) = (app.clone(), app.clone());
     job.start(
@@ -428,6 +497,9 @@ fn download_model(app: AppHandle, state: State<'_, AppState>, name: String) -> R
             let _ = tell.emit("download", s);
         },
         move |_| {
+            if !fresh {
+                return;
+            }
             if let Ok(data) = data_dir(&done) {
                 let mut s = model::load_settings(&data);
                 s.model = Some(e.name.into());
@@ -435,34 +507,6 @@ fn download_model(app: AppHandle, state: State<'_, AppState>, name: String) -> R
                 let _ = model::save_settings(&data, &s);
             }
         },
-    );
-    Ok(())
-}
-
-/// Manage models' offer on a Mac: name's Core ML encoder alone, for its
-/// whole model file here (or the user's own copy of it), which then runs
-/// on the Neural Engine; on Windows on Arm its graph for this PC's NPU. "download" events say how it goes, as a model's.
-#[tauri::command]
-fn get_encoder(app: AppHandle, state: State<'_, AppState>, name: String) -> Result<(), Problem> {
-    let e = model::entry(&name).ok_or("no such model")?;
-    let data = data_dir(&app)?;
-    if model::encoder_offer(&data, e).is_none() {
-        return Ok(());
-    }
-    let mut slot = state.download.lock().unwrap();
-    if let Some(j) = slot.as_ref().filter(|j| j.alive()) {
-        return Err(Problem::new("download.busy").with("name", j.name()));
-    }
-    let job = Arc::new(download::Job::encoder(e, &data.join("models")));
-    *slot = Some(job.clone());
-    let tell = app.clone();
-    job.start_encoder(
-        e,
-        data.join("models"),
-        move |s| {
-            let _ = tell.emit("download", s);
-        },
-        |_| {},
     );
     Ok(())
 }
@@ -763,7 +807,9 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
         fps,
         ..Default::default()
     });
-    let Engine { model, asr, .. } = match ensure_engine(&mut slot, &data, &model_path) {
+    let Engine {
+        model, asr, neural, ..
+    } = match ensure_engine(&mut slot, &data, &model_path) {
         Ok(e) => e,
         Err(why) => return fail(trouble("transcribe.cant_load_model", why.to_string())),
     };
@@ -802,7 +848,11 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
     );
     let transcribed = t1.elapsed().as_secs_f64();
     let name = model.name();
+    let on_npu = *neural;
     drop(slot);
+    if on_npu && matches!(r, Ok((_, true))) {
+        model::ran_on_npu(&data, &model_path);
+    }
     let _ = state
         .stop
         .compare_exchange(id, 0, Ordering::Relaxed, Ordering::Relaxed);
@@ -1631,7 +1681,7 @@ fn headless(args: &[String]) -> Result<(), String> {
 fn download_alone(args: &[String]) -> Result<PathBuf, String> {
     let e = model::entry(args.get(1).ok_or("--download NAME DIR")?).ok_or("no such model")?;
     let dir = PathBuf::from(args.get(2).ok_or("--download NAME DIR")?);
-    let job = Arc::new(download::Job::new(e, &dir));
+    let job = Arc::new(download::Job::new(e, &dir).ok_or("nothing to download")?);
     let (tx, rx) = std::sync::mpsc::channel();
     job.start(
         e,
@@ -2003,6 +2053,11 @@ fn main() {
         })
         .manage(AppState::default())
         .setup(|app| {
+            // files downloaded before 0.9.6 given their records, once, off
+            // the window's thread (editions::adopt)
+            if let Ok(data) = data_dir(app.handle()) {
+                std::thread::spawn(move || editions::adopt(&data.join("models")));
+            }
             // the audio no transcript on the recent list needs, from runs
             // before; before the window opens, so none of this run's goes too
             if let (Ok(data), Ok(dir)) = (data_dir(app.handle()), audio_dir(app.handle())) {
@@ -2034,7 +2089,6 @@ fn main() {
             npu_notice,
             choose_model,
             download_model,
-            get_encoder,
             pause_download,
             cancel_download,
             delete_model,

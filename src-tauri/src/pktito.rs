@@ -174,12 +174,12 @@ extern "C" {
 }
 
 /// The phone's NPU as QNN describes it, as the graph compiled for it names
-/// it (model::Graph's chip: "57,75,8,1,0"); why not where QNN finds none,
+/// it (editions::Runtime::Qnn's chip: "57,75,8,1,0"); why not where QNN finds none,
 /// or the build has no QNN. QNN loads the NPU's own library to say, 137 to
 /// 168 ms on the Googlebook (2026-11-03): asked once, off the screen's
 /// thread. A Snapdragon X's QNN on Windows knows its Hexagon (73) and not
 /// its SoC, which it gives as 2147483647 (snappy, an X1E, 2026-11-05):
-/// model::graph_for falls back to the Hexagon's graph.
+/// editions::fit takes the Hexagon's graph for it.
 #[cfg(any(target_os = "android", all(windows, target_arch = "aarch64")))]
 pub fn qnn_chip() -> Result<String, String> {
     let mut chip = [0 as c_char; 64];

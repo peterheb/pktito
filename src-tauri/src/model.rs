@@ -3,8 +3,10 @@
 //! before it is used. A download that stops (paused, or the connection
 //! lost) keeps what it has, and the next one asks only for the rest.
 //! PKTITO_MODEL_BASE points the download somewhere else (a mirror, or a
-//! local server while testing).
+//! local server while testing). Which of a model's editions runs here, and
+//! what Manage models offers, is editions.rs's.
 
+use crate::editions::{self, Device, Edition, Refusals, Runtime};
 use crate::strings::Problem;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -17,23 +19,21 @@ use std::time::Duration;
 
 pub const DEFAULT_BASE: &str = "https://models.pktito.net/";
 
-/// Whether this system downloads a model's edition for the Neural Engine
-/// (Coreml: the model file without its encoder, and its Core ML encoder)
-/// where it downloads one: the Mac's, every one of which has it (macOS 12
-/// on Apple silicon, the app's floor), at 3x the CPU's speed for v2 on an
-/// M4 Pro with 0.9.5's encoder (AliceBench, 349x to 117x, WER 0.059% apart,
-/// 2026-11-02); 0.9.6's, with the position term folded, takes 16% less
-/// time on an M4 (AliceBench v2, 354x to 423x, 6 words of 27,118
-/// different; the ane fork's tools/ane/CLIMB.md, 2026-11-03). The
-/// iOS app downloads its own, in Swift. A whole .pkf already here still
-/// runs, on the Neural Engine too once its encoder is beside it.
+/// Whether this system is a Mac, whose every one (macOS 12 on Apple
+/// silicon, the app's floor) runs a model's Core ML edition on the Neural
+/// Engine, at 3x the CPU's speed for v2 on an M4 Pro with 0.9.5's encoder
+/// (AliceBench, 349x to 117x, WER 0.059% apart, 2026-11-02); 0.9.6's, with
+/// the position term folded, takes 16% less time on an M4 (AliceBench v2,
+/// 354x to 423x, 6 words of 27,118 different; the ane fork's
+/// tools/ane/CLIMB.md, 2026-11-03). The choice itself is editions::choose's;
+/// this says where a user's own copy of a catalog model may borrow its
+/// encoder (encoder_of), and where pktito-cli unpacks one.
 pub const NEURAL: bool = cfg!(target_os = "macos");
 
 /// This PC's NPU as QNN describes it (pktito::qnn_chip), on Windows on Arm,
 /// asked once: QNN loads the NPU's library to say. None where it finds none
 /// (a Snapdragon 7c, whose Hexagon QNN refuses), where the app's folder has
-/// no QNN DLLs, and on every other system, whose download is decided at
-/// build time (NEURAL).
+/// no QNN DLLs, and on every other system (Device::this).
 pub fn chip() -> Option<&'static str> {
     #[cfg(all(windows, target_arch = "aarch64"))]
     {
@@ -49,104 +49,7 @@ pub fn chip() -> Option<&'static str> {
     None
 }
 
-/// e's graph for this PC's NPU (graph_for), where it has one and QNN has
-/// not refused it here (refused): on Windows on Arm the download is
-/// then the slim file and that graph, for v2 727 MB where the .pkf is 624,
-/// whose encoder ran a chapter at 155x to the CPU's 115x on a Snapdragon X
-/// Elite with 1/22 the CPU time (snappy, ch01, 2026-11-05).
-pub fn graph(dir: &Path, e: &Entry) -> Option<&'static Graph> {
-    let g = graph_for(e, chip()?)?;
-    (!refused(dir, g)).then_some(g)
-}
-
-/// The catalog's graph of e for chip, in QNN's words for it
-/// (soc,arch,vtcm,dlbc,signed), as the Android app picks one (its
-/// Models.graphFor): the one compiled for it, else one compiled for
-/// another SoC of its Hexagon with no more VTCM than it has, which QNN may
-/// run or refuse. A Snapdragon X's QNN on Windows names no SoC
-/// (2147483647,73,8,1,1 on snappy's X1E, 2026-11-05), and takes the
-/// X1E80100's graph by its Hexagon, as an X2 the SC8480XP's. Only the
-/// graphs for this system are candidates (graph_on).
-pub fn graph_for(e: &Entry, chip: &str) -> Option<&'static Graph> {
-    graph_on(e, chip, std::env::consts::OS)
-}
-
-/// graph_for on the system named system, among the graphs for it alone
-/// (Graph::systems). Which one is never the catalog's order: on a system
-/// the catalog has one graph a Hexagon (one_graph_a_hexagon_a_system), so
-/// the exact chip and its Hexagon's name the same graph or there is one
-/// candidate. A second graph of one Hexagon on one system needs a rule for
-/// choosing between them first.
-pub fn graph_on(e: &Entry, chip: &str, system: &str) -> Option<&'static Graph> {
-    let numbers = |c: &str| -> Option<Vec<u64>> {
-        let n: Vec<u64> = c
-            .split(',')
-            .map(|x| x.parse().ok())
-            .collect::<Option<_>>()?;
-        (n.len() == 5).then_some(n)
-    };
-    let mine = numbers(chip)?;
-    let e: &'static Entry = entry(e.name)?;
-    let mut here = e.qnn.iter().filter(|g| g.systems.contains(&system));
-    here.clone().find(|g| g.chip == chip).or_else(|| {
-        here.find(|g| {
-            numbers(g.chip).is_some_and(|theirs| theirs[1] == mine[1] && theirs[2] <= mine[2])
-        })
-    })
-}
-
-/// Where the models folder records that QNN refused graph g here (its file
-/// with .refused after it), and why: from then on a download of its model
-/// is the whole file, whose encoder runs on the CPU.
-fn refused_in(dir: &Path, g: &Graph) -> PathBuf {
-    dir.join(format!("{}.refused", g.part.file))
-}
-
-/// What a refusal is of: the chip, this app's version and the graph's
-/// SHA-256, a line each, as the Android app keys its own
-/// (Editions.failure), so that a new app, whose QNN or graphs may be new,
-/// tries the NPU again: a refusal once, from a driver's hiccup or an NPU
-/// short of memory, is not for good.
-fn refusal_key(g: &Graph) -> String {
-    format!(
-        "{}\n{}\n{}\n",
-        chip().unwrap_or(""),
-        env!("CARGO_PKG_VERSION"),
-        g.part.sha256
-    )
-}
-
-/// Whether QNN refused graph g on this PC with this app (refusal_key).
-fn refused(dir: &Path, g: &Graph) -> bool {
-    fs::read_to_string(refused_in(dir, g)).is_ok_and(|t| t.starts_with(&refusal_key(g)))
-}
-
-/// QNN refused e's graph on this PC (why): recorded (refused), so that a
-/// download offers the whole model until the app is updated, and the graphs
-/// deleted, 714 MB for v2's. The slim file, 12 MB, stays until e is
-/// deleted: the engine still has it open. Only Windows on Arm asks.
-pub fn refuse_npu(dir: &Path, e: &Entry, why: &str) {
-    if let Some(g) = chip().and_then(|c| graph_for(e, c)) {
-        let _ = fs::write(refused_in(dir, g), format!("{}{why}\n", refusal_key(g)));
-    }
-    for g in e.qnn {
-        let dst = Wanted::part(dir, e, &g.part).dst;
-        let _ = fs::remove_file(&dst);
-        unmark(&dst);
-    }
-}
-
-/// The NPU's encoder for a model file of e's in dir, beside it: the Core
-/// ML encoder on a Mac, unpacked, or on Windows on Arm this PC's graph,
-/// downloaded.
-fn have_npu_encoder(dir: &Path, e: &Entry) -> bool {
-    if NEURAL {
-        return have_encoder(dir, e);
-    }
-    graph(dir, e).is_some_and(|g| Wanted::part(dir, e, &g.part).here())
-}
-
-#[derive(Clone, Copy, Serialize)]
+#[derive(Clone, Copy, Debug, Serialize)]
 pub struct Entry {
     pub name: &'static str,
     /// Its name, and what it transcribes in a line, for pktito-cli; the
@@ -160,66 +63,134 @@ pub struct Entry {
     /// Where its error rate in each language is, for a model of several:
     /// the window links to it under their list; "" for none.
     pub accuracy: &'static str,
-    pub bytes: u64,
-    pub sha256: &'static str,
-    /// Its edition for Apple's Neural Engine, which the iOS app downloads
-    /// where the device can run it (ios.rs).
-    pub coreml: Coreml,
-    /// Its encoder for Snapdragons' NPUs, a graph a chip, which the Android
-    /// app downloads with Coreml's slim file where the phone is one of
-    /// those chips (android.rs).
-    pub qnn: &'static [Graph],
+    /// The ways to run it (editions::Edition): the CPU's, its whole .pkf,
+    /// first, and one for each NPU it has an encoder for.
+    pub editions: &'static [Edition],
 }
 
-/// A file models.pktito.net serves beside a .pkf, under the first twelve
-/// digits of its SHA-256 as one is (part_url): file is its name with its
-/// extension.
-#[derive(Clone, Copy, Serialize)]
+impl Entry {
+    /// The CPU's edition: every model has one (every_model_has_one_cpu_edition).
+    pub fn cpu(&self) -> &'static Edition {
+        self.editions
+            .iter()
+            .find(|ed| !ed.npu())
+            .expect("a catalog model without a CPU edition")
+    }
+
+    /// The whole .pkf, which runs on any CPU.
+    pub fn whole(&self) -> &'static Part {
+        &self.cpu().model
+    }
+
+    /// The Core ML edition, the Neural Engine's, where it has one.
+    pub fn coreml(&self) -> Option<&'static Edition> {
+        self.editions
+            .iter()
+            .find(|ed| matches!(ed.runtime, Runtime::CoreMl { .. }))
+    }
+
+    /// The slim .pkf the NPU editions load, where it has one.
+    pub fn slim(&self) -> Option<&'static Part> {
+        self.editions.iter().find(|ed| ed.npu()).map(|ed| &ed.model)
+    }
+}
+
+/// A file models.pktito.net serves, under the first twelve digits of its
+/// SHA-256 (part_url): file is its name with its extension.
+#[derive(Clone, Copy, Debug, Serialize)]
 pub struct Part {
     pub file: &'static str,
     pub bytes: u64,
     pub sha256: &'static str,
 }
 
-/// A model's edition for Apple's Neural Engine, from pktito's ane fork: the
-/// model file without its encoder (`pktito-tools slim`), which only the
-/// fork loads (its qnn branch too, Android's), and the encoder as a compiled Core ML model, int8, in an
-/// Apple Archive (tools/ane/encoder.py, then `aa archive`), made from the
-/// same checkpoint, whose SHA-256 each names and the fork holds them to.
-/// For v2 559 MB in all where its .pkf is 624; the same transcript as the
-/// .pkf with that encoder, which runs at 271x on an M1 iPad (AliceBench v2,
-/// against 0.9.5's 242x; the fork's tools/ane/CLIMB.md, 2026-11-03).
-#[derive(Clone, Copy, Serialize)]
-pub struct Coreml {
-    pub slim: Part,
-    pub encoder: Part,
+// The Core ML editions come from pktito's ane fork: the model file without
+// its encoder (`pktito-tools slim`), which only the fork loads (its qnn
+// branch too, Android's), and the encoder as a compiled Core ML model,
+// int8, in an Apple Archive (tools/ane/encoder.py, then `aa archive`), made
+// from the same checkpoint, whose SHA-256 each names and the fork holds
+// them to. For v2 559 MB in all where its .pkf is 624; the same transcript
+// as the .pkf with that encoder, which runs at 271x on an M1 iPad
+// (AliceBench v2, against 0.9.5's 242x; the fork's tools/ane/CLIMB.md,
+// 2026-11-03).
+//
+// The QNN editions' graphs come from pktito's qnn branch: compiled by
+// Qualcomm's QNN on a PC from the whole .pkf for one chip (core/qnn.h,
+// PKTITO_QNN_TARGET), and read with the slim file, the same file as the
+// Core ML edition's. No phone compiles one: the Android app ships no
+// compiler. For v2 727 MB with the slim file where its .pkf is 624. With
+// the PC's graph the Galaxy S24 Ultra (SM8650) ran AliceBench at 167x and
+// the Galaxy S25 Ultra (SM8750) at 206x, each phone's test.wav to every
+// digit what its own compile of the graph wrote; with graph 1 the
+// Googlebook (X1E80100) wrote the slim file's transcript word for word
+// what the whole one wrote with the same graph (the qnn branch's
+// tools/qnn/CLIMB.md, 2026-11-03). On Windows on Arm a graph ran a chapter
+// at 155x to the CPU's 115x on a Snapdragon X Elite with 1/22 the CPU time
+// (snappy, ch01, 2026-11-05).
+
+/// The app's floors, where every device has a Neural Engine.
+const COREML: Runtime = Runtime::CoreMl {
+    macos: (12, 0),
+    ios: (18, 0),
+};
+
+/// A model's CPU edition, its whole .pkf.
+const fn cpu(model: Part) -> Edition {
+    Edition {
+        id: "cpu",
+        runtime: Runtime::Cpu,
+        model,
+        encoder: None,
+    }
 }
 
-/// A model's encoder for one chip's NPU, from pktito's qnn branch: the graph
-/// Qualcomm's QNN compiled on a PC from the whole .pkf for that chip
-/// (core/qnn.h, PKTITO_QNN_TARGET), which the qnn branch reads with
-/// Coreml's slim file, the same file, as with the whole model. No phone
-/// compiles one: the Android app ships no compiler. For v2 727 MB with the
-/// slim file where its .pkf is 624. With the PC's graph the Galaxy S24
-/// Ultra (SM8650) ran AliceBench at 167x and the Galaxy S25 Ultra (SM8750)
-/// at 206x, each phone's test.wav to every digit what its own compile of
-/// the graph wrote; with graph 1 the Googlebook (X1E80100) wrote the slim
-/// file's transcript word for word what the whole one wrote with the same
-/// graph (the qnn branch's tools/qnn/CLIMB.md, 2026-11-03).
-#[derive(Clone, Copy, Serialize)]
-pub struct Graph {
-    /// The chip it is for, as its QNN describes it (pk_qnn_chip): the SoC's
-    /// number in QNN's table, its Hexagon's version, its VTCM in MB, and
-    /// whether it has DLBC and a signed PD
-    pub chip: &'static str,
-    pub part: Part,
-    /// The systems whose QNN it is for, as Rust names them
-    /// (std::env::consts::OS: "android", "windows"): a graph is offered on
-    /// no other, whatever its chip, so that a phone never takes a PC's graph
-    /// of its Hexagon, nor a PC a phone's (graph_for). The X1E80100's is
-    /// both, the Googlebook's and snappy's.
-    pub systems: &'static [&'static str],
+/// A model's QNN edition for one chip (Runtime::Qnn), its graph read with
+/// the slim file.
+const fn qnn(
+    id: &'static str,
+    chip: &'static str,
+    systems: &'static [&'static str],
+    slim: Part,
+    graph: Part,
+) -> Edition {
+    Edition {
+        id,
+        runtime: Runtime::Qnn { chip, systems },
+        model: slim,
+        encoder: Some(graph),
+    }
 }
+
+// the chips, in QNN's words (pk_qnn_chip): the SoC's number in QNN's table,
+// its Hexagon's version, its VTCM in MB, and whether it has DLBC and a
+// signed PD. A Snapdragon X's QNN on Windows names no SoC
+// (2147483647,73,8,1,1 on snappy's X1E, 2026-11-05), and takes the
+// X1E80100's graph by its Hexagon, as an X2 the SC8480XP's.
+/// the Galaxy S24's Snapdragon 8 Gen 3
+const SM8650: &str = "57,75,8,1,0";
+/// the Galaxy S25's Snapdragon 8 Elite
+const SM8750: &str = "69,79,8,1,0";
+/// the Galaxy S26's Snapdragon 8 Elite Gen 5
+const SM8850: &str = "87,81,8,1,0";
+/// the Snapdragon X Elite, the Googlebook's on Android and snappy's on Windows
+const X1E80100: &str = "60,73,8,1,1";
+/// the Snapdragon X2 Elite (SoC 88, V81, 8 MB of VTCM), for Windows
+const SC8480XP: &str = "88,81,8,1,1";
+const ANDROID: &[&str] = &["android"];
+const WINDOWS: &[&str] = &["windows"];
+const BOTH: &[&str] = &["android", "windows"];
+
+const V2_SLIM: Part = Part {
+    file: "parakeet-tdt-0.6b-v2-slim.pkf",
+    bytes: 12_115_524,
+    sha256: "e582eb76db19e9fba4d9e15d45ce041dd9a230bac3c2970643aa6808bf966acb",
+};
+
+const V3_SLIM: Part = Part {
+    file: "parakeet-tdt-0.6b-v3-slim.pkf",
+    bytes: 35_187_972,
+    sha256: "169ead8b6b98c67676d13c40bd592614f9d1a3b3783da027fe03967cd559b100",
+};
 
 /// The models models.pktito.net serves: pktito-tools' conversions of NVIDIA's
 /// checkpoints (CC-BY-4.0), as pktito 22fa0b1 writes them. What each one
@@ -232,75 +203,81 @@ pub const CATALOG: &[Entry] = &[
         about: "English only",
         languages: &["en"],
         accuracy: "",
-        bytes: 624_480_196,
-        sha256: "8bfa6750b83cd7c447bad82057c7a12473563b72b3d35487fcca6da0786d83c7",
-        coreml: Coreml {
-            slim: Part {
-                file: "parakeet-tdt-0.6b-v2-slim.pkf",
-                bytes: 12_115_524,
-                sha256: "e582eb76db19e9fba4d9e15d45ce041dd9a230bac3c2970643aa6808bf966acb",
+        editions: &[
+            cpu(Part {
+                file: "parakeet-tdt-0.6b-v2.pkf",
+                bytes: 624_480_196,
+                sha256: "8bfa6750b83cd7c447bad82057c7a12473563b72b3d35487fcca6da0786d83c7",
+            }),
+            Edition {
+                id: "coreml",
+                runtime: COREML,
+                model: V2_SLIM,
+                encoder: Some(Part {
+                    file: "parakeet-tdt-0.6b-v2-encoder.mlmodelc.aar",
+                    bytes: 546_910_291,
+                    sha256: "70272da7508aff518225caeaea3f0dc7dedb5bf0cc829da72876c9ecae5159a1",
+                }),
             },
-            encoder: Part {
-                file: "parakeet-tdt-0.6b-v2-encoder.mlmodelc.aar",
-                bytes: 546_910_291,
-                sha256: "70272da7508aff518225caeaea3f0dc7dedb5bf0cc829da72876c9ecae5159a1",
-            },
-        },
-        // pktito-qnn-graph 2, compiled by pktito 88f5a6d on the 9950X with QAIRT 2.51.0.260929
-        // (2026-11-03; the S26's 2026-11-04)
-        qnn: &[
-            // the Galaxy S24's Snapdragon 8 Gen 3
-            Graph {
-                chip: "57,75,8,1,0",
-                part: Part {
+            // pktito-qnn-graph 2, compiled by pktito 88f5a6d on the 9950X with
+            // QAIRT 2.51.0.260929 (2026-11-03; the S26's 2026-11-04)
+            qnn(
+                "qnn-sm8650",
+                SM8650,
+                ANDROID,
+                V2_SLIM,
+                Part {
                     file: "parakeet-tdt-0.6b-v2-sm8650.qnn",
                     bytes: 714_506_856,
                     sha256: "3f690d2cdd0ad6dc3b805f627f5c8e0b7701af20135bc275ebcc8f55877263a1",
                 },
-                systems: &["android"],
-            },
-            // the Galaxy S25's Snapdragon 8 Elite
-            Graph {
-                chip: "69,79,8,1,0",
-                part: Part {
+            ),
+            qnn(
+                "qnn-sm8750",
+                SM8750,
+                ANDROID,
+                V2_SLIM,
+                Part {
                     file: "parakeet-tdt-0.6b-v2-sm8750.qnn",
                     bytes: 713_568_872,
                     sha256: "40a5b75f37954b528f04944c57096ba0215783cea23b50ef659a981b5995456c",
                 },
-                systems: &["android"],
-            },
-            // the Galaxy S26's Snapdragon 8 Elite Gen 5
-            Graph {
-                chip: "87,81,8,1,0",
-                part: Part {
+            ),
+            qnn(
+                "qnn-sm8850",
+                SM8850,
+                ANDROID,
+                V2_SLIM,
+                Part {
                     file: "parakeet-tdt-0.6b-v2-sm8850.qnn",
                     bytes: 714_412_648,
                     sha256: "08388c7f4b9cbb562330111ed6e0b026d00512168cee589b04578f50673b1aff",
                 },
-                systems: &["android"],
-            },
-            // the Googlebook's Snapdragon X Elite
-            Graph {
-                chip: "60,73,8,1,1",
-                part: Part {
+            ),
+            qnn(
+                "qnn-x1e80100",
+                X1E80100,
+                BOTH,
+                V2_SLIM,
+                Part {
                     file: "parakeet-tdt-0.6b-v2-x1e80100.qnn",
                     bytes: 714_523_240,
                     sha256: "dab2d4d69028caba976c0b82316f83ad49bd3d4bac01b39992cd66904d216513",
                 },
-                systems: &["android", "windows"],
-            },
-            // the Snapdragon X2 Elite's (SC8480XP: SoC 88, V81, 8 MB of VTCM), for
-            // Windows; compiled by pktito bbdcf60 on 2026-11-05, run on no X2 yet
-            // (the qnn branch's tools/qnn/CLIMB.md)
-            Graph {
-                chip: "88,81,8,1,1",
-                part: Part {
+            ),
+            // compiled by pktito bbdcf60 on 2026-11-05, run on no X2 yet (the
+            // qnn branch's tools/qnn/CLIMB.md)
+            qnn(
+                "qnn-sc8480xp",
+                SC8480XP,
+                WINDOWS,
+                V2_SLIM,
+                Part {
                     file: "parakeet-tdt-0.6b-v2-sc8480xp.qnn",
                     bytes: 714_445_416,
                     sha256: "726db8ecde7934510ab0193f52de93601c64506edf1804a240612a823e90d811",
                 },
-                systems: &["windows"],
-            },
+            ),
         ],
     },
     Entry {
@@ -314,72 +291,118 @@ pub const CATALOG: &[Entry] = &[
         ],
         // the model card's table of each language's word error rate
         accuracy: "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3#multilingual-asr",
-        bytes: 647_552_644,
-        sha256: "35a59c9a433d4da2289640db93e73c42478b576e49a293090ef61b4ae595152a",
-        coreml: Coreml {
-            slim: Part {
-                file: "parakeet-tdt-0.6b-v3-slim.pkf",
-                bytes: 35_187_972,
-                sha256: "169ead8b6b98c67676d13c40bd592614f9d1a3b3783da027fe03967cd559b100",
+        editions: &[
+            cpu(Part {
+                file: "parakeet-tdt-0.6b-v3.pkf",
+                bytes: 647_552_644,
+                sha256: "35a59c9a433d4da2289640db93e73c42478b576e49a293090ef61b4ae595152a",
+            }),
+            Edition {
+                id: "coreml",
+                runtime: COREML,
+                model: V3_SLIM,
+                encoder: Some(Part {
+                    file: "parakeet-tdt-0.6b-v3-encoder.mlmodelc.aar",
+                    bytes: 545_275_075,
+                    sha256: "a7eef40e28b009fee25548fe869124d2b9ba7be8c00c2dcb1b2e8e8973524571",
+                }),
             },
-            encoder: Part {
-                file: "parakeet-tdt-0.6b-v3-encoder.mlmodelc.aar",
-                bytes: 545_275_075,
-                sha256: "a7eef40e28b009fee25548fe869124d2b9ba7be8c00c2dcb1b2e8e8973524571",
-            },
-        },
-        qnn: &[
-            Graph {
-                chip: "57,75,8,1,0",
-                part: Part {
+            qnn(
+                "qnn-sm8650",
+                SM8650,
+                ANDROID,
+                V3_SLIM,
+                Part {
                     file: "parakeet-tdt-0.6b-v3-sm8650.qnn",
                     bytes: 714_506_856,
                     sha256: "84aae2af7273132997bb71af73550f1a9a037de35b3d45d9e95a9390a796324e",
                 },
-                systems: &["android"],
-            },
-            Graph {
-                chip: "69,79,8,1,0",
-                part: Part {
+            ),
+            qnn(
+                "qnn-sm8750",
+                SM8750,
+                ANDROID,
+                V3_SLIM,
+                Part {
                     file: "parakeet-tdt-0.6b-v3-sm8750.qnn",
                     bytes: 713_568_872,
                     sha256: "d5cf8b7659ea176f66937a94e72c80bb11caac60d18811b0f500b6b1eaa73113",
                 },
-                systems: &["android"],
-            },
-            Graph {
-                chip: "87,81,8,1,0",
-                part: Part {
+            ),
+            qnn(
+                "qnn-sm8850",
+                SM8850,
+                ANDROID,
+                V3_SLIM,
+                Part {
                     file: "parakeet-tdt-0.6b-v3-sm8850.qnn",
                     bytes: 714_412_648,
                     sha256: "68eb09b667c7f9f6f36bb7eb7812945078150d8ff9984c61ce169d1bdfe99eab",
                 },
-                systems: &["android"],
-            },
-            Graph {
-                chip: "60,73,8,1,1",
-                part: Part {
+            ),
+            qnn(
+                "qnn-x1e80100",
+                X1E80100,
+                BOTH,
+                V3_SLIM,
+                Part {
                     file: "parakeet-tdt-0.6b-v3-x1e80100.qnn",
                     bytes: 714_523_240,
                     sha256: "1208ddc1b2c63e68568d692780297d142ad5f57ee3bb05dd86218347edd7809f",
                 },
-                systems: &["android", "windows"],
-            },
-            // the Snapdragon X2 Elite's (SC8480XP: SoC 88, V81, 8 MB of VTCM), for
-            // Windows; compiled by pktito bbdcf60 on 2026-11-05, run on no X2 yet
-            // (the qnn branch's tools/qnn/CLIMB.md)
-            Graph {
-                chip: "88,81,8,1,1",
-                part: Part {
+            ),
+            qnn(
+                "qnn-sc8480xp",
+                SC8480XP,
+                WINDOWS,
+                V3_SLIM,
+                Part {
                     file: "parakeet-tdt-0.6b-v3-sc8480xp.qnn",
                     bytes: 714_445_416,
                     sha256: "237a5a6c51abfcb969310d494f70b2663c568a43174b70b9fd3f6d624c6caa7a",
                 },
-                systems: &["windows"],
-            },
+            ),
         ],
     },
 ];
+
+/// e as 0.9.6's catalog JSON had it, which the Android app's Kotlin and the
+/// iOS app's Swift read until each reads the view (editions::view): bytes
+/// and sha256 the whole file's, coreml its slim file and encoder, qnn the
+/// graphs with their chips and systems.
+pub fn legacy(e: &Entry) -> serde_json::Value {
+    let part = |p: &Part| serde_json::to_value(p).unwrap_or_default();
+    let coreml = e.coreml().map(|ed| {
+        serde_json::json!({
+            "slim": part(&ed.model),
+            "encoder": ed.encoder.as_ref().map(part),
+        })
+    });
+    let qnn: Vec<serde_json::Value> = e
+        .editions
+        .iter()
+        .filter_map(|ed| match (ed.runtime, ed.encoder.as_ref()) {
+            (Runtime::Qnn { chip, systems }, Some(g)) => Some(serde_json::json!({
+                "chip": chip,
+                "part": part(g),
+                "systems": systems,
+            })),
+            _ => None,
+        })
+        .collect();
+    serde_json::json!({
+        "name": e.name,
+        "key": e.key,
+        "label": e.label,
+        "about": e.about,
+        "languages": e.languages,
+        "accuracy": e.accuracy,
+        "bytes": e.whole().bytes,
+        "sha256": e.whole().sha256,
+        "coreml": coreml,
+        "qnn": qnn,
+    })
+}
 
 pub fn entry(name: &str) -> Option<&'static Entry> {
     CATALOG.iter().find(|e| e.name == name)
@@ -424,27 +447,27 @@ pub fn choose_file(data: &Path, path: &Path) -> Result<(), String> {
 /// SHA-256 (a second or two for 624 MB, once, when it is chosen).
 pub fn copy_of(path: &Path) -> Option<&'static Entry> {
     let size = fs::metadata(path).ok()?.len();
-    let e = CATALOG.iter().find(|e| e.bytes == size)?;
+    let e = CATALOG.iter().find(|e| e.whole().bytes == size)?;
     let mut file = File::open(path).ok()?;
-    (sha256(&mut file, &Ctl::default()).ok()? == e.sha256).then_some(e)
+    (sha256(&mut file, &Ctl::default()).ok()? == e.whole().sha256).then_some(e)
 }
 
-/// The Core ML encoder for the model file at path, on a Mac: a catalog
-/// model's beside it (encoder_for), or for a file of the user's own that is
-/// a catalog model's copy (Settings::model_file_is), that model's. On
-/// Windows on Arm, a catalog model's graph for this PC's NPU beside its
-/// file, whole or slim (graph).
+/// What e runs on in dir on this computer (editions::runs).
+pub fn runs(dir: &Path, e: &Entry) -> Option<editions::Runs> {
+    editions::runs(dir, e, Device::this(), &Refusals::read(dir))
+}
+
+/// The NPU's encoder for the model file at path: a catalog model's, where
+/// what it runs on (runs) loads that file with one, on a Mac its Core ML
+/// encoder and on Windows on Arm this PC's graph; or on a Mac, for a file of
+/// the user's own that is a catalog model's copy (Settings::model_file_is),
+/// that model's Core ML encoder.
 pub fn encoder_of(data: &Path, path: &Path) -> Option<PathBuf> {
     let dir = data.join("models");
-    if chip().is_some() {
-        let e = CATALOG
-            .iter()
-            .find(|e| same_file(&file_in(&dir, e), path) || same_file(&slim_in(&dir, e), path))?;
-        let w = Wanted::part(&dir, e, &graph(&dir, e)?.part);
-        return w.here().then_some(w.dst);
-    }
-    if let Some(enc) = encoder_for(&dir, path) {
-        return Some(enc);
+    for e in CATALOG {
+        if let Some(r) = runs(&dir, e).filter(|r| same_file(&r.model, path)) {
+            return r.encoder;
+        }
     }
     let s = load_settings(data);
     let own = s.model_file.as_deref().is_some_and(|f| same_file(f, path));
@@ -452,22 +475,42 @@ pub fn encoder_of(data: &Path, path: &Path) -> Option<PathBuf> {
     have_encoder(&dir, e).then(|| encoder_in(&dir, e))
 }
 
-/// On a Mac, the bytes of e's Core ML encoder where a whole model file of
-/// e is here without it, to offer (Manage models): one in the models
-/// folder, or the user's own file that is e's copy. On Windows on Arm, the
-/// bytes of this PC's graph where e's whole file is in the models folder
-/// without it: every 0.9.5 install's. The whole file stays, as on a Mac:
-/// it is the CPU's where QNN refuses the graph. None otherwise.
-pub fn encoder_offer(data: &Path, e: &Entry) -> Option<u64> {
+/// A transcription ran with the model file at path on an NPU: where that is
+/// a catalog model's own slim file, its whole .pkf goes (editions::ran).
+pub fn ran_on_npu(data: &Path, path: &Path) {
     let dir = data.join("models");
-    if !NEURAL {
-        let g = graph(&dir, e)?;
-        return (have(&dir, e) && !Wanted::part(&dir, e, &g.part).here()).then_some(g.part.bytes);
+    for e in CATALOG {
+        if let Some(r) = runs(&dir, e).filter(|r| same_file(&r.model, path)) {
+            editions::ran(&dir, e, r.edition, path);
+        }
     }
-    let s = load_settings(data);
-    let own = s.model_file_is.as_deref() == Some(e.name)
-        && s.model_file.as_ref().is_some_and(|f| f.is_file());
-    ((have(&dir, e) || own) && !have_encoder(&dir, e)).then_some(e.coreml.encoder.bytes)
+}
+
+/// An NPU refused the encoder at encoder, a catalog model's (why):
+/// recorded for this computer, and the encoder deleted (editions::refuse).
+pub fn refuse_npu(encoder: &Path, why: &str) {
+    let Some(dir) = encoder.parent() else {
+        return;
+    };
+    for e in CATALOG {
+        for ed in e.editions {
+            if ed
+                .encoder
+                .as_ref()
+                .is_some_and(|p| same_file(&editions::installed(dir, p), encoder))
+            {
+                editions::refuse(dir, e, ed, Device::this(), why);
+            }
+        }
+    }
+}
+
+/// The catalog model whose file path is, whole or slim, in data's models.
+pub fn catalog_file(data: &Path, path: &Path) -> Option<&'static Entry> {
+    let dir = data.join("models");
+    CATALOG
+        .iter()
+        .find(|e| same_file(&file_in(&dir, e), path) || same_file(&slim_in(&dir, e), path))
 }
 
 /// Whether a and b are one file: the same path, or the same once each is
@@ -486,103 +529,49 @@ pub fn usable(data: &Path, s: &Settings) -> Option<PathBuf> {
     file_of(&data.join("models"), e)
 }
 
-/// e's model file in dir, if it is here: the whole one, else on a Mac its
-/// Neural Engine edition's, whose encoder is beside it, and on Windows on
-/// Arm the slim one beside this PC's graph.
+/// e's model file in dir that runs here (runs), if one does.
 pub fn file_of(dir: &Path, e: &Entry) -> Option<PathBuf> {
-    if have(dir, e) {
-        Some(file_in(dir, e))
-    } else if have_neural(dir, e) {
-        Some(slim_in(dir, e))
-    } else {
-        None
-    }
+    runs(dir, e).map(|r| r.model)
 }
 
-/// Whether e is here to transcribe with, in either edition (file_of).
+/// Whether e is here to transcribe with, in any edition (file_of).
 pub fn have_any(dir: &Path, e: &Entry) -> bool {
     file_of(dir, e).is_some()
 }
 
-/// The files a download of e fetches on this system, in order: on a Mac its
-/// Neural Engine edition (the slim model file, then the encoder's archive,
-/// unpacked once it checks), on Windows on Arm with a graph for its NPU the
-/// slim file and that graph, elsewhere the whole model.
-pub fn edition(dir: &Path, e: &Entry) -> Vec<Wanted> {
-    if NEURAL {
-        vec![
-            Wanted::part(dir, e, &e.coreml.slim),
-            Wanted::part(dir, e, &e.coreml.encoder),
-        ]
-    } else if let Some(g) = graph(dir, e) {
-        vec![
-            Wanted::part(dir, e, &e.coreml.slim),
-            Wanted::part(dir, e, &g.part),
-        ]
-    } else {
-        vec![Wanted::model(dir, e)]
-    }
+/// The files Manage models' offer for e fetches (editions::offer), in
+/// order, each to where it lands (editions::landing); none where nothing is
+/// offered.
+pub fn wanted(dir: &Path, e: &Entry) -> Vec<Wanted> {
+    editions::offer(dir, e, Device::this(), &Refusals::read(dir))
+        .map(|o| o.files.iter().map(|p| Wanted::part(dir, e, p)).collect())
+        .unwrap_or_default()
 }
 
-/// The bytes of e on this computer once it is downloaded: what is here, or
-/// what a download of it fetches.
-pub fn bytes_of(dir: &Path, e: &Entry) -> u64 {
-    let whole = if have(dir, e) { e.bytes } else { 0 };
-    // the edition's files, or an encoder fetched for a whole file alone
-    let npu = NEURAL || graph(dir, e).is_some();
-    let slim = if npu && Wanted::part(dir, e, &e.coreml.slim).here() {
-        e.coreml.slim.bytes
-    } else {
-        0
-    };
-    let encoder = if !have_npu_encoder(dir, e) {
-        0
-    } else if NEURAL {
-        e.coreml.encoder.bytes
-    } else {
-        graph(dir, e).map_or(0, |g| g.part.bytes)
-    };
-    let neural = if whole > 0 || slim > 0 {
-        slim + encoder
-    } else {
-        0
-    };
-    match whole + neural {
-        0 => edition(dir, e).iter().map(|w| w.bytes).sum(),
-        n => n,
-    }
-}
-
-/// The bytes a download of e that stopped has kept: its files done and the
-/// part of the one under way. None once it is here.
-pub fn kept(dir: &Path, e: &Entry) -> u64 {
-    if have_any(dir, e) {
-        return 0;
-    }
-    edition(dir, e)
-        .iter()
-        .map(|w| if w.here() { w.bytes } else { w.partial() })
-        .sum()
-}
-
-/// What a download of e that stopped kept, deleted.
+/// What a download of e that stopped kept, deleted: every file of e's that
+/// what runs (runs) doesn't use, whole or in part, and of the ones it uses
+/// a replacement's part, or one that checked and waits (editions::landing).
 pub fn remove_parts(dir: &Path, e: &Entry) -> Result<(), String> {
-    for w in edition(dir, e) {
-        // a slim file checked but its encoder not yet: part of the download
-        let done = (NEURAL || graph(dir, e).is_some()) && !have_npu_encoder(dir, e) && w.here();
-        for f in [Some(&w.part), done.then_some(&w.dst)]
-            .into_iter()
-            .flatten()
-        {
+    let now = runs(dir, e);
+    let used = |p: &Part| {
+        now.as_ref().is_some_and(|r| {
+            r.model_part.file == p.file || r.edition.encoder.is_some_and(|q| q.file == p.file)
+        })
+    };
+    for p in editions::parts(e) {
+        if !used(p) {
+            editions::remove_part(dir, p);
+            continue;
+        }
+        let w = Wanted::part(dir, e, p);
+        for f in [w.part, w.dst].iter().filter(|f| **f != dir.join(p.file)) {
             match fs::remove_file(f) {
                 Err(err) if err.kind() != io::ErrorKind::NotFound => {
                     return Err(format!("{err}\n{}", f.display()))
                 }
                 _ => {}
             }
-        }
-        if done {
-            unmark(&w.dst);
+            unmark(f);
         }
     }
     Ok(())
@@ -604,7 +593,8 @@ pub fn encoder_for(dir: &Path, path: &Path) -> Option<PathBuf> {
 /// compiled model) into dst, with macOS's own aa: unpacked beside it first
 /// and renamed into place whole, so that an encoder in place is a whole one
 /// (have_encoder), and the archive deleted after, as the iOS app does (its
-/// Unpack.swift). Only an archive whose SHA-256 checked comes here.
+/// Unpack.swift). Only an archive whose SHA-256 checked comes here
+/// (editions::settle).
 pub fn unpack_encoder(archive: &Path, dst: &Path) -> Result<(), String> {
     let mut work = dst.as_os_str().to_owned();
     work.push(".unpacking");
@@ -635,11 +625,22 @@ pub fn unpack_encoder(archive: &Path, dst: &Path) -> Result<(), String> {
     if !work.join("model.mil").is_file() {
         return fail(format!("{} holds no Core ML model", archive.display()));
     }
-    let _ = fs::remove_dir_all(dst);
+    // the encoder it replaces aside until the new one is in place, so that
+    // one cut short between the two is put right (editions::recover)
+    let mut old = dst.as_os_str().to_owned();
+    old.push(".old");
+    let old = PathBuf::from(old);
+    let _ = fs::remove_dir_all(&old);
+    if dst.exists() {
+        fs::rename(dst, &old)
+            .map_err(|err| format!("couldn't move {} aside: {err}", dst.display()))?;
+    }
     fs::rename(&work, dst)
         .map_err(|err| format!("couldn't put {} in place: {err}", dst.display()))?;
-    let _ = fs::remove_file(archive);
+    let _ = fs::remove_file(marker_of(dst));
     let _ = fs::rename(marker_of(archive), marker_of(dst));
+    let _ = fs::remove_file(archive);
+    let _ = fs::remove_dir_all(&old);
     Ok(())
 }
 
@@ -723,18 +724,17 @@ pub fn encoder_in(dir: &Path, e: &Entry) -> PathBuf {
     dir.join(format!("{}-encoder.mlmodelc", e.name))
 }
 
-/// Where e's model file without its encoder lives (Coreml's slim), which
-/// transcribes only with its Core ML encoder.
+/// Where e's model file without its encoder lives (Entry::slim), which
+/// transcribes only with an NPU's encoder.
 pub fn slim_in(dir: &Path, e: &Entry) -> PathBuf {
-    Wanted::part(dir, e, &e.coreml.slim).dst
+    dir.join(e.slim().map_or("", |p| p.file))
 }
 
-/// Whether e's edition for the NPU is in dir: its slim model file and its
-/// Core ML encoder, unpacked, or on Windows on Arm this PC's graph.
+/// Whether e's Core ML edition can run from dir: its encoder and a model
+/// file it loads (editions::here_of).
 pub fn have_neural(dir: &Path, e: &Entry) -> bool {
-    (NEURAL || graph(dir, e).is_some())
-        && Wanted::part(dir, e, &e.coreml.slim).here()
-        && have_npu_encoder(dir, e)
+    e.coreml()
+        .is_some_and(|ed| editions::here_of(dir, e, ed).is_some())
 }
 
 /// Whether e's Core ML encoder is in dir: put in place whole, after it was
@@ -751,15 +751,13 @@ pub fn part_in(dir: &Path, e: &Entry) -> PathBuf {
 /// Whether e is downloaded into dir. A download is renamed into place only
 /// after its SHA-256 checks, so the size is enough to tell.
 pub fn have(dir: &Path, e: &Entry) -> bool {
-    fs::metadata(file_in(dir, e))
-        .map(|m| m.len() == e.bytes)
-        .unwrap_or(false)
+    Wanted::model(dir, e).here()
 }
 
 /// The bytes of e a download that stopped has kept.
 pub fn partial(dir: &Path, e: &Entry) -> u64 {
     fs::metadata(part_in(dir, e))
-        .map(|m| m.len().min(e.bytes))
+        .map(|m| m.len().min(e.whole().bytes))
         .unwrap_or(0)
 }
 
@@ -769,29 +767,19 @@ pub fn partial(dir: &Path, e: &Entry) -> u64 {
 /// the user's own, set, stays in use instead).
 pub fn delete(data: &Path, e: &Entry) -> Result<Option<&'static Entry>, String> {
     let dir = data.join("models");
-    // the whole file, and the NPU's edition beside it: on a Mac the slim
-    // file and its Core ML encoder, on Windows on Arm the slim file and graphs
-    let graphs = e.qnn.iter().map(|g| Wanted::part(&dir, e, &g.part).dst);
-    for file in [file_in(&dir, e), slim_in(&dir, e)]
-        .into_iter()
-        .chain(graphs)
-    {
-        match fs::remove_file(&file) {
-            Err(err) if err.kind() != io::ErrorKind::NotFound => {
-                return Err(format!("{err}\n{}", file.display()))
+    // every edition's files, the encoders' folders, what downloads of them
+    // kept or left waiting, and e's refusals
+    for p in editions::parts(e) {
+        let at = editions::installed(&dir, p);
+        let file = dir.join(p.file);
+        editions::remove_part(&dir, p);
+        for f in [&at, &file] {
+            if f.exists() {
+                return Err(format!("couldn't delete it\n{}", f.display()));
             }
-            _ => {}
         }
-        unmark(&file);
     }
-    let encoder = encoder_in(&dir, e);
-    match fs::remove_dir_all(&encoder) {
-        Err(err) if err.kind() != io::ErrorKind::NotFound => {
-            return Err(format!("{err}\n{}", encoder.display()))
-        }
-        _ => {}
-    }
-    unmark(&encoder);
+    editions::forget(&dir, e);
     let mut s = load_settings(data);
     if s.model.as_deref() != Some(e.name) {
         return Ok(None);
@@ -809,7 +797,7 @@ pub fn delete(data: &Path, e: &Entry) -> Result<Option<&'static Entry>, String> 
 /// forever, and a model converted again gets a new address instead of a
 /// cached copy of the old one that fails the check.
 pub fn download_url(e: &Entry) -> String {
-    format!("{}{}/{}.pkf", base(), &e.sha256[..12], e.name)
+    part_url(e.whole())
 }
 
 /// The same for a Core ML edition's file, or a graph for an NPU.
@@ -817,10 +805,11 @@ pub fn part_url(p: &Part) -> String {
     format!("{}{}/{}", base(), &p.sha256[..12], p.file)
 }
 
-/// A file to download from models.pktito.net into a folder: a model's
-/// .pkf, a part of its Core ML edition (Coreml), or a graph of its for a
-/// chip's NPU (Graph). It gathers in part, and is renamed to dst once its
-/// size and SHA-256 are the published ones.
+/// A file to download from models.pktito.net into a folder: one of an
+/// edition's (editions::Edition), a .pkf, a Core ML encoder's archive or a
+/// graph. It gathers in part, and is renamed to dst once its size and
+/// SHA-256 are the published ones: in place, or beside the file it replaces
+/// until that is let go (editions::landing).
 #[derive(Clone)]
 pub struct Wanted {
     /// what a download of it is called: its model's name
@@ -838,29 +827,26 @@ impl Wanted {
         Wanted {
             name: e.name.into(),
             url: download_url(e),
-            bytes: e.bytes,
-            sha256: e.sha256,
+            bytes: e.whole().bytes,
+            sha256: e.whole().sha256,
             part: part_in(dir, e),
             dst: file_in(dir, e),
         }
     }
 
-    /// The file of e's the catalog names file: its .pkf, a part of its
-    /// Core ML edition, or one of its graphs; None for a name the catalog
-    /// does not give e, so that a download asks for no other file (the
-    /// Android app's, which names the files of the edition it wants).
+    /// The file of e's the catalog names file, of any of its editions;
+    /// None for a name the catalog does not give e, so that a download asks
+    /// for no other file (the Android app's, which names the files of the
+    /// edition it wants).
     pub fn named(dir: &Path, e: &Entry, file: &str) -> Option<Wanted> {
-        if file == format!("{}.pkf", e.name) {
-            return Some(Wanted::model(dir, e));
-        }
-        [&e.coreml.slim, &e.coreml.encoder]
+        editions::parts(e)
             .into_iter()
-            .chain(e.qnn.iter().map(|g| &g.part))
             .find(|p| p.file == file)
             .map(|p| Wanted::part(dir, e, p))
     }
 
-    /// A part of e's Core ML edition, or a graph of e's, into dir under its own name.
+    /// A file of one of e's editions, into dir under its own name, or beside
+    /// the one it replaces (editions::landing).
     pub fn part(dir: &Path, e: &Entry, p: &Part) -> Wanted {
         Wanted {
             name: e.name.into(),
@@ -868,7 +854,7 @@ impl Wanted {
             bytes: p.bytes,
             sha256: p.sha256,
             part: dir.join(format!("{}.part", p.file)),
-            dst: dir.join(p.file),
+            dst: editions::landing(dir, p),
         }
     }
 
@@ -1239,7 +1225,7 @@ fn fetch(
     Ok(got)
 }
 
-fn sha256(file: &mut File, ctl: &Ctl) -> Result<String, Stop> {
+pub(crate) fn sha256(file: &mut File, ctl: &Ctl) -> Result<String, Stop> {
     let read_err = |err: io::Error| Stop::Hard(Problem::new("download.cant_check").detail(err));
     file.seek(SeekFrom::Start(0)).map_err(read_err)?;
     let mut hash = Sha256::new();
@@ -1280,25 +1266,6 @@ mod tests {
         d
     }
 
-    /// A graph by its chip, as Models.graphFor on Android: the chip's own,
-    /// else its Hexagon's with no more VTCM; snappy's QNN names no SoC
-    #[test]
-    fn graph_by_chip() {
-        let v2 = &CATALOG[0];
-        let file = |chip| graph_on(v2, chip, "windows").map(|g| g.part.file);
-        assert_eq!(
-            file("60,73,8,1,1"),
-            Some("parakeet-tdt-0.6b-v2-x1e80100.qnn")
-        );
-        assert_eq!(
-            file("2147483647,73,8,1,1"),
-            Some("parakeet-tdt-0.6b-v2-x1e80100.qnn")
-        );
-        assert_eq!(file("2147483647,73,4,1,1"), None);
-        assert_eq!(file("2147483647,68,8,1,1"), None);
-        assert_eq!(file("snapdragon"), None);
-    }
-
     /// A file whose SHA-256 checked has it beside it, and deleting its model
     /// deletes that too (marker_of)
     #[test]
@@ -1329,73 +1296,6 @@ mod tests {
         delete(&data, &CATALOG[0]).unwrap();
         assert!(!w.dst.exists() && !marker_of(&w.dst).exists());
         let _ = fs::remove_dir_all(&data);
-    }
-
-    /// On each system the catalog has one graph a Hexagon, so that which one
-    /// a chip gets is never the catalog's order (graph_on)
-    #[test]
-    fn one_graph_a_hexagon_a_system() {
-        for e in CATALOG {
-            for system in ["android", "windows"] {
-                let mut arches: Vec<&str> = e
-                    .qnn
-                    .iter()
-                    .filter(|g| g.systems.contains(&system))
-                    .map(|g| g.chip.split(',').nth(1).unwrap())
-                    .collect();
-                let n = arches.len();
-                arches.sort();
-                arches.dedup();
-                assert_eq!(
-                    arches.len(),
-                    n,
-                    "{} has two graphs of one Hexagon on {system}",
-                    e.name
-                );
-            }
-        }
-    }
-
-    /// What each chip we know of gets on its system, as its QNN describes it
-    #[test]
-    fn each_chip_gets_its_systems_graph() {
-        for e in CATALOG {
-            let file = |chip, system| graph_on(e, chip, system).map(|g| g.part.file.to_string());
-            let f = |chip: &str| Some(format!("{}-{chip}.qnn", e.name));
-            // phones: the S24, the S25, the S26, the Googlebook
-            assert_eq!(file("57,75,8,1,0", "android"), f("sm8650"));
-            assert_eq!(file("69,79,8,1,0", "android"), f("sm8750"));
-            assert_eq!(file("87,81,8,1,0", "android"), f("sm8850"));
-            assert_eq!(file("60,73,8,1,1", "android"), f("x1e80100"));
-            // another V81 phone (QNN's SM8845) takes the S26's, never the X2's
-            assert_eq!(file("97,81,8,1,0", "android"), f("sm8850"));
-            // Windows names no SoC: snappy's X Elite, an X2 Elite
-            assert_eq!(file("2147483647,73,8,1,1", "windows"), f("x1e80100"));
-            assert_eq!(file("2147483647,81,8,1,1", "windows"), f("sc8480xp"));
-            assert_eq!(file("88,81,8,1,1", "windows"), f("sc8480xp"));
-            // no phone's graph on Windows, nor any graph where there are none
-            assert_eq!(file("2147483647,75,8,1,1", "windows"), None);
-            assert_eq!(file("60,73,8,1,1", "macos"), None);
-            assert_eq!(file("60,73,8,1,1", "linux"), None);
-        }
-    }
-
-    /// A refusal holds for the chip, the app and the graph it was of: an
-    /// app of another version, or a graph of another SHA-256, tries again
-    #[test]
-    fn a_refusal_is_of_one_app_and_graph() {
-        let d = scratch("refused");
-        let g = &CATALOG[0].qnn[3];
-        assert!(!refused(&d, g));
-        fs::write(refused_in(&d, g), format!("{}why\n", refusal_key(g))).unwrap();
-        assert!(refused(&d, g));
-        let old = refusal_key(g).replace(env!("CARGO_PKG_VERSION"), "0.0.1");
-        fs::write(refused_in(&d, g), format!("{old}why\n")).unwrap();
-        assert!(!refused(&d, g));
-        let other = refusal_key(g).replace(g.part.sha256, &"0".repeat(64));
-        fs::write(refused_in(&d, g), format!("{other}why\n")).unwrap();
-        assert!(!refused(&d, g));
-        let _ = fs::remove_dir_all(&d);
     }
 
     #[test]
@@ -1444,7 +1344,7 @@ mod tests {
         fs::create_dir_all(&dir).unwrap();
         File::create(file_in(&dir, e))
             .unwrap()
-            .set_len(e.bytes)
+            .set_len(e.whole().bytes)
             .unwrap();
         assert!(have(&dir, e));
     }

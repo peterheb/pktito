@@ -87,10 +87,16 @@ pub extern "C" fn pkapp_catalog() -> *mut c_char {
         let offers: Vec<serde_json::Value> = model::CATALOG
             .iter()
             .map(|e| {
-                let mut v = serde_json::to_value(e).unwrap_or_default();
+                // 0.9.6's shape, which Swift reads until it reads the view
+                // (editions::view; docs/EDITIONS.md)
+                let mut v = model::legacy(e);
                 v["url"] = json!(model::download_url(e));
-                v["coreml"]["slim"]["url"] = json!(model::part_url(&e.coreml.slim));
-                v["coreml"]["encoder"]["url"] = json!(model::part_url(&e.coreml.encoder));
+                if let Some(ed) = e.coreml() {
+                    v["coreml"]["slim"]["url"] = json!(model::part_url(&ed.model));
+                    if let Some(enc) = ed.encoder.as_ref() {
+                        v["coreml"]["encoder"]["url"] = json!(model::part_url(enc));
+                    }
+                }
                 v
             })
             .collect();
