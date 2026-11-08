@@ -268,23 +268,19 @@ cargo +stable-x86_64-pc-windows-gnullvm build --release --target x86_64-pc-windo
 cargo +stable-x86_64-pc-windows-gnullvm build --release --target aarch64-pc-windows-gnullvm
 ```
 
-Each installer names the DLL as a resource: tauri-bundler 2.10.4 adds
-`WebView2Loader.dll` only for targets ending in `-gnu`, and without it the
-installed app does not start. tauri-build copies it into the target's
-folder, but only after it has checked the resources, so a first build in a
-fresh folder fails on the DLL not being there yet: copy it in from
-webview2-com-sys, which carries Microsoft's loader for each architecture
-(its version is Cargo.lock's), `x64` or `arm64`:
+The setup programs come from `scripts/build-windows.ps1`, which works in a
+fresh clone: each installer names the DLL as a resource (tauri-bundler
+2.10.4 adds `WebView2Loader.dll` only for targets ending in `-gnu`, and
+without it the installed app does not start), and tauri-build checks the
+resources before it copies the DLL into the target's folder, so the script
+copies it in first from webview2-com-sys (its version is Cargo.lock's),
+which carries Microsoft's loader for each architecture. With `-QnnSdk` (or
+`QNN_SDK`), an Arm64 build carries the NPU's QNN files
+(`scripts/qnn-windows.ps1`); `-Config` adds a signing command's config.
 
 ```powershell
-Copy-Item (Resolve-Path "$env:USERPROFILE\.cargo\registry\src\index.crates.io-*\webview2-com-sys-0.39.1\x64\WebView2Loader.dll") src-tauri\target\x86_64-pc-windows-gnullvm\release\
-```
-
-```sh
-cargo tauri build --target x86_64-pc-windows-gnullvm --bundles nsis --config \
-  '{"bundle":{"resources":{"target/x86_64-pc-windows-gnullvm/release/WebView2Loader.dll":"WebView2Loader.dll"}}}'
-cargo tauri build --target aarch64-pc-windows-gnullvm --bundles nsis --config \
-  '{"bundle":{"resources":{"target/aarch64-pc-windows-gnullvm/release/WebView2Loader.dll":"WebView2Loader.dll"}}}'
+scripts\build-windows.ps1 -Arch x64
+scripts\build-windows.ps1 -Arch arm64 -QnnSdk C:\qairt\2.51.0
 ```
 
 pktito's sources are copied into `vendor/pktito` by
