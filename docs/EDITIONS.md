@@ -186,7 +186,11 @@ and the old file runs until the swap:
    file would work anyway, but Windows refuses it, and one rule is simpler.
 3. A flat file is renamed over the old one, and its marker after. An
    encoder is unpacked to `<folder>.unpacking`, the old folder renamed to
-   `<folder>.old`, the new one into place, and the old deleted.
+   `<folder>.old`, the new one into place, and the old deleted. The core
+   unpacks it with Apple Archive's library (model.rs `apple_archive`), the
+   one `aa` is a front for, on the Mac and on iOS alike: v2's 547 MB
+   archive in 0.24 s on the M4 Pro, the same tree as `aa extract`
+   (2026-11-08).
 4. A swap cut short (the app killed between steps) is finished at the next
    catalog read: a `.next` checked file or a `.old` folder says how far it
    got.
@@ -261,17 +265,20 @@ The core gives every platform the same view of each model, as JSON:
 ```
 
 - Desktop: main.rs `Offer` becomes this view; the window shows `offer`.
-- iOS: `pkapp_catalog(device)` returns it, and Swift's `Editions.preferred`
-  and `Store.have(e, edition)` go. Swift keeps the Core ML load, its retry
-  and `compiled`.
+- iOS: `pkapp_catalog(dir, device)` returns it, each offer's files with
+  their addresses (`offer.parts`), and Swift's `Editions.preferred`,
+  `Store.have` and `Unpack.swift` are gone. URLSession still brings the
+  files, so that a download goes on while the app is away; the core checks
+  each one and puts it where it lands with its record (`pkapp_land`,
+  model.rs `land`), unpacks a new encoder (`pkapp_settle_new`), settles
+  what waits before a load (`pkapp_settle`), and keeps the refusals
+  (`pkapp_refuse`) and the whole file's deletion (`pkapp_ran`). Swift
+  keeps the Core ML load, its retry and `compiled`.
 - Android: `Engine.catalog(dir, device)` returns it, and Kotlin's
   `graphFor` and `Offer.edition` / `usable` / `faster` go. Kotlin keeps the
   chip question, the skels and the QNN load.
 - Downloads take `offer.files` as they are (Android's `Engine.download`
   already takes a list of names).
-- Until each app reads the view, ios.rs and android.rs give it 0.9.6's
-  catalog JSON (`model::legacy`), so a phone built from this branch works
-  as 0.9.6's until its port lands.
 
 The core is src-tauri/src/editions.rs: `Device`, `fit`, `choose`, `have`,
 `adopt`, `settle`, `Refusals`, `runs`, `offer`, `ran` and `view`. model.rs

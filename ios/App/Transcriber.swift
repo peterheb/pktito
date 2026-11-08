@@ -40,8 +40,8 @@ final class Transcriber {
     /// Locate… can find it again (Recents.source)
     var why: String?
     var locate = false
-    /// the edition the transcription ran on, for the stats
-    private(set) var edition: Edition?
+    /// the edition the transcription ran on ("coreml", "cpu"), for the stats
+    private(set) var edition: String?
     /// Core ML compiling the Neural Engine's encoder for this device: the
     /// first load after an install or an update, about 16 s on an M1 iPad
     private(set) var preparing = false
@@ -51,6 +51,8 @@ final class Transcriber {
     private var engine: Engine?
     /// what the engine was loaded from: a catalog model's name or the own file's path
     private(set) var loadedName: String?
+    /// the model file the engine loaded, for Core.ran
+    private var loadedModel: URL?
     private var loading: Task<Engine, Error>?
 
     private init() {}
@@ -126,6 +128,7 @@ final class Transcriber {
         guard loadedName == name, !running else { return }
         engine = nil
         loadedName = nil
+        loadedModel = nil
     }
 
     /// The model in use loaded now, ahead of the first recording: Core ML
@@ -139,16 +142,21 @@ final class Transcriber {
     /// encoder here: at launch, after an install or an update, and back on
     /// the screen after a download ended while the app was away.
     func prepareIfNew() {
-        guard case .catalog(let name)? = Models.shared.usable(), let e = Models.shared.entry(name),
-            Models.usable(e) == .neuralEngine, !Editions.compiled(e)
+        guard case .catalog(let name)? = Models.shared.usable(),
+            let v = Models.shared.offer(name)?.entry, v.runs?.neuralEngine == true,
+            !Editions.compiled(v)
         else { return }
         prepare()
     }
 
-    /// The model in use, loaded once, and again once another is chosen: its
-    /// Neural Engine edition where this device runs it, else its CPU's
-    /// (Editions). Where the Neural Engine edition fails and the CPU's isn't
-    /// here, that one is downloaded, and a toast says why.
+    /// The model in use, loaded once, and again once another is chosen or a
+    /// download of it waits to be put in place (Core.pending), the engine
+    /// that holds the files it replaces let go first: the old files ran
+    /// until then (Core.settle). It runs as the core says it runs here
+    /// (Editions.engine): where Core ML refuses its encoder, the whole .pkf
+    /// goes on with it where that is here, a toast saying why; where only
+    /// the slim file was, the transcription stops with why, and the setup
+    /// screen offers the whole file, which downloads only when asked.
     private func model() async throws -> Engine {
         guard let use = Models.shared.usable() else { throw CoreError(L("no_model")) }
         let key: String
@@ -156,44 +164,65 @@ final class Transcriber {
         case .own(let url): key = url.path
         case .catalog(let name): key = name
         }
+        if case .catalog(let name) = use, loading == nil, Core.pending(name) {
+            engine = nil
+            loadedName = nil
+            loadedModel = nil
+        }
         if let engine, loadedName == key { return engine }
         if let loading { return try await loading.value }
         engine = nil
         loadedName = nil
-        let task = Task.detached(priority: .userInitiated) { () throws -> (Engine, Edition) in
+        loadedModel = nil
+        // a compile, not a load of what Core ML compiled before
+        if case .catalog(let name) = use, let v = Models.shared.offer(name)?.entry {
+            preparing = v.runs?.neuralEngine == true && !Editions.compiled(v)
+        }
+        let task = Task.detached(priority: .userInitiated) { () throws -> Editions.Loaded in
             switch use {
             case .own(let url):
-                return (try Engine(file: url), .cpu)
+                return Editions.Loaded(
+                    engine: try Engine(file: url), edition: "cpu", model: url, refusedNow: false)
             case .catalog(let name):
-                guard let e = await Models.shared.entry(name) else {
+                if Core.pending(name) {
+                    do {
+                        try Core.settle(name)
+                        trace("\(name): the update in place")
+                    } catch {
+                        // the old files run on, and settle is tried at the next load
+                        trace("\(name): the update not put in place: \(error.localizedDescription)")
+                    }
+                }
+                guard let v = try Core.catalog().first(where: { $0.name == name }) else {
                     throw CoreError(L("no_model"))
                 }
-                return try Editions.engine(for: e)
+                return try Editions.engine(for: v)
             }
         }
-        // a compile, not a load of what Core ML compiled before
-        if case .catalog(let name) = use, let e = Models.shared.entry(name) {
-            preparing = Models.usable(e) == .neuralEngine && !Editions.compiled(e)
-        }
-        let wrapped = Task { try await task.value.0 }
+        let wrapped = Task { try await task.value.engine }
         loading = wrapped
         defer {
             loading = nil
             preparing = false
         }
         do {
-            let (e, ed) = try await task.value
-            engine = e
+            let l = try await task.value
+            engine = l.engine
             loadedName = key
-            edition = ed
-            return e
-        } catch let failed as Editions.NeedsCPUEdition {
+            loadedModel = l.model
+            edition = l.edition
+            if l.refusedNow { Models.shared.news = L("prepare_cpu", deviceKind) }
             Models.shared.refresh()
-            Models.shared.news = L("prepare_cpu", deviceKind)
-            if let o = Models.shared.offers.first(where: { $0.name == key }) {
-                Downloads.shared.start(o)
-            }
-            throw CoreError(failed.why)
+            return l.engine
+        } catch let r as Editions.Refused {
+            // the processor's model, which the setup screen now offers
+            Models.shared.refresh()
+            guard r.holds else { throw CoreError(L("model_file_damaged")) }
+            let bytes = Models.shared.offer(key)?.bytes ?? 0
+            throw CoreError(L("prepare_cpu_get", deviceKind, mb(bytes)))
+        } catch {
+            Models.shared.refresh()
+            throw error
         }
     }
 
@@ -277,6 +306,7 @@ final class Transcriber {
                 transcript = t
                 done = t.complete ? 1 : done
                 step = t.complete ? .done : .stopped
+                if t.complete { ran() }
             } catch {
                 // the app's words where the core gave a key: not the core's
                 // English, nor the file's name the header has, nor the
@@ -294,6 +324,22 @@ final class Transcriber {
 
     /// The transcription running ends before its next chunk.
     func stop() { Engine.stop() }
+
+    /// A transcription finished with the catalog model loaded: the core
+    /// hears so (Core.ran), and once the Neural Engine's edition has run from
+    /// its own slim file, the whole .pkf goes, 624 MB for English, as on
+    /// every platform (Peter, 2026-11-07). The engine holds the slim file,
+    /// not the whole one.
+    private func ran() {
+        guard let name = loadedName, let model = loadedModel, let edition,
+            Models.shared.offer(name) != nil
+        else { return }
+        Task.detached(priority: .utility) {
+            guard Core.ran(name, edition: edition, model: model) else { return }
+            trace("\(name): the whole file deleted, the Neural Engine's edition in its place")
+            await MainActor.run { Models.shared.refresh() }
+        }
+    }
 }
 
 /// When a transcription's audio was read, for the seconds it spent

@@ -6,6 +6,11 @@
     <string name="prepare_why">Compiling the speech model for the Neural Engine.</string>
     <!-- a toast, where the Neural Engine couldn't run the model and the whole model file is downloaded instead -->
     <string name="prepare_cpu">This %1$s\'s Neural Engine can\'t run the model, so pktito uses its processor instead</string>
+    <!-- a transcription's error, where the Neural Engine couldn't run the model and only its Neural Engine edition was downloaded: the processor's model is offered on the setup screen, which downloads only when asked; %2$s is its megabytes -->
+    <string name="prepare_cpu_get">This %1$s\'s Neural Engine can\'t run the model. pktito can use its processor instead, after a %2$s&#160;MB download.</string>
+    <!-- Manage models, under a model that runs on the processor (the Neural Engine refused it on an earlier system or build, or the person's own copy of its whole file): the Neural Engine's edition offered, as Android's manage_faster_phone and manage_faster_text_phone offer the NPU's; %1$s (and %2$s in the text) is the device's kind, "iPhone" or "iPad"; its megabytes are its download's, which takes the whole file's place once the Neural Engine runs it -->
+    <string name="manage_faster_ios">Faster on this %1$s</string>
+    <string name="manage_faster_text_ios">The %1$s model on this %2$s\'s Neural Engine&#160;· %3$s&#160;MB&#160;download</string>
     <!-- the strip, where the recording found doesn't play (Android's play_cant names Android) -->
     <string name="play_cant_ios">iOS can\'t play this file</string>
     <!-- the play button's spoken name while iOS reads through the recording, so that a time sought to is exactly that time (a long FLAC can take a few seconds) -->

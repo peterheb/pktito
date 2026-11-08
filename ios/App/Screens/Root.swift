@@ -107,11 +107,12 @@ struct Root: View {
             if phase == .background { Player.shared.pause() }
             if phase == .active { Transcriber.shared.prepareIfNew() }
         }
-        // a download a run before began goes on; Core ML compiles a Neural
-        // Engine edition's encoder the first time after an install or an
-        // update, which the setup screen says
+        // the models folder put right (Models.start); a download a run before
+        // began goes on; Core ML compiles a Neural Engine edition's encoder
+        // the first time after an install or an update, which the setup
+        // screen says
         .task {
-            Models.shared.refresh()
+            await Models.shared.start()
             Downloads.shared.resumeAfterLaunch()
             Transcriber.shared.prepareIfNew()
             #if DEBUG

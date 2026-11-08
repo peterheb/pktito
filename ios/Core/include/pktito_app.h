@@ -15,9 +15,35 @@ void pkapp_free_string(char *s);
 /* "neon-dp (ARMv8.2 NEON: SDOT int8, fp32)": a plain string, not JSON */
 char *pkapp_backend(void);
 
-/* [model.rs's entries, each with "url", and "coreml": {"slim", "encoder"},
- * each {"file", "bytes", "sha256", "url"}] */
-char *pkapp_catalog(void);
+/* The models folder dir, kept by editions.rs's rule (docs/EDITIONS.md) for
+ * device, editions.rs's Device in JSON: {"system": "ios", "os": [major,
+ * minor], "here"}. */
+
+/* [each model as editions::view sees it: the catalog's entry with "chosen",
+ * "runs": {"edition", "model", "encoder"} or null, "refused", "bytes", and
+ * "offer": {"kind", "bytes", "kept", "files", "parts": [{"file", "bytes",
+ * "sha256", "url"}]} or null] */
+char *pkapp_catalog(const char *dir, const char *device);
+/* Once a launch, off the main thread: records for files from before 0.9.6,
+ * swaps cut short finished */
+void pkapp_adopt(const char *dir);
+/* A file of name's that URLSession brought, at got, checked and put where it
+ * lands with its record: {"path"}, or {"error", "key", "detail"} */
+char *pkapp_land(const char *dir, const char *name, const char *file, const char *got);
+/* Whether a download of name's checked and waits to be put in place */
+bool pkapp_pending(const char *dir, const char *name);
+/* What waits put in place, with no engine holding name's files: {} or {"error"} */
+char *pkapp_settle(const char *dir, const char *name);
+/* What replaces nothing put in place, a new Core ML encoder unpacked: {} or {"error"} */
+char *pkapp_settle_new(const char *dir, const char *name);
+/* The Neural Engine refused name's edition for why: {"refused": whether the
+ * refusal holds, the encoder having been the catalog's} */
+char *pkapp_refuse(const char *dir, const char *name, const char *edition, const char *device, const char *why);
+/* A transcription finished on name's edition from model: whether the whole
+ * .pkf went, the Neural Engine's edition having run from its slim file */
+bool pkapp_ran(const char *dir, const char *name, const char *edition, const char *model);
+/* Every file of name's editions, and its refusals */
+void pkapp_delete(const char *dir, const char *name);
 
 /* {"handle", "name", "encoder": false for a slim file, "threads"} */
 char *pkapp_load(const char *path);

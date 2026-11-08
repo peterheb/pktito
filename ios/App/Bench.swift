@@ -7,16 +7,19 @@
     /// device downloaded, prepared and run on a file, every step said as it goes.
     @MainActor @Observable
     final class BenchState {
-        var catalog: [CatalogEntry] = []
+        var catalog: [ModelView] = []
         var line: [String: String] = [:]
         var engine: Engine?
-        var edition: Edition?
-        var model: CatalogEntry?
+        var edition: String?
+        var model: ModelView?
         var busy = false
         var text = ""
         var stats = ""
 
-        init() {
+        init() { reload() }
+
+        /// The core's view of the models folder anew.
+        func reload() {
             do {
                 catalog = try Core.catalog()
             } catch {
@@ -24,73 +27,86 @@
             }
         }
 
+        func view(_ name: String) -> ModelView? { catalog.first { $0.name == name } }
+
         private func mb(_ b: Int64) -> String { String(b / 1_000_000) }
 
-        /// e's edition for this device, downloaded (and its encoder unpacked),
-        /// then prepared
-        func get(_ e: CatalogEntry) async {
+        /// v's offer downloaded, each file checked and put in place as it
+        /// comes and the encoder unpacked, then the model prepared
+        func get(_ v: ModelView) async {
             busy = true
             defer { busy = false }
             do {
-                try await download(e, Editions.preferred(e))
-                await prepare(e)
+                try await download(v)
+                await prepare(v.name)
             } catch {
-                line[e.name] = error.localizedDescription
+                line[v.name] = error.localizedDescription
             }
         }
 
-        private func download(_ e: CatalogEntry, _ edition: Edition) async throws {
-            let parts = edition == .cpu ? [e.pkf] : [e.coreml.slim, e.coreml.encoder]
+        private func download(_ v: ModelView) async throws {
+            let parts = v.offer?.parts ?? []
             let total = parts.reduce(0) { $0 + $1.bytes }
             var before: Int64 = 0
-            for p in parts where !(p.file.hasSuffix(".aar") && Store.haveEncoder(e)) {
+            for p in parts {
                 let base = before
                 await Downloader.shared.begin([p])
-                let url = try await Downloader.shared.fetch(p) { got in
+                let held = try await Downloader.shared.fetch(p) { got in
                     Task { @MainActor in
-                        self.line[e.name] =
+                        self.line[v.name] =
                             "Downloading \(self.mb(base + got)) of \(self.mb(total)) MB"
                     }
                 }
-                if p.file.hasSuffix(".aar") {
-                    line[e.name] = "Unpacking the encoder…"
-                    try await Task.detached(priority: .userInitiated) {
-                        try Unpack.encoder(e, from: url)
-                    }.value
-                }
+                line[v.name] = "Checking \(p.file)…"
+                let name = v.name
+                _ = try await Task.detached(priority: .userInitiated) {
+                    try Core.land(name, file: p.file, got: held)
+                }.value
                 before += p.bytes
             }
+            line[v.name] = "Unpacking the encoder…"
+            let name = v.name
+            try await Task.detached(priority: .userInitiated) { try Core.settleNew(name) }.value
+            reload()
         }
 
-        /// e's engine for this device: the Neural Engine edition prepared (Core
-        /// ML compiles its encoder the first time), else the CPU's, downloaded
-        /// first where it isn't here
-        func prepare(_ e: CatalogEntry) async {
-            line[e.name] = "Preparing pktito for this \(UIDevice.current.model)…"
+        /// The model's engine as the core says it runs here: the Neural
+        /// Engine's edition prepared (Core ML compiles its encoder the first
+        /// time), else the CPU's; where the Neural Engine refuses it and the
+        /// CPU's isn't here, that one downloaded first, as nothing in the app
+        /// does by itself, for a device with no one tapping
+        func prepare(_ name: String) async {
+            reload()
+            guard let v = view(name) else { return }
+            line[name] = "Preparing pktito for this \(UIDevice.current.model)…"
             let t0 = Date()
             do {
-                let (engine, edition) = try await Task.detached(priority: .userInitiated) {
-                    try Editions.engine(for: e)
+                let l = try await Task.detached(priority: .userInitiated) {
+                    try Editions.engine(for: v)
                 }.value
-                self.engine = engine
-                self.edition = edition
-                model = e
-                line[e.name] = String(
-                    format: "Ready: %@, prepared in %.1f s",
-                    edition == .neuralEngine ? "Neural Engine" : "CPU",
+                engine = l.engine
+                edition = l.edition
+                model = v
+                line[name] = String(
+                    format: "Ready: %@%@, prepared in %.1f s",
+                    l.edition == "cpu" ? "CPU" : "Neural Engine",
+                    l.refusedNow ? " (the Neural Engine refused it)" : "",
                     Date().timeIntervalSince(t0))
-            } catch let failed as Editions.NeedsCPUEdition {
-                line[e.name] =
-                    "The Neural Engine can't run it here (\(failed.why)); getting the CPU's model"
+            } catch let refused as Editions.Refused {
+                line[name] =
+                    "The Neural Engine refused it here (the catalog's encoder: \(refused.holds)); getting the CPU's model"
+                reload()
+                guard let cpu = view(name), cpu.offer != nil else { return }
                 do {
-                    try await download(e, .cpu)
-                    await prepare(e)
+                    try await download(cpu)
+                    await prepare(name)
                 } catch {
-                    line[e.name] = error.localizedDescription
+                    line[name] = error.localizedDescription
                 }
             } catch {
-                line[e.name] = error.localizedDescription
+                line[name] = error.localizedDescription
             }
+            reload()
         }
 
         func transcribe(_ url: URL) async {
@@ -117,7 +133,7 @@
                 stats = String(
                     format: "%.1f s of audio in %.2f s, %.1fx real time, %@, %@", t.duration, took,
                     t.duration / max(took, 0.001),
-                    edition == .neuralEngine ? "Neural Engine" : "CPU",
+                    edition == "cpu" ? "CPU" : "Neural Engine",
                     Core.backend)
             } catch {
                 stats = error.localizedDescription
@@ -133,23 +149,23 @@
             NavigationStack {
                 List {
                     Section("Models") {
-                        ForEach(s.catalog) { e in
+                        ForEach(s.catalog) { v in
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
-                                    Text(e.label).font(.headline)
+                                    Text(label(v.key)).font(.headline)
                                     Spacer()
-                                    Button(Store.have(e, Editions.preferred(e)) ? "Use" : "Get") {
+                                    Button(v.runs != nil ? "Use" : "Get") {
                                         Task {
-                                            if Store.have(e, Editions.preferred(e)) {
-                                                await s.prepare(e)
+                                            if v.runs != nil {
+                                                await s.prepare(v.name)
                                             } else {
-                                                await s.get(e)
+                                                await s.get(v)
                                             }
                                         }
                                     }
                                     .disabled(s.busy)
                                 }
-                                Text(s.line[e.name] ?? e.about).font(.footnote).foregroundStyle(
+                                Text(s.line[v.name] ?? v.name).font(.footnote).foregroundStyle(
                                     .secondary)
                             }
                         }
@@ -193,7 +209,7 @@
 
     #if DEBUG
         extension BenchState {
-            func bench(_ e: CatalogEntry, file: String?) async {
+            func bench(_ e: ModelView, file: String?) async {
                 let t0 = Date()
                 let say = { (s: String) in
                     print(String(format: "bench %6.1f s: %@", Date().timeIntervalSince(t0), s))
@@ -202,17 +218,17 @@
                 // -fresh: this model's files deleted first, so that its edition
                 // is downloaded, checked and unpacked as a first install's is
                 if CommandLine.arguments.contains("-fresh") {
-                    for f in [Store.file(e.pkf), Store.file(e.coreml.slim), Store.encoder(e)] {
-                        try? FileManager.default.removeItem(at: f)
-                        try? FileManager.default.removeItem(at: Store.marker(f))
-                    }
+                    Core.delete(e.name)
+                    for p in e.files { Downloader.shared.forget(p.file) }
+                    reload()
                     say("deleted \(e.name)'s files (-fresh)")
                 }
+                guard let e = view(e.name) else { return }
                 say(
-                    "\(e.name), edition for this device: \(Editions.preferred(e).rawValue)\(Editions.failure(e).map { " (Neural Engine failed before: \($0))" } ?? "")"
+                    "\(e.name), edition for this device: \(e.chosen)\(e.refused.map { " (the Neural Engine refused it before: \($0))" } ?? "")"
                 )
-                if Store.have(e, Editions.preferred(e)) {
-                    await prepare(e)
+                if e.runs != nil {
+                    await prepare(e.name)
                 } else {
                     await get(e)
                 }

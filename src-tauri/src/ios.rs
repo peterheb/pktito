@@ -1,17 +1,19 @@
 //! The iOS app's way in (ios/, in Swift): what android.rs is to the Kotlin
 //! app, as C functions over JSON strings, which ios/Core/pktito_app.h
 //! declares. Swift owns the screen, the files (each a path it has access
-//! to), the downloads (URLSession, which goes on while the app is in the
-//! background) and the unpacking of a model's Core ML encoder; this owns
-//! what the desktop's Rust owns, the same code, so a recording gives the
-//! same transcript here as on every other platform.
+//! to) and the transfers of the downloads (URLSession, which goes on while
+//! the app is in the background); this owns what the desktop's Rust owns,
+//! the same code: a recording gives the same transcript here as on every
+//! other platform, and the models folder is kept by the same rule
+//! (editions.rs), each download checked and put in place, a Core ML
+//! encoder unpacked, an edition the Neural Engine refused recorded.
 //!
 //! What can fail comes back as a JSON object with "error", its reason in
 //! English, in place of the result. Every string returned is the caller's,
 //! to free with pkapp_free_string. A panic is caught and comes back as an
 //! error; it never unwinds into Swift.
 
-use crate::{audio, decode, format, model, pktito, recent, transcribe};
+use crate::{audio, decode, editions, format, model, pktito, recent, transcribe};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::ffi::{c_char, c_void, CStr, CString};
@@ -79,29 +81,185 @@ pub extern "C" fn pkapp_backend() -> *mut c_char {
     give(pktito::backend())
 }
 
-/// The models models.pktito.net serves, as JSON: model.rs's entries, each
-/// with the addresses of its .pkf and of its Core ML edition's two files.
+/// The iPhone or iPad as Swift describes it (Editions.device): editions.rs's
+/// Device, in JSON.
+fn device(json: &str) -> Result<editions::Device, String> {
+    serde_json::from_str(json).map_err(|err| format!("device: {err}"))
+}
+
+/// The catalog model name; why not, for one it doesn't list.
+fn entry(name: &str) -> Result<&'static model::Entry, String> {
+    model::entry(name).ok_or_else(|| format!("{name}: no such model"))
+}
+
+/// e's edition id; why not, for one it doesn't have.
+fn edition(e: &'static model::Entry, id: &str) -> Result<&'static editions::Edition, String> {
+    e.editions
+        .iter()
+        .find(|ed| ed.id == id)
+        .ok_or_else(|| format!("{}: no edition {id}", e.name))
+}
+
+/// The models models.pktito.net serves, each as the core's view of it in
+/// dir, the app's models folder, for device (editions::view;
+/// docs/EDITIONS.md): the edition chosen, what runs, why the Neural Engine
+/// refused the one that fits best, and the offer, whose files come with
+/// their sizes, SHA-256s and addresses for URLSession (offer.parts). No
+/// model is loaded for it.
 #[unsafe(no_mangle)]
-pub extern "C" fn pkapp_catalog() -> *mut c_char {
+pub extern "C" fn pkapp_catalog(dir: *const c_char, device: *const c_char) -> *mut c_char {
+    let (dir, device) = (PathBuf::from(arg(dir)), arg(device));
     answer(|| {
-        let offers: Vec<serde_json::Value> = model::CATALOG
+        let d = self::device(&device)?;
+        let views: Vec<serde_json::Value> = model::CATALOG
             .iter()
             .map(|e| {
-                // 0.9.6's shape, which Swift reads until it reads the view
-                // (editions::view; docs/EDITIONS.md)
-                let mut v = model::legacy(e);
-                v["url"] = json!(model::download_url(e));
-                if let Some(ed) = e.coreml() {
-                    v["coreml"]["slim"]["url"] = json!(model::part_url(&ed.model));
-                    if let Some(enc) = ed.encoder.as_ref() {
-                        v["coreml"]["encoder"]["url"] = json!(model::part_url(enc));
-                    }
+                let view = editions::view(&dir, e, &d);
+                let mut v = serde_json::to_value(&view).unwrap_or_default();
+                if let Some(o) = &view.offer {
+                    let parts: Vec<serde_json::Value> = editions::parts(e)
+                        .into_iter()
+                        .filter(|p| o.files.contains(&p.file))
+                        .map(|p| {
+                            let mut x = json!(p);
+                            x["url"] = json!(model::part_url(p));
+                            x
+                        })
+                        .collect();
+                    v["offer"]["parts"] = json!(parts);
                 }
                 v
             })
             .collect();
-        Ok(json!(offers))
+        Ok(json!(views))
     })
+}
+
+/// The files in dir from before 0.9.6 given their records, and swaps cut
+/// short finished (editions::adopt). Once a launch, off the main thread: a
+/// whole .pkf takes about 2 s.
+#[unsafe(no_mangle)]
+pub extern "C" fn pkapp_adopt(dir: *const c_char) {
+    let dir = PathBuf::from(arg(dir));
+    let _ = catch_unwind(|| editions::adopt(&dir));
+}
+
+/// name's file that URLSession brought, at got: checked against the
+/// catalog's SHA-256 and put where it lands with its record (model::land,
+/// editions::landing): in place, or beside the file it replaces until that
+/// is let go (pkapp_settle). One that doesn't check is deleted. {"path"},
+/// or {"error", "key", "detail"} with the catalog's key for the app's words.
+#[unsafe(no_mangle)]
+pub extern "C" fn pkapp_land(
+    dir: *const c_char,
+    name: *const c_char,
+    file: *const c_char,
+    got: *const c_char,
+) -> *mut c_char {
+    let (dir, name, file, got) = (PathBuf::from(arg(dir)), arg(name), arg(file), arg(got));
+    answer(|| {
+        let e = entry(&name)?;
+        let w = model::Wanted::named(&dir, e, &file)
+            .ok_or_else(|| format!("{name} has no file {file}"))?;
+        Ok(match model::land(&w, Path::new(&got)) {
+            Ok(path) => json!({ "path": path }),
+            Err(p) => json!({ "error": p.line(), "key": p.key, "detail": p.detail }),
+        })
+    })
+}
+
+/// Whether name has a download that checked and waits to be put in place
+/// (editions::pending).
+#[unsafe(no_mangle)]
+pub extern "C" fn pkapp_pending(dir: *const c_char, name: *const c_char) -> bool {
+    let (dir, name) = (PathBuf::from(arg(dir)), arg(name));
+    catch_unwind(|| model::entry(&name).is_some_and(|e| editions::pending(&dir, e)))
+        .unwrap_or(false)
+}
+
+/// name's downloads that checked put in place over the files they replace,
+/// a Core ML encoder unpacked over the one before (editions::settle). Only
+/// while no engine holds name's files: the transcriber lets go of it first.
+/// {} or {"error"}.
+#[unsafe(no_mangle)]
+pub extern "C" fn pkapp_settle(dir: *const c_char, name: *const c_char) -> *mut c_char {
+    let (dir, name) = (PathBuf::from(arg(dir)), arg(name));
+    answer(|| {
+        editions::settle(&dir, entry(&name)?)?;
+        Ok(json!({}))
+    })
+}
+
+/// pkapp_settle for what replaces nothing: a Core ML encoder unpacked where
+/// none is in place, right after its download, with any engine running
+/// (editions::settle_new). {} or {"error"}.
+#[unsafe(no_mangle)]
+pub extern "C" fn pkapp_settle_new(dir: *const c_char, name: *const c_char) -> *mut c_char {
+    let (dir, name) = (PathBuf::from(arg(dir)), arg(name));
+    answer(|| {
+        editions::settle_new(&dir, entry(&name)?)?;
+        Ok(json!({}))
+    })
+}
+
+/// The Neural Engine refused name's edition for why, here
+/// (editions::refuse): its encoder goes either way, and the refusal is
+/// recorded for device where the encoder was the catalog's. {"refused":
+/// whether it was, as the refusals now say}: an Older encoder refused says
+/// nothing of the catalog's, which Manage models then offers.
+#[unsafe(no_mangle)]
+pub extern "C" fn pkapp_refuse(
+    dir: *const c_char,
+    name: *const c_char,
+    id: *const c_char,
+    device: *const c_char,
+    why: *const c_char,
+) -> *mut c_char {
+    let (dir, name, id) = (PathBuf::from(arg(dir)), arg(name), arg(id));
+    let (device, why) = (arg(device), arg(why));
+    answer(|| {
+        let e = entry(&name)?;
+        let ed = edition(e, &id)?;
+        let d = self::device(&device)?;
+        editions::refuse(&dir, e, ed, &d, &why);
+        let refused = editions::Refusals::read(&dir).holds(e, ed, &d).is_some();
+        Ok(json!({ "refused": refused }))
+    })
+}
+
+/// A transcription finished on name's edition with the model file at
+/// model; the whole .pkf deleted once the Neural Engine's edition has run
+/// from its own slim file (editions::ran). Whether it was.
+#[unsafe(no_mangle)]
+pub extern "C" fn pkapp_ran(
+    dir: *const c_char,
+    name: *const c_char,
+    id: *const c_char,
+    model: *const c_char,
+) -> bool {
+    let (dir, name, id, model) = (PathBuf::from(arg(dir)), arg(name), arg(id), arg(model));
+    catch_unwind(|| {
+        entry(&name)
+            .and_then(|e| Ok((e, edition(e, &id)?)))
+            .is_ok_and(|(e, ed)| editions::ran(&dir, e, ed, Path::new(&model)))
+    })
+    .unwrap_or(false)
+}
+
+/// Every file of name's editions in dir, their records, parts and
+/// replacements waiting, and its refusals (editions::remove_part, forget).
+/// The engine lets go of it first.
+#[unsafe(no_mangle)]
+pub extern "C" fn pkapp_delete(dir: *const c_char, name: *const c_char) {
+    let (dir, name) = (PathBuf::from(arg(dir)), arg(name));
+    let _ = catch_unwind(|| {
+        if let Some(e) = model::entry(&name) {
+            for p in editions::parts(e) {
+                editions::remove_part(&dir, p);
+            }
+            editions::forget(&dir, e);
+        }
+    });
 }
 
 /// The model at path and a transcriber for it, on one thread a core (the

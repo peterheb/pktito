@@ -376,44 +376,6 @@ pub const CATALOG: &[Entry] = &[
     },
 ];
 
-/// e as 0.9.6's catalog JSON had it, which the Android app's Kotlin and the
-/// iOS app's Swift read until each reads the view (editions::view): bytes
-/// and sha256 the whole file's, coreml its slim file and encoder, qnn the
-/// graphs with their chips and systems.
-pub fn legacy(e: &Entry) -> serde_json::Value {
-    let part = |p: &Part| serde_json::to_value(p).unwrap_or_default();
-    let coreml = e.coreml().map(|ed| {
-        serde_json::json!({
-            "slim": part(&ed.model),
-            "encoder": ed.encoder.as_ref().map(part),
-        })
-    });
-    let qnn: Vec<serde_json::Value> = e
-        .editions
-        .iter()
-        .filter_map(|ed| match (ed.runtime, ed.encoder.as_ref()) {
-            (Runtime::Qnn { chip, systems }, Some(g)) => Some(serde_json::json!({
-                "chip": chip,
-                "part": part(g),
-                "systems": systems,
-            })),
-            _ => None,
-        })
-        .collect();
-    serde_json::json!({
-        "name": e.name,
-        "key": e.key,
-        "label": e.label,
-        "about": e.about,
-        "languages": e.languages,
-        "accuracy": e.accuracy,
-        "bytes": e.whole().bytes,
-        "sha256": e.whole().sha256,
-        "coreml": coreml,
-        "qnn": qnn,
-    })
-}
-
 pub fn entry(name: &str) -> Option<&'static Entry> {
     CATALOG.iter().find(|e| e.name == name)
 }
@@ -600,37 +562,23 @@ pub fn encoder_for(dir: &Path, path: &Path) -> Option<PathBuf> {
 }
 
 /// The Core ML encoder out of its Apple Archive (`aa archive` of the
-/// compiled model) into dst, with macOS's own aa: unpacked beside it first
-/// and renamed into place whole, so that an encoder in place is a whole one
-/// (have_encoder), and the archive deleted after, as the iOS app does (its
-/// Unpack.swift). Only an archive whose SHA-256 checked comes here
-/// (editions::settle).
+/// compiled model) into dst, by Apple Archive's own library (apple_archive),
+/// on the Mac and on iOS alike: unpacked beside it first and renamed into
+/// place whole, so that an encoder in place is a whole one (have_encoder),
+/// and the archive deleted after. Only an archive whose SHA-256 checked
+/// comes here (editions::settle).
 pub fn unpack_encoder(archive: &Path, dst: &Path) -> Result<(), String> {
     let mut work = dst.as_os_str().to_owned();
     work.push(".unpacking");
     let work = PathBuf::from(work);
     let _ = fs::remove_dir_all(&work);
     fs::create_dir_all(&work).map_err(|err| format!("couldn't make {}: {err}", work.display()))?;
-    let ran = std::process::Command::new("/usr/bin/aa")
-        .arg("extract")
-        .arg("-i")
-        .arg(archive)
-        .arg("-d")
-        .arg(&work)
-        .status();
     let fail = |why: String| {
         let _ = fs::remove_dir_all(&work);
         Err(why)
     };
-    match ran {
-        Ok(s) if s.success() => {}
-        Ok(s) => return fail(format!("aa couldn't unpack {} ({s})", archive.display())),
-        Err(err) => {
-            return fail(format!(
-                "couldn't run aa to unpack {}: {err}",
-                archive.display()
-            ))
-        }
+    if let Err(why) = apple_archive::extract(archive, &work) {
+        return fail(why);
     }
     if !work.join("model.mil").is_file() {
         return fail(format!("{} holds no Core ML model", archive.display()));
@@ -652,6 +600,117 @@ pub fn unpack_encoder(archive: &Path, dst: &Path) -> Result<(), String> {
     let _ = fs::remove_file(archive);
     let _ = fs::remove_dir_all(&old);
     Ok(())
+}
+
+/// Apple Archive's library (libAppleArchive, from macOS 11 and iOS 14),
+/// which macOS's aa is a front for: one way to unpack an encoder on the Mac
+/// and on iOS, which has no aa to run, so the Mac's tests cover the iPhone's.
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+mod apple_archive {
+    use std::ffi::{c_char, c_int, c_void, CString};
+    use std::os::unix::ffi::OsStrExt;
+    use std::path::Path;
+
+    /// An AAByteStream or AAArchiveStream
+    type Stream = *mut c_void;
+    /// AA_FLAG_IGNORE_EPERM: an attribute the app may not set, such as an
+    /// owner, left as it is rather than failing the whole
+    const IGNORE_EPERM: u64 = 1 << 0;
+    const O_RDONLY: c_int = 0;
+
+    #[link(name = "AppleArchive")]
+    unsafe extern "C" {
+        fn AAFileStreamOpenWithPath(path: *const c_char, flags: c_int, mode: u16) -> Stream;
+        fn AADecompressionInputStreamOpen(compressed: Stream, flags: u64, threads: c_int)
+            -> Stream;
+        fn AADecodeArchiveInputStreamOpen(
+            stream: Stream,
+            msg_data: *mut c_void,
+            msg_proc: *const c_void,
+            flags: u64,
+            threads: c_int,
+        ) -> Stream;
+        fn AAExtractArchiveOutputStreamOpen(
+            dir: *const c_char,
+            msg_data: *mut c_void,
+            msg_proc: *const c_void,
+            flags: u64,
+            threads: c_int,
+        ) -> Stream;
+        fn AAArchiveStreamProcess(
+            from: Stream,
+            to: Stream,
+            msg_data: *mut c_void,
+            msg_proc: *const c_void,
+            flags: u64,
+            threads: c_int,
+        ) -> isize;
+        fn AAArchiveStreamClose(s: Stream) -> c_int;
+        fn AAByteStreamClose(s: Stream) -> c_int;
+    }
+
+    /// archive's entries into dir, which is there: aa extract -i archive -d dir.
+    pub fn extract(archive: &Path, dir: &Path) -> Result<(), String> {
+        let c = |p: &Path| {
+            CString::new(p.as_os_str().as_bytes())
+                .map_err(|_| format!("{} has a NUL in its name", p.display()))
+        };
+        let (from, to) = (c(archive)?, c(dir)?);
+        let none = std::ptr::null_mut();
+        let no_proc = std::ptr::null();
+        // SAFETY: each stream reads the one opened before it and is closed
+        // before it, each once; a NULL stream is none, which closes as
+        // nothing; threads 0 is the library's choice
+        let (done, closed) = unsafe {
+            let file = AAFileStreamOpenWithPath(from.as_ptr(), O_RDONLY, 0);
+            if file.is_null() {
+                return Err(format!("couldn't open {}", archive.display()));
+            }
+            let inflate = AADecompressionInputStreamOpen(file, 0, 0);
+            let decode = match inflate.is_null() {
+                true => none,
+                false => AADecodeArchiveInputStreamOpen(inflate, none, no_proc, 0, 0),
+            };
+            let out = match decode.is_null() {
+                true => none,
+                false => {
+                    AAExtractArchiveOutputStreamOpen(to.as_ptr(), none, no_proc, IGNORE_EPERM, 0)
+                }
+            };
+            let done = match out.is_null() {
+                true => -1,
+                false => AAArchiveStreamProcess(decode, out, none, no_proc, 0, 0),
+            };
+            // the extraction's last writes come as it closes, which says
+            // whether they did (AAExtractArchiveOutputStreamOpen)
+            let closed = match out.is_null() {
+                true => -1,
+                false => AAArchiveStreamClose(out),
+            };
+            AAArchiveStreamClose(decode);
+            AAByteStreamClose(inflate);
+            AAByteStreamClose(file);
+            (done, closed)
+        };
+        if done < 0 || closed < 0 {
+            return Err(format!("couldn't unpack {}", archive.display()));
+        }
+        Ok(())
+    }
+}
+
+/// Elsewhere no edition has a Core ML encoder (editions::fit), so none
+/// comes to be unpacked.
+#[cfg(not(any(target_os = "macos", target_os = "ios")))]
+mod apple_archive {
+    use std::path::Path;
+
+    pub fn extract(archive: &Path, _dir: &Path) -> Result<(), String> {
+        Err(format!(
+            "{}: a Core ML encoder unpacks only on Apple's systems",
+            archive.display()
+        ))
+    }
 }
 
 /// What the app remembers between runs: the catalog model in use, or a
@@ -1085,6 +1144,36 @@ pub fn download_file(
     Ok(dst)
 }
 
+/// A download of w that came another way, at got: the iOS app's, whose
+/// transfers are URLSession's so that they go on while the app is away.
+/// Checked against its SHA-256 and put where it lands with its record, as
+/// fetch puts one; deleted where it doesn't check, or can't be put there.
+pub fn land(w: &Wanted, got: &Path) -> Result<PathBuf, Problem> {
+    let landed = (|| {
+        let mut file = File::open(got)
+            .map_err(|err| Stop::Hard(Problem::new("download.cant_check").detail(err)))?;
+        let digest = sha256(&mut file, &Ctl::default())?;
+        drop(file);
+        if digest != w.sha256 {
+            return Err(Stop::Hard(
+                Problem::new("download.damaged")
+                    .detail(format!("SHA-256 {digest}\nexpected {}", w.sha256)),
+            ));
+        }
+        fs::rename(got, &w.dst).map_err(|err| written(&w.dst, err))?;
+        mark(&w.dst, w.sha256);
+        Ok(w.dst.clone())
+    })();
+    landed.map_err(|stop| {
+        let _ = fs::remove_file(got);
+        match stop {
+            Stop::Hard(p) | Stop::Net(p) => p,
+            // no Ctl here asks for either
+            Stop::Paused | Stop::Cancelled => Problem::new("download.cant_check"),
+        }
+    })
+}
+
 /// Where the SHA-256 that a file of the catalog's checked against is kept,
 /// beside it (its name with .sha256 after it), and beside a Core ML
 /// encoder's folder the archive's it was unpacked from: so that a later
@@ -1418,5 +1507,83 @@ mod tests {
         fs::write(&junk, b"just some bytes, not a pktito model").unwrap();
         assert!(crate::pktito::Model::load(&junk).is_err());
         let _ = fs::remove_dir_all(&data);
+    }
+
+    #[test]
+    fn a_download_from_elsewhere_lands_checked_with_its_record() {
+        let dir = scratch("land");
+        let bytes = b"the bytes the catalog names";
+        let sha: String = Sha256::digest(bytes)
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+        let sha: &'static str = Box::leak(sha.into_boxed_str());
+        let w = Wanted {
+            name: "test".into(),
+            url: String::new(),
+            bytes: bytes.len() as u64,
+            sha256: sha,
+            part: dir.join("m.pkf.part"),
+            dst: dir.join("m.pkf"),
+        };
+        let got = dir.join("m.pkf.download");
+        fs::write(&got, bytes).unwrap();
+        assert_eq!(land(&w, &got).unwrap(), w.dst);
+        assert_eq!(fs::read(&w.dst).unwrap(), bytes);
+        assert_eq!(
+            fs::read_to_string(marker_of(&w.dst)).unwrap(),
+            format!("{sha}\n")
+        );
+        assert!(!got.exists());
+        // one that doesn't check is deleted, and what is in place stays
+        fs::write(&got, b"other bytes").unwrap();
+        assert_eq!(land(&w, &got).unwrap_err().key, "download.damaged");
+        assert!(!got.exists());
+        assert_eq!(fs::read(&w.dst).unwrap(), bytes);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn an_encoder_unpacks_by_apple_archive_over_the_one_before() {
+        let dir = scratch("unpack");
+        // an encoder's shape: model.mil, and its weights in a folder
+        let src = dir.join("src");
+        fs::create_dir_all(src.join("weights")).unwrap();
+        fs::write(src.join("model.mil"), b"program").unwrap();
+        fs::write(src.join("weights/weight.bin"), vec![7u8; 1 << 20]).unwrap();
+        // archived as models.pktito.net's are, by aa
+        let archive = dir.join("e.mlmodelc.aar");
+        let made = std::process::Command::new("/usr/bin/aa")
+            .args(["archive", "-d"])
+            .arg(&src)
+            .arg("-o")
+            .arg(&archive)
+            .status()
+            .unwrap();
+        assert!(made.success());
+        fs::write(marker_of(&archive), "new\n").unwrap();
+        // the encoder it replaces
+        let dst = dir.join("e.mlmodelc");
+        fs::create_dir_all(&dst).unwrap();
+        fs::write(dst.join("model.mil"), b"the one before").unwrap();
+        fs::write(marker_of(&dst), "old\n").unwrap();
+        unpack_encoder(&archive, &dst).unwrap();
+        assert_eq!(fs::read(dst.join("model.mil")).unwrap(), b"program");
+        assert_eq!(
+            fs::read(dst.join("weights/weight.bin")).unwrap(),
+            vec![7u8; 1 << 20]
+        );
+        assert_eq!(fs::read_to_string(marker_of(&dst)).unwrap(), "new\n");
+        assert!(!archive.exists() && !marker_of(&archive).exists());
+        for left in [".old", ".unpacking"] {
+            assert!(!dir.join(format!("e.mlmodelc{left}")).exists());
+        }
+        // what isn't an archive leaves the encoder in place as it was
+        fs::write(&archive, b"not an archive").unwrap();
+        assert!(unpack_encoder(&archive, &dst).is_err());
+        assert_eq!(fs::read(dst.join("model.mil")).unwrap(), b"program");
+        assert!(!dir.join("e.mlmodelc.unpacking").exists());
+        let _ = fs::remove_dir_all(&dir);
     }
 }

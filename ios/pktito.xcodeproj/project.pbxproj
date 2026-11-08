@@ -290,6 +290,7 @@
 					CoreMedia,
 					"-framework",
 					CoreML,
+					"-lAppleArchive",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = net.pktito.app;
 				PRODUCT_NAME = pktito;
@@ -338,6 +339,7 @@
 					CoreMedia,
 					"-framework",
 					CoreML,
+					"-lAppleArchive",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = net.pktito.app;
 				PRODUCT_NAME = pktito;

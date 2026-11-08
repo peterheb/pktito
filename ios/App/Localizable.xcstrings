@@ -1033,6 +1033,18 @@
         }
       }
     },
+    "manage_faster_ios": {
+      "extractionState": "manual",
+      "comment": "Manage models, under a model that runs on the processor (the Neural Engine refused it on an earlier system or build, or the person's own copy of its whole file): the Neural Engine's edition offered, as Android's manage_faster_phone and manage_faster_text_phone offer the NPU's; %1$s (and %2$s in the text) is the device's kind, \"iPhone\" or \"iPad\"; its megabytes are its download's, which takes the whole file's place once the Neural Engine runs it",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faster on this %1$@"
+          }
+        }
+      }
+    },
     "manage_faster_phone": {
       "extractionState": "manual",
       "comment": "the NPU's edition offered for a model downloaded for the processor (manage.faster, manage.faster_text, manage.get), the device by its kind, as iOS's name an iPhone or an iPad: a computer where Android says it is one, a tablet from 600 dp, else a phone. Its megabytes are its download's: the edition takes the place of the processor's file once the NPU runs it, so they are not that much more kept",
@@ -1063,6 +1075,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "The %1$@ model on this computer's NPU · %2$@ MB download"
+          }
+        }
+      }
+    },
+    "manage_faster_text_ios": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The %1$@ model on this %2$@'s Neural Engine · %3$@ MB download"
           }
         }
       }
@@ -1638,6 +1661,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "This %1$@'s Neural Engine can't run the model, so pktito uses its processor instead"
+          }
+        }
+      }
+    },
+    "prepare_cpu_get": {
+      "extractionState": "manual",
+      "comment": "a transcription's error, where the Neural Engine couldn't run the model and only its Neural Engine edition was downloaded: the processor's model is offered on the setup screen, which downloads only when asked; %2$s is its megabytes",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This %1$@'s Neural Engine can't run the model. pktito can use its processor instead, after a %2$@ MB download."
           }
         }
       }

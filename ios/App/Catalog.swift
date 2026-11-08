@@ -1,51 +1,100 @@
 import Foundation
 
-/// A file models.pktito.net serves beside a model's .pkf (model.rs, Part).
-struct Part: Decodable {
+/// A file models.pktito.net serves for a model (model.rs, Part), and where
+/// an offer names it, its address.
+struct Part: Decodable, Hashable {
     let file: String
     let bytes: Int64
     let sha256: String
-    let url: URL
+    var url: URL?
 }
 
-/// A model of the catalog (model.rs, Entry), with the addresses of its two
-/// editions: the .pkf, whose encoder is pktito's own on the CPU, and the
-/// Core ML one, a slim .pkf and the encoder for the Neural Engine.
-struct CatalogEntry: Decodable, Identifiable {
-    let name: String
-    let key: String
-    let label: String
-    let about: String
-    let languages: [String]
-    let accuracy: String
-    let bytes: Int64
-    let sha256: String
-    let url: URL
-    let coreml: Coreml
+/// One way to run a model (editions.rs, Edition): the CPU's, its whole .pkf,
+/// or the Neural Engine's, the slim .pkf and the Core ML encoder.
+struct EditionInfo: Decodable {
+    struct Runtime: Decodable { let kind: String }
+    let id: String
+    let runtime: Runtime
+    let model: Part
+    let encoder: Part?
+}
 
-    struct Coreml: Decodable {
-        let slim: Part
-        let encoder: Part
-    }
+/// What runs a model here (editions.rs, Runs): its edition, the model file
+/// the engine loads, and for the Neural Engine's the encoder beside it.
+struct Runs: Decodable, Equatable {
+    let edition: String
+    let model: String
+    let encoder: String?
+    var neuralEngine: Bool { encoder != nil }
+}
+
+/// What Manage models and the setup screen offer for a model (editions.rs,
+/// Offer): Download where nothing of it runs, Faster where the CPU's
+/// edition runs and the Neural Engine's is chosen, Update where a file of
+/// the edition that runs is an older build than the catalog's. Its files,
+/// with their addresses, and their bytes. What a download of them that
+/// stopped kept is URLSession's resume data here, which Downloads counts.
+struct Get: Decodable {
+    enum Kind: String, Decodable { case download, faster, update }
+    let kind: Kind
+    let bytes: Int64
+    let parts: [Part]
+}
+
+/// A model the catalog lists, as the core sees it in the models folder for
+/// this device (editions.rs, View; docs/EDITIONS.md), which decides for
+/// every platform: the edition chosen, what runs, why the Neural Engine
+/// refused the edition that fits best, and the offer.
+struct ModelView: Decodable, Identifiable {
+    let name: String
+    /// the desktop's key for its words: "english", "multilingual"
+    let key: String
+    /// what it transcribes, as ISO 639-1 codes
+    let languages: [String]
+    /// where its error rate in each language is, for a model of several; "" for none
+    let accuracy: String
+    let editions: [EditionInfo]
+    /// the edition chosen for this device: "coreml", or "cpu" where the
+    /// Neural Engine refused it here
+    let chosen: String
+    /// what runs, nil for nothing here that does
+    let runs: Runs?
+    /// why the Neural Engine refused the edition that fits best, on this
+    /// system and build, with this encoder; nil where it didn't
+    let refused: String?
+    let offer: Get?
+    /// the bytes its files take here, where it runs; where nothing does,
+    /// the chosen edition's, which its Download fetches
+    let bytes: Int64
 
     var id: String { name }
 
-    /// The CPU edition's file, as the core names it everywhere
-    var pkf: Part { Part(file: name + ".pkf", bytes: bytes, sha256: sha256, url: url) }
+    /// the CPU's edition's file, the whole .pkf
+    var whole: Part {
+        (editions.first { $0.runtime.kind == "cpu" } ?? editions[0]).model
+    }
+
+    /// the Neural Engine's encoder, the catalog's
+    var encoder: Part? {
+        editions.first { $0.runtime.kind == "coreml" }?.encoder
+    }
+
+    /// every file of its editions, each once
+    var files: [Part] {
+        var out: [Part] = []
+        for p in editions.flatMap({ [$0.model, $0.encoder].compactMap { $0 } })
+        where !out.contains(where: { $0.file == p.file }) {
+            out.append(p)
+        }
+        return out
+    }
 }
 
-/// Which of a model's two editions a transcriber runs.
-enum Edition: String {
-    /// the slim .pkf and the encoder on the Neural Engine
-    case neuralEngine
-    /// the whole .pkf, its encoder pktito's own on the CPU
-    case cpu
-}
-
-/// Where the app keeps its models, and which of them are here.
+/// Where the app keeps its models, which the core keeps by its rule
+/// (editions.rs): Application Support/models.
 enum Store {
-    /// Application Support/models: kept out of backups, since a model can
-    /// be downloaded again, as Android keeps them in no_backup
+    /// kept out of backups, since a model can be downloaded again, as
+    /// Android keeps them in no_backup
     static let models: URL = {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[
             0]
@@ -57,56 +106,11 @@ enum Store {
         return dir
     }()
 
-    static func file(_ p: Part) -> URL { models.appendingPathComponent(p.file) }
+    static func file(_ name: String) -> URL { models.appendingPathComponent(name) }
 
-    /// Where the SHA-256 a file of the catalog's checked against is kept,
-    /// beside it (its name with .sha256 after it), and beside a Core ML
-    /// encoder's folder its archive's, as the core keeps it (model.rs,
-    /// marker_of): so that a later app can tell the file it has from a newer
-    /// one its catalog names, even of the same size. It says something only
-    /// beside its file.
+    /// Where the SHA-256 a file was checked against is kept, beside it, as
+    /// the core keeps it (model.rs, marker_of): its name with .sha256 after it
     static func marker(_ url: URL) -> URL {
         url.deletingLastPathComponent().appendingPathComponent(url.lastPathComponent + ".sha256")
-    }
-
-    /// Where a model's Core ML encoder is unpacked to (Unpack.swift)
-    static func encoder(_ e: CatalogEntry) -> URL {
-        models.appendingPathComponent(e.name + "-encoder.mlmodelc", isDirectory: true)
-    }
-
-    /// A file is renamed into place only after its SHA-256 checks, so the
-    /// size is enough to tell, as the core tells (model.rs, have).
-    static func have(_ p: Part) -> Bool {
-        let size =
-            (try? FileManager.default.attributesOfItem(atPath: file(p).path)[.size] as? Int64)
-            ?? nil
-        return size == p.bytes
-    }
-
-    /// The encoder is renamed into place only once its archive unpacked whole.
-    static func haveEncoder(_ e: CatalogEntry) -> Bool {
-        FileManager.default.fileExists(atPath: encoder(e).appendingPathComponent("model.mil").path)
-    }
-
-    static func have(_ e: CatalogEntry, _ edition: Edition) -> Bool {
-        switch edition {
-        case .cpu: return have(e.pkf)
-        case .neuralEngine: return have(e.coreml.slim) && haveEncoder(e)
-        }
-    }
-
-    /// What e's files here take, either edition's, for Manage models: a
-    /// device whose Neural Engine failed may have both.
-    static func bytes(_ e: CatalogEntry) -> Int64 {
-        var n: Int64 = 0
-        for p in [e.pkf, e.coreml.slim] where have(p) { n += p.bytes }
-        if let files = FileManager.default.enumerator(
-            at: encoder(e), includingPropertiesForKeys: [.fileSizeKey])
-        {
-            for case let f as URL in files {
-                n += Int64((try? f.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
-            }
-        }
-        return n
     }
 }

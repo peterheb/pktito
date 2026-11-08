@@ -11,7 +11,7 @@ private func languageName(_ code: String) -> String {
 /// A model of several's languages, about, and the system's language where
 /// it is one of them, as the one sentence models_languages_among makes of
 /// them, about where the sentence puts it (ui/app.js, withOwn).
-private func withOwn(_ e: CatalogEntry, _ about: AttributedString) -> AttributedString {
+private func withOwn(_ e: ModelView, _ about: AttributedString) -> AttributedString {
     guard e.languages.count > 1, e.languages.contains(ownLanguage) else { return about }
     let mark = "\u{1}"
     let parts = L("models_languages_among", mark, languageName(ownLanguage)).components(

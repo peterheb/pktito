@@ -543,7 +543,7 @@ pub fn settle(dir: &Path, e: &Entry) -> Result<(), String> {
             continue;
         }
         if unpacked(p) {
-            #[cfg(target_os = "macos")]
+            #[cfg(any(target_os = "macos", target_os = "ios"))]
             model::unpack_encoder(&dir.join(p.file), &installed(dir, p))?;
             continue;
         }
@@ -561,7 +561,7 @@ pub fn settle(dir: &Path, e: &Entry) -> Result<(), String> {
 pub fn settle_new(dir: &Path, e: &Entry) -> Result<(), String> {
     for p in parts(e) {
         if unpacked(p) && waiting(dir, p) && !installed(dir, p).exists() {
-            #[cfg(target_os = "macos")]
+            #[cfg(any(target_os = "macos", target_os = "ios"))]
             model::unpack_encoder(&dir.join(p.file), &installed(dir, p))?;
         }
     }

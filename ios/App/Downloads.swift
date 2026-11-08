@@ -1,4 +1,3 @@
-import CryptoKit
 import Foundation
 import UIKit
 
@@ -18,9 +17,9 @@ struct DownloadProblem: LocalizedError {
 /// Each carries its file's name (taskDescription), by which a later run of
 /// the app finds it again. A stopped one keeps what it has, its resume
 /// data, beside the models (FILE.resume) to go on from. A file that came is
-/// held beside its place (FILE.download) until its SHA-256 checks against
-/// the catalog's, as the core's download checks it on every other platform
-/// (model.rs), then renamed into place; one that doesn't check is deleted.
+/// held beside its place (FILE.download) until the core checks it and puts
+/// it where it lands (Core.land), as its own download does on every other
+/// platform (model.rs); one that doesn't check is deleted.
 final class Downloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
     static let shared = Downloader()
     static let sessionID = "net.pktito.app.models"
@@ -72,10 +71,8 @@ final class Downloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendabl
     /// background is left for when the system likes.
     func begin(_ parts: [Part]) async {
         let tasks = await session.allTasks
-        for p in parts
-        where !Store.have(p)
-            && !FileManager.default.fileExists(atPath: Downloader.held(p.file).path)
-        {
+        for p in parts where !FileManager.default.fileExists(atPath: Downloader.held(p.file).path) {
+            guard let url = p.url else { continue }
             let task: URLSessionTask
             if let t = tasks.first(where: {
                 $0.taskDescription == p.file && ($0.state == .running || $0.state == .suspended)
@@ -86,7 +83,7 @@ final class Downloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendabl
                 if let data = try? Data(contentsOf: Downloader.kept(p.file)) {
                     new = session.downloadTask(withResumeData: data)
                 } else {
-                    new = session.downloadTask(with: p.url)
+                    new = session.downloadTask(with: url)
                 }
                 try? FileManager.default.removeItem(at: Downloader.kept(p.file))
                 new.taskDescription = p.file
@@ -100,16 +97,11 @@ final class Downloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendabl
         }
     }
 
-    /// p's transfer waited for (begin), then checked: its path once it is in
-    /// place. progress hears its bytes so far, on URLSession's queue.
-    func fetch(
-        _ p: Part, progress: @escaping @Sendable (Int64) -> Void,
-        checking: @escaping @Sendable () -> Void = {}
-    ) async throws -> URL {
-        if Store.have(p) {
-            return Store.file(p)
-        }
-        let got: URL = try await withCheckedThrowingContinuation { done in
+    /// p's transfer waited for (begin): the file it brought, held for the
+    /// core to check (Core.land). progress hears its bytes so far, on
+    /// URLSession's queue.
+    func fetch(_ p: Part, progress: @escaping @Sendable (Int64) -> Void) async throws -> URL {
+        try await withCheckedThrowingContinuation { done in
             lock.lock()
             defer { lock.unlock() }
             // one that came, or failed, before anyone waited for it
@@ -122,12 +114,12 @@ final class Downloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendabl
                 jobs[p.file] = Job(progress: progress, done: done)
             }
         }
-        checking()
-        return try await Task.detached(priority: .utility) { try Downloader.check(got, p) }.value
     }
 
-    /// The bytes a stopped download of p kept, by its resume data.
+    /// The bytes a stopped download of p kept: all of them where its file
+    /// came and waits for its check, else its resume data's.
     func kept(_ p: Part) -> Int64 {
+        if FileManager.default.fileExists(atPath: Downloader.held(p.file).path) { return p.bytes }
         guard let data = try? Data(contentsOf: Downloader.kept(p.file)),
             let plist = try? PropertyListSerialization.propertyList(from: data, format: nil)
                 as? [String: Any]
@@ -135,13 +127,13 @@ final class Downloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendabl
         return (plist["NSURLSessionResumeBytesReceived"] as? NSNumber)?.int64Value ?? 0
     }
 
-    /// What a download of p kept or got, let go.
-    func forget(_ p: Part) {
-        for f in [Downloader.kept(p.file), Downloader.held(p.file)] {
+    /// What a download of file kept or got, let go.
+    func forget(_ file: String) {
+        for f in [Downloader.kept(file), Downloader.held(file)] {
             try? FileManager.default.removeItem(at: f)
         }
         lock.lock()
-        failed[p.file] = nil
+        failed[file] = nil
         lock.unlock()
     }
 
@@ -171,37 +163,6 @@ final class Downloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendabl
         session.getTasksWithCompletionHandler { _, _, downloads in
             for d in downloads { d.cancel() }
         }
-    }
-
-    /// The file a finished transfer gave, checked: its SHA-256 the catalog's,
-    /// then renamed into place; else deleted.
-    private static func check(_ got: URL, _ p: Part) throws -> URL {
-        defer { try? FileManager.default.removeItem(at: got) }
-        let h = try sha256(of: got)
-        guard h == p.sha256 else {
-            throw DownloadProblem(key: "download.damaged", detail: p.file)
-        }
-        let dst = Store.file(p)
-        try? FileManager.default.removeItem(at: dst)
-        do {
-            try FileManager.default.moveItem(at: got, to: dst)
-        } catch {
-            throw DownloadProblem(key: "download.cant_save", detail: error.localizedDescription)
-        }
-        // kept if it can be: a file without one is only a file whose
-        // version a later app must read for itself
-        try? (h + "\n").write(to: Store.marker(dst), atomically: true, encoding: .utf8)
-        return dst
-    }
-
-    static func sha256(of url: URL) throws -> String {
-        let f = try FileHandle(forReadingFrom: url)
-        defer { try? f.close() }
-        var h = SHA256()
-        while let chunk = try f.read(upToCount: 4 << 20), !chunk.isEmpty {
-            h.update(data: chunk)
-        }
-        return h.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
     /// Whether task is the one its file is coming by; none is, for a file
@@ -308,15 +269,21 @@ struct DownloadState {
     var going: Bool { step == .downloading || step == .checking || (step == .failed && retry) }
 }
 
-/// A catalog model's download in this device's edition (Android's
-/// Downloads, the desktop's download.rs): its files on their way at once,
-/// each checked as it comes, the Neural Engine edition's encoder unpacked
-/// once it checks; a failure of the network tried again by itself, 2 s
-/// after and doubling to 30, and a pause that keeps what came. Once it is
-/// all here the model is in use, the toast says so, and its engine is
-/// prepared, once the app is on the screen. One at a time. The model being
-/// downloaded is remembered, and a later run of the app goes on with it
-/// (resumeAfterLaunch), its transfers having gone on without it.
+/// A catalog model's download, what the core offers for it (Offer.entry.offer:
+/// the edition chosen for this device, the Neural Engine's faster edition
+/// for a model here on the CPU, or a newer build; Android's Downloads, the
+/// desktop's download.rs): its files on their way at once, each checked
+/// and put where it lands as it comes (Core.land), a new Neural Engine
+/// encoder unpacked once all are here (Core.settleNew); a failure of the
+/// network tried again by itself, 2 s after and doubling to 30, and a
+/// pause that keeps what came. Only ever started by its user: nothing
+/// downloads by itself (Peter, 2026-11-05). Once a first download is all
+/// here the model is in use, the toast says so, and its engine is
+/// prepared, once the app is on the screen; what replaces a file in use
+/// waits for the transcriber to let go of it (Core.settle). One at a
+/// time. The model being downloaded is remembered, and a later run of the
+/// app goes on with it (resumeAfterLaunch), its transfers having gone on
+/// without it.
 @MainActor @Observable
 final class Downloads {
     static let shared = Downloads()
@@ -338,18 +305,14 @@ final class Downloads {
         func pretend(_ s: DownloadState) { state = s }
     #endif
 
-    /// The bytes a stopped download of e kept: its files here, and what the
-    /// others' transfers kept.
-    func kept(_ e: CatalogEntry) -> Int64 {
-        if state?.name == e.name, let s = state { return s.got }
-        let parts = Editions.preferred(e) == .cpu ? [e.pkf] : [e.coreml.slim, e.coreml.encoder]
-        let n = parts.reduce(Int64(0)) {
-            $0 + (Store.have($1) ? $1.bytes : Downloader.shared.kept($1))
-        }
-        return Store.have(e, Editions.preferred(e)) ? 0 : n
+    /// The bytes a stopped download of v's offer kept: its files that came,
+    /// and what the others' transfers kept.
+    func kept(_ v: ModelView) -> Int64 {
+        if state?.name == v.name, let s = state { return s.got }
+        return (v.offer?.parts ?? []).reduce(Int64(0)) { $0 + Downloader.shared.kept($1) }
     }
 
-    /// o's edition downloaded, or its download gone on with; one waiting to
+    /// o's offer downloaded, or its download gone on with; one waiting to
     /// try again tries now.
     func start(_ o: Offer) {
         if running {
@@ -359,8 +322,9 @@ final class Downloads {
         pausing = false
         UserDefaults.standard.set(o.name, forKey: "downloading")
         UserDefaults.standard.set(false, forKey: "downloadPaused")
-        state = DownloadState(name: o.name, step: .downloading, got: o.partial, total: o.bytes)
-        work = Task { await run(o) }
+        state = DownloadState(
+            name: o.name, step: .downloading, got: o.partial, total: o.entry.offer?.bytes ?? 0)
+        work = Task { await run(o.name, first: !o.have) }
     }
 
     /// The download a run before began and the person didn't pause, gone on
@@ -369,9 +333,9 @@ final class Downloads {
         let d = UserDefaults.standard
         guard state == nil, !d.bool(forKey: "downloadPaused"),
             let name = d.string(forKey: "downloading"),
-            let o = Models.shared.offers.first(where: { $0.name == name })
+            let o = Models.shared.offer(name)
         else { return }
-        if Store.have(o.entry, o.edition) {
+        if o.entry.offer == nil {
             d.removeObject(forKey: "downloading")
             return
         }
@@ -384,7 +348,7 @@ final class Downloads {
             state?.trying = true
             return
         }
-        if let name = state?.name, let o = Models.shared.offers.first(where: { $0.name == name }) {
+        if let name = state?.name, let o = Models.shared.offer(name) {
             start(o)
         }
     }
@@ -414,44 +378,39 @@ final class Downloads {
             UserDefaults.standard.removeObject(forKey: "downloading")
             UserDefaults.standard.removeObject(forKey: "downloadPaused")
         }
-        guard let e = Models.shared.entry(name) else { return }
-        for p in [e.pkf, e.coreml.slim, e.coreml.encoder] { Downloader.shared.forget(p) }
+        guard let o = Models.shared.offer(name) else { return }
+        for p in o.entry.files { Downloader.shared.forget(p.file) }
     }
 
-    private func run(_ o: Offer) async {
+    /// name's offer as the core sees it now, so that a download gone on with
+    /// fetches no file that came before (the core offers none that is in
+    /// place or waits to be); first, whether nothing of it ran before.
+    private func run(_ name: String, first: Bool) async {
         defer { work = nil }
-        let e = o.entry
-        let parts = o.edition == .cpu ? [e.pkf] : [e.coreml.slim, e.coreml.encoder]
-        let here = { (p: Part) in
-            p.file == e.coreml.encoder.file ? Store.haveEncoder(e) : Store.have(p)
-        }
+        Models.shared.refresh()
+        let parts = Models.shared.offer(name)?.entry.offer?.parts ?? []
+        var landed: Set<String> = []
         got = [:]
         for p in parts {
-            got[p.file] = here(p) ? p.bytes : Downloader.shared.kept(p)
+            got[p.file] = Downloader.shared.kept(p)
         }
         var delay: Double = 2
         speedometer = Speed()
-        for p in parts where !here(p) {
+        for p in parts {
             while true {
                 do {
-                    await Downloader.shared.begin(parts.filter { !here($0) })
-                    let url = try await Downloader.shared.fetch(
-                        p,
-                        progress: { n in
-                            Task { @MainActor in self.heard(p, n) }
-                        },
-                        checking: {
-                            Task { @MainActor in self.state?.step = .checking }
-                        })
+                    await Downloader.shared.begin(parts.filter { !landed.contains($0.file) })
+                    let held = try await Downloader.shared.fetch(p) { n in
+                        Task { @MainActor in self.heard(p, n) }
+                    }
                     // iOS's time to finish, where the transfer ended while the app was away
                     let time = BackgroundTime("model " + p.file)
                     defer { time.end() }
-                    if p.file == e.coreml.encoder.file {
-                        state?.step = .checking
-                        try await Task.detached(priority: .userInitiated) {
-                            try Unpack.encoder(e, from: url)
-                        }.value
-                    }
+                    state?.step = .checking
+                    _ = try await Task.detached(priority: .userInitiated) {
+                        try Core.land(name, file: p.file, got: held)
+                    }.value
+                    landed.insert(p.file)
                     got[p.file] = p.bytes
                     delay = 2
                     break
@@ -483,10 +442,32 @@ final class Downloads {
                 }
             }
         }
+        // a Neural Engine encoder that replaces none unpacked now (v2's 547
+        // MB archive in 0.24 s on the M4 Pro, 2026-11-08); one that replaces
+        // the encoder in use waits for the transcriber to let go of it
+        // (Core.settle)
+        do {
+            let time = BackgroundTime("model " + name)
+            defer { time.end() }
+            state?.step = .checking
+            try await Task.detached(priority: .userInitiated) { try Core.settleNew(name) }.value
+        } catch {
+            state?.step = .failed
+            state?.problem = DownloadProblem(
+                key: "download.cant_save", detail: error.localizedDescription)
+            state?.retry = false
+            state?.speed = 0
+            return
+        }
         UserDefaults.standard.removeObject(forKey: "downloading")
         state = nil
-        Models.shared.use(o.name)
-        Models.shared.news = L("models_ready", label(o.key))
+        // in use once it is here, as the desktop's (main.rs, download_model);
+        // the Neural Engine's edition or an update for a model here leaves the
+        // one in use as it is
+        if first { Models.shared.use(name) } else { Models.shared.refresh() }
+        if let o = Models.shared.offer(name) {
+            Models.shared.news = L("models_ready", label(o.key))
+        }
         // Core ML's compile, on the screen, where it says what it is doing
         // (Root, back from the background)
         if UIApplication.shared.applicationState != .background { Transcriber.shared.prepare() }

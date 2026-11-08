@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// One thing the app keeps: what it is (its id: its kind and its name,
-/// "have:", "part:" or "own:"), its words, what it takes, its button's, and
-/// the question before the button does it (none for Stop).
+/// One thing the app keeps, or one it offers: what it is (its id: its kind
+/// and its name, "have:", "part:", "own:", or the offers "faster:" and
+/// "update:"), its words, what it takes, its button's, and the question
+/// before the button does it (none for Stop and the offers).
 private struct Kept: Identifiable {
     let id: String
     let title: String
@@ -21,8 +22,10 @@ private struct Kept: Identifiable {
 /// free, the recent list with it. In the catalog's order, each model
 /// downloaded, its name and size, the one in use said so in green; what a
 /// download that stopped kept, which it would go on from; a download under
-/// way, with Stop; and the copy of a model file of the person's own; each
-/// deleted after a question that says what follows. Under them what they
+/// way, with Stop; under a model here, the Neural Engine's edition where it
+/// runs on the CPU (Faster) or a newer build of its files (Update), as the
+/// core offers them (Offer.entry.offer); and the copy of a model file of
+/// the person's own; each deleted after a question that says what follows. Under them what they
 /// take in all, and the room left. A sheet from the screen's foot on a
 /// phone, in its middle on an iPad. While a transcription runs, the model
 /// in use and the one it loaded, if another was chosen since, keep their
@@ -164,7 +167,7 @@ struct Manage: View {
             let dl = d?.name == o.name ? d : nil
             if o.have {
                 let inUse = m.own == nil && o.name == m.model
-                let bytes = Store.bytes(o.entry)
+                let bytes = o.entry.bytes
                 let text: String
                 if !inUse {
                     text = L("manage_ask_text", mb(bytes))
@@ -181,6 +184,7 @@ struct Manage: View {
                         enabled: !(t.running && (inUse || t.loadedName == o.name)),
                         ask: (L("manage_ask_title", name), text)
                     ) { s.deleted(m.delete(o)) })
+                if o.faster > 0 || o.update > 0 { out.append(more(o, name, dl)) }
             } else if let dl, dl.going {
                 out.append(
                     Kept(
@@ -230,6 +234,50 @@ struct Manage: View {
                 })
         }
         return out
+    }
+
+    /// What Manage models offers for a model here (Offer.entry.offer): on the
+    /// CPU, the Neural Engine's edition, the slim file and the encoder, which
+    /// take the whole file's place once the Neural Engine has run a
+    /// transcription (Offer.faster): Faster on this iPhone, or iPad; or the
+    /// catalog's newer build of a file of the edition that runs
+    /// (Offer.update), which takes the older one's place once no
+    /// transcription has the model (Transcriber.model). Its download's
+    /// megabytes, then how the download goes, with Stop, as the downloads
+    /// under way above (Android's Manage, more).
+    private func more(_ o: Offer, _ name: String, _ dl: DownloadState?) -> Kept {
+        let update = o.update > 0
+        let title = update ? L("manage_update") : L("manage_faster_ios", deviceKind)
+        let bytes = update ? o.update : o.faster
+        let id = (update ? "update:" : "faster:") + o.name
+        let get = { Downloads.shared.start(o) }
+        if let dl, dl.going {
+            return Kept(
+                id: id, title: title,
+                note: L("manage_downloading", mb(dl.got), mb(dl.total)),
+                bytes: 0, act: L("stop"), ask: nil
+            ) { Downloads.shared.cancel() }
+        }
+        if let dl, dl.step == .failed {
+            return Kept(
+                id: id, title: title, note: dl.problem?.errorDescription ?? "", bytes: 0,
+                act: L("download_try_again"), ask: nil, onAct: get)
+        }
+        if dl != nil || o.partial > 0 {
+            return Kept(
+                id: id, title: title,
+                note: L("manage_paused", mb(dl?.got ?? o.partial), mb(bytes)),
+                bytes: 0, act: L("download_resume"), ask: nil, onAct: get)
+        }
+        if update {
+            return Kept(
+                id: id, title: title, note: L("manage_update_text", name, mb(bytes)), bytes: 0,
+                act: L("manage_update_get"), ask: nil, onAct: get)
+        }
+        return Kept(
+            id: id, title: title,
+            note: L("manage_faster_text_ios", name, deviceKind, mb(bytes)),
+            bytes: 0, act: L("manage_get"), ask: nil, onAct: get)
     }
 }
 

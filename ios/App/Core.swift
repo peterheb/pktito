@@ -68,10 +68,68 @@ enum Core {
         return String(cString: s)
     }
 
-    /// The models models.pktito.net serves (model.rs).
-    static func catalog() throws -> [CatalogEntry] {
-        try take(pkapp_catalog(), as: [CatalogEntry].self)
+    /// The models models.pktito.net serves, each as the core sees it in the
+    /// models folder for this device (editions.rs, view): any thread.
+    static func catalog() throws -> [ModelView] {
+        try take(pkapp_catalog(Store.models.path, Editions.device), as: [ModelView].self)
     }
+
+    /// Once a launch, off the main thread: files from before 0.9.6 given
+    /// their records, swaps cut short finished (editions.rs, adopt).
+    static func adopt() { pkapp_adopt(Store.models.path) }
+
+    /// name's file that URLSession brought, at got: checked against the
+    /// catalog's SHA-256 and put where it lands, with its record
+    /// (model.rs, land): in place, or beside the file it replaces until
+    /// settle. One that doesn't check is deleted, and the problem says why.
+    static func land(_ name: String, file: String, got: URL) throws -> URL {
+        struct Landed: Decodable { let path: String }
+        do {
+            let l = try take(pkapp_land(Store.models.path, name, file, got.path), as: Landed.self)
+            return URL(fileURLWithPath: l.path)
+        } catch let e as CoreError {
+            guard let key = e.key else { throw e }
+            throw DownloadProblem(key: key, detail: e.detail)
+        }
+    }
+
+    /// Whether name has a download that checked and waits to be put in place.
+    static func pending(_ name: String) -> Bool { pkapp_pending(Store.models.path, name) }
+
+    /// name's downloads that checked put in place over what they replace, a
+    /// Core ML encoder unpacked over the one before: only while no engine
+    /// holds name's files.
+    static func settle(_ name: String) throws {
+        _ = try take(pkapp_settle(Store.models.path, name), as: Nothing.self)
+    }
+
+    /// What replaces nothing put in place: a Core ML encoder unpacked where
+    /// none is, right after its download, whatever is loaded.
+    static func settleNew(_ name: String) throws {
+        _ = try take(pkapp_settle_new(Store.models.path, name), as: Nothing.self)
+    }
+
+    /// The Neural Engine refused name's edition for why: its encoder deleted,
+    /// and the refusal kept for this system and build where the encoder was
+    /// the catalog's. Whether it was, so that the refusal holds.
+    static func refuse(_ name: String, edition: String, why: String) throws -> Bool {
+        struct Refused: Decodable { let refused: Bool }
+        return try take(
+            pkapp_refuse(Store.models.path, name, edition, Editions.device, why),
+            as: Refused.self
+        ).refused
+    }
+
+    /// A transcription finished on name's edition with the model file at
+    /// model: whether the whole .pkf went, the Neural Engine's edition
+    /// having run from its own slim file (editions.rs, ran).
+    static func ran(_ name: String, edition: String, model: URL) -> Bool {
+        pkapp_ran(Store.models.path, name, edition, model.path)
+    }
+
+    /// Every file of name's editions, their records and replacements
+    /// waiting, and its refusals.
+    static func delete(_ name: String) { pkapp_delete(Store.models.path, name) }
 
     /// transcript as a file of the kind ext names: txt, md, srt, vtt, json.
     static func format(_ transcript: Transcript, ext: String, name: String, times: Bool) throws
