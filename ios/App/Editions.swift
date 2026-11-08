@@ -43,16 +43,25 @@ enum Editions {
     /// runs it on the Mac's processor (SIMCTL_CHILD_PKTITO_REFUSE_NPU=1).
     static let refusingForTest = ProcessInfo.processInfo.environment["PKTITO_REFUSE_NPU"] == "1"
 
-    /// Whether Core ML has compiled v's encoder on this system for this
-    /// build: a load of it that worked here, remembered. The first load
-    /// after an install or an update compiles it, which the setup screen
-    /// says while it lasts.
+    /// Whether Core ML has compiled the encoder v runs on this system for
+    /// this build: a load of it that worked here, remembered. The first load
+    /// after an install, an update of the app or an update of the encoder
+    /// compiles it, which the setup screen says while it lasts.
     static func compiled(_ v: ModelView) -> Bool {
         UserDefaults.standard.string(forKey: "neuralEngineReady." + v.name) == ready(v)
     }
 
+    /// The key a compile is remembered by: this system and build, and the
+    /// encoder in place by its record, not the catalog's, which an older
+    /// encoder still running isn't (the M1 iPad, 2026-11-08: 0.9.5's
+    /// encoders, unrecorded, ran under the catalog's newer SHA-256, and its
+    /// update would have compiled with no word on the screen). One unpacked
+    /// before 0.9.6 has no record.
     private static func ready(_ v: ModelView) -> String {
-        here + " " + (v.encoder?.sha256 ?? "")
+        let record = v.runs?.encoder.flatMap {
+            try? String(contentsOf: Store.marker(URL(fileURLWithPath: $0)), encoding: .utf8)
+        }
+        return here + " " + (record ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// A model's engine, as it runs here: its edition, the model file it

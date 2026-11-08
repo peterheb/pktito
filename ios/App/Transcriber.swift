@@ -174,9 +174,12 @@ final class Transcriber {
         engine = nil
         loadedName = nil
         loadedModel = nil
-        // a compile, not a load of what Core ML compiled before
+        // a compile, not a load of what Core ML compiled before: a new
+        // system or build, or an encoder that a download waiting to be put
+        // in place brings
         if case .catalog(let name) = use, let v = Models.shared.offer(name)?.entry {
-            preparing = v.runs?.neuralEngine == true && !Editions.compiled(v)
+            preparing =
+                v.runs?.neuralEngine == true && (!Editions.compiled(v) || Core.pending(name))
         }
         let task = Task.detached(priority: .userInitiated) { () throws -> Editions.Loaded in
             switch use {
