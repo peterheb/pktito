@@ -231,7 +231,7 @@ final class AppState {
     }
 }
 
-/// Work's pace, as the desktop's says it (app.js, pace): "12.3x real-time",
+/// Work's pace, as the desktop's says it (app.js, pace): "12.3× real time",
 /// its decimal the locale's.
 func pace(_ audio: Double, _ took: Double) -> String {
     guard took > 0 else { return "" }

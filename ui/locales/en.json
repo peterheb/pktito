@@ -152,7 +152,7 @@
   "download.disk_full": "Not enough disk space",
   "download.cant_save": "Couldn't save the model",
 
-  "time.real_time": "{x}x real-time",
+  "time.real_time": "{x}× real time",
   "time.seconds": "{s}s",
   "time.left_seconds": "about\u00a0{s}\u00a0s\u00a0left",
   "time.left_minutes": "about\u00a0{m}\u00a0min\u00a0left",

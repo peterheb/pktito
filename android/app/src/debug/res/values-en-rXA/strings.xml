@@ -55,7 +55,7 @@
     <string name="status_done">[Ďőńę ·]</string>
     <string name="status_failed">[Čőűłďń\'ț țřąńșčřįbę ····· ··]</string>
     <string name="no_speech">[Ńő șpęęčh įń țhįș fįłę ······]</string>
-    <string name="real_time">[%1$sx řęął-țįmę ····]</string>
+    <string name="real_time">[%1$s× řęął țįmę ····]</string>
     <string name="stats_transcribed">[Țřąńșčřįbęď įń %1$s, %2$s ····· ··]</string>
     <string name="recent_title">[Řęčęńț ···]</string>
     <string name="recent_clear">[Čłęąř ··]</string>
