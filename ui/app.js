@@ -3514,8 +3514,8 @@ function closeSheet() {
 
 $("notices-open").onclick = () => openNotices();
 $("privacy-open").onclick = () => {
-  // the Store edition's data is in its package, which uninstalling deletes
-  if (st?.store)
+  // the Store edition's data, when in its package, goes when it is uninstalled
+  if (st?.data_in_package)
     $("privacy-uninstall").textContent = t("privacy.choice_uninstall_store");
   openSheet("privacy");
 };
