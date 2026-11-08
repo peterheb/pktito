@@ -1179,6 +1179,39 @@
         }
       }
     },
+    "manage_update": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Newer build"
+          }
+        }
+      }
+    },
+    "manage_update_get": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update"
+          }
+        }
+      }
+    },
+    "manage_update_text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A newer build of the %1$@ model · %2$@ MB download"
+          }
+        }
+      }
+    },
     "manage_used_gb": {
       "extractionState": "manual",
       "localizations": {
