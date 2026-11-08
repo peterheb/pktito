@@ -515,7 +515,13 @@ function modelMenu(anchor, keys) {
       closeMenu();
       if (b.dataset.own) return useOwnFile();
       if (b.dataset.reveal) return invoke("reveal_model").catch(toastErr);
-      if (b.dataset.manage) return openManage(anchor);
+      if (b.dataset.manage) {
+        // the models folder as it is now, not at the last status: an NPU
+        // run deletes the whole .pkf (editions::ran), and status puts a
+        // waiting update in place (main.rs, settle_idle)
+        await refresh().catch(toastErr);
+        return openManage(anchor);
+      }
       const entry = st.catalog.find((x) => x.name === b.dataset.model);
       if (!entry || (!st.model_file && st.model === entry.name)) return;
       if (!entry.have) return startDownload(entry);
@@ -1964,7 +1970,7 @@ function matchesIn(s) {
   }
   const q = l.as ? query : query.toLowerCase(),
     found = [];
-  for (let from = 0, j; (j = l.low.indexOf(q, from)) >= 0; )
+  for (let from = 0, j; (j = l.low.indexOf(q, from)) >= 0;)
     if (startsWord(l.low, j, q)) {
       found.push([j, j + q.length]);
       from = j + q.length;
