@@ -151,6 +151,9 @@
     <string name="npu_cpu_phone">[Țhįș phőńę\'ș ŃPŰ čąń\'ț řűń țhę mőďęł, șő pkțįțő űșęș įțș přőčęșșőř įńșțęąď ····· ····· ····· ·]</string>
     <string name="npu_cpu_tablet">[Țhįș țąbłęț\'ș ŃPŰ čąń\'ț řűń țhę mőďęł, șő pkțįțő űșęș įțș přőčęșșőř įńșțęąď ····· ····· ····· ·]</string>
     <string name="npu_cpu_computer">[Țhįș čőmpűțęř\'ș ŃPŰ čąń\'ț řűń țhę mőďęł, șő pkțįțő űșęș įțș přőčęșșőř įńșțęąď ····· ····· ····· ··]</string>
+    <string name="npu_cpu_get_phone">[Țhįș phőńę\'ș ŃPŰ čąń\'ț řűń țhę mőďęł. pkțįțő čąń űșę įțș přőčęșșőř įńșțęąď, ąfțęř ą %1$s&#160;MB ďőwńłőąď. ····· ····· ····· ····· ··]</string>
+    <string name="npu_cpu_get_tablet">[Țhįș țąbłęț\'ș ŃPŰ čąń\'ț řűń țhę mőďęł. pkțįțő čąń űșę įțș přőčęșșőř įńșțęąď, ąfțęř ą %1$s&#160;MB ďőwńłőąď. ····· ····· ····· ····· ··]</string>
+    <string name="npu_cpu_get_computer">[Țhįș čőmpűțęř\'ș ŃPŰ čąń\'ț řűń țhę mőďęł. pkțįțő čąń űșę įțș přőčęșșőř įńșțęąď, ąfțęř ą %1$s&#160;MB ďőwńłőąď. ····· ····· ····· ····· ···]</string>
     <string name="manage_free_mb">[%1$s&#160;MB&#160;fřęę ···]</string>
     <string name="manage_free_gb">[%1$s&#160;GB&#160;fřęę ···]</string>
     <string name="manage_downloading">[Ďőwńłőąďįńg&#160;· %1$s őf %2$s&#160;MB ····· ···]</string>

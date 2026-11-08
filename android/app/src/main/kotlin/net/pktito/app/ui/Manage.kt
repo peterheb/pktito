@@ -170,7 +170,7 @@ fun Manage(
                         Kept(
                             "refused:${o.name}",
                             label,
-                            AnnotatedString(Editions.cpuWords(context)),
+                            AnnotatedString(Editions.cpuGetWords(context, o.bytes)),
                             o.taken,
                             delete,
                             true,

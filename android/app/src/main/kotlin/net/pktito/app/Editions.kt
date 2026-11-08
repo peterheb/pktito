@@ -175,5 +175,20 @@ object Editions {
             )
         )
 
+    /**
+     * The same where the processor's edition isn't here: pktito can use the processor once its
+     * bytes, the setup screen's Download (Offer.bytes), are here, nothing downloading by itself.
+     */
+    fun cpuGetWords(context: Context, bytes: Long): String =
+        context.getString(
+            kind(
+                context,
+                R.string.npu_cpu_get_phone,
+                R.string.npu_cpu_get_tablet,
+                R.string.npu_cpu_get_computer,
+            ),
+            mb(bytes),
+        )
+
     private const val TAG = "pktito"
 }

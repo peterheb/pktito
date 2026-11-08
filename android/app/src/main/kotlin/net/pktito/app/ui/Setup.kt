@@ -390,7 +390,7 @@ private fun Card(
             // (Offer.refused), not a model never downloaded
             if (!o.have && o.refused != null)
                 Text(
-                    Editions.cpuWords(LocalContext.current),
+                    Editions.cpuGetWords(LocalContext.current, o.bytes),
                     style = Type.small,
                     color = p.inkMuted,
                 )

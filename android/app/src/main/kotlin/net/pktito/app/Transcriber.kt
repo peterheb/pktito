@@ -303,7 +303,7 @@ object Transcriber {
                     // transcription waits for the whole file (again)
                     if (!whole.isFile) {
                         free()
-                        throw NpuFailed(failed(context, refused))
+                        throw NpuFailed(failed(context, refused, o.name))
                     }
                     if (refused) {
                         val app = context.applicationContext
@@ -350,15 +350,20 @@ object Transcriber {
     fun npuFailed(context: Context, why: String): String {
         val u = Models.usable(context)
         if (handle != 0L) free()
-        return failed(context, u?.graph != null && refuse(context, u, why))
+        return failed(context, u?.graph != null && refuse(context, u, why), u?.offer?.name)
     }
 
     /**
-     * What a slim model's failure on the NPU says: that the NPU can't run the model, or for a graph
-     * that wasn't the catalog's, that it is damaged, as Manage models then offers the catalog's.
+     * What a slim model's failure on the NPU says: that the NPU can't run the model, and the
+     * processor can after the whole file's download, the core's view of it after the refusal; or
+     * for a graph that wasn't the catalog's, that it is damaged, as Manage models then offers the
+     * catalog's.
      */
-    private fun failed(context: Context, refused: Boolean) =
-        if (refused) Editions.cpuWords(context) else context.getString(R.string.model_file_damaged)
+    private fun failed(context: Context, refused: Boolean, name: String?): String {
+        if (!refused) return context.getString(R.string.model_file_damaged)
+        val bytes = Models.catalog(context).find { it.name == name }?.bytes ?: 0
+        return Editions.cpuGetWords(context, bytes)
+    }
 
     /**
      * The NPU's refusal of u's graph (Engine.npu), or its failure in a transcription
