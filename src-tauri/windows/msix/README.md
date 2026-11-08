@@ -191,7 +191,8 @@ will not be used to evaluate your app during Microsoft Store onboarding".
 - **DPI awareness** (a warning): pktito-cli.exe declares none. It is a
   console program, with no window to scale; pktito-app.exe passed.
 
-0.9.2.4 hasn't been through the kit yet.
+The 0.9.6.0 bundle passed the kit (2026-11-05). The one test it failed was
+Blocked executables, the optional one 0.9.2.4 failed too.
 
 ## The icons
 
