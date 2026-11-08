@@ -13,6 +13,15 @@
 # or wav chooses). PKTITO_CLI names the pktito-cli to time, else the one on
 # the PATH, else the Mac app's.
 #
+# The model is AliceBench's own copy, in DIR/models, apart from the app's
+# models folder, which the app may change (from 0.9.7 it deletes the whole
+# .pkf once the Neural Engine or an NPU has run from the slim one,
+# docs/EDITIONS.md): the whole .pkf everywhere, and on a Mac also the Neural
+# Engine's slim file and encoder, each downloaded once and again only when
+# the catalog's changes (pktito-cli download --to). A Mac times the Neural
+# Engine's, as the app runs; ALICEBENCH_CPU=1 times the CPU's there. A
+# pktito-cli before 0.9.7 has no --to, and uses the app's models as before.
+#
 # The chapters are FLAC, 16 kHz mono, made from LibriVox's 64 kbps MP3s with
 #     ffmpeg -i wonderland_ch_NN_64kb.mp3 -map 0:a -map_metadata -1 \
 #         -fflags +bitexact -flags:a +bitexact -ac 1 -ar 16000 \
@@ -84,11 +93,25 @@ echo "$chapters" | while read -r stem flac wav _; do
 done
 for stem in $(echo "$chapters" | cut -d' ' -f1); do files="$files $dir/$stem.$format"; done
 
-"$cli" download parakeet-tdt-0.6b-v2 >/dev/null
+name=parakeet-tdt-0.6b-v2
+models=$dir/models
+mac=$([ "$(uname)" = Darwin ] && echo 1 || true)
+cpu=$([ -n "$mac" ] && [ "${ALICEBENCH_CPU:-}" = 1 ] && echo --cpu || true)
+"$cli" download --cpu --to "$models" $name >/dev/null 2>&1 || true
+if [ -f "$models/$name.pkf" ]; then
+    model=$models/$name.pkf
+    if [ -n "$mac" ]; then
+        "$cli" download --to "$models" $name >/dev/null
+        [ -n "$cpu" ] || model=$models/$name-slim.pkf
+    fi
+else
+    "$cli" download $name >/dev/null
+    model=$name
+fi
 ref=$(cd "$(dirname "$0")" && pwd)/alicebench/ref
 out=$dir/result.json
 # shellcheck disable=SC2086
-"$cli" bench -m parakeet-tdt-0.6b-v2 --json --ref "$ref" $files > "$out"
+"$cli" bench -m "$model" $cpu --json --ref "$ref" $files > "$out"
 
 # each chapter's speed and its transcript's score, from bench's JSON (one
 # key a line; a file's keys at 6 spaces, its score's at 8, the whole

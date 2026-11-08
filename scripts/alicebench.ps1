@@ -5,7 +5,10 @@
 #
 # DIR keeps the chapters (default %LOCALAPPDATA%\alicebench-v1); PKTITO_CLI
 # names the pktito-cli to time, else the one on the PATH (the app's installer
-# puts it there).
+# puts it there). The model is AliceBench's own copy of the whole .pkf, in
+# DIR\models, apart from the app's models folder, which the app may change
+# (alicebench.sh says why); a pktito-cli before 0.9.7 has no --to, and uses
+# the app's models as before.
 param([string]$Dir = (Join-Path $env:LOCALAPPDATA 'alicebench-v1'))
 $ErrorActionPreference = 'Stop'
 
@@ -43,12 +46,23 @@ foreach ($c in $chapters) {
     Move-Item -Force "$f.part" $f
 }
 
-& $cli download parakeet-tdt-0.6b-v2 | Out-Null
-if ($LASTEXITCODE) { exit 1 }
+$name = 'parakeet-tdt-0.6b-v2'
+$models = Join-Path $Dir 'models'
+$model = Join-Path $models "$name.pkf"
+# an older pktito-cli refuses --to on stderr, which Windows PowerShell 5.1
+# makes a stopping error under 'Stop'
+$ErrorActionPreference = 'Continue'
+& $cli download --cpu --to $models $name 2>$null | Out-Null
+$ErrorActionPreference = 'Stop'
+if (-not (Test-Path $model)) {
+    & $cli download $name | Out-Null
+    if ($LASTEXITCODE) { exit 1 }
+    $model = $name
+}
 $files = $chapters | ForEach-Object { Join-Path $Dir $_.Name }
 # each transcript scored against the reference beside this script (alicebench.sh says how)
 $ref = Join-Path $PSScriptRoot 'alicebench\ref'
-$json = & $cli bench -m parakeet-tdt-0.6b-v2 --json --ref $ref @files
+$json = & $cli bench -m $model --json --ref $ref @files
 $json | Set-Content (Join-Path $Dir 'result.json')
 $r = $json | Out-String | ConvertFrom-Json
 

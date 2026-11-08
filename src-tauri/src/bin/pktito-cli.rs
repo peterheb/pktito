@@ -5,7 +5,7 @@
 //! same bytes. It comes with the app, beside the window's program: the
 //! bundles carry every program in src/bin.
 
-use pktito_app::{awake, decode, download, format, model, pktito, score, transcribe};
+use pktito_app::{awake, decode, download, editions, format, model, pktito, score, transcribe};
 use std::fs;
 use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
@@ -17,7 +17,8 @@ const USAGE: &str = "\
 usage: pktito-cli [options] FILE...        transcribe
        pktito-cli bench [options] PATH...  time a transcription
        pktito-cli models                   list the models, here and in use
-       pktito-cli download [--cpu] MODEL   download a model
+       pktito-cli download [--cpu] [--to DIR] MODEL
+                                           download a model
 FILE is audio or video; one goes to stdout, several each beside its file.
 PATH is a file or a folder of them.
 
@@ -29,6 +30,8 @@ PATH is a file or a folder of them.
   -t, --threads N     threads (default: one per core)
       --cpu           on a Mac, the CPU instead of the Neural Engine; with
                       download, the model for any CPU
+      --to DIR        with download, into DIR, apart from the app's models
+                      (which the app may delete: AliceBench keeps its own)
   -q, --quiet         no progress
 
 bench takes -m, -t, -q, --cpu and:
@@ -80,12 +83,17 @@ fn run(args: &[String]) -> Result<i32, String> {
         }
         Some("models") => return models(),
         Some("download") => {
-            let cpu = args[1..].iter().any(|a| a == "--cpu");
-            let name = args[1..]
-                .iter()
-                .find(|a| *a != "--cpu")
-                .ok_or("download needs a model name (see pktito-cli models)")?;
-            return fetch(name, cpu || !cfg!(target_os = "macos"));
+            let (mut cpu, mut to, mut name) = (false, None, None);
+            let mut rest = args[1..].iter();
+            while let Some(a) = rest.next() {
+                match a.as_str() {
+                    "--cpu" => cpu = true,
+                    "--to" => to = Some(PathBuf::from(rest.next().ok_or("--to needs a folder")?)),
+                    _ => name = Some(a),
+                }
+            }
+            let name = name.ok_or("download needs a model name (see pktito-cli models)")?;
+            return fetch(name, cpu || !cfg!(target_os = "macos"), to);
         }
         _ => {}
     }
@@ -435,10 +443,9 @@ fn encoder(
 ) -> Result<&'static str, String> {
     let whole = model.has_encoder();
     let cpu_or = |why: String| if whole { Ok("CPU") } else { Err(why) };
-    let Some(data) = model::data_dir() else {
-        return cpu_or("no data folder for the app on this system".into());
-    };
-    let dir = data.join("models");
+    // the catalog model's file, whole or slim, in the app's models or any
+    // other folder (download --to): its encoder is the one beside it
+    let dir = path.parent().unwrap_or(Path::new(".")).to_path_buf();
     let e = model::CATALOG.iter().find(|e| {
         model::same_file(&model::file_in(&dir, e), path)
             || model::same_file(&model::slim_in(&dir, e), path)
@@ -642,18 +649,22 @@ fn models() -> Result<i32, String> {
 /// A model downloaded into the app's models folder, as the window does it:
 /// resuming what a stopped one kept, trying again, and checked against its
 /// size and SHA-256. The app then uses it if it had none.
-fn fetch(m: &str, cpu: bool) -> Result<i32, String> {
+fn fetch(m: &str, cpu: bool, to: Option<PathBuf>) -> Result<i32, String> {
     let e = entry(m)?;
     let data = model::data_dir().ok_or("no data folder for the app on this system")?;
-    let dir = data.join("models");
+    let dir = to.clone().unwrap_or_else(|| data.join("models"));
+    // here and the catalog's, by its record (editions::have): a copy kept
+    // for a bench is the one the catalog names, or is downloaded again
+    let current = |p: &model::Part| editions::have(&dir, p) == editions::Have::Current;
     // on a Mac, as the iOS app has it: the model file without its encoder
     // and its Core ML encoder, 559 MB for v2 where the whole is 624, the
     // encoder on the Neural Engine (3x the CPU's speed on an M4 Pro,
     // AliceBench); --cpu, or anywhere else, the whole model
+    let ne = e.coreml();
     let here = if cpu {
-        model::have(&dir, e)
+        current(e.whole())
     } else {
-        model::have_neural(&dir, e)
+        ne.is_some_and(|ne| current(&ne.model) && ne.encoder.as_ref().is_some_and(current))
     };
     let at = if cpu {
         model::file_in(&dir, e)
@@ -664,30 +675,31 @@ fn fetch(m: &str, cpu: bool) -> Result<i32, String> {
         fs::create_dir_all(&dir)
             .map_err(|err| format!("couldn't make {}: {err}", dir.display()))?;
         if cpu {
-            fetch_file(&model::Wanted::model(&dir, e))?;
+            fetch_file(&model::Wanted::part(&dir, e, e.whole()))?;
         } else {
-            let ne = e
-                .coreml()
-                .ok_or_else(|| format!("{} has no Neural Engine edition", e.name))?;
-            let slim = model::Wanted::part(&dir, e, &ne.model);
-            if !slim.here() {
-                fetch_file(&slim)?;
+            let ne = ne.ok_or_else(|| format!("{} has no Neural Engine edition", e.name))?;
+            if !current(&ne.model) {
+                fetch_file(&model::Wanted::part(&dir, e, &ne.model))?;
             }
             let enc = ne
                 .encoder
                 .as_ref()
                 .ok_or("a Neural Engine edition without its encoder")?;
-            let archive = model::Wanted::part(&dir, e, enc);
-            if !model::have_encoder(&dir, e) {
-                let got = fetch_file(&archive)?;
+            if !current(enc) {
+                let got = fetch_file(&model::Wanted::part(&dir, e, enc))?;
                 unpack(&got, &model::encoder_in(&dir, e))?;
             }
         }
+        // a file that replaced an older one, put in place: nothing here holds it
+        editions::settle(&dir, e)?;
     }
     // here already, from the window or a copy: in use, too, if none is, as
     // one just downloaded is (with no settings, the model there was "no
-    // model yet" after a download of it said where it was)
-    use_if_none(&data, e)?;
+    // model yet" after a download of it said where it was); not one put
+    // elsewhere with --to
+    if to.is_none() {
+        use_if_none(&data, e)?;
+    }
     println!("{}", at.display());
     Ok(0)
 }
