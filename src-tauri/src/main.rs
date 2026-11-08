@@ -90,10 +90,8 @@ fn data_dir(app: &AppHandle) -> Result<PathBuf, String> {
 
 /// The Microsoft Store edition: the same exes as the setup program's,
 /// wrapped in an MSIX package, so they ask Windows whether they run from
-/// one. In a package, AppData is redirected into the package's own storage,
-/// which Explorer outside it does not show and uninstalling deletes: the
-/// page hides the model's Show in File Explorer and says so in Privacy.
-/// Asked with no buffer, the call answers ERROR_INSUFFICIENT_BUFFER in a
+/// one, for About; where its data is, data_in_package says. Asked with no
+/// buffer, the call answers ERROR_INSUFFICIENT_BUFFER in a
 /// package and APPMODEL_ERROR_NO_PACKAGE outside one (appmodel.h).
 #[cfg(target_os = "windows")]
 fn store_edition() -> bool {
@@ -110,6 +108,44 @@ fn store_edition() -> bool {
 
 #[cfg(not(target_os = "windows"))]
 fn store_edition() -> bool {
+    false
+}
+
+/// Whether the data folder is the package's own, which Explorer outside
+/// the package does not show and uninstalling deletes; then the page hides
+/// the model's Show in File Explorer and says so in Privacy. Windows
+/// redirects only a folder the package makes: where the setup program's
+/// copy made %APPDATA%\net.pktito.app first, the Store's copy reads and
+/// writes that real folder (the signed test package on the 9950X,
+/// 2026-10-26). The package's copy is under its LocalCache, which is not
+/// redirected, and the package sees the two merged, its own first. So the
+/// data is its own when that copy is there, or when no folder is there
+/// yet, as the first write will make one in the package.
+#[cfg(target_os = "windows")]
+fn data_in_package(data: &Path) -> bool {
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetCurrentPackageFamilyName(len: *mut u32, name: *mut u16) -> i32;
+    }
+    let mut name = [0u16; 65]; // PACKAGE_FAMILY_NAME_MAX_LENGTH + 1, appmodel.h
+    let mut len = name.len() as u32;
+    if unsafe { GetCurrentPackageFamilyName(&mut len, name.as_mut_ptr()) } != 0 {
+        return false; // not in a package
+    }
+    let family = String::from_utf16_lossy(&name[..len.saturating_sub(1) as usize]);
+    let (Some(local), Some(folder)) = (std::env::var_os("LOCALAPPDATA"), data.file_name()) else {
+        return false;
+    };
+    let own = Path::new(&local)
+        .join("Packages")
+        .join(family)
+        .join(r"LocalCache\Roaming")
+        .join(folder);
+    own.exists() || !data.exists()
+}
+
+#[cfg(not(target_os = "windows"))]
+fn data_in_package(_: &Path) -> bool {
     false
 }
 
@@ -156,9 +192,12 @@ struct Status {
     platform: &'static str,
     /// Running from the Microsoft Store's package (store_edition).
     store: bool,
+    /// The data folder is that package's own (data_in_package).
+    data_in_package: bool,
     /// The file manager can show the models' folder, which the model menu
-    /// offers beside Manage models: not from the Store's package, whose
-    /// storage Explorer outside it does not show.
+    /// offers beside Manage models: not where the data is the Store
+    /// package's own (data_in_package), which Explorer outside the package
+    /// does not show.
     reveal: bool,
     media: &'static [&'static str],
     video: &'static [&'static str],
@@ -283,6 +322,7 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, Problem>
         model::save_settings(&data, &s)?;
     }
     let dir = data.join("models");
+    let in_package = data_in_package(&data);
     let download = state
         .download
         .lock()
@@ -313,7 +353,8 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, Problem>
         backend: pktito::backend(),
         platform: std::env::consts::OS,
         store: store_edition(),
-        reveal: !store_edition(),
+        data_in_package: in_package,
+        reveal: !in_package,
         media: decode::MEDIA,
         video: VIDEO,
     })

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  pktito for the Microsoft Store: the setup program's two exes, unchanged,
+  in an MSIX package. scripts/msix.ps1 fills in the @...@ values and packs
+  it; the exes tell they are packaged at run time (main.rs, store_edition).
+
+  What the setup program does that this does instead (windows/hooks.nsh):
+  - .pkf as "pktito model": the file type association below.
+  - pktito-cli on the PATH: an execution alias, which Windows puts on the
+    PATH itself. The alias names pktito-cli.exe and a console subsystem
+    under the one Application, as the Certification Kit fails a package of
+    two ("Application count", 2026-10-26). A console alias needs its
+    Application to allow many instances, or makeappx refuses the manifest;
+    the window still keeps to one, by tauri-plugin-single-instance.
+  The data folder in AppData is the package's own, which uninstalling
+  deletes, unless the setup program's copy made it first (README.md, "Where
+  the data is"). runFullTrust is the one capability: a desktop program's.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
+  xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap5 desktop4 rescap">
+  <Identity Name="@NAME@" Publisher="@PUBLISHER@" Version="@VERSION@" ProcessorArchitecture="@ARCH@" />
+  <Properties>
+    <DisplayName>@DISPLAY@</DisplayName>
+    <PublisherDisplayName>@PUBLISHER_DISPLAY@</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+  <Dependencies>
+    <!-- Windows 10 1809, the oldest MSIX's desktop extensions run on; the
+         window also needs the WebView2 runtime, which a package cannot
+         install (Windows 11 has it, as does Windows 10 with Edge updates) -->
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+  <Applications>
+    <Application Id="pktito" Executable="pktito-app.exe" EntryPoint="Windows.FullTrustApplication" desktop4:SupportsMultipleInstances="true">
+      <uap:VisualElements DisplayName="@DISPLAY@" Description="Speech to text on this computer"
+        BackgroundColor="transparent" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png" />
+      <Extensions>
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="pktitomodel">
+            <uap:DisplayName>pktito model</uap:DisplayName>
+            <uap:Logo>Assets\model.png</uap:Logo>
+            <uap:SupportedFileTypes>
+              <uap:FileType>.pkf</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap:FileTypeAssociation>
+        </uap:Extension>
+        <uap5:Extension Category="windows.appExecutionAlias" Executable="pktito-cli.exe" EntryPoint="Windows.FullTrustApplication">
+          <uap5:AppExecutionAlias desktop4:Subsystem="console">
+            <uap5:ExecutionAlias Alias="pktito-cli.exe" />
+          </uap5:AppExecutionAlias>
+        </uap5:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>
