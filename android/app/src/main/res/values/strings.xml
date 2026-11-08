@@ -187,6 +187,9 @@
     <string name="manage_faster_text_tablet">The %1$s model on this tablet\'s NPU&#160;· %2$s&#160;MB&#160;download</string>
     <string name="manage_faster_text_computer">The %1$s model on this computer\'s NPU&#160;· %2$s&#160;MB&#160;download</string>
     <string name="manage_get">Download</string>
+    <string name="manage_update">Newer build</string>
+    <string name="manage_update_text">A newer build of the %1$s model&#160;· %2$s&#160;MB&#160;download</string>
+    <string name="manage_update_get">Update</string>
     <!-- the NPU refused the model, which goes on with the processor, as iOS's prepare_cpu says it of the Neural Engine -->
     <string name="npu_cpu_phone">This phone\'s NPU can\'t run the model, so pktito uses its processor instead</string>
     <string name="npu_cpu_tablet">This tablet\'s NPU can\'t run the model, so pktito uses its processor instead</string>

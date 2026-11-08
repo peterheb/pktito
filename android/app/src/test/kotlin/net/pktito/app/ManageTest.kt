@@ -42,12 +42,14 @@ class ManageTest {
             key,
             listOf("en"),
             "",
-            Part(File("$name.pkf"), 624_480_196, "", have, bytes, bytes),
-            Part(File("$name-slim.pkf"), 12_115_524, "", here = false),
+            "cpu",
+            if (have) Runs("cpu", File("$name.pkf"), null) else null,
             null,
-            Edition.CPU,
-            if (have) Edition.CPU else null,
-            0,
+            if (have) null else Get(Get.DOWNLOAD, 624_480_196, 0, listOf("$name.pkf")),
+            624_480_196,
+            listOf(File("$name.pkf")),
+            Part(File("$name.pkf"), 624_480_196, ""),
+            taken = bytes,
         )
     }
 

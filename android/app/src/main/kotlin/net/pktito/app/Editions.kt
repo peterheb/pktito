@@ -9,26 +9,19 @@ import android.util.Log
 import java.io.File
 import java.io.IOException
 import kotlin.concurrent.thread
-
-/** Which of a model's two editions a transcriber runs (iOS's Edition). */
-enum class Edition {
-    /** the slim model file and the graph compiled for this phone's NPU */
-    NPU,
-
-    /** the whole model file, its encoder pktito's own on the CPU */
-    CPU,
-}
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
- * Which edition of a model this phone runs, chosen for whoever uses the app, as iOS's
- * Editions.swift chooses: the NPU's - the slim model file and the graph a PC compiled for the
- * phone's chip (model.rs, Graph), 727 MB for English where the whole file is 624; with the NPU's
+ * This phone as the core asks for it (editions.rs, Device), which chooses the edition of a model it
+ * runs for every platform (docs/EDITIONS.md): the NPU's - the slim model file and the graph a PC
+ * compiled for the phone's chip, 727 MB for English where the whole file is 624; with the NPU's
  * encoder the app on a Galaxy S24 Ultra transcribed chapter 1 of Alice in 3.2 s (2026-11-03), where
  * its CPU took 22.6 (2026-11-02) - where the catalog has a graph for the chip and the NPU has not
- * refused that graph here, on this system with this build of the app; else the CPU's, the whole
- * model file. The chip is QNN's word for it (Engine.npuChip), asked once a system and build, off
- * the main thread: QNN loads the NPU's own library to say, 137 to 168 ms on the Googlebook
- * (2026-11-03).
+ * refused it here; else the CPU's, the whole model file. The chip is QNN's word for it
+ * (Engine.npuChip), asked once a system and build, off the main thread: QNN loads the NPU's own
+ * library to say, 137 to 168 ms on the Googlebook (2026-11-03). And the NPU's skels, which this
+ * copies out for QNN.
  */
 object Editions {
     /** The chip, "" for none; null until it is known for this system and build. */
@@ -135,26 +128,26 @@ object Editions {
     }
 
     /**
-     * Why the NPU refused name's graph here, on this system with this build of the app, or null: a
-     * new system or build may run what this one could not, as iOS's failure has it, and so may a
-     * new graph, so the graph's SHA-256 is kept with them.
+     * The phone for the core, as JSON (editions.rs, Device): Android and its API level, the chip
+     * where QNN found an NPU (null while that isn't known yet, and the NPU is none), and what a
+     * refusal holds for, this system and this install of the app (here). Any thread.
      */
-    fun failure(context: Context, name: String, graph: Part?): String? {
-        if (graph == null) return null
-        val s = prefs(context).getString("npu_failed.$name", null) ?: return null
-        val key = "${here(context)} ${graph.sha256}: "
-        return if (s.startsWith(key)) s.substring(key.length) else null
-    }
+    fun device(context: Context): String =
+        JSONObject()
+            .put("system", "android")
+            .put("os", JSONArray().put(Build.VERSION.SDK_INT).put(0))
+            .put("qnn", chip(context)?.takeIf { it.isNotEmpty() } ?: JSONObject.NULL)
+            .put("here", here(context))
+            .toString()
 
     /**
-     * The NPU's refusal of name's graph, remembered for this system, build and graph: until one of
-     * them changes, the model goes to its CPU's edition at once.
+     * 0.9.6's refusals, kept in the preferences under npu_failed.<model> and keyed on its build,
+     * which no later one is: forgotten, the core keeping them now (models/refusals.json).
      */
-    fun refused(context: Context, name: String, graph: Part, why: String) {
-        prefs(context)
-            .edit()
-            .putString("npu_failed.$name", "${here(context)} ${graph.sha256}: $why")
-            .apply()
+    fun forgetOld(context: Context) {
+        val p = prefs(context)
+        val old = p.all.keys.filter { it.startsWith("npu_failed.") }
+        if (old.isNotEmpty()) p.edit().apply { old.forEach(::remove) }.apply()
     }
 
     /**

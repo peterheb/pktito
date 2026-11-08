@@ -1,19 +1,21 @@
 package net.pktito.app
 
 import java.io.File
-import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
  * Which model is in use once Manage models deletes the one that was (Models.next): another
- * downloaded, the catalog model an own file stood in for first, and none once none is here. Which
- * graph a chip gets (Models.graphFor): its own, else one of its Hexagon's that fits its VTCM, else
- * none. And what a model's files here load and what Faster fetches (Offer.file, fasterParts).
+ * downloaded, the catalog model an own file stood in for first, and none once none is here. And the
+ * core's view of a model as Kotlin reads it (Models.offer, editions.rs View): what runs, the offer,
+ * a refusal with nothing left to run, and the whole file among its files. Which edition fits which
+ * chip is the core's, and its tests' (editions.rs).
  */
 @RunWith(RobolectricTestRunner::class)
 class ModelsTest {
@@ -23,12 +25,14 @@ class ModelsTest {
             name,
             listOf("en"),
             "",
-            Part(File("$name.pkf"), 1, "", here = have),
-            Part(File("$name-slim.pkf"), 1, "", here = false),
+            "cpu",
+            if (have) Runs("cpu", File("$name.pkf"), null) else null,
             null,
-            Edition.CPU,
-            if (have) Edition.CPU else null,
-            0,
+            null,
+            1,
+            emptyList(),
+            Part(File("$name.pkf"), 1, ""),
+            taken = 0,
         )
 
     @Test
@@ -60,97 +64,115 @@ class ModelsTest {
     fun anOwnFileAloneLeavesNone() =
         assertNull(Models.next(listOf(offer("v2", false), offer("v3", false)), "v2", null))
 
-    // the catalog's chips (model.rs, Graph) and their systems: the SM8650's, the SM8750's, the
-    // SM8850's, the X1E80100's, and the X2 Elite's, for Windows alone
-    private fun graph(chip: String, vararg systems: String) =
-        JSONObject().put("chip", chip).put("systems", JSONArray(systems.toList()))
-
-    private val graphs =
-        JSONArray(
-            listOf(
-                graph("57,75,8,1,0", "android"),
-                graph("69,79,8,1,0", "android"),
-                graph("88,81,8,1,1", "windows"),
-                graph("87,81,8,1,0", "android"),
-                graph("60,73,8,1,1", "android", "windows"),
-            )
-        )
-
-    private fun graphOf(chip: String?) = Models.graphFor(graphs, chip)?.getString("chip")
-
-    @Test fun aChipGetsItsOwnGraph() = assertEquals("69,79,8,1,0", graphOf("69,79,8,1,0"))
-
-    // QNN's SoC 43, the SM8550, a v73 with 8 MB
-    @Test fun anotherSocGetsItsHexagonsGraph() = assertEquals("60,73,8,1,1", graphOf("43,73,8,1,0"))
-
-    @Test fun lessVtcmThanTheGraphsGetsNone() = assertNull(graphOf("43,73,4,1,0"))
-
-    // QNN's SoC 97, the SM8845, a v81: the S26's graph, never the PC's listed before it
-    @Test
-    fun anotherV81PhoneGetsThePhonesGraph() = assertEquals("87,81,8,1,0", graphOf("97,81,8,1,0"))
-
-    @Test
-    fun aPcsChipOnAPhoneGetsThePhonesGraph() = assertEquals("87,81,8,1,0", graphOf("88,81,8,1,1"))
-
-    // QNN's SoC 36, the SM8450, a v69
-    @Test fun anotherHexagonGetsNone() = assertNull(graphOf("36,69,8,1,0"))
-
-    @Test
-    fun noChipGetsNone() {
-        assertNull(graphOf(null))
-        assertNull(graphOf(""))
-        assertNull(graphOf("75"))
-    }
+    private val dir = File("/models")
 
     /**
-     * The English model with these of its files here, its edition and Faster's bytes as
-     * Models.catalog makes them.
+     * The English model as the core's view gives it (editions.rs, View, through Engine.catalog):
+     * its CPU's edition and the S24's, with what runs, why the NPU refused and the offer.
      */
-    private fun english(whole: Boolean, slim: Boolean, graph: Boolean): Offer {
-        val usable = if (graph && (slim || whole)) Edition.NPU else if (whole) Edition.CPU else null
-        return Offer(
-            "v2",
-            "english",
-            listOf("en"),
-            "",
-            Part(File("v2.pkf"), 1, "", here = whole),
-            Part(File("v2-slim.pkf"), 1, "", here = slim),
-            Part(File("v2-sm8650.qnn"), 1, "", here = graph),
-            Edition.NPU,
-            usable,
-            if (usable == Edition.CPU) listOf(slim, graph).count { !it }.toLong() else 0,
+    private fun view(runs: String?, refused: String?, offer: String?) =
+        Models.offer(
+            dir,
+            JSONObject(
+                """
+                {"name": "parakeet-tdt-0.6b-v2", "key": "english", "label": "English",
+                 "about": "", "languages": ["en"], "accuracy": "",
+                 "editions": [
+                   {"id": "cpu", "runtime": {"kind": "cpu"},
+                    "model": {"file": "v2.pkf", "bytes": 624480196, "sha256": "8bfa"},
+                    "encoder": null},
+                   {"id": "qnn-sm8650",
+                    "runtime": {"kind": "qnn", "chip": "57,75,8,1,0", "systems": ["android"]},
+                    "model": {"file": "v2-slim.pkf", "bytes": 12115524, "sha256": "a1"},
+                    "encoder": {"file": "v2-sm8650.qnn", "bytes": 714506856, "sha256": "40a5"}}
+                 ],
+                 "chosen": "qnn-sm8650", "runs": ${runs ?: "null"},
+                 "refused": ${refused?.let { "\"$it\"" } ?: "null"},
+                 "offer": ${offer ?: "null"}, "bytes": 726622380}
+                """
+            ),
         )
+
+    @Test
+    fun theNpusEditionRunsFromTheSlimFileWithItsGraph() {
+        val o =
+            view(
+                """{"edition": "qnn-sm8650", "model": "/models/v2-slim.pkf",
+                    "encoder": "/models/v2-sm8650.qnn"}""",
+                null,
+                null,
+            )
+        assertTrue(o.have)
+        assertEquals("v2-slim.pkf", o.runs?.model?.name)
+        assertEquals("v2-sm8650.qnn", o.runs?.graph?.name)
+        assertTrue(o.runs!!.npu)
+        assertEquals(0L, o.faster)
+        assertEquals(0L, o.update)
     }
 
     @Test
-    fun theNpusEditionLoadsTheSlimFile() {
-        assertEquals("v2-slim.pkf", english(whole = true, slim = true, graph = true).file.name)
-        assertEquals("v2-slim.pkf", english(whole = false, slim = true, graph = true).file.name)
+    fun theCpusEditionRunsWithNoGraph() {
+        val o =
+            view(
+                """{"edition": "cpu", "model": "/models/v2.pkf", "encoder": null}""",
+                null,
+                """{"kind": "faster", "bytes": 726622380, "kept": 0,
+                    "files": ["v2-slim.pkf", "v2-sm8650.qnn"]}""",
+            )
+        assertNull(o.runs?.graph)
+        assertFalse(o.runs!!.npu)
+        assertEquals(726_622_380L, o.faster)
+        assertEquals(listOf("v2-slim.pkf", "v2-sm8650.qnn"), o.get?.files)
     }
 
-    // the whole file's encoder beside the graph, as Faster left it before the slim file came with
-    // it
     @Test
-    fun aGraphBesideTheWholeFileAloneLoadsTheWholeFile() =
-        assertEquals("v2.pkf", english(whole = true, slim = false, graph = true).file.name)
+    fun anUpdateIsItsOwnOffer() {
+        val o =
+            view(
+                """{"edition": "qnn-sm8650", "model": "/models/v2-slim.pkf",
+                    "encoder": "/models/v2-sm8650.qnn"}""",
+                null,
+                """{"kind": "update", "bytes": 714506856, "kept": 1000,
+                    "files": ["v2-sm8650.qnn"]}""",
+            )
+        assertEquals(714_506_856L, o.update)
+        assertEquals(0L, o.faster)
+        assertEquals(0L, o.partial)
+        assertEquals(1000L, o.get?.kept)
+    }
 
     @Test
-    fun theCpusEditionLoadsTheWholeFile() =
-        assertEquals("v2.pkf", english(whole = true, slim = true, graph = false).file.name)
+    fun aRefusalWithNothingLeftToRunSaysWhy() {
+        val o =
+            view(
+                null,
+                "graphExecute 6033",
+                """{"kind": "download", "bytes": 624480196, "kept": 0, "files": ["v2.pkf"]}""",
+            )
+        assertFalse(o.have)
+        assertEquals("graphExecute 6033", o.refused)
+        assertEquals(624_480_196L, o.bytes)
+    }
 
     @Test
-    fun fasterFetchesTheNpusFilesNotHere() {
-        assertEquals(
-            listOf("v2-slim.pkf", "v2-sm8650.qnn"),
-            english(whole = true, slim = false, graph = false).fasterParts.map { it.file.name },
-        )
-        assertEquals(
-            listOf("v2-sm8650.qnn"),
-            english(whole = true, slim = true, graph = false).fasterParts.map { it.file.name },
-        )
-        assertEquals(
-            emptyList<String>(),
-            english(whole = true, slim = true, graph = true).fasterParts.map { it.file.name },
-        )
+    fun aModelNeverDownloadedHasNoRefusal() {
+        val o =
+            view(
+                null,
+                null,
+                """{"kind": "download", "bytes": 726622380, "kept": 5,
+                    "files": ["v2-slim.pkf", "v2-sm8650.qnn"]}""",
+            )
+        assertNull(o.refused)
+        assertEquals(726_622_380L, o.bytes)
+        assertEquals(5L, o.partial)
+    }
+
+    @Test
+    fun itsFilesAreEveryEditionsAndTheWholeOneIsTheCpus() {
+        val o = view(null, null, null)
+        assertEquals(listOf("v2.pkf", "v2-slim.pkf", "v2-sm8650.qnn"), o.files.map { it.name })
+        assertEquals(File(dir, "v2.pkf"), o.whole.file)
+        assertEquals("8bfa", o.whole.sha256)
     }
 }

@@ -160,8 +160,26 @@ fun Manage(
                             a.delete(o)
                         }
                     )
-                    if (o.faster > 0) add(faster(context, o, label, d, a))
+                    if (o.faster > 0 || o.update > 0) add(more(context, o, label, d, a))
                 }
+                // the NPU refused it, and the CPU's edition, its whole file, isn't
+                // here: the slim file's row, to delete, the setup screen's Download
+                // being for the whole one
+                o.refused != null && d == null && o.partial == 0L && o.taken > 0 ->
+                    add(
+                        Kept(
+                            "refused:${o.name}",
+                            label,
+                            AnnotatedString(Editions.cpuWords(context)),
+                            o.taken,
+                            delete,
+                            true,
+                            res.getString(R.string.manage_ask_title, label) to
+                                res.getString(R.string.manage_ask_text, mb(o.taken)),
+                        ) {
+                            a.delete(o)
+                        }
+                    )
                 d != null && d.going ->
                     add(
                         Kept(
@@ -299,13 +317,15 @@ fun Manage(
 }
 
 /**
- * The offer of a model here on the CPU in the NPU's edition, the slim file and the graph, which
- * take the whole file's place once the NPU runs the graph (Offer.faster): Faster on this phone (or
- * tablet, or computer: Editions.kind), and its download's megabytes, then how the download goes,
- * with Stop, as the downloads under way above; what a download of it that stopped kept is the model
- * row's, counted and deleted with the rest of the model's files.
+ * What Manage models offers for a model here (Offer.get): on the CPU, its NPU's edition, the slim
+ * file and the graph, which take the whole file's place once the NPU runs the graph (Offer.faster):
+ * Faster on this phone (or tablet, or computer: Editions.kind); or the catalog's newer build of a
+ * file of the edition that runs (Offer.update), which takes the older one's place once no
+ * transcription has the model (Transcriber.model). Its download's megabytes, then how the download
+ * goes, with Stop, as the downloads under way above; what a download of it that stopped kept is the
+ * model row's, counted and deleted with the rest of the model's files.
  */
-private fun faster(
+private fun more(
     context: Context,
     o: Offer,
     label: String,
@@ -313,17 +333,21 @@ private fun faster(
     a: ManageActions,
 ): Kept {
     val res = context.resources
+    val update = o.update > 0
     val title =
-        res.getString(
-            Editions.kind(
-                context,
-                R.string.manage_faster_phone,
-                R.string.manage_faster_tablet,
-                R.string.manage_faster_computer,
+        if (update) res.getString(R.string.manage_update)
+        else
+            res.getString(
+                Editions.kind(
+                    context,
+                    R.string.manage_faster_phone,
+                    R.string.manage_faster_tablet,
+                    R.string.manage_faster_computer,
+                )
             )
-        )
-    val kept = o.fasterParts.sumOf { it.kept }
-    val key = "faster:${o.name}"
+    val bytes = if (update) o.update else o.faster
+    val kept = o.get?.kept ?: 0
+    val key = "${if (update) "update" else "faster"}:${o.name}"
     val get = { a.faster(o) }
     return when {
         d != null && d.going ->
@@ -353,10 +377,21 @@ private fun faster(
                 key,
                 title,
                 AnnotatedString(
-                    res.getString(R.string.manage_paused, mb(d?.got ?: kept), mb(o.faster))
+                    res.getString(R.string.manage_paused, mb(d?.got ?: kept), mb(bytes))
                 ),
                 0,
                 res.getString(R.string.download_resume),
+                true,
+                null,
+                get,
+            )
+        update ->
+            Kept(
+                key,
+                title,
+                AnnotatedString(res.getString(R.string.manage_update_text, label, mb(bytes))),
+                0,
+                res.getString(R.string.manage_update_get),
                 true,
                 null,
                 get,
@@ -372,7 +407,7 @@ private fun faster(
             Kept(
                 key,
                 title,
-                AnnotatedString(res.getString(more, label, mb(o.faster))),
+                AnnotatedString(res.getString(more, label, mb(bytes))),
                 0,
                 res.getString(R.string.manage_get),
                 true,

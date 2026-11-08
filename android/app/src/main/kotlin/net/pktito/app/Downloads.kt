@@ -88,9 +88,9 @@ class Download(
  * Android 14 a user-initiated data transfer job (DownloadJob), Android's way for a download the
  * person asked for, with a network as its condition; before it a foreground service
  * (DownloadService). Its progress is in a notification as well as on the screen. One at a time: the
- * screen offers no second while one is shown. It fetches the files of the model's edition for this
- * phone (Offer.parts), or for a model here on the CPU, its graph for the NPU alone (Manage models,
- * Faster), each checked in turn, their bytes counted as one.
+ * screen offers no second while one is shown. It fetches the files of what Manage models offers for
+ * the model (Offer.get): the edition chosen for this phone, or for a model here the NPU's edition's
+ * files (Faster) or an update's, each checked in turn, their bytes counted as one.
  */
 object Downloads {
     /**
@@ -118,31 +118,24 @@ object Downloads {
         @Synchronized get() = worker?.isAlive == true
 
     /**
-     * Whether the download shown is of a model here, which can only be its NPU's edition (Manage
-     * models, Faster): Manage models shows it, not the setup screen, and the model in use stays in
-     * use.
+     * Whether the download shown is of a model here, its NPU's edition or an update (Manage models,
+     * Faster and Update): Manage models shows it, not the setup screen, and the model in use stays
+     * in use.
      */
     val faster: Boolean
         get() = state?.let { d -> Models.offers.find { it.name == d.name }?.have } == true
 
     /**
-     * The files a download of o fetches: its edition's, or for a model here on the CPU, the NPU's
-     * edition's that make it faster (Offer.fasterParts).
-     */
-    fun parts(o: Offer): List<Part> = if (o.have) o.fasterParts else o.parts
-
-    /**
-     * The files of the model of that name downloaded (parts), or their download gone on with from
-     * what it kept: the screen says so at once, from what is here, as app.js's startDownload; a
-     * download that is waiting to try again tries now.
+     * The files of the model of that name downloaded (Offer.get), or their download gone on with
+     * from what it kept: the screen says so at once, from what is here, as app.js's startDownload;
+     * a download that is waiting to try again tries now.
      */
     fun start(context: Context, o: Offer) {
         if (running) return Engine.retryDownload()
-        val parts = parts(o)
-        if (parts.isEmpty()) return
-        files = JSONArray(parts.map { it.file.name }).toString()
-        val got = parts.sumOf { it.kept }
-        val total = parts.sumOf { it.bytes }
+        val get = o.get ?: return
+        files = JSONArray(get.files).toString()
+        val got = get.kept
+        val total = get.bytes
         state =
             Download(
                 o.name,
@@ -229,24 +222,22 @@ object Downloads {
     fun run(context: Context, name: String, files: String, over: () -> Unit): Boolean {
         val app = context.applicationContext
         val o = Models.catalog(app).find { it.name == name } ?: return false
-        val parts = of(o, files)
-        if (parts.all { it.here }) return false
+        // what the offer still lists of files: those here, put in place or
+        // waiting for it, it lists no more
+        val names = JSONArray(files).let { a -> (0 until a.length()).map { a.getString(it) } }
+        val get = o.get?.takeIf { g -> names.any { it in g.files } } ?: return false
         this.files = files
         this.over = over
         if (worker?.isAlive == true) {
             Engine.retryDownload()
             return true
         }
-        // the NPU's edition for a model here, which leaves the one in use as it is
+        // the NPU's edition or an update for a model here, which leaves the one
+        // in use as it is
         val faster = o.have
-        worker = thread(name = "download") { download(app, name, files, parts, faster) }
+        val need = get.bytes - get.kept
+        worker = thread(name = "download") { download(app, name, files, need, faster) }
         return true
-    }
-
-    /** Which of o's files files names (FILES). */
-    private fun of(o: Offer, files: String): List<Part> {
-        val names = JSONArray(files).let { a -> (0 until a.length()).map { a.getString(it) } }
-        return listOfNotNull(o.whole, o.slim, o.graph).filter { it.file.name in names }
     }
 
     /**
@@ -266,13 +257,13 @@ object Downloads {
         app: Context,
         name: String,
         files: String,
-        parts: List<Part>,
+        need: Long,
         faster: Boolean,
     ) {
         // room for the rest made where Android can make it (Models.room); where
         // it cannot, the download stops when the storage is full, as the
         // desktop's does, keeping what it has to go on from
-        Models.room(app, parts.sumOf { it.bytes - it.kept })
+        Models.room(app, need)
         val notes = app.getSystemService(NotificationManager::class.java)
         var shown = 0L
         val path =

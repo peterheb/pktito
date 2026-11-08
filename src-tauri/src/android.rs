@@ -11,7 +11,7 @@
 //! back as an IOException with the reason, and a panic as a
 //! RuntimeException, never across into Java.
 
-use crate::{audio, decode, download, format, model, pktito, recent, transcribe, view};
+use crate::{audio, decode, download, editions, format, model, pktito, recent, transcribe, view};
 use jni::errors::ThrowRuntimeExAndDefault;
 use jni::objects::{JByteArray, JClass, JObject, JString, JValue};
 use jni::strings::JNIString;
@@ -161,6 +161,8 @@ pub extern "system" fn Java_net_pktito_app_Engine_npuChip<'a>(
 /// (pktito::Asr::use_qnn), the graph at graph, compiled for this chip:
 /// the seconds QNN took to read it, or an IOException with why where it
 /// refused it, the model's own encoder then the one, where it has one.
+/// Under PKTITO_REFUSE_NPU=1 (editions::refusing_for_test) every graph is
+/// refused, for a refusal's path on any phone.
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_net_pktito_app_Engine_npu<'a>(
     mut unowned: EnvUnowned<'a>,
@@ -173,6 +175,9 @@ pub extern "system" fn Java_net_pktito_app_Engine_npu<'a>(
         .with_env(|env| -> jni::errors::Result<jdouble> {
             let l = unsafe { &mut *(handle as *mut Loaded) };
             let graph = graph.try_to_string(env)?;
+            if editions::refusing_for_test() {
+                return throw(env, "PKTITO_REFUSE_NPU=1").map(|_| 0.0);
+            }
             npu_libs(&libs.try_to_string(env)?);
             let t = std::time::Instant::now();
             match l.asr.use_qnn(Path::new(&graph)) {
@@ -550,48 +555,192 @@ pub extern "system" fn Java_net_pktito_app_Engine_backend<'a>(
         .resolve::<ThrowRuntimeExAndDefault>()
 }
 
-/// What catalog() says of each model, as main.rs's Offer: its entry, with
-/// the files of its editions (Coreml's slim file and the graphs for NPUs,
-/// whose state the app reads from the folder itself, as iOS's does);
-/// whether its whole .pkf is downloaded, the bytes a download of that one
-/// that stopped has kept, its path, which the app loads it from, and the
-/// path of the part a download gathers.
-#[derive(Serialize)]
-struct Offer {
-    /// 0.9.6's shape, which Kotlin reads until it reads the view
-    /// (editions::view; docs/EDITIONS.md)
-    #[serde(flatten)]
-    entry: serde_json::Value,
-    have: bool,
-    partial: u64,
-    file: String,
-    part: String,
+/// The phone as Kotlin describes it (Editions.device), in JSON: an
+/// IOException's why for JSON that isn't one.
+fn device(json: &str) -> Result<editions::Device, String> {
+    serde_json::from_str(json).map_err(|err| format!("device: {err}"))
 }
 
-/// Engine.catalog(dir): the models models.pktito.net serves, as JSON, each
-/// as it stands in dir, the app's models folder. No model is loaded for it.
+/// The catalog model name; why not, for one it doesn't list.
+fn entry(name: &str) -> Result<&'static model::Entry, String> {
+    model::entry(name).ok_or_else(|| format!("{name}: no such model"))
+}
+
+/// name's edition id, of the catalog's; why not, for one it doesn't have.
+fn edition(e: &'static model::Entry, id: &str) -> Result<&'static editions::Edition, String> {
+    e.editions
+        .iter()
+        .find(|ed| ed.id == id)
+        .ok_or_else(|| format!("{}: no edition {id}", e.name))
+}
+
+/// Engine.catalog(dir, device): the models models.pktito.net serves, as
+/// JSON, each as the core's view of it in dir, the app's models folder, for
+/// device (editions::view; docs/EDITIONS.md): the edition chosen, what runs,
+/// why the NPU refused the one that fits best, the offer. No model is
+/// loaded for it.
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_net_pktito_app_Engine_catalog<'a>(
     mut unowned: EnvUnowned<'a>,
     _class: JClass<'a>,
     dir: JString<'a>,
+    device: JString<'a>,
 ) -> JObject<'a> {
     unowned
         .with_env(|env| -> jni::errors::Result<JObject<'a>> {
             let dir = PathBuf::from(dir.try_to_string(env)?);
-            let offers: Vec<Offer> = model::CATALOG
+            let d = match self::device(&device.try_to_string(env)?) {
+                Ok(d) => d,
+                Err(why) => return throw(env, &why).map(|_| JObject::null()),
+            };
+            let views: Vec<editions::View> = model::CATALOG
                 .iter()
-                .map(|e| Offer {
-                    entry: model::legacy(e),
-                    have: model::have(&dir, e),
-                    partial: model::partial(&dir, e),
-                    file: model::file_in(&dir, e).to_string_lossy().into_owned(),
-                    part: model::part_in(&dir, e).to_string_lossy().into_owned(),
-                })
+                .map(|e| editions::view(&dir, e, &d))
                 .collect();
             Ok(env
-                .new_string(serde_json::to_string(&offers).unwrap_or_default())?
+                .new_string(serde_json::to_string(&views).unwrap_or_default())?
                 .into())
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.adopt(dir): the files in dir from before 0.9.6 given their
+/// records, swaps cut short finished (editions::adopt). Once a launch, off
+/// the main thread: a whole .pkf takes about 2 s.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_adopt<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    dir: JString<'a>,
+) {
+    unowned
+        .with_env(|env| -> jni::errors::Result<()> {
+            editions::adopt(&PathBuf::from(dir.try_to_string(env)?));
+            Ok(())
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.pending(dir, name): whether name has a download that checked and
+/// waits to be put in place (editions::pending).
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_pending<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    dir: JString<'a>,
+    name: JString<'a>,
+) -> jboolean {
+    unowned
+        .with_env(|env| -> jni::errors::Result<jboolean> {
+            let dir = PathBuf::from(dir.try_to_string(env)?);
+            Ok(model::entry(&name.try_to_string(env)?).is_some_and(|e| editions::pending(&dir, e)))
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.settle(dir, name): name's downloads that checked put in place
+/// over the files they replace (editions::settle), or an IOException with
+/// why. Only while no engine holds name's files: the transcriber lets go of
+/// it first (Transcriber.model).
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_settle<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    dir: JString<'a>,
+    name: JString<'a>,
+) {
+    unowned
+        .with_env(|env| -> jni::errors::Result<()> {
+            let dir = PathBuf::from(dir.try_to_string(env)?);
+            let settled = entry(&name.try_to_string(env)?).and_then(|e| editions::settle(&dir, e));
+            match settled {
+                Ok(()) => Ok(()),
+                Err(why) => throw(env, &why),
+            }
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.refuse(dir, name, edition, device, why): the NPU refused name's
+/// edition for why, here (editions::refuse): its graph goes either way, and
+/// the refusal is recorded for device where the graph was the catalog's.
+/// Whether it was, as the refusals now say: an Older graph refused says
+/// nothing of the catalog's, which Manage models then offers.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_refuse<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    dir: JString<'a>,
+    name: JString<'a>,
+    id: JString<'a>,
+    device: JString<'a>,
+    why: JString<'a>,
+) -> jboolean {
+    unowned
+        .with_env(|env| -> jni::errors::Result<jboolean> {
+            let dir = PathBuf::from(dir.try_to_string(env)?);
+            let name = name.try_to_string(env)?;
+            let id = id.try_to_string(env)?;
+            let why = why.try_to_string(env)?;
+            let device = device.try_to_string(env)?;
+            let got = entry(&name).and_then(|e| Ok((e, edition(e, &id)?, self::device(&device)?)));
+            let (e, ed, d) = match got {
+                Ok(x) => x,
+                Err(why) => return throw(env, &why).map(|_| false),
+            };
+            editions::refuse(&dir, e, ed, &d, &why);
+            Ok(editions::Refusals::read(&dir).holds(e, ed, &d).is_some())
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.ran(dir, name, edition, model): a transcription finished on name's
+/// edition with the model file at model; the whole .pkf deleted once an
+/// NPU's edition has run from its own slim file (editions::ran). Whether it
+/// was.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_ran<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    dir: JString<'a>,
+    name: JString<'a>,
+    id: JString<'a>,
+    model: JString<'a>,
+) -> jboolean {
+    unowned
+        .with_env(|env| -> jni::errors::Result<jboolean> {
+            let dir = PathBuf::from(dir.try_to_string(env)?);
+            let name = name.try_to_string(env)?;
+            let id = id.try_to_string(env)?;
+            let model = PathBuf::from(model.try_to_string(env)?);
+            Ok(entry(&name)
+                .and_then(|e| Ok((e, edition(e, &id)?)))
+                .is_ok_and(|(e, ed)| editions::ran(&dir, e, ed, &model)))
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.delete(dir, name): every file of name's editions in dir, their
+/// records, parts and replacements waiting, and its refusals
+/// (editions::remove_part, forget). The engine lets go of it first
+/// (Models.delete).
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_delete<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    dir: JString<'a>,
+    name: JString<'a>,
+) {
+    unowned
+        .with_env(|env| -> jni::errors::Result<()> {
+            let dir = PathBuf::from(dir.try_to_string(env)?);
+            if let Some(e) = model::entry(&name.try_to_string(env)?) {
+                for p in editions::parts(e) {
+                    editions::remove_part(&dir, p);
+                }
+                editions::forget(&dir, e);
+            }
+            Ok(())
         })
         .resolve::<ThrowRuntimeExAndDefault>()
 }

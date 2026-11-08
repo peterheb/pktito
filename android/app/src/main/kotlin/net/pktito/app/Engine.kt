@@ -169,10 +169,48 @@ object Engine {
     @JvmStatic external fun viewFree(view: Long)
 
     /**
-     * The models models.pktito.net serves, as JSON, each as it stands in dir, the app's models
-     * folder: downloaded, or the bytes a download kept.
+     * The models models.pktito.net serves, as JSON, each as the core sees it in dir, the app's
+     * models folder, for device (Editions.device): the edition chosen, what runs, why the NPU
+     * refused, what Manage models offers (editions.rs, View; docs/EDITIONS.md).
      */
-    @JvmStatic external fun catalog(dir: String): String
+    @JvmStatic external fun catalog(dir: String, device: String): String
+
+    /**
+     * The files in dir from before 0.9.6 given their records, and swaps cut short finished: once a
+     * launch, off the main thread.
+     */
+    @JvmStatic external fun adopt(dir: String)
+
+    /** Whether name has a download that checked and waits to be put in place (settle). */
+    @JvmStatic external fun pending(dir: String, name: String): Boolean
+
+    /**
+     * name's downloads that checked put in place over the files they replace; an IOException with
+     * why. Only while no engine holds name's files.
+     */
+    @JvmStatic external fun settle(dir: String, name: String)
+
+    /**
+     * The NPU refused name's edition for why, on device: its graph deleted, and where it was the
+     * catalog's the refusal recorded, until the system, the app or the graph changes (true).
+     */
+    @JvmStatic
+    external fun refuse(
+        dir: String,
+        name: String,
+        edition: String,
+        device: String,
+        why: String,
+    ): Boolean
+
+    /**
+     * A transcription finished on name's edition with the model file at model: once an NPU's
+     * edition has run from its own slim file, the whole .pkf goes. Whether it went.
+     */
+    @JvmStatic external fun ran(dir: String, name: String, edition: String, model: String): Boolean
+
+    /** Every file of name's in dir, their records and parts, and its refusals. */
+    @JvmStatic external fun delete(dir: String, name: String)
 
     /**
      * Files of the catalog model name downloaded into dir in turn (files, a JSON array of the

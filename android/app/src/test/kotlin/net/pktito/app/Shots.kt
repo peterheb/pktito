@@ -100,6 +100,8 @@ class Shots {
         short: Boolean = false,
         tab: Int = 0,
         targets: Boolean = false,
+        xa: Boolean = false,
+        scale: Float = 1f,
         act: (() -> SemanticsNodeInteraction)? = null,
         content: @Composable () -> Unit,
     ) {
@@ -119,8 +121,10 @@ class Shots {
             }
         )
         RuntimeEnvironment.setQualifiers(if (dark) "+night" else "+notnight")
+        if (xa) RuntimeEnvironment.setQualifiers("+en-rXA")
         compose.setContent {
             val c = Configuration(LocalConfiguration.current)
+            c.fontScale = scale
             if (keys) {
                 c.keyboard = Configuration.KEYBOARD_QWERTY
                 c.hardKeyboardHidden = Configuration.HARDKEYBOARDHIDDEN_NO
@@ -137,7 +141,11 @@ class Shots {
             else if (land) "-land"
             else if (short) "-short" else if (window) "-window" else if (wide) "-wide" else ""
         val file =
-            File(dir, "$name${if (keys) "-keys" else ""}-${if (dark) "dark" else "light"}$size.png")
+            File(
+                dir,
+                "$name${if (keys) "-keys" else ""}${if (xa) "-xa" else ""}-" +
+                    "${if (dark) "dark" else "light"}$size.png",
+            )
         val node = act?.invoke() ?: compose.onRoot()
         file.outputStream().use {
             node.captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
@@ -262,13 +270,15 @@ class Shots {
 
     // npu: in the edition of a phone whose NPU the catalog has a graph for
     // (the Galaxy S24's), nothing downloaded; faster: the English model here
-    // on the CPU, its NPU's edition offered
+    // on the CPU, its NPU's edition offered; refused: the NPU refused English,
+    // its CPU's edition to download
     private fun offers(
         have: Boolean = false,
         both: Boolean = false,
         partial: Long = 0,
         npu: Boolean = false,
         faster: Boolean = false,
+        refused: Boolean = false,
     ) =
         listOf(
             offer(
@@ -281,8 +291,9 @@ class Shots {
                 714_506_856,
                 have,
                 0,
-                npu,
+                npu && !refused,
                 faster,
+                refused,
             ),
             offer(
                 "parakeet-tdt-0.6b-v3",
@@ -295,6 +306,7 @@ class Shots {
                 both,
                 if (both) 0 else partial,
                 npu,
+                false,
                 false,
             ),
         )
@@ -316,21 +328,29 @@ class Shots {
         partial: Long,
         npu: Boolean,
         faster: Boolean,
+        refused: Boolean,
     ): Offer {
-        val g =
-            Part(File(""), graph, "", here = false, kept = 0, taken = 0).takeIf { npu || faster }
-        val kept = if (have) whole else partial
+        val npuBytes = slim + graph
+        val get =
+            when {
+                have && faster -> Get(Get.FASTER, npuBytes, 0, listOf("slim", "graph"))
+                have -> null
+                npu -> Get(Get.DOWNLOAD, npuBytes, partial, listOf("slim", "graph"))
+                else -> Get(Get.DOWNLOAD, whole, partial, listOf("whole"))
+            }
         return Offer(
             name,
             key,
             langs,
             accuracy,
-            Part(File(""), whole, "", have, kept, kept),
-            Part(File(""), slim, "", here = false, kept = 0, taken = 0),
-            g,
-            if (g != null) Edition.NPU else Edition.CPU,
-            if (have) Edition.CPU else null,
-            if (faster && have) slim + graph else 0,
+            if (npu || faster) "qnn-sm8650" else "cpu",
+            if (have) Runs("cpu", File("$name.pkf"), null) else null,
+            if (refused) "PKTITO_REFUSE_NPU=1" else null,
+            get,
+            if (have) whole else get?.bytes ?: whole,
+            emptyList(),
+            Part(File("$name.pkf"), whole, ""),
+            taken = if (have) whole else partial,
         )
     }
 
@@ -637,6 +657,14 @@ class Shots {
     @Test fun setupDark() = shot("setup", true) { setupScreen() }
 
     @Test fun setupNarrow() = shot("setup-360", false, narrow = true) { setupScreen() }
+
+    // the NPU refused English: its card says so, in en-XA's longest words at
+    // one text size up (1.15) on a 360 dp phone
+    @Test
+    fun setupRefused() =
+        shot("setup-refused-360", false, narrow = true, xa = true, scale = 1.15f) {
+            Setup(offers(npu = true, refused = true), null, null, null, 0, setupActions)
+        }
 
     @Test fun setupWindow() = shot("setup", false, window = true) { setupScreen(waiting = 1) }
 

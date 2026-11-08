@@ -41,6 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
@@ -72,6 +73,7 @@ import androidx.compose.ui.unit.sp
 import java.util.Locale
 import net.pktito.app.Copy
 import net.pktito.app.Download
+import net.pktito.app.Editions
 import net.pktito.app.Models
 import net.pktito.app.Offer
 import net.pktito.app.R
@@ -384,6 +386,14 @@ private fun Card(
         }
         Column(Modifier.padding(start = 30.dp)) {
             Text(desc, style = Type.small, color = p.inkMuted)
+            // why its download is the CPU's edition: the NPU refused it here
+            // (Offer.refused), not a model never downloaded
+            if (!o.have && o.refused != null)
+                Text(
+                    Editions.cpuWords(LocalContext.current),
+                    style = Type.small,
+                    color = p.inkMuted,
+                )
             if (many && open) Languages(o, own, onLink)
         }
     }

@@ -189,11 +189,19 @@ class MainActivity : ComponentActivity() {
             File(filesDir, "model_base")
                 .takeIf { it.isFile }
                 ?.let { Os.setenv("PKTITO_MODEL_BASE", it.readText().trim(), true) }
+        // and every NPU refusing where files/refuse_npu is there, for a
+        // refusal's path on any phone (editions.rs, refusing_for_test)
+        if (
+            applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0 &&
+                File(filesDir, "refuse_npu").isFile
+        )
+            Os.setenv("PKTITO_REFUSE_NPU", "1", true)
         // the NPU's chip, for the edition each model downloads in, asked of QNN
         // once a system and build: waited for a second at most, so that the
         // first frame shows the sizes of the edition the phone runs
         Editions.ask(this, 1000)
         Models.refresh(this)
+        Models.start(this)
         Recents.refresh(this)
         Recents.prune(this)
         // a transcript of the list that was on the screen when Android let the
