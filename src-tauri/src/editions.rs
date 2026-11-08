@@ -78,7 +78,13 @@ impl Device {
             let system = std::env::consts::OS.to_string();
             let os = os_version();
             Device {
-                here: format!("{system} {}.{} {}", os.0, os.1, env!("CARGO_PKG_VERSION")),
+                here: format!(
+                    "{system} {}.{} {}{}",
+                    os.0,
+                    os.1,
+                    env!("CARGO_PKG_VERSION"),
+                    npu_here()
+                ),
                 system,
                 os,
                 qnn: model::chip().map(str::to_string),
@@ -104,6 +110,169 @@ fn os_version() -> (u32, u32) {
         }
     }
     (0, 0)
+}
+
+/// On Windows on Arm, the rest of what a refusal holds for: the OS build
+/// with its update revision, and the NPU driver's version, which Windows
+/// Update and the PC's maker update apart from the OS (snappy, 2026-11-08:
+/// " build 26300.9818 npu 30.0.220.3000"). Either is "?" where it can't be
+/// read, which still holds a refusal until the app's version changes.
+#[cfg(all(windows, target_arch = "aarch64"))]
+fn npu_here() -> String {
+    let os = reg::os_build().unwrap_or_else(|| "?".into());
+    let npu = reg::npu_driver().unwrap_or_else(|| "?".into());
+    format!(" build {os} npu {npu}")
+}
+
+#[cfg(not(all(windows, target_arch = "aarch64")))]
+fn npu_here() -> String {
+    String::new()
+}
+
+/// The registry values npu_here reads, through advapi32 itself: the
+/// windows crate's registry module would be a dependency for four calls.
+#[cfg(all(windows, target_arch = "aarch64"))]
+mod reg {
+    use std::ffi::c_void;
+    use std::ptr::null_mut;
+
+    type Hkey = *mut c_void;
+    // HKEY_LOCAL_MACHINE is (HKEY)(LONG)0x80000002, sign-extended
+    const HKLM: Hkey = 0x8000_0002u32 as i32 as isize as Hkey;
+    const KEY_READ: u32 = 0x2_0019;
+    const RRF_RT_REG_SZ: u32 = 0x2;
+    const RRF_RT_REG_DWORD: u32 = 0x10;
+
+    #[link(name = "advapi32")]
+    extern "system" {
+        fn RegOpenKeyExW(key: Hkey, sub: *const u16, opts: u32, sam: u32, out: *mut Hkey) -> i32;
+        fn RegEnumKeyExW(
+            key: Hkey,
+            index: u32,
+            name: *mut u16,
+            len: *mut u32,
+            reserved: *mut u32,
+            class: *mut u16,
+            class_len: *mut u32,
+            time: *mut c_void,
+        ) -> i32;
+        fn RegGetValueW(
+            key: Hkey,
+            sub: *const u16,
+            value: *const u16,
+            flags: u32,
+            kind: *mut u32,
+            data: *mut c_void,
+            len: *mut u32,
+        ) -> i32;
+        fn RegCloseKey(key: Hkey) -> i32;
+    }
+
+    fn wide(s: &str) -> Vec<u16> {
+        s.encode_utf16().chain([0]).collect()
+    }
+
+    fn get(
+        key: Hkey,
+        sub: &str,
+        value: &str,
+        flags: u32,
+        data: *mut c_void,
+        len: &mut u32,
+    ) -> bool {
+        let (sub, value) = (wide(sub), wide(value));
+        unsafe {
+            RegGetValueW(
+                key,
+                sub.as_ptr(),
+                value.as_ptr(),
+                flags,
+                null_mut(),
+                data,
+                len,
+            ) == 0
+        }
+    }
+
+    fn string(key: Hkey, sub: &str, value: &str) -> Option<String> {
+        let mut buf = [0u16; 256];
+        let mut len = std::mem::size_of_val(&buf) as u32;
+        // len counts bytes, the terminating NUL included
+        get(
+            key,
+            sub,
+            value,
+            RRF_RT_REG_SZ,
+            buf.as_mut_ptr().cast(),
+            &mut len,
+        )
+        .then(|| String::from_utf16_lossy(&buf[..(len as usize / 2).saturating_sub(1)]))
+    }
+
+    fn dword(key: Hkey, sub: &str, value: &str) -> Option<u32> {
+        let mut v = 0u32;
+        let mut len = 4u32;
+        get(
+            key,
+            sub,
+            value,
+            RRF_RT_REG_DWORD,
+            (&mut v as *mut u32).cast(),
+            &mut len,
+        )
+        .then_some(v)
+    }
+
+    /// "26300.9818": CurrentBuildNumber and UBR, the build and the update
+    /// revision winver shows.
+    pub fn os_build() -> Option<String> {
+        let nt = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion";
+        let build = string(HKLM, nt, "CurrentBuildNumber")?;
+        Some(match dword(HKLM, nt, "UBR") {
+            Some(ubr) => format!("{build}.{ubr}"),
+            None => build,
+        })
+    }
+
+    /// The driver version of the ComputeAccelerator device whose
+    /// description names a Hexagon, as Device Manager shows it: on snappy
+    /// "Snapdragon(R) X Elite - X1E78100 - Qualcomm(R) Hexagon(TM) NPU",
+    /// 30.0.220.3000, under the class's key 0000.
+    pub fn npu_driver() -> Option<String> {
+        let class =
+            wide(r"SYSTEM\CurrentControlSet\Control\Class\{f01a9d53-3ff6-48d2-9f97-c8a7004be10c}");
+        let mut key: Hkey = null_mut();
+        if unsafe { RegOpenKeyExW(HKLM, class.as_ptr(), 0, KEY_READ, &mut key) } != 0 {
+            return None;
+        }
+        let mut found = None;
+        for i in 0.. {
+            let mut name = [0u16; 64];
+            let mut len = name.len() as u32;
+            let r = unsafe {
+                RegEnumKeyExW(
+                    key,
+                    i,
+                    name.as_mut_ptr(),
+                    &mut len,
+                    null_mut(),
+                    null_mut(),
+                    null_mut(),
+                    null_mut(),
+                )
+            };
+            if r != 0 {
+                break;
+            }
+            let sub = String::from_utf16_lossy(&name[..len as usize]);
+            if string(key, &sub, "DriverDesc").is_some_and(|d| d.contains("Hexagon")) {
+                found = string(key, &sub, "DriverVersion");
+                break;
+            }
+        }
+        unsafe { RegCloseKey(key) };
+        found
+    }
 }
 
 /// How well edition fits device: 3 for one built for it (Core ML on a
