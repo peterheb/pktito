@@ -22,7 +22,7 @@ hardware it has, downloads what the core names, and runs it.
 - **Knowing a file is current.** An encoder counts as here if
   `model.mil` exists in its folder, and every other file if its size is
   the catalog's. 0.9.6's encoder replaced 0.9.5's (the position term folded
-  in, 16% less time a call on an M4, the ane fork's tools/ane/CLIMB.md,
+  in, 16% less time a call on an M4, pktito's tools/ane/CLIMB.md,
   2026-11-03), and a Mac or iPhone that has 0.9.5's keeps it. The S24's v2
   and v3 graphs are both 714,506,856 bytes, so a rebuilt graph of the same
   size can't be told from the old one at all. 0.9.6 started writing
@@ -71,6 +71,18 @@ pub enum Runtime {
 `<first 12 of the SHA>/<file>`. A rebuilt encoder is a new `Part` under
 the same edition id, and so a new address.
 
+The editions themselves are pktito's models.json, the one catalog the
+library's `pktito-c models` reads too, vendored with the engine
+(scripts/vendor-pktito.sh). build.rs writes each model's editions into the
+build in models.json's order, and model.rs's `CATALOG` gives them with what
+the window says of the model: its key, label, about, languages and
+accuracy. A new edition of a runtime the app knows comes with a newer
+pktito alone. A new model needs an `Entry` as well (a test holds
+`CATALOG` to models.json's models), and a new runtime stops the build
+until the app knows it. pktito's tests/editions.tsv says what each known
+device runs, and pktito's editioncheck and the app's tests hold both
+`choose`s to it.
+
 ## The device
 
 Each platform builds one `Device` and passes it to the core:
@@ -104,7 +116,7 @@ fingerprint already covers the vendor's drivers.
 `os` is the system's version as each names it: macOS and iOS their
 major and minor, Android `(Build.VERSION.SDK_INT, 0)`, (36, 0) on the S24.
 Only Core ML's floors compare it today. They are macOS 15 and iOS 18,
-where Core ML first has what core/ane.m asks of it (`MLModelAsset`'s
+where Core ML first has what npu/ane.m asks of it (`MLModelAsset`'s
 `modelAssetWithURL:` and `functionNamesWithCompletionHandler:`,
 `MLModelConfiguration.functionName`). A Mac on macOS 12 to 14 is above the
 app's floor and below Core ML's, and takes the CPU's edition: 0.9.5 and

@@ -1,13 +1,15 @@
 #!/bin/sh
-# Copy pktito's library sources (the C engine, no CLI, no tools) into
-# vendor/pktito, and record which commit they came from. The app builds
-# from this copy alone; run this again to take a newer pktito.
+# Copy pktito's library sources (the C engine and its NPU encoders, no CLI,
+# no tools) into vendor/pktito, with models.json, the catalog of model files
+# that build.rs makes the app's editions from, and tests/editions.tsv, what
+# each known device runs, which the app's tests hold editions.rs to. Record
+# which commit they came from. The app builds from this copy alone; run this
+# again to take a newer pktito.
 #
 #   scripts/vendor-pktito.sh [PKTITO_CHECKOUT [DEST]]
 #
-# The checkout defaults to ../libpktito, then ../pktito. DEST, by default
-# vendor/pktito, is vendor/pktito-ane for the Apple apps' copy of the ane
-# fork (its branch ane: the encoder on Apple's Neural Engine, core/ane.m).
+# The checkout defaults to ../libpktito, then ../pktito; DEST to
+# vendor/pktito.
 set -eu
 here=$(cd "$(dirname "$0")/.." && pwd)
 src=${1:-}
@@ -20,18 +22,25 @@ fi
 src=$(cd "$src" && pwd)
 dst="$here/${2:-vendor/pktito}"
 rm -rf "$dst"
-mkdir -p "$dst/core" "$dst/backend"
+mkdir -p "$dst/core" "$dst/backend" "$dst/npu" "$dst/tests"
 cp "$src"/core/*.c "$src"/core/*.h "$dst/core/"
-for m in "$src"/core/*.m; do [ -f "$m" ] && cp "$m" "$dst/core/"; done
-rm -f "$dst/core/cli.c"
+# pktito-c's own, not the library's: its command line, and its reading of
+# models.json (the app's is editions.rs)
+rm -f "$dst/core/cli.c" "$dst/core/catalog.c" "$dst/core/editions.c" "$dst/core/editions.h"
+# the encoders on the Neural Engine (ane.m, through Core ML) and on a
+# Snapdragon's NPU (qnn.c, through QNN), which build.rs compiles only where
+# each runs
+cp "$src"/npu/*.h "$src"/npu/*.c "$src"/npu/*.m "$dst/npu/"
 cp "$src/backend/kernels.h" "$src/backend/kernels.c" "$dst/backend/"
 for b in "$src"/backend/*/; do
   name=$(basename "$b")
   mkdir -p "$dst/backend/$name"
   cp "$b"*.c "$dst/backend/$name/"
 done
+cp "$src/models.json" "$dst/models.json"
+cp "$src/tests/editions.tsv" "$dst/tests/editions.tsv"
 cp "$src/LICENSE" "$dst/LICENSE"
 commit=$(git -C "$src" rev-parse --short HEAD 2>/dev/null || echo unknown)
-dirty=$(git -C "$src" status --porcelain -- core backend 2>/dev/null | head -1)
+dirty=$(git -C "$src" status --porcelain -- core backend npu models.json tests/editions.tsv 2>/dev/null | head -1)
 printf 'pktito %s%s, copied %s from %s\n' "$commit" "${dirty:+ (with uncommitted changes)}" "$(date -u +%Y-%m-%d)" "$src" > "$dst/VENDORED"
 echo "vendored pktito $commit into ${2:-vendor/pktito}"

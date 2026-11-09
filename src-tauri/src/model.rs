@@ -17,14 +17,12 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
 use std::time::Duration;
 
-pub const DEFAULT_BASE: &str = "https://models.pktito.net/";
-
 /// Whether this system is a Mac that runs a model's Core ML edition on the
-/// Neural Engine: one on Core ML's floor (COREML) or later, macOS 15, at 3x
+/// Neural Engine: one on Core ML's floor (models.json's) or later, macOS 15, at 3x
 /// the CPU's speed for v2 on an M4 Pro with 0.9.5's encoder (AliceBench,
 /// 349x to 117x, WER 0.059% apart, 2026-11-02); 0.9.6's, with the position
 /// term folded, takes 16% less time on an M4 (AliceBench v2, 354x to 423x,
-/// 6 words of 27,118 different; the ane fork's tools/ane/CLIMB.md,
+/// 6 words of 27,118 different; pktito's tools/ane/CLIMB.md,
 /// 2026-11-03). The choice itself is editions::choose's; this says where a
 /// user's own copy of a catalog model may borrow its encoder (encoder_of),
 /// and where pktito-cli downloads and loads one.
@@ -110,101 +108,43 @@ pub struct Part {
     pub sha256: &'static str,
 }
 
-// The Core ML editions come from pktito's ane fork: the model file without
-// its encoder (`pktito-tools slim`), which only the fork loads (its qnn
-// branch too, Android's), and the encoder as a compiled Core ML model,
-// int8, in an Apple Archive (tools/ane/encoder.py, then `aa archive`), made
-// from the same checkpoint, whose SHA-256 each names and the fork holds
-// them to. For v2 559 MB in all where its .pkf is 624; the same transcript
-// as the .pkf with that encoder, which runs at 271x on an M1 iPad
-// (AliceBench v2, against 0.9.5's 242x; the fork's tools/ane/CLIMB.md,
-// 2026-11-03).
+// The editions are pktito's models.json's: build.rs's catalog writes them
+// into OUT_DIR/catalog.rs, with DEFAULT_BASE, where the files are. The CPU's
+// is the whole .pkf. Every NPU's reads the slim file, the model without its
+// encoder (`pktito-tools slim`), with an encoder built for that NPU from the
+// same checkpoint, whose SHA-256 each names and pktito holds them to.
 //
-// The QNN editions' graphs come from pktito's qnn branch: compiled by
-// Qualcomm's QNN on a PC from the whole .pkf for one chip (core/qnn.h,
-// PKTITO_QNN_TARGET), and read with the slim file, the same file as the
-// Core ML edition's. No phone compiles one: the Android app ships no
-// compiler. For v2 727 MB with the slim file where its .pkf is 624. With
-// the PC's graph the Galaxy S24 Ultra (SM8650) ran AliceBench at 167x and
-// the Galaxy S25 Ultra (SM8750) at 206x, each phone's test.wav to every
-// digit what its own compile of the graph wrote; with graph 1 the
-// Googlebook (X1E80100) wrote the slim file's transcript word for word
-// what the whole one wrote with the same graph (the qnn branch's
-// tools/qnn/CLIMB.md, 2026-11-03). On Windows on Arm a graph ran a chapter
-// at 155x to the CPU's 115x on a Snapdragon X Elite with 1/22 the CPU time
-// (snappy, ch01, 2026-11-05).
-
-/// Core ML's floors for the encoder: macOS 15 and iOS 18, whose Core ML
-/// first has what core/ane.m asks of it (MLModelAsset's modelAssetWithURL:
-/// and functionNamesWithCompletionHandler:, MLModelConfiguration's
-/// functionName; the SDK's CoreML headers). A Mac on macOS 12 to 14, above
-/// the app's floor, takes the CPU's edition.
-const COREML: Runtime = Runtime::CoreMl {
-    macos: (15, 0),
-    ios: (18, 0),
-};
-
-/// A model's CPU edition, its whole .pkf.
-const fn cpu(model: Part) -> Edition {
-    Edition {
-        id: "cpu",
-        runtime: Runtime::Cpu,
-        model,
-        encoder: None,
-    }
-}
-
-/// A model's QNN edition for one chip (Runtime::Qnn), its graph read with
-/// the slim file.
-const fn qnn(
-    id: &'static str,
-    chip: &'static str,
-    systems: &'static [&'static str],
-    slim: Part,
-    graph: Part,
-) -> Edition {
-    Edition {
-        id,
-        runtime: Runtime::Qnn { chip, systems },
-        model: slim,
-        encoder: Some(graph),
-    }
-}
-
-// the chips, in QNN's words (pk_qnn_chip): the SoC's number in QNN's table,
-// its Hexagon's version, its VTCM in MB, and whether it has DLBC and a
-// signed PD. A Snapdragon X's QNN on Windows names no SoC
-// (2147483647,73,8,1,1 on snappy's X1E, 2026-11-05), and takes the
-// X1E80100's graph by its Hexagon, as an X2 the SC8480XP's.
-/// the Galaxy S24's Snapdragon 8 Gen 3
-const SM8650: &str = "57,75,8,1,0";
-/// the Galaxy S25's Snapdragon 8 Elite
-const SM8750: &str = "69,79,8,1,0";
-/// the Galaxy S26's Snapdragon 8 Elite Gen 5
-const SM8850: &str = "87,81,8,1,0";
-/// the Snapdragon X Elite, the Googlebook's on Android and snappy's on Windows
-const X1E80100: &str = "60,73,8,1,1";
-/// the Snapdragon X2 Elite (SoC 88, V81, 8 MB of VTCM), for Windows
-const SC8480XP: &str = "88,81,8,1,1";
-const ANDROID: &[&str] = &["android"];
-const WINDOWS: &[&str] = &["windows"];
-const BOTH: &[&str] = &["android", "windows"];
-
-const V2_SLIM: Part = Part {
-    file: "parakeet-tdt-0.6b-v2-slim.pkf",
-    bytes: 12_115_524,
-    sha256: "e582eb76db19e9fba4d9e15d45ce041dd9a230bac3c2970643aa6808bf966acb",
-};
-
-const V3_SLIM: Part = Part {
-    file: "parakeet-tdt-0.6b-v3-slim.pkf",
-    bytes: 35_187_972,
-    sha256: "169ead8b6b98c67676d13c40bd592614f9d1a3b3783da027fe03967cd559b100",
-};
+// - Core ML's: the encoder as a compiled Core ML model, int8, in an Apple
+//   Archive (tools/ane/encoder.py, then `aa archive`). It runs from macOS 15
+//   and iOS 18, whose Core ML first has what npu/ane.m asks of it
+//   (MLModelAsset's modelAssetWithURL: and functionNamesWithCompletionHandler:,
+//   MLModelConfiguration's functionName; the SDK's CoreML headers), so a Mac
+//   on macOS 12 to 14, above the app's floor, takes the CPU's. For v2 559 MB
+//   in all where its .pkf is 624, and the same transcript as the .pkf with
+//   that encoder, which runs at 271x on an M1 iPad (AliceBench v2, against
+//   0.9.5's 242x; pktito's tools/ane/CLIMB.md, 2026-11-03).
+// - QNN's: a graph compiled by Qualcomm's QNN on a PC from the whole .pkf,
+//   for one chip (npu/qnn.h, PKTITO_QNN_TARGET), named in QNN's words
+//   (pk_qnn_chip): the SoC's number in QNN's table, its Hexagon's version,
+//   its VTCM in MB, and whether it has DLBC and a signed PD. A Snapdragon
+//   X's QNN on Windows names no SoC (2147483647,73,8,1,1 on snappy's X1E,
+//   2026-11-05) and takes its Hexagon's graph, an X2 the SC8480XP's. No
+//   phone compiles one: the Android app ships no compiler. For v2 727 MB
+//   with the slim file where its .pkf is 624. With the PC's graph the Galaxy
+//   S24 Ultra (SM8650) ran AliceBench at 167x and the Galaxy S25 Ultra
+//   (SM8750) at 206x, each phone's test.wav to every digit what its own
+//   compile of the graph wrote; with graph 1 the Googlebook (X1E80100)
+//   wrote the slim file's transcript word for word what the whole one wrote
+//   with the same graph (pktito's tools/qnn/CLIMB.md, 2026-11-03). On
+//   Windows on Arm a graph ran a chapter at 155x to the CPU's 115x on a
+//   Snapdragon X Elite with 1/22 the CPU time (snappy, ch01, 2026-11-05),
+//   and the X2 Elite's ran AliceBench at 221.3x (x2elite, ALICEBENCH.md,
+//   2026-11-08).
+include!(concat!(env!("OUT_DIR"), "/catalog.rs"));
 
 /// The models models.pktito.net serves: pktito-tools' conversions of NVIDIA's
-/// checkpoints (CC-BY-4.0), as pktito 22fa0b1 writes them. What each one
-/// does is from NVIDIA's model cards.
+/// checkpoints (CC-BY-4.0), as pktito 22fa0b1 writes them, with what the
+/// window says of each; what each one does is from NVIDIA's model cards.
 pub const CATALOG: &[Entry] = &[
     Entry {
         name: "parakeet-tdt-0.6b-v2",
@@ -213,82 +153,7 @@ pub const CATALOG: &[Entry] = &[
         about: "English only",
         languages: &["en"],
         accuracy: "",
-        editions: &[
-            cpu(Part {
-                file: "parakeet-tdt-0.6b-v2.pkf",
-                bytes: 624_480_196,
-                sha256: "8bfa6750b83cd7c447bad82057c7a12473563b72b3d35487fcca6da0786d83c7",
-            }),
-            Edition {
-                id: "coreml",
-                runtime: COREML,
-                model: V2_SLIM,
-                encoder: Some(Part {
-                    file: "parakeet-tdt-0.6b-v2-encoder.mlmodelc.aar",
-                    bytes: 546_910_291,
-                    sha256: "70272da7508aff518225caeaea3f0dc7dedb5bf0cc829da72876c9ecae5159a1",
-                }),
-            },
-            // pktito-qnn-graph 2, compiled by pktito 88f5a6d on the 9950X with
-            // QAIRT 2.51.0.260929 (2026-11-03; the S26's 2026-11-04)
-            qnn(
-                "qnn-sm8650",
-                SM8650,
-                ANDROID,
-                V2_SLIM,
-                Part {
-                    file: "parakeet-tdt-0.6b-v2-sm8650.qnn",
-                    bytes: 714_506_856,
-                    sha256: "3f690d2cdd0ad6dc3b805f627f5c8e0b7701af20135bc275ebcc8f55877263a1",
-                },
-            ),
-            qnn(
-                "qnn-sm8750",
-                SM8750,
-                ANDROID,
-                V2_SLIM,
-                Part {
-                    file: "parakeet-tdt-0.6b-v2-sm8750.qnn",
-                    bytes: 713_568_872,
-                    sha256: "40a5b75f37954b528f04944c57096ba0215783cea23b50ef659a981b5995456c",
-                },
-            ),
-            qnn(
-                "qnn-sm8850",
-                SM8850,
-                ANDROID,
-                V2_SLIM,
-                Part {
-                    file: "parakeet-tdt-0.6b-v2-sm8850.qnn",
-                    bytes: 714_412_648,
-                    sha256: "08388c7f4b9cbb562330111ed6e0b026d00512168cee589b04578f50673b1aff",
-                },
-            ),
-            qnn(
-                "qnn-x1e80100",
-                X1E80100,
-                BOTH,
-                V2_SLIM,
-                Part {
-                    file: "parakeet-tdt-0.6b-v2-x1e80100.qnn",
-                    bytes: 714_523_240,
-                    sha256: "dab2d4d69028caba976c0b82316f83ad49bd3d4bac01b39992cd66904d216513",
-                },
-            ),
-            // compiled by pktito bbdcf60 on 2026-11-05, run on no X2 yet (the
-            // qnn branch's tools/qnn/CLIMB.md)
-            qnn(
-                "qnn-sc8480xp",
-                SC8480XP,
-                WINDOWS,
-                V2_SLIM,
-                Part {
-                    file: "parakeet-tdt-0.6b-v2-sc8480xp.qnn",
-                    bytes: 714_445_416,
-                    sha256: "726db8ecde7934510ab0193f52de93601c64506edf1804a240612a823e90d811",
-                },
-            ),
-        ],
+        editions: PARAKEET_TDT_0_6B_V2,
     },
     Entry {
         name: "parakeet-tdt-0.6b-v3",
@@ -301,78 +166,7 @@ pub const CATALOG: &[Entry] = &[
         ],
         // the model card's table of each language's word error rate
         accuracy: "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3#multilingual-asr",
-        editions: &[
-            cpu(Part {
-                file: "parakeet-tdt-0.6b-v3.pkf",
-                bytes: 647_552_644,
-                sha256: "35a59c9a433d4da2289640db93e73c42478b576e49a293090ef61b4ae595152a",
-            }),
-            Edition {
-                id: "coreml",
-                runtime: COREML,
-                model: V3_SLIM,
-                encoder: Some(Part {
-                    file: "parakeet-tdt-0.6b-v3-encoder.mlmodelc.aar",
-                    bytes: 545_275_075,
-                    sha256: "a7eef40e28b009fee25548fe869124d2b9ba7be8c00c2dcb1b2e8e8973524571",
-                }),
-            },
-            qnn(
-                "qnn-sm8650",
-                SM8650,
-                ANDROID,
-                V3_SLIM,
-                Part {
-                    file: "parakeet-tdt-0.6b-v3-sm8650.qnn",
-                    bytes: 714_506_856,
-                    sha256: "84aae2af7273132997bb71af73550f1a9a037de35b3d45d9e95a9390a796324e",
-                },
-            ),
-            qnn(
-                "qnn-sm8750",
-                SM8750,
-                ANDROID,
-                V3_SLIM,
-                Part {
-                    file: "parakeet-tdt-0.6b-v3-sm8750.qnn",
-                    bytes: 713_568_872,
-                    sha256: "d5cf8b7659ea176f66937a94e72c80bb11caac60d18811b0f500b6b1eaa73113",
-                },
-            ),
-            qnn(
-                "qnn-sm8850",
-                SM8850,
-                ANDROID,
-                V3_SLIM,
-                Part {
-                    file: "parakeet-tdt-0.6b-v3-sm8850.qnn",
-                    bytes: 714_412_648,
-                    sha256: "68eb09b667c7f9f6f36bb7eb7812945078150d8ff9984c61ce169d1bdfe99eab",
-                },
-            ),
-            qnn(
-                "qnn-x1e80100",
-                X1E80100,
-                BOTH,
-                V3_SLIM,
-                Part {
-                    file: "parakeet-tdt-0.6b-v3-x1e80100.qnn",
-                    bytes: 714_523_240,
-                    sha256: "1208ddc1b2c63e68568d692780297d142ad5f57ee3bb05dd86218347edd7809f",
-                },
-            ),
-            qnn(
-                "qnn-sc8480xp",
-                SC8480XP,
-                WINDOWS,
-                V3_SLIM,
-                Part {
-                    file: "parakeet-tdt-0.6b-v3-sc8480xp.qnn",
-                    bytes: 714_445_416,
-                    sha256: "237a5a6c51abfcb969310d494f70b2663c568a43174b70b9fd3f6d624c6caa7a",
-                },
-            ),
-        ],
+        editions: PARAKEET_TDT_0_6B_V3,
     },
 ];
 
@@ -1354,6 +1148,13 @@ fn written(path: &Path, err: io::Error) -> Stop {
 
 #[cfg(test)]
 mod tests {
+    /// The window's models are models.json's, in its order
+    #[test]
+    fn catalog_is_models_json() {
+        let names: Vec<&str> = CATALOG.iter().map(|e| e.name).collect();
+        assert_eq!(names, MODELS);
+    }
+
     use super::*;
 
     /// A data folder of its own under the system's temporary one

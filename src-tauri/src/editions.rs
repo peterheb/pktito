@@ -38,7 +38,8 @@ impl Edition {
 pub enum Runtime {
     /// pktito's own encoder, on any CPU.
     Cpu,
-    /// Apple's Neural Engine, from these systems on (model::COREML's), on
+    /// Apple's Neural Engine, from these systems on (models.json's; model.rs
+    /// says why macOS 15 and iOS 18), on
     /// every device of theirs: each has one.
     CoreMl { macos: (u32, u32), ios: (u32, u32) },
     /// One Snapdragon's Hexagon, the chip in QNN's words for it
@@ -928,38 +929,40 @@ mod tests {
         }
     }
 
-    /// Every device we know of, as its platform describes it
-    fn known() -> Vec<(&'static str, Device)> {
-        vec![
-            ("an M1-M5 Mac", device("macos", (15, 0), None)),
-            ("a Mac on macOS 14", device("macos", (14, 7), None)),
-            ("a Mac on macOS 12", device("macos", (12, 0), None)),
-            ("an iPhone 16e (A18)", device("ios", (26, 7), None)),
-            ("an M1 iPad", device("ios", (26, 5), None)),
-            ("the S24", device("android", (36, 0), Some("57,75,8,1,0"))),
-            ("the S25", device("android", (36, 0), Some("69,79,8,1,0"))),
-            ("the S26", device("android", (36, 0), Some("87,81,8,1,0"))),
-            ("an SM8845", device("android", (36, 0), Some("97,81,8,1,0"))),
-            (
-                "the Googlebook (X1E80100)",
-                device("android", (37, 0), Some("60,73,8,1,1")),
-            ),
-            (
-                "an Android phone with no NPU",
-                device("android", (34, 0), None),
-            ),
-            (
-                "snappy (X1E, no SoC named)",
-                device("windows", (0, 0), Some("2147483647,73,8,1,1")),
-            ),
-            (
-                "an X2 Elite",
-                device("windows", (0, 0), Some("2147483647,81,8,1,1")),
-            ),
-            ("the 7c (no NPU QNN runs)", device("windows", (0, 0), None)),
-            ("an x86 PC", device("windows", (0, 0), None)),
-            ("a Pi", device("linux", (0, 0), None)),
-        ]
+    /// Every device we know of, as its platform describes it, and the
+    /// edition of each model it runs, by the model's name: pktito's
+    /// tests/editions.tsv, which pktito's editioncheck holds its own reading
+    /// of models.json to (core/editions.c), so the library and the app pick
+    /// the same edition on every device
+    fn known() -> Vec<(String, Device, Vec<(String, String)>)> {
+        let tsv = include_str!("../../vendor/pktito/tests/editions.tsv");
+        let mut rows = tsv.lines().filter(|l| !l.is_empty() && !l.starts_with('#'));
+        let head: Vec<&str> = rows
+            .next()
+            .expect("editions.tsv's header")
+            .split('\t')
+            .collect();
+        assert_eq!(
+            head[..4],
+            ["device", "system", "os", "qnn"],
+            "editions.tsv's columns"
+        );
+        rows.map(|l| {
+            let f: Vec<&str> = l.split('\t').collect();
+            assert_eq!(f.len(), head.len(), "editions.tsv: {l}");
+            let (major, minor) = f[2]
+                .split_once('.')
+                .expect("editions.tsv: an os, major.minor");
+            let os = (major.parse().unwrap(), minor.parse().unwrap());
+            let qnn = (f[3] != "-").then_some(f[3]);
+            let want = head[4..]
+                .iter()
+                .zip(&f[4..])
+                .map(|(m, id)| (m.to_string(), id.to_string()))
+                .collect();
+            (f[0].to_string(), device(f[1], os, qnn), want)
+        })
+        .collect()
     }
 
     /// No device has two editions at the top: which one is never the
@@ -967,7 +970,7 @@ mod tests {
     #[test]
     fn no_edition_ties_another() {
         for e in CATALOG {
-            for (what, d) in known() {
+            for (what, d, _) in known() {
                 let fits: Vec<u8> = e.editions.iter().map(|ed| fit(ed, &d)).collect();
                 let top = *fits.iter().max().unwrap();
                 let n = fits.iter().filter(|&&f| f == top).count();
@@ -993,36 +996,18 @@ mod tests {
         }
     }
 
-    /// What each device gets
+    /// What each device gets: editions.tsv's edition of every model, a
+    /// column for each of the catalog's
     #[test]
     fn each_device_gets_its_edition() {
         let r = Refusals::default();
-        for e in CATALOG {
-            let got: Vec<(&str, &str)> = known()
-                .iter()
-                .map(|(what, d)| (*what, choose(e, d, &r).id))
-                .collect();
-            let want = [
-                "coreml",
-                "cpu",
-                "cpu",
-                "coreml",
-                "coreml",
-                "qnn-sm8650",
-                "qnn-sm8750",
-                "qnn-sm8850",
-                // another V81 phone takes the S26's, never the X2's
-                "qnn-sm8850",
-                "qnn-x1e80100",
-                "cpu",
-                "qnn-x1e80100",
-                "qnn-sc8480xp",
-                "cpu",
-                "cpu",
-                "cpu",
-            ];
-            for ((what, id), want) in got.iter().zip(want) {
-                assert_eq!(*id, want, "{} on {what}", e.name);
+        for (what, d, want) in known() {
+            let names: Vec<&str> = want.iter().map(|(m, _)| m.as_str()).collect();
+            let catalog: Vec<&str> = CATALOG.iter().map(|e| e.name).collect();
+            assert_eq!(names, catalog, "editions.tsv's models");
+            for (name, id) in &want {
+                let e = model::entry(name).unwrap();
+                assert_eq!(choose(e, &d, &r).id, id.as_str(), "{name} on {what}");
             }
         }
         // a Mac below the floor, an iPhone below iOS 18; no phone's graph on

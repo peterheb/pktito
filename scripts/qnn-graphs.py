@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""The NPU's graphs in DIR held to the catalog (src-tauri/src/model.rs, each
-Entry's qnn) before they go to models.pktito.net: each file's size and
-SHA-256 the catalog's, and its header as the qnn branch's core/qnn.c writes
-it (the vendored copy's PK_QNN_GRAPH, 616 bytes, little-endian) saying what
+"""The NPU's graphs in DIR held to the catalog (pktito's models.json, the
+vendored copy's QNN editions) before they go to models.pktito.net: each
+file's size and SHA-256 the catalog's, and its header as pktito's npu/qnn.c
+writes it (the vendored copy's PK_QNN_GRAPH, 616 bytes, little-endian) saying what
 the catalog says the file is - the chip it lists the graph under, and the
 model: the key the engine makes from the slim file the app downloads with
 the graph (in DIR too, and held to the catalog as well), its checkpoint and
@@ -15,36 +15,48 @@ everyone.
 """
 
 import hashlib
+import json
 import os
 import re
 import struct
 import sys
 
 here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# the graph the vendored engine reads (vendor/pktito-qnn/core/qnn.c)
+# the graph the vendored engine reads (vendor/pktito/npu/qnn.c)
 MAGIC = re.search(
     r'#define PK_QNN_GRAPH "([^"]+)"',
     open(
-        os.path.join(here, "vendor", "pktito-qnn", "core", "qnn.c"), encoding="utf-8"
+        os.path.join(here, "vendor", "pktito", "npu", "qnn.c"), encoding="utf-8"
     ).read(),
 ).group(1)
 # magic, key, chip, made, built, names[6][16], id[6], rank[6], dims[6][4], bytes
 HEAD = struct.Struct("<32s176s32s64s64s96s6I6I24IQ")
-FRAMES = 3072  # the length the engine asks for (core/qnn.h, PK_QNN_FRAMES)
-PART = r'file: "([^"]+)",\s*bytes: ([\d_]+),\s*sha256: "([0-9a-f]{64})"'
+FRAMES = 3072  # the length the engine asks for (npu/qnn.c, PK_QNN_FRAMES)
 
 
 def catalog():
-    """each entry's name, its slim file and its graphs, as (chip, file, bytes, sha256)"""
-    src = open(
-        os.path.join(here, "src-tauri", "src", "model.rs"), encoding="utf-8"
-    ).read()
+    """each model's name, its slim file and its graphs, as (chip, file, bytes,
+    sha256): the QNN editions of the vendored models.json, which the app
+    offers (build.rs)"""
+    with open(
+        os.path.join(here, "vendor", "pktito", "models.json"), encoding="utf-8"
+    ) as f:
+        models = json.load(f)["models"]
     out = []
-    for e in re.split(r"\n    Entry \{", src)[1:]:
-        name = re.search(r'name: "([^"]+)"', e).group(1)
-        slim = re.search(r"slim: Part \{\s*" + PART, e).groups()
-        graphs = re.findall(r'Graph \{\s*chip: "([^"]+)",\s*part: Part \{\s*' + PART, e)
-        out.append((name, slim, graphs))
+    for m in models:
+        qnn = [ed for ed in m["editions"] if ed["runtime"]["kind"] == "qnn"]
+        if qnn:
+            s = qnn[0]["model"]
+            graphs = [
+                (
+                    ed["runtime"]["chip"],
+                    ed["encoder"]["file"],
+                    ed["encoder"]["bytes"],
+                    ed["encoder"]["sha256"],
+                )
+                for ed in qnn
+            ]
+            out.append((m["name"], (s["file"], s["bytes"], s["sha256"]), graphs))
     return out
 
 
@@ -58,7 +70,7 @@ def held(path, size, sha256):
     if not os.path.exists(path):
         return "not in DIR"
     n = os.path.getsize(path)
-    if n != int(size.replace("_", "")):
+    if n != size:
         return f"{n} bytes, the catalog's {size}"
     h = hashlib.sha256()
     with open(path, "rb") as f:
@@ -72,7 +84,7 @@ def held(path, size, sha256):
 
 
 def pkf(path):
-    """a .pkf's params and metadata (the qnn branch's core/pkf.h)"""
+    """a .pkf's params and metadata (pktito's core/pkf.h)"""
     with open(path, "rb") as f:
         b = f.read(256)
         (n_params,) = struct.unpack_from("<I", b, 104)

@@ -426,8 +426,8 @@ fn wer(errors: usize, words: usize) -> f64 {
 }
 
 /// The encoder a transcription runs: on a Mac, the Neural Engine's where the
-/// model is a catalog one whose Core ML encoder is beside it (the ane fork,
-/// core/ane.m) and --cpu doesn't say otherwise, else the CPU's, pktito's
+/// model is a catalog one whose Core ML encoder is beside it (pktito's
+/// npu/ane.m) and --cpu doesn't say otherwise, else the CPU's, pktito's
 /// own. Core ML compiles the encoder for this Mac the first time this
 /// program loads it, which takes a while, once (about 10 s for v2 on the
 /// M4 Pro). Where the Neural Engine can't run it, Core ML's reason is said

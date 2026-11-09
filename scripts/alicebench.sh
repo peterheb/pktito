@@ -38,7 +38,7 @@
 # (scripts/alicebench/ref, pktito-cli bench --ref): identical, or by its
 # word error rate and its character edits, the text alone, its split into
 # sentences aside. An engine that isn't pktito's CPU engine bit for bit,
-# the Neural Engine's (the ane fork), differs from it by a comma here and
+# the Neural Engine's (pktito's npu/ane.m), differs from it by a comma here and
 # a word's spelling there, and the score says how much, so that a row of
 # it is measured, not failed (Peter, 2026-11-02). The line below each
 # chapter is the SHA-256 of the FLAC and of the WAV.

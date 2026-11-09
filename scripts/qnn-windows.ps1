@@ -1,5 +1,5 @@
 # Qualcomm's QNN libraries for the Windows on Arm build, where its encoder
-# runs on a Snapdragon X's NPU (the qnn fork's core/qnn.c, build.rs with
+# runs on a Snapdragon X's NPU (pktito's npu/qnn.c, build.rs with
 # QNN_SDK): copied out of the SDK into src-tauri\target\qnn, git-ignored
 # like the target folder, for src-tauri\windows\qnn.conf.json, which puts
 # them beside pktito-app.exe in the setup program.

@@ -1,5 +1,6 @@
-/* The app's native library (ios/native.sh): the engine, pktito's ane fork,
- * and the Rust core the desktop app shares, behind src-tauri/src/ios.rs.
+/* The app's native library (ios/native.sh): the engine, pktito with its
+ * Neural Engine encoder, and the Rust core the desktop app shares, behind
+ * src-tauri/src/ios.rs.
  * Every char * returned is JSON, the caller's to free with
  * pkapp_free_string; one that failed is {"error": its reason, in English}.
  * Paths are UTF-8, of files the app can read. */

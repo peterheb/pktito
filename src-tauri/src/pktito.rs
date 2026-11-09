@@ -139,7 +139,7 @@ extern "C" {
     ) -> c_long;
 }
 
-// the ane fork's (vendor/pktito-ane), which the Apple builds take: the
+// pktito's npu/ane.m, which the Apple builds compile (build.rs): the
 // encoder on the Neural Engine, and the slim model file whose only encoder
 // it is
 #[cfg(any(target_os = "macos", target_os = "ios"))]
@@ -154,12 +154,10 @@ extern "C" {
     fn pk_asr_ane_warm(a: *mut RawAsr, err: *mut c_char, errlen: usize) -> c_int;
 }
 
-// Android's and Windows on Arm's, from the fork's qnn branch
-// (vendor/pktito-qnn): the encoder on a Snapdragon's NPU (core/qnn.h), in
-// a build with QNN_SDK set
-// (build.rs), without which it says so; the chip it is, for the graph
-// compiled for it; and the fork's slim model file, whose only encoder that
-// graph is
+// Android's and Windows on Arm's, pktito's npu/qnn.c: the encoder on a
+// Snapdragon's NPU, in a build with QNN_SDK set (build.rs), without which
+// it says so; the chip it is, for the graph compiled for it; and the slim
+// model file, whose only encoder that graph is
 #[cfg(any(target_os = "android", all(windows, target_arch = "aarch64")))]
 extern "C" {
     fn pk_model_has_encoder(m: *const RawModel) -> c_int;
@@ -520,7 +518,7 @@ impl Asr {
     }
 
     /// The encoder on the phone's NPU (a Snapdragon's Hexagon, through
-    /// Qualcomm's QNN: core/qnn.h): the graph at path, compiled on a PC for
+    /// Qualcomm's QNN: npu/qnn.h): the graph at path, compiled on a PC for
     /// this chip from the model's checkpoint, read in 0.7 s on a Galaxy
     /// S24 Ultra. Where QNN refuses it, why, and the model's own encoder on
     /// the CPU, which a slim file has not. The app ships no compiler, so a

@@ -181,7 +181,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# the engine (pktito's ane fork) and the Rust core the desktop app shares, as build/PktitoCore.xcframework (ios/native.sh); cargo builds only what changed\nexec \"$SRCROOT/native.sh\"\n";
+			shellScript = "# the engine (pktito) and the Rust core the desktop app shares, as build/PktitoCore.xcframework (ios/native.sh); cargo builds only what changed\nexec \"$SRCROOT/native.sh\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

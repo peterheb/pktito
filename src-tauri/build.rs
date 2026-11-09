@@ -5,14 +5,15 @@
 //! backend it can (pktito's backend/kernels.c). Then the platform's decoder
 //! (AVFoundation on macOS and iOS, Media Foundation on Windows) and the mix
 //! that every decoder hands its samples to (native/mix.h). On the Mac and
-//! iOS pktito is its ane fork (vendor/pktito-ane), whose encoder can run on
-//! the Neural Engine through Core ML (core/ane.m), and runs on the CPU as
-//! pktito's does where it isn't given one. On Android it is that fork with
-//! the qnn branch's (vendor/pktito-qnn), whose encoder can run on a
-//! Snapdragon's NPU (core/qnn.c), in a build with QNN_SDK set, and which
-//! reads the fork's slim model file, whose only encoder is the NPU's graph;
-//! without QNN_SDK it runs on the CPU as pktito's does. Windows on Arm is
-//! the same: the qnn fork, its NPU where QNN_SDK is set, a Snapdragon X's.
+//! iOS the encoder can also run on the Neural Engine through Core ML
+//! (pktito's npu/ane.m, as its Makefile's ANE=1 builds it). On Android and
+//! Windows on Arm it can run on a Snapdragon's NPU through QNN (npu/qnn.c,
+//! QNN=1), in a build with QNN_SDK set. Either reads the slim model file,
+//! whose only encoder is the NPU's; elsewhere, and without QNN_SDK, pktito
+//! runs on the CPU alone.
+//!
+//! It also writes the catalog's editions from pktito's models.json, which
+//! model.rs includes (catalog, below).
 //!
 //! Everything goes into one archive, and the system's libraries come after
 //! it. GNU ld reads each archive once, left to right, taking only what
@@ -20,7 +21,8 @@
 //! resolving until nothing new turns up.
 
 use std::env;
-use std::path::PathBuf;
+use std::fmt::Write as _;
+use std::path::{Path, PathBuf};
 
 const CORE: &[&str] = &[
     "model.c",
@@ -76,6 +78,102 @@ fn assembles(os: &str, root: &PathBuf, name: &str, flags: &[&str], asm: &str) ->
             .is_ok()
 }
 
+/// The catalog's editions, from pktito's models.json, which `pktito-c
+/// models` reads too, so the library and the app offer the same files. For
+/// each model a const of its editions in models.json's order, named for it
+/// in capitals (parakeet-tdt-0.6b-v2's PARAKEET_TDT_0_6B_V2), which
+/// model.rs's CATALOG gives with what the window says of the model; MODELS,
+/// every model's name, which a test holds CATALOG to; and DEFAULT_BASE,
+/// where the files are. A runtime this doesn't know stops the build, since
+/// the app would offer an edition it can't run.
+fn catalog(json: &Path, out: &Path) {
+    use serde_json::Value;
+    let text = std::fs::read_to_string(json).expect("pktito's models.json");
+    let v: Value = serde_json::from_str(&text).expect("models.json isn't JSON");
+    let s = |v: &Value, what: &str| -> String {
+        v.as_str()
+            .unwrap_or_else(|| panic!("models.json: {what} isn't a string"))
+            .to_string()
+    };
+    let part = |p: &Value| {
+        let bytes = p["bytes"].as_u64().expect("models.json: a file's bytes");
+        let (file, sha) = (s(&p["file"], "a file"), s(&p["sha256"], "a sha256"));
+        format!("Part {{ file: {file:?}, bytes: {bytes}, sha256: {sha:?} }}")
+    };
+    let version = |v: &Value| {
+        let n: Vec<u64> = v
+            .as_array()
+            .expect("models.json: a system's version")
+            .iter()
+            .map(|n| n.as_u64().expect("models.json: a version's number"))
+            .collect();
+        format!("({}, {})", n[0], n[1])
+    };
+    let mut rs = String::new();
+    let _ = writeln!(
+        rs,
+        "// build.rs's, from pktito's models.json: change that, not this\n"
+    );
+    let _ = writeln!(
+        rs,
+        "pub const DEFAULT_BASE: &str = {:?};\n",
+        s(&v["base"], "base")
+    );
+    let mut names = Vec::new();
+    for m in v["models"].as_array().expect("models.json: models") {
+        let name = s(&m["name"], "a model's name");
+        let ident: String = name
+            .chars()
+            .map(|c| {
+                if c.is_ascii_alphanumeric() {
+                    c.to_ascii_uppercase()
+                } else {
+                    '_'
+                }
+            })
+            .collect();
+        let _ = writeln!(rs, "pub const {ident}: &[Edition] = &[");
+        for ed in m["editions"].as_array().expect("models.json: editions") {
+            let id = s(&ed["id"], "an edition's id");
+            let r = &ed["runtime"];
+            let runtime = match r["kind"].as_str() {
+                Some("cpu") => "Runtime::Cpu".to_string(),
+                Some("coreml") => format!(
+                    "Runtime::CoreMl {{ macos: {}, ios: {} }}",
+                    version(&r["macos"]),
+                    version(&r["ios"])
+                ),
+                Some("qnn") => {
+                    let systems: Vec<String> = r["systems"]
+                        .as_array()
+                        .expect("models.json: a QNN edition's systems")
+                        .iter()
+                        .map(|x| s(x, "a system"))
+                        .collect();
+                    format!(
+                        "Runtime::Qnn {{ chip: {:?}, systems: &{systems:?} }}",
+                        s(&r["chip"], "a chip")
+                    )
+                }
+                k => panic!("models.json: {name}'s {id} runs on {k:?}, which the app doesn't know"),
+            };
+            let encoder = ed
+                .get("encoder")
+                .map_or("None".to_string(), |p| format!("Some({})", part(p)));
+            let _ = writeln!(
+                rs,
+                "    // {}\n    Edition {{ id: {id:?}, runtime: {runtime}, model: {}, encoder: {encoder} }},",
+                s(&ed["about"], "an edition's about"),
+                part(&ed["model"]),
+            );
+        }
+        let _ = writeln!(rs, "];\n");
+        names.push(name);
+    }
+    let _ = writeln!(rs, "#[cfg(test)]\npub const MODELS: &[&str] = &{names:?};");
+    std::fs::write(out, rs).expect("OUT_DIR/catalog.rs");
+}
+
 fn base(os: &str, root: &PathBuf) -> cc::Build {
     let mut b = cc::Build::new();
     // pktito's numbers are the same bits on every backend only without
@@ -90,7 +188,10 @@ fn base(os: &str, root: &PathBuf) -> cc::Build {
         .flag("-fno-math-errno")
         .warnings(false)
         .include(root.join("core"))
-        .include(root.join("backend"));
+        .include(root.join("backend"))
+        // the NPU encoders' headers, which core/asr.c and core/encoder.c
+        // include in every build, as the Makefile's -Inpu
+        .include(root.join("npu"));
     match os {
         "macos" | "ios" => {
             b.define("_DARWIN_C_SOURCE", None).define("PK_ANE", None);
@@ -111,19 +212,16 @@ fn main() {
     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let os = env::var("CARGO_CFG_TARGET_OS").unwrap();
     let arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap();
-    let root = manifest.join(match os.as_str() {
-        "macos" | "ios" => "../vendor/pktito-ane",
-        "android" => "../vendor/pktito-qnn",
-        "windows" if arch == "aarch64" => "../vendor/pktito-qnn",
-        _ => "../vendor/pktito",
-    });
+    let root = manifest.join("../vendor/pktito");
     println!("cargo:rerun-if-changed=../vendor/pktito");
-    println!("cargo:rerun-if-changed=../vendor/pktito-ane");
-    println!("cargo:rerun-if-changed=../vendor/pktito-qnn");
     println!("cargo:rerun-if-changed=native");
     println!("cargo:rerun-if-env-changed=QNN_SDK");
+    catalog(
+        &root.join("models.json"),
+        &PathBuf::from(env::var_os("OUT_DIR").unwrap()).join("catalog.rs"),
+    );
     // Qualcomm's AI Runtime SDK, where QNN_SDK names it: the encoder on a
-    // Snapdragon's NPU too (core/qnn.c), on Android's Arm64 and Windows's.
+    // Snapdragon's NPU too (npu/qnn.c), on Android's Arm64 and Windows's.
     // Only its headers are read here; its libraries are loaded at run time
     // (dlopen; LoadLibraryEx on Windows) from the app's own native ones, or
     // the DLLs beside the exe
@@ -220,7 +318,7 @@ fn main() {
     );
     match os.as_str() {
         // the Mac's decoder, which iOS's AVFoundation runs as it is, and the
-        // ane fork's encoder on the Neural Engine
+        // encoder on the Neural Engine
         "macos" | "ios" => {
             objects.extend(
                 cc::Build::new()
@@ -231,7 +329,7 @@ fn main() {
             );
             objects.extend(
                 base(&os, &root)
-                    .file(root.join("core/ane.m"))
+                    .file(root.join("npu/ane.m"))
                     .flag("-fobjc-arc")
                     .compile_intermediates(),
             );
@@ -256,7 +354,7 @@ fn main() {
     core.file(root.join("backend/ref/kernels.c"))
         .file(root.join("backend/kernels.c"));
     if let Some(sdk) = &qnn {
-        core.file(root.join("core/qnn.c"))
+        core.file(root.join("npu/qnn.c"))
             .define("PK_QNN", None)
             .include(sdk.join("include/QNN"));
     }

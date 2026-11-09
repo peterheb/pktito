@@ -1,6 +1,6 @@
 #!/bin/sh
-# The app's native library: the engine, pktito's ane fork (vendor/pktito-ane,
-# whose encoder runs on the Neural Engine), and the Rust core the desktop
+# The app's native library: the engine (vendor/pktito, whose encoder runs
+# on the Neural Engine through npu/ane.m), and the Rust core the desktop
 # app shares (src-tauri's library; src/ios.rs is its C side), cross-built for
 # iOS devices and the Simulator into build/PktitoCore.xcframework, with
 # Core/include's header and module map, which the Xcode project links and
