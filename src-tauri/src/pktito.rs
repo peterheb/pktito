@@ -77,6 +77,18 @@ pub struct Sentence {
     pub flags: i32,
 }
 
+/// A recording as the library reads it (pk_audio): n samples, 16 kHz mono,
+/// and a function it calls for a stretch of them. The app's are a decoded
+/// array's (pk_audio_floats): a desktop has the memory for one, and the
+/// boards pktito-c runs on are where reading a file a stretch at a time
+/// pays (Peter, 2026-11-09, PKT-24).
+#[repr(C)]
+struct Audio {
+    n: i64,
+    read: Option<unsafe extern "C" fn(*mut c_void, i64, *mut f32, usize) -> c_int>,
+    arg: *mut c_void,
+}
+
 #[repr(C)]
 struct CapWord {
     text: *const c_char,
@@ -106,12 +118,14 @@ extern "C" {
     fn pk_model_frame_seconds(m: *const RawModel) -> f64;
     fn pk_asr_new(m: *const RawModel, threads: c_int) -> *mut RawAsr;
     fn pk_asr_free(a: *mut RawAsr);
+    // x[0, n) as a recording, read by copying; x lasts the calls that read it
+    fn pk_audio_floats(x: *const f32, n: usize) -> Audio;
     // o NULL: pktito's defaults (pk_transcribe_defaults): chunks of 30.72 s at
-    // most, the far side of a cut in mid-sentence heard, and the retry
+    // most, the far side of a cut in mid-sentence heard, and the retry. The
+    // call copies *x and reads it only until it returns.
     fn pk_asr_transcribe(
         a: *mut RawAsr,
-        x: *const f32,
-        n: usize,
+        x: *const Audio,
         o: *const c_void,
         f: unsafe extern "C" fn(*mut c_void, *const ChunkOut) -> c_int,
         arg: *mut c_void,
@@ -466,11 +480,13 @@ impl Asr {
             }
         }
         let mut call = Call { each, panic: None };
+        // x is borrowed for the whole call, which is as long as the library
+        // reads it
+        let audio = unsafe { pk_audio_floats(x.as_ptr(), x.len()) };
         let rc = unsafe {
             pk_asr_transcribe(
                 self.raw,
-                x.as_ptr(),
-                x.len(),
+                &audio,
                 ptr::null(),
                 chunk::<F>,
                 &mut call as *mut Call<F> as *mut c_void,
