@@ -73,15 +73,24 @@ the same edition id, and so a new address.
 
 The editions themselves are pktito's models.json, the one catalog the
 library's `pktito-c models` reads too, vendored with the engine
-(scripts/vendor-pktito.sh). build.rs writes each model's editions into the
-build in models.json's order, and model.rs's `CATALOG` gives them with what
-the window says of the model: its key, label, about, languages and
-accuracy. A new edition of a runtime the app knows comes with a newer
-pktito alone. A new model needs an `Entry` as well (a test holds
-`CATALOG` to models.json's models), and a new runtime stops the build
-until the app knows it. pktito's tests/editions.tsv says what each known
-device runs, and pktito's editioncheck and the app's tests hold both
-`choose`s to it.
+(scripts/vendor-pktito.sh). Each model there has a task (transcribe or
+diarize), a status (stable or preview) and, where it needs a later pktito
+than some, `needs`; an edition may have a status and needs of its own.
+build.rs writes into the build what the app offers: the stable models
+that transcribe, with their stable editions, that the vendored pktito
+(its PKTITO_VERSION) loads, in models.json's order, with each model's
+languages. That is what pktito-c picks unasked. A preview, a diarizer,
+or a model for a later pktito is pktito-c's to list
+(`pktito-c models --all`) and never reaches the app. model.rs's `CATALOG`
+gives each model with what the window says of it: its key, label, about
+and accuracy. A new edition of a runtime the app knows comes with a newer
+pktito alone. A new stable model needs an `Entry` as well (a test holds
+`CATALOG` to the models build.rs offers), and a new runtime stops the
+build until the app knows it. pktito's tests/editions.tsv says what each
+known device runs, and pktito's editioncheck and the app's tests hold
+both `choose`s to it; tests/editions-rules.json and .tsv, a made-up
+catalog of a preview edition, one needing a later pktito and a preview
+model, hold both to what they leave out.
 
 ## The device
 

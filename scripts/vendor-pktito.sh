@@ -2,8 +2,10 @@
 # Copy pktito's library sources (the C engine and its NPU encoders, no CLI,
 # no tools) into vendor/pktito, with models.json, the catalog of model files
 # that build.rs makes the app's editions from, and tests/editions.tsv, what
-# each known device runs, which the app's tests hold editions.rs to. Record
-# which commit they came from. The app builds from this copy alone; run this
+# each known device runs, which the app's tests hold editions.rs to, with
+# tests/editions-rules.json and .tsv, the made-up catalog that holds the
+# rules for preview and too-new editions. Record which commit they came
+# from. The app builds from this copy alone; run this
 # again to take a newer pktito.
 #
 #   scripts/vendor-pktito.sh [PKTITO_CHECKOUT [DEST]]
@@ -38,9 +40,9 @@ for b in "$src"/backend/*/; do
   cp "$b"*.c "$dst/backend/$name/"
 done
 cp "$src/models.json" "$dst/models.json"
-cp "$src/tests/editions.tsv" "$dst/tests/editions.tsv"
+cp "$src/tests/editions.tsv" "$src/tests/editions-rules.json" "$src/tests/editions-rules.tsv" "$dst/tests/"
 cp "$src/LICENSE" "$dst/LICENSE"
 commit=$(git -C "$src" rev-parse --short HEAD 2>/dev/null || echo unknown)
-dirty=$(git -C "$src" status --porcelain -- core backend npu models.json tests/editions.tsv 2>/dev/null | head -1)
+dirty=$(git -C "$src" status --porcelain -- core backend npu models.json tests/editions.tsv tests/editions-rules.json tests/editions-rules.tsv 2>/dev/null | head -1)
 printf 'pktito %s%s, copied %s from %s\n' "$commit" "${dirty:+ (with uncommitted changes)}" "$(date -u +%Y-%m-%d)" "$src" > "$dst/VENDORED"
 echo "vendored pktito $commit into ${2:-vendor/pktito}"

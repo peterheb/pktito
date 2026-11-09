@@ -20,6 +20,9 @@ pub mod ios;
 pub mod model;
 pub mod mp3;
 pub mod mp4;
+// build.rs's comparison of pktito's versions, here for its tests alone
+#[cfg(test)]
+mod needs;
 pub mod pktito;
 pub mod recent;
 pub mod score;

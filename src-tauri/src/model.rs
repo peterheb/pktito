@@ -61,8 +61,9 @@ pub struct Entry {
     pub key: &'static str,
     pub label: &'static str,
     pub about: &'static str,
-    /// What it transcribes, as ISO 639-1 codes: the window offers the first
-    /// model that speaks the system's language.
+    /// What it transcribes, as ISO 639-1 codes in models.json's order (the
+    /// window and the phones list them by name): the window offers the
+    /// first model that speaks the system's language.
     pub languages: &'static [&'static str],
     /// Where its error rate in each language is, for a model of several:
     /// the window links to it under their list; "" for none.
@@ -108,9 +109,14 @@ pub struct Part {
     pub sha256: &'static str,
 }
 
-// The editions are pktito's models.json's: build.rs's catalog writes them
-// into OUT_DIR/catalog.rs, with DEFAULT_BASE, where the files are. The CPU's
-// is the whole .pkf. Every NPU's reads the slim file, the model without its
+// The models and their editions are pktito's models.json's: build.rs's
+// catalog writes those the app offers into OUT_DIR/catalog.rs, with each
+// model's languages and DEFAULT_BASE, where the files are. It offers what
+// pktito-c picks unasked: the stable models that transcribe, with their
+// stable editions, that the pktito vendored loads (its PKTITO_VERSION, each
+// one's `needs`). A preview, a diarizer, or a model for a later pktito is
+// pktito-c's to list (`pktito-c models --all`), not the app's. The CPU's
+// edition is the whole .pkf. Every NPU's reads the slim file, the model without its
 // encoder (`pktito-tools slim`), with an encoder built for that NPU from the
 // same checkpoint, whose SHA-256 each names and pktito holds them to.
 //
@@ -151,7 +157,7 @@ pub const CATALOG: &[Entry] = &[
         key: "english",
         label: "English",
         about: "English only",
-        languages: &["en"],
+        languages: PARAKEET_TDT_0_6B_V2_LANGUAGES,
         accuracy: "",
         editions: PARAKEET_TDT_0_6B_V2,
     },
@@ -160,10 +166,7 @@ pub const CATALOG: &[Entry] = &[
         key: "multilingual",
         label: "Multilingual",
         about: "25 European languages",
-        languages: &[
-            "bg", "cs", "da", "de", "el", "en", "es", "et", "fi", "fr", "hr", "hu", "it", "lt",
-            "lv", "mt", "nl", "pl", "pt", "ro", "ru", "sk", "sl", "sv", "uk",
-        ],
+        languages: PARAKEET_TDT_0_6B_V3_LANGUAGES,
         // the model card's table of each language's word error rate
         accuracy: "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3#multilingual-asr",
         editions: PARAKEET_TDT_0_6B_V3,
@@ -1148,11 +1151,20 @@ fn written(path: &Path, err: io::Error) -> Stop {
 
 #[cfg(test)]
 mod tests {
-    /// The window's models are models.json's, in its order
+    /// The window's models are those models.json has for it, in its order,
+    /// each with its languages
     #[test]
     fn catalog_is_models_json() {
         let names: Vec<&str> = CATALOG.iter().map(|e| e.name).collect();
         assert_eq!(names, MODELS);
+        // the window chooses a model by its languages
+        for e in CATALOG {
+            assert!(
+                !e.languages.is_empty(),
+                "{}: no languages in models.json",
+                e.name
+            );
+        }
     }
 
     use super::*;

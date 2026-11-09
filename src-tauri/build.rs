@@ -12,8 +12,8 @@
 //! whose only encoder is the NPU's; elsewhere, and without QNN_SDK, pktito
 //! runs on the CPU alone.
 //!
-//! It also writes the catalog's editions from pktito's models.json, which
-//! model.rs includes (catalog, below).
+//! It also writes the catalog from pktito's models.json, the models the app
+//! offers with their editions, which model.rs includes (catalog, below).
 //!
 //! Everything goes into one archive, and the system's libraries come after
 //! it. GNU ld reads each archive once, left to right, taking only what
@@ -78,75 +78,129 @@ fn assembles(os: &str, root: &PathBuf, name: &str, flags: &[&str], asm: &str) ->
             .is_ok()
 }
 
-/// The catalog's editions, from pktito's models.json, which `pktito-c
-/// models` reads too, so the library and the app offer the same files. For
-/// each model a const of its editions in models.json's order, named for it
-/// in capitals (parakeet-tdt-0.6b-v2's PARAKEET_TDT_0_6B_V2), which
-/// model.rs's CATALOG gives with what the window says of the model; MODELS,
-/// every model's name, which a test holds CATALOG to; and DEFAULT_BASE,
-/// where the files are. A runtime this doesn't know stops the build, since
-/// the app would offer an edition it can't run.
-fn catalog(json: &Path, out: &Path) {
+// pktito's versions, which build.rs compares and the app's tests hold to
+// their cases
+#[path = "src/needs.rs"]
+mod needs;
+
+/// The version of the pktito vendored, core/pktito.h's PKTITO_VERSION, which
+/// a model's or an edition's `needs` in models.json is held to
+fn engine_version(root: &Path) -> [u64; 3] {
+    let h = std::fs::read_to_string(root.join("core/pktito.h")).expect("pktito's core/pktito.h");
+    h.lines()
+        .find_map(|l| {
+            let mut w = l.split_whitespace();
+            (w.next() == Some("#define") && w.next() == Some("PKTITO_VERSION"))
+                .then(|| w.next())
+                .flatten()
+        })
+        .and_then(|v| needs::version(v.trim_matches('"')))
+        .expect("core/pktito.h: PKTITO_VERSION, major.minor.patch")
+}
+
+/// A model's consts' name: its name in capitals, parakeet-tdt-0.6b-v2's
+/// PARAKEET_TDT_0_6B_V2
+fn ident(name: &str) -> String {
+    name.chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() {
+                c.to_ascii_uppercase()
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}
+
+/// The models of a catalog in models.json's form that the app offers, as
+/// consts: for each, its editions in the file's order (PARAKEET_TDT_0_6B_V2,
+/// ident) and its languages (PARAKEET_TDT_0_6B_V2_LANGUAGES), none for a
+/// catalog that names none. Returns their names.
+///
+/// It offers what pktito-c picks unasked (core/editions.c's may, unnamed):
+/// a model that transcribes, stable, that this engine loads, and of its
+/// editions the stable ones this engine loads. An edition's status is its
+/// own, absent meaning stable; its needs are its own, else its model's. The
+/// rest, a preview or a diarizer or a model for a later pktito, `pktito-c
+/// models --all` lists and the app never sees. A runtime this doesn't know
+/// stops the build, since the app would offer an edition it can't run; so
+/// does a model offered without its CPU edition, which every model falls
+/// back to.
+fn offered(src: &str, v: &serde_json::Value, engine: [u64; 3], rs: &mut String) -> Vec<String> {
     use serde_json::Value;
-    let text = std::fs::read_to_string(json).expect("pktito's models.json");
-    let v: Value = serde_json::from_str(&text).expect("models.json isn't JSON");
     let s = |v: &Value, what: &str| -> String {
         v.as_str()
-            .unwrap_or_else(|| panic!("models.json: {what} isn't a string"))
+            .unwrap_or_else(|| panic!("{src}: {what} isn't a string"))
             .to_string()
     };
     let part = |p: &Value| {
-        let bytes = p["bytes"].as_u64().expect("models.json: a file's bytes");
+        let bytes = p["bytes"]
+            .as_u64()
+            .unwrap_or_else(|| panic!("{src}: a file's bytes"));
         let (file, sha) = (s(&p["file"], "a file"), s(&p["sha256"], "a sha256"));
         format!("Part {{ file: {file:?}, bytes: {bytes}, sha256: {sha:?} }}")
     };
-    let version = |v: &Value| {
+    let system = |v: &Value| {
         let n: Vec<u64> = v
             .as_array()
-            .expect("models.json: a system's version")
+            .unwrap_or_else(|| panic!("{src}: a system's version"))
             .iter()
-            .map(|n| n.as_u64().expect("models.json: a version's number"))
+            .map(|n| {
+                n.as_u64()
+                    .unwrap_or_else(|| panic!("{src}: a version's number"))
+            })
             .collect();
         format!("({}, {})", n[0], n[1])
     };
-    let mut rs = String::new();
-    let _ = writeln!(
-        rs,
-        "// build.rs's, from pktito's models.json: change that, not this\n"
-    );
-    let _ = writeln!(
-        rs,
-        "pub const DEFAULT_BASE: &str = {:?};\n",
-        s(&v["base"], "base")
-    );
+    // what this engine loads: needs, where given, no later than it
+    let loads = |needs: Option<&Value>, what: &str| {
+        needs.is_none_or(|n| {
+            needs::version(&s(n, what)).unwrap_or_else(|| panic!("{src}: {what} isn't a version"))
+                <= engine
+        })
+    };
     let mut names = Vec::new();
-    for m in v["models"].as_array().expect("models.json: models") {
+    for m in v["models"]
+        .as_array()
+        .unwrap_or_else(|| panic!("{src}: models"))
+    {
         let name = s(&m["name"], "a model's name");
-        let ident: String = name
-            .chars()
-            .map(|c| {
-                if c.is_ascii_alphanumeric() {
-                    c.to_ascii_uppercase()
-                } else {
-                    '_'
-                }
-            })
-            .collect();
-        let _ = writeln!(rs, "pub const {ident}: &[Edition] = &[");
-        for ed in m["editions"].as_array().expect("models.json: editions") {
+        let needs = m.get("needs");
+        if m["task"].as_str() != Some("transcribe")
+            || m["status"].as_str() != Some("stable")
+            || !loads(needs, &format!("{name}'s needs"))
+        {
+            continue;
+        }
+        let upper = ident(&name);
+        let _ = writeln!(rs, "pub const {upper}: &[Edition] = &[");
+        let mut cpu = false;
+        for ed in m["editions"]
+            .as_array()
+            .unwrap_or_else(|| panic!("{src}: {name}'s editions"))
+        {
             let id = s(&ed["id"], "an edition's id");
+            let stable = ed
+                .get("status")
+                .is_none_or(|t| t.as_str() == Some("stable"));
+            if !stable || !loads(ed.get("needs").or(needs), &format!("{name}'s {id}'s needs")) {
+                continue;
+            }
             let r = &ed["runtime"];
             let runtime = match r["kind"].as_str() {
-                Some("cpu") => "Runtime::Cpu".to_string(),
+                Some("cpu") => {
+                    cpu = true;
+                    "Runtime::Cpu".to_string()
+                }
                 Some("coreml") => format!(
                     "Runtime::CoreMl {{ macos: {}, ios: {} }}",
-                    version(&r["macos"]),
-                    version(&r["ios"])
+                    system(&r["macos"]),
+                    system(&r["ios"])
                 ),
                 Some("qnn") => {
                     let systems: Vec<String> = r["systems"]
                         .as_array()
-                        .expect("models.json: a QNN edition's systems")
+                        .unwrap_or_else(|| panic!("{src}: a QNN edition's systems"))
                         .iter()
                         .map(|x| s(x, "a system"))
                         .collect();
@@ -155,7 +209,7 @@ fn catalog(json: &Path, out: &Path) {
                         s(&r["chip"], "a chip")
                     )
                 }
-                k => panic!("models.json: {name}'s {id} runs on {k:?}, which the app doesn't know"),
+                k => panic!("{src}: {name}'s {id} runs on {k:?}, which the app doesn't know"),
             };
             let encoder = ed
                 .get("encoder")
@@ -167,11 +221,74 @@ fn catalog(json: &Path, out: &Path) {
                 part(&ed["model"]),
             );
         }
-        let _ = writeln!(rs, "];\n");
+        assert!(
+            cpu,
+            "{src}: {name} would be offered without its CPU edition"
+        );
+        let languages: Vec<String> = m
+            .get("languages")
+            .map(|l| {
+                l.as_array()
+                    .unwrap_or_else(|| panic!("{src}: {name}'s languages"))
+                    .iter()
+                    .map(|c| s(c, "a language"))
+                    .collect()
+            })
+            .unwrap_or_default();
+        let _ = writeln!(
+            rs,
+            "];\npub const {upper}_LANGUAGES: &[&str] = &{languages:?};\n"
+        );
         names.push(name);
     }
+    names
+}
+
+/// The catalog's models and editions, from pktito's models.json, which
+/// `pktito-c models` reads too, so the library and the app offer the same
+/// files: offered's consts, which model.rs's CATALOG gives with what the
+/// window says of each model; MODELS, their names, which a test holds
+/// CATALOG to; and DEFAULT_BASE, where the files are.
+fn catalog(json: &Path, engine: [u64; 3], out: &Path) {
+    let text = std::fs::read_to_string(json).expect("pktito's models.json");
+    let v: serde_json::Value = serde_json::from_str(&text).expect("models.json isn't JSON");
+    let mut rs = String::new();
+    let _ = writeln!(
+        rs,
+        "// build.rs's, from pktito's models.json: change that, not this\n"
+    );
+    let _ = writeln!(
+        rs,
+        "pub const DEFAULT_BASE: &str = {:?};\n",
+        v["base"]
+            .as_str()
+            .expect("models.json: base isn't a string")
+    );
+    let names = offered("models.json", &v, engine, &mut rs);
     let _ = writeln!(rs, "#[cfg(test)]\npub const MODELS: &[&str] = &{names:?};");
     std::fs::write(out, rs).expect("OUT_DIR/catalog.rs");
+}
+
+/// pktito's made-up catalog for the rules (tests/editions-rules.json),
+/// through offered as models.json goes: what the app offers of it, for the
+/// test that holds the app to tests/editions-rules.tsv (editions.rs),
+/// RULES, each model it offers with its editions
+fn rules(json: &Path, engine: [u64; 3], out: &Path) {
+    let text = std::fs::read_to_string(json).expect("pktito's tests/editions-rules.json");
+    let v: serde_json::Value =
+        serde_json::from_str(&text).expect("tests/editions-rules.json isn't JSON");
+    let mut rs = String::new();
+    let _ = writeln!(
+        rs,
+        "// build.rs's, from pktito's tests/editions-rules.json: change that, not this\n"
+    );
+    let names = offered("tests/editions-rules.json", &v, engine, &mut rs);
+    let _ = writeln!(rs, "pub const RULES: &[(&str, &[Edition])] = &[");
+    for n in &names {
+        let _ = writeln!(rs, "    ({n:?}, {}),", ident(n));
+    }
+    let _ = writeln!(rs, "];");
+    std::fs::write(out, rs).expect("OUT_DIR/rules.rs");
 }
 
 fn base(os: &str, root: &PathBuf) -> cc::Build {
@@ -216,9 +333,15 @@ fn main() {
     println!("cargo:rerun-if-changed=../vendor/pktito");
     println!("cargo:rerun-if-changed=native");
     println!("cargo:rerun-if-env-changed=QNN_SDK");
-    catalog(
-        &root.join("models.json"),
-        &PathBuf::from(env::var_os("OUT_DIR").unwrap()).join("catalog.rs"),
+    // the catalog's models the app offers, and those of the made-up one
+    // that holds it to the rules (catalog, rules)
+    let out = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+    let engine = engine_version(&root);
+    catalog(&root.join("models.json"), engine, &out.join("catalog.rs"));
+    rules(
+        &root.join("tests/editions-rules.json"),
+        engine,
+        &out.join("rules.rs"),
     );
     // Qualcomm's AI Runtime SDK, where QNN_SDK names it: the encoder on a
     // Snapdragon's NPU too (npu/qnn.c), on Android's Arm64 and Windows's.

@@ -933,9 +933,25 @@ mod tests {
     /// edition of each model it runs, by the model's name: pktito's
     /// tests/editions.tsv, which pktito's editioncheck holds its own reading
     /// of models.json to (core/editions.c), so the library and the app pick
-    /// the same edition on every device
-    fn known() -> Vec<(String, Device, Vec<(String, String)>)> {
-        let tsv = include_str!("../../vendor/pktito/tests/editions.tsv");
+    /// the same edition on every device. "-" is a model nothing runs unasked:
+    /// one the app leaves out (build.rs, offered).
+    const TABLE: &str = include_str!("../../vendor/pktito/tests/editions.tsv");
+
+    /// The same devices and what they run of pktito's made-up catalog for
+    /// the rules, tests/editions-rules.json
+    const RULES_TABLE: &str = include_str!("../../vendor/pktito/tests/editions-rules.tsv");
+
+    /// What build.rs makes of the made-up catalog, by the rules that make
+    /// the app's of models.json: RULES, the models it offers, with their
+    /// editions
+    mod rules {
+        #![allow(dead_code)]
+        use super::super::*;
+        include!(concat!(env!("OUT_DIR"), "/rules.rs"));
+    }
+
+    /// A table's rows: each device, and the edition of each model it runs
+    fn known(tsv: &str) -> Vec<(String, Device, Vec<(String, String)>)> {
         let mut rows = tsv.lines().filter(|l| !l.is_empty() && !l.starts_with('#'));
         let head: Vec<&str> = rows
             .next()
@@ -970,7 +986,7 @@ mod tests {
     #[test]
     fn no_edition_ties_another() {
         for e in CATALOG {
-            for (what, d, _) in known() {
+            for (what, d, _) in known(TABLE) {
                 let fits: Vec<u8> = e.editions.iter().map(|ed| fit(ed, &d)).collect();
                 let top = *fits.iter().max().unwrap();
                 let n = fits.iter().filter(|&&f| f == top).count();
@@ -996,20 +1012,35 @@ mod tests {
         }
     }
 
-    /// What each device gets: editions.tsv's edition of every model, a
-    /// column for each of the catalog's
+    /// A catalog held to a table: for each device, the edition of every
+    /// model it offers is the table's, a column for each, and a model the
+    /// table gives "-" isn't in it
+    fn holds_to(tsv: &str, catalog: &[Entry]) {
+        let r = Refusals::default();
+        for (what, d, want) in known(tsv) {
+            for e in catalog {
+                assert!(
+                    want.iter().any(|(m, _)| m == e.name),
+                    "{}: no column in the table",
+                    e.name
+                );
+            }
+            for (name, id) in &want {
+                match (catalog.iter().find(|e| e.name == name), id.as_str()) {
+                    (None, "-") => {}
+                    (Some(_), "-") => panic!("{name}: offered, where nothing runs it unasked"),
+                    (None, _) => panic!("{name}: in the table, not the catalog"),
+                    (Some(e), id) => assert_eq!(choose(e, &d, &r).id, id, "{name} on {what}"),
+                }
+            }
+        }
+    }
+
+    /// What each device gets: editions.tsv's edition of every model
     #[test]
     fn each_device_gets_its_edition() {
         let r = Refusals::default();
-        for (what, d, want) in known() {
-            let names: Vec<&str> = want.iter().map(|(m, _)| m.as_str()).collect();
-            let catalog: Vec<&str> = CATALOG.iter().map(|e| e.name).collect();
-            assert_eq!(names, catalog, "editions.tsv's models");
-            for (name, id) in &want {
-                let e = model::entry(name).unwrap();
-                assert_eq!(choose(e, &d, &r).id, id.as_str(), "{name} on {what}");
-            }
-        }
+        holds_to(TABLE, CATALOG);
         // a Mac below the floor, an iPhone below iOS 18; no phone's graph on
         // Windows, nor one where the Hexagon has less VTCM than it was built for
         let v2 = &CATALOG[0];
@@ -1023,6 +1054,27 @@ mod tests {
         ] {
             assert_eq!(choose(v2, &d, &r).id, "cpu", "{d:?}");
         }
+    }
+
+    /// What the app leaves out of a catalog, on pktito's made-up one, as
+    /// tests/editions-rules.tsv has it: a preview edition, and one that needs
+    /// a later pktito, so the S24 runs the CPU's where the S25 still gets
+    /// its graph; and a preview model, whole
+    #[test]
+    fn held_back_editions_are_never_chosen() {
+        let catalog: Vec<Entry> = rules::RULES
+            .iter()
+            .map(|&(name, editions)| Entry {
+                name,
+                key: name,
+                label: name,
+                about: "",
+                languages: &[],
+                accuracy: "",
+                editions,
+            })
+            .collect();
+        holds_to(RULES_TABLE, &catalog);
     }
 
     /// A refusal holds for its device's here and its encoder: another app,
