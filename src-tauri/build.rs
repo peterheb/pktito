@@ -98,6 +98,31 @@ fn engine_version(root: &Path) -> [u64; 3] {
         .expect("core/pktito.h: PKTITO_VERSION, major.minor.patch")
 }
 
+/// compiler-rt's builtins for the Mac, libclang_rt.osx.a, from the runtime
+/// folder of the clang that cc compiles with (main says why). Not bundled
+/// into the library crate: the binaries' link takes only the member that
+/// resolves something, here __isPlatformVersionAtLeast's.
+fn link_clang_runtime() {
+    let dir = cc::Build::new()
+        .get_compiler()
+        .to_command()
+        .arg("--print-runtime-dir")
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .map(|s| PathBuf::from(s.trim()))
+        .filter(|d| d.join("libclang_rt.osx.a").is_file());
+    match dir {
+        Some(d) => {
+            println!("cargo:rustc-link-search=native={}", d.display());
+            println!("cargo:rustc-link-lib=static:-bundle=clang_rt.osx");
+        }
+        None => println!(
+            "cargo:warning=pktito: no libclang_rt.osx.a in this compiler's runtime folder; a build for macOS under 15 will not link"
+        ),
+    }
+}
+
 /// A model's consts' name: its name in capitals, parakeet-tdt-0.6b-v2's
 /// PARAKEET_TDT_0_6B_V2
 fn ident(name: &str) -> String {
@@ -509,6 +534,18 @@ fn main() {
     };
     for lib in system {
         println!("cargo:rustc-link-lib={lib}");
+    }
+    // clang's runtime on the Mac, for npu/ane.m's @available(macOS 15.0):
+    // under a deployment target of 15 it is a call to compiler-rt's
+    // __isPlatformVersionAtLeast, which clang links into a program of its
+    // own and rustc's link (-nodefaultlibs) leaves out. `cargo tauri build`
+    // sets tauri.conf.json's 12.0, and its link failed with that symbol
+    // undefined (2026-11-09); a plain `cargo build` compiles for this Mac's
+    // macOS, where @available is decided when compiling, so it linked. iOS's
+    // 18.0 (ios/native.sh) decides it when compiling too, and Xcode's link
+    // brings the runtime anyway.
+    if os == "macos" {
+        link_clang_runtime();
     }
     if qnn.is_some() && os == "android" {
         println!("cargo:rustc-link-lib=dl");
