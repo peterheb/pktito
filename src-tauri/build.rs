@@ -41,19 +41,36 @@ const CORE: &[&str] = &[
     "sentences.c",
 ];
 
-/// Whether this compiler's assembler takes neon-sve's instructions, as
-/// pktito's Makefile asks it (PROBE_neon-sve): the flags alone say nothing
-/// of them, since the assembly names its own extensions.
-fn assembles_sve(os: &str, root: &PathBuf) -> bool {
-    let dir = PathBuf::from(env::var_os("OUT_DIR").unwrap()).join("probe-sve");
+/// The instructions a backend's assembly names for itself, which its flags
+/// say nothing of, as pktito's Makefile probes its compiler for them
+/// (PROBE_<id>): neon-sve's SVE and I8MM, neon-i8mm's I8MM.
+fn probe(name: &str) -> Option<&'static str> {
+    match name {
+        "neon-sve" => Some(
+            r".arch_extension sve\n.arch_extension i8mm\nmovprfx z0, z1\nsmmla z0.s, z1.b, z2.b",
+        ),
+        "neon-i8mm" => Some(r".arch_extension i8mm\nsmmla v0.4s, v1.16b, v2.16b"),
+        _ => None,
+    }
+}
+
+/// Whether this compiler's assembler takes a backend's probe, under the
+/// backend's flags; a backend it doesn't is left out.
+fn assembles(os: &str, root: &PathBuf, name: &str, flags: &[&str], asm: &str) -> bool {
+    let dir = PathBuf::from(env::var_os("OUT_DIR").unwrap()).join(format!("probe-{name}"));
     let _ = std::fs::create_dir_all(&dir);
-    let probe = dir.join("probe.c");
-    let asm = r#"void pk_probe_sve(void) { __asm__(".arch_extension sve\n.arch_extension i8mm\nmovprfx z0, z1\nsmmla z0.s, z1.b, z2.b"); }"#;
-    std::fs::write(&probe, asm).is_ok()
-        && base(os, root)
-            .flag("-march=armv8.2-a+dotprod")
-            .out_dir(&dir)
-            .file(&probe)
+    let file = dir.join("probe.c");
+    let mut b = base(os, root);
+    for f in flags {
+        b.flag(f);
+    }
+    std::fs::write(
+        &file,
+        format!("void pk_probe(void) {{ __asm__(\"{asm}\"); }}\n"),
+    )
+    .is_ok()
+        && b.out_dir(&dir)
+            .file(&file)
             .cargo_warnings(false)
             .try_compile_intermediates()
             .is_ok()
@@ -115,14 +132,28 @@ fn main() {
         .map(PathBuf::from);
 
     let family: Vec<(&str, Vec<&str>)> = match arch.as_str() {
-        // neon-sve, neon-dp's C with an int8 loop of SVE and I8MM assembly
-        // (SMMLA), on neon-dp's flags as pktito's Makefile builds it: 15 to
-        // 16% over neon-dp on the GB10's ten X925s, 24% on one (pktito's
-        // backend/neon-dp/CLIMB.md, 2026-11-02). Not for Apple's chips,
-        // which have no SVE; pktito picks it at run time only where the
-        // system says the CPU has both (core/os.c, cpu_has)
+        // neon-dp's three variants, each its C with another int8 product,
+        // on its flags as pktito's Makefile builds them (pktito's
+        // backend/neon-dp/CLIMB.md, by date):
+        // - neon-sve, a loop of SVE and I8MM assembly (SMMLA): 15 to 16%
+        //   over neon-dp on the GB10's ten X925s, 24% on one (2026-11-02);
+        //   run only where the system says the CPU has both (core/os.c,
+        //   cpu_has).
+        // - neon-i8mm, that loop without SVE: test.wav 12.4% the quicker on
+        //   the S24 and 21.5% on the S25 (2026-11-07).
+        // - neon-dp-a76, SDOT in the Cortex-A76's tile: 8.9% on the Pi 5,
+        //   7.0% on Graviton2 (2026-11-08).
+        // The last two run only where a probe of the product, on all of
+        // the fastest cores at once, finds them 3% the faster, once, by the
+        // first model load (backend/kernels.c). Apple's chips get none of
+        // the three: they have no SVE, and the probe keeps neon-dp there,
+        // the M4's neon-i8mm at 1.119 of its time and neon-dp-a76 at 0.976
+        // to 0.977 (2026-11-08), the M5 Ultra's neon-i8mm at 1.173 to 1.190
+        // (2026-11-07).
         "aarch64" if os != "macos" && os != "ios" => vec![
             ("neon-sve", vec!["-march=armv8.2-a+dotprod"]),
+            ("neon-i8mm", vec!["-march=armv8.2-a+dotprod"]),
+            ("neon-dp-a76", vec!["-march=armv8.2-a+dotprod"]),
             ("neon-dp", vec!["-march=armv8.2-a+dotprod"]),
             ("neon", vec!["-march=armv8-a"]),
         ],
@@ -168,7 +199,7 @@ fn main() {
         if flags
             .iter()
             .all(|f| b.is_flag_supported(f).unwrap_or(false))
-            && (*name != "neon-sve" || assembles_sve(&os, &root))
+            && probe(name).map_or(true, |asm| assembles(&os, &root, name, flags, asm))
         {
             for f in flags {
                 b.flag(f);
