@@ -36,8 +36,8 @@ android {
         // untrusted_app_34, which its SELinux policy leaves out, and so
         // reaches no NPU there (2026-11-03)
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.9.6"
+        versionCode = 5
+        versionName = "0.9.7"
         // the two native.sh builds the library for: without this AndroidX's
         // graphics-path library (Compose's) brought armeabi-v7a and x86 too,
         // and a 32-bit phone that Play offered the app to would have had
