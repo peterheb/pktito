@@ -236,6 +236,17 @@ static void k_quantize(pk_act *a, const float *x, size_t xs) {
 #define PK_Q8_BLOCK_BYTES (192 * 1024)
 #endif
 
+/* An output added to what is there keeps the add inside its branch: clang 18
+ * otherwise adds -0.0f where the caller adds nothing, the same bits rounding
+ * to nearest and a -0 for a zero sum rounding toward -infinity, where ref's
+ * is +0 (tests/q8check; CLIMB.md, 2026-11-10). The empty asm is what the
+ * compiler will not run ahead of the branch. */
+#ifdef __AVX512F__
+#define PK_HELD(v) __asm__("" : "+v"(v))
+#else
+#define PK_HELD(v) __asm__("" : "+x"(v))
+#endif
+
 /* 32 inputs from k on into a tile, g their weights: eight of the tile's
  * PK_Q8_GROUPs at constant offsets, which gcc keeps the accumulators in
  * place across (CLIMB.md, H2). The encoder's blocks are one of these, or
@@ -261,12 +272,9 @@ static void k_quantize(pk_act *a, const float *x, size_t xs) {
  * the size as a constant, a function each for 32 and 64 (k_gemm_q8_32,
  * k_gemm_q8_64): a run on the 12900HK 1.9% faster under gcc 15 and 1.2%
  * under clang 21 than with the size chosen as the loop runs, and in the
- * fast mode 1.0 and 1.5 points. The zmm tile chooses as the loop runs,
- * because a zmm block loop with the one size in it and no branch, clang 21
- * made with the tile's column pointers on the stack: at 32 a run 23.5%
- * slower on a Zen 5, and at 64 the fast mode 2.5% slower than the default,
- * where choosing makes it 4.9% faster. gcc 15's would be about 2 points
- * faster with the constant at either size (CLIMB.md, 2026-10-29). */
+ * fast mode 1.0 and 1.5 points. The zmm tile in C chooses as the loop
+ * runs; the encoder's blocks are the assembly tile's (q8z_blocks), which
+ * takes any multiple of 32. */
 #define PK_Q8_BLOCK(FAST, g, b)                                                   \
     do {                                                                          \
         if (qb == 32) {                                                           \
@@ -320,10 +328,10 @@ static void colsums(int32_t *cs, const pk_act *a) {
 /* AVX-512 (the avx512-vnni build): a panel of 16 rows is one zmm of int32
  * sums, and a group of four inputs for them the 64 weight bytes one zmm
  * load takes, so a group is one load and one VPDPBUSD a column where the
- * ymm tile below takes two of each. The 32 registers hold PK_Q8_NC columns,
- * two zmm each (the block's integer sums and the float chain), beside the
- * weight vector and a broadcast (CLIMB.md, 2026-10-24). Every lane does
- * what the ymm tile's does, so the bits are the same. */
+ * ymm tile below takes two of each. Every lane does what the ymm tile's
+ * does, so the bits are the same. There are two tiles: below PK_Q8_XOFF
+ * columns (the decoder) this one in C, PK_Q8_NC columns of one panel with
+ * the weights offset; from PK_Q8_XOFF up the one in assembly after it. */
 #ifndef PK_Q8_NC
 #define PK_Q8_NC 8
 #endif
@@ -331,24 +339,19 @@ static void colsums(int32_t *cs, const pk_act *a) {
 #error "PK_Q8_NC is 1 to 12: the tiles below are written for at most 12 columns"
 #endif
 
-#define PK_Q8_GROUP(g, k)                                                \
-    do {                                                                 \
-        __m512i wv = _mm512_loadu_si512((const void *)(g));              \
-        if (!XOFF)                                                       \
-            wv = _mm512_xor_si512(wv, off);                              \
-        for (int c = 0; c < NC; c++) {                                   \
-            int32_t v;                                                   \
-            memcpy(&v, x[c] + (k), 4);                                   \
-            const __m512i xb = _mm512_set1_epi32(v);                     \
-            s[c] = XOFF ? _mm512_dpbusd_epi32(s[c], xb, wv)              \
-                        : _mm512_dpbusd_epi32(s[c], wv, xb);             \
-        }                                                                \
+#define PK_Q8_GROUP(g, k)                                                                \
+    do {                                                                                 \
+        const __m512i wv = _mm512_xor_si512(_mm512_loadu_si512((const void *)(g)), off); \
+        for (int c = 0; c < NC; c++) {                                                   \
+            int32_t v;                                                                   \
+            memcpy(&v, x[c] + (k), 4);                                                   \
+            s[c] = _mm512_dpbusd_epi32(s[c], wv, _mm512_set1_epi32(v));                  \
+        }                                                                                \
     } while (0)
 
 static inline __attribute__((always_inline))
 void q8_tile(float *out, size_t os, const int8_t *w, uint32_t n, const float *ws,
-             const float *bias, const pk_act *a, uint32_t t0, int add,
-             const uint8_t *xo, const __m512i *wsum, const int32_t *cs, const int XOFF,
+             const float *bias, const pk_act *a, uint32_t t0, int add, const int32_t *cs,
              const int NC, const int FAST) {
     const uint32_t qb = a->qb, nb = n / qb;
     const __m512i off = _mm512_set1_epi8((char)0x80);
@@ -356,14 +359,14 @@ void q8_tile(float *out, size_t os, const int8_t *w, uint32_t n, const float *ws
     const uint8_t *x[12];
     for (int c = 0; c < NC; c++) {
         f[c] = _mm512_setzero_ps();
-        x[c] = XOFF ? xo + (size_t)c * n : (const uint8_t *)(a->q + (size_t)(t0 + c) * n);
+        x[c] = (const uint8_t *)(a->q + (size_t)(t0 + c) * n);
     }
     for (uint32_t b = 0; b < nb; b++) {
         __m512i s[12];
         for (int c = 0; c < NC; c++) s[c] = _mm512_setzero_si512();
         PK_Q8_BLOCK(FAST, w, b);
         for (int c = 0; c < NC; c++) {
-            const __m512i cv = XOFF ? wsum[b] : _mm512_set1_epi32(cs[(size_t)c * nb + b]);
+            const __m512i cv = _mm512_set1_epi32(cs[(size_t)c * nb + b]);
             const __m512 d = _mm512_set1_ps(a->d[(size_t)(t0 + c) * nb + b]);
             f[c] = _mm512_fmadd_ps(_mm512_cvtepi32_ps(_mm512_sub_epi32(s[c], cv)), d, f[c]);
         }
@@ -373,104 +376,385 @@ void q8_tile(float *out, size_t os, const int8_t *w, uint32_t n, const float *ws
         float *o = out + (size_t)(t0 + c) * os;
         __m512 v = _mm512_mul_ps(f[c], sc);
         if (bias) v = _mm512_add_ps(v, _mm512_loadu_ps(bias));
-        if (add) v = _mm512_add_ps(_mm512_loadu_ps(o), v);
+        if (add) { v = _mm512_add_ps(_mm512_loadu_ps(o), v); PK_HELD(v); }
         _mm512_storeu_ps(o, v);
     }
 }
 
-/* the tiles of one panel over columns [c0, c1), PK_Q8_NC at a time */
-#define PK_Q8_TILE_N(N, FAST, XOFF, XO, WSUM, CS)                                        \
-    q8_tile(o, os, wp, n, ws + r, b, a, t, add, XO, WSUM, CS, XOFF, N, FAST)
-#define PK_Q8_TILES(FAST, XOFF, XO, WSUM, CS)                                            \
-    do {                                                                                 \
-        uint32_t t = c0;                                                                 \
-        for (; t + PK_Q8_NC <= c1; t += PK_Q8_NC)                                        \
-            PK_Q8_TILE_N(PK_Q8_NC, FAST, XOFF, XO, WSUM, CS);                              \
-        switch (c1 - t) {                                                                \
-        case 11: PK_Q8_TILE_N(11, FAST, XOFF, XO, WSUM, CS); break;                        \
-        case 10: PK_Q8_TILE_N(10, FAST, XOFF, XO, WSUM, CS); break;                        \
-        case 9: PK_Q8_TILE_N(9, FAST, XOFF, XO, WSUM, CS); break;                          \
-        case 8: PK_Q8_TILE_N(8, FAST, XOFF, XO, WSUM, CS); break;                          \
-        case 7: PK_Q8_TILE_N(7, FAST, XOFF, XO, WSUM, CS); break;                          \
-        case 6: PK_Q8_TILE_N(6, FAST, XOFF, XO, WSUM, CS); break;                          \
-        case 5: PK_Q8_TILE_N(5, FAST, XOFF, XO, WSUM, CS); break;                          \
-        case 4: PK_Q8_TILE_N(4, FAST, XOFF, XO, WSUM, CS); break;                          \
-        case 3: PK_Q8_TILE_N(3, FAST, XOFF, XO, WSUM, CS); break;                          \
-        case 2: PK_Q8_TILE_N(2, FAST, XOFF, XO, WSUM, CS); break;                          \
-        case 1: PK_Q8_TILE_N(1, FAST, XOFF, XO, WSUM, CS); break;                          \
-        default: break;                                                                  \
-        }                                                                                \
+/* the tiles of one panel over columns [0, c1), PK_Q8_NC at a time */
+#define PK_Q8_TILE_N(N, FAST) q8_tile(o, os, wp, n, ws + r, b, a, t, add, cs + (size_t)t * nb, N, FAST)
+#define PK_Q8_TILES(FAST)                                \
+    do {                                                 \
+        uint32_t t = 0;                                  \
+        for (; t + PK_Q8_NC <= c1; t += PK_Q8_NC)        \
+            PK_Q8_TILE_N(PK_Q8_NC, FAST);                \
+        switch (c1 - t) {                                \
+        case 11: PK_Q8_TILE_N(11, FAST); break;          \
+        case 10: PK_Q8_TILE_N(10, FAST); break;          \
+        case 9: PK_Q8_TILE_N(9, FAST); break;            \
+        case 8: PK_Q8_TILE_N(8, FAST); break;            \
+        case 7: PK_Q8_TILE_N(7, FAST); break;            \
+        case 6: PK_Q8_TILE_N(6, FAST); break;            \
+        case 5: PK_Q8_TILE_N(5, FAST); break;            \
+        case 4: PK_Q8_TILE_N(4, FAST); break;            \
+        case 3: PK_Q8_TILE_N(3, FAST); break;            \
+        case 2: PK_Q8_TILE_N(2, FAST); break;            \
+        case 1: PK_Q8_TILE_N(1, FAST); break;            \
+        default: break;                                  \
+        }                                                \
     } while (0)
 
-/* The offset copy, a block a thread, its address taken once a call from a
- * function gcc does not inline. In libpktito.so a thread-local is reached
- * through a call to __tls_get_addr, and gcc, which holds such an address
- * invariant in a function, would make the call at each of the copy's 13
- * uses in q8_zmm, where clang makes it once: taken here, gcc's shared
- * library runs level with ./pktito-c, 2% faster than with the thread-local
- * in q8_zmm on one thread and 6% on sixteen, and the executables do not
- * move (the 9950X, CLIMB.md, 2026-10-27). */
-static __attribute__((noinline)) uint8_t *zmm_xoff(void) {
-    static _Thread_local _Alignas(64) uint8_t xoff[PK_Q8_BLOCK_BYTES + PK_Q8_NC * 32 * PK_MAX_BLOCKS];
-    return xoff;
-}
-
+/* fewer than PK_Q8_XOFF columns */
 static inline __attribute__((always_inline))
-void q8_zmm_with(float *out, size_t os, const int8_t *w, const float *ws, const float *bias,
-                 uint32_t rows, const pk_act *a, int add, const int FAST) {
-    const uint32_t n = a->n, nb = n / a->qb;
-    if (a->T < PK_Q8_XOFF) {
-        int32_t cs[PK_Q8_XOFF * PK_MAX_BLOCKS];
-        colsums(cs, a);
-        const uint32_t c0 = 0, c1 = a->T;
-        for (uint32_t r = 0; r < rows; r += 16) {
-            const int8_t *wp = w + (size_t)r * n;
-            float *o = out + r;
-            const float *b = bias ? bias + r : NULL;
-            PK_Q8_TILES(FAST, 0, NULL, NULL, cs + (size_t)(t - c0) * nb);
-        }
-        return;
-    }
-    uint8_t *const xoff = zmm_xoff();
-    __m512i wsum[PK_MAX_BLOCKS];
-    const __m512i one = _mm512_set1_epi8(1), off = _mm512_set1_epi8((char)0x80);
-    uint32_t cb = PK_Q8_BLOCK_BYTES / n;
-    cb = cb < PK_Q8_NC ? PK_Q8_NC : cb - cb % PK_Q8_NC;
-    for (uint32_t c0 = 0; c0 < a->T; c0 += cb) {
-        const uint32_t c1 = a->T - c0 < cb ? a->T : c0 + cb;
-        const int8_t *src = a->q + (size_t)c0 * n;
-        for (size_t i = 0; i < (size_t)(c1 - c0) * n; i += 32)
-            _mm256_store_si256((__m256i *)(void *)(xoff + i),
-                               _mm256_xor_si256(_mm256_loadu_si256((const __m256i *)(const void *)(src + i)),
-                                                _mm512_castsi512_si256(off)));
-        for (uint32_t r = 0; r < rows; r += 16) {
-            const int8_t *wp = w + (size_t)r * n;
-            float *o = out + r;
-            const float *b = bias ? bias + r : NULL;
-            for (uint32_t blk = 0; blk < nb; blk++) {
-                __m512i s = _mm512_setzero_si512();
-                for (uint32_t k = blk * a->qb; k < (blk + 1) * a->qb; k += 4)
-                    s = _mm512_dpbusd_epi32(s, one, _mm512_loadu_si512((const void *)(wp + (size_t)k * 16)));
-                wsum[blk] = _mm512_slli_epi32(s, 7);
-            }
-            PK_Q8_TILES(FAST, 1, xoff + (size_t)(t - c0) * n, wsum, NULL);
-        }
+void q8_zmm_few(float *out, size_t os, const int8_t *w, const float *ws, const float *bias,
+                uint32_t rows, const pk_act *a, int add, const int FAST) {
+    const uint32_t n = a->n, nb = n / a->qb, c1 = a->T;
+    int32_t cs[PK_Q8_XOFF * PK_MAX_BLOCKS];
+    colsums(cs, a);
+    for (uint32_t r = 0; r < rows; r += 16) {
+        const int8_t *wp = w + (size_t)r * n;
+        float *o = out + r;
+        const float *b = bias ? bias + r : NULL;
+        PK_Q8_TILES(FAST);
     }
 }
 
 /* the fast mode's blocks of 64 (PK_Q8_BLOCK) */
 static __attribute__((noinline))
-void q8_zmm64(float *out, size_t os, const int8_t *w, const float *ws, const float *bias,
-              uint32_t rows, const pk_act *a, int add) {
-    q8_zmm_with(out, os, w, ws, bias, rows, a, add, 1);
+void q8_zmm_few64(float *out, size_t os, const int8_t *w, const float *ws, const float *bias,
+                  uint32_t rows, const pk_act *a, int add) {
+    q8_zmm_few(out, os, w, ws, bias, rows, a, add, 1);
+}
+
+/* The tiles from PK_Q8_XOFF columns up, their block loops in assembly. A
+ * Zen 5 takes two vector loads a cycle of any width, and a block of one
+ * panel by eight columns is 81 of them for its 64 VPDPBUSD and 8 FMA: 40.5
+ * cycles, where the two multiplier pipes would take 36. With two panels a
+ * broadcast serves two VPDPBUSD: a group is 2 weight loads and 6
+ * broadcasts for 12 VPDPBUSD, and the pipes are the bound again (CLIMB.md,
+ * 2026-11-09). So the panels go two at a time by six columns, and a panel
+ * left over, or a call of one (the attention's V, core/encoder.c's
+ * panel_item), by twelve. Either way the 32 registers are
+ *
+ *   zmm0-11    a block's sums: a pair's panel 0 by column, then panel 1
+ *   zmm12-23   the float chains, likewise
+ *   zmm24-25   a group's weights, each panel's
+ *   zmm26-29   broadcasts
+ *   zmm30      a column's scale
+ *
+ * A block's sums start at minus 128 x its weights' sums, so the offset's
+ * correction (PK_Q8_XOFF) is a register move. One chain a sum is enough:
+ * twelve of a block's 8 VPDPBUSD at 4 cycles each fit the 54 cycles that
+ * its 108 uops take on the two pipes. In assembly because the loop wants
+ * every register, and gcc and clang each spill a different part of the C
+ * (CLIMB.md, 2026-10-24, the x86 backends under two compilers). The loops
+ * are strings of 8 KB, past the 4095 characters C11 requires a compiler to
+ * take in a literal, which clang's -Wpedantic points out; gcc and clang
+ * take them whole. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Woverlength-strings"
+#endif
+
+#define Q8Z_ZERO(r) "vpxord %%xmm" r ", %%xmm" r ", %%xmm" r "\n\t"
+#define Q8Z_MOVE(a, b) "vmovdqa64 %%zmm" a ", %%zmm" b "\n\t"
+#define Q8Z_STORE(r, o) "vmovaps %%zmm" r ", " o "(%[i])\n\t"
+#define Q8Z_X(m, r) "vpbroadcastd " m ", %%zmm" r "\n\t"
+#define Q8Z_HEAD                                                                                  \
+    Q8Z_ZERO("12") Q8Z_ZERO("13") Q8Z_ZERO("14") Q8Z_ZERO("15") Q8Z_ZERO("16") Q8Z_ZERO("17")   \
+    Q8Z_ZERO("18") Q8Z_ZERO("19") Q8Z_ZERO("20") Q8Z_ZERO("21") Q8Z_ZERO("22") Q8Z_ZERO("23")   \
+    ".p2align 6\n"                                                                                \
+    "1:\n\t"
+#define Q8Z_TAIL                                                                                  \
+    "dec %[nb]\n\t"                                                                               \
+    "jnz 1b\n\t"                                                                                  \
+    "mov %[f], %[i]\n\t"                                                                          \
+    Q8Z_STORE("12", "0") Q8Z_STORE("13", "64") Q8Z_STORE("14", "128") Q8Z_STORE("15", "192")     \
+    Q8Z_STORE("16", "256") Q8Z_STORE("17", "320") Q8Z_STORE("18", "384") Q8Z_STORE("19", "448")  \
+    Q8Z_STORE("20", "512") Q8Z_STORE("21", "576") Q8Z_STORE("22", "640") Q8Z_STORE("23", "704")
+#define Q8Z_CLOBBERS                                                                              \
+    "cc", "memory", "zmm0", "zmm1", "zmm2", "zmm3", "zmm4", "zmm5", "zmm6", "zmm7", "zmm8",      \
+    "zmm9", "zmm10", "zmm11", "zmm12", "zmm13", "zmm14", "zmm15", "zmm16", "zmm17", "zmm18",     \
+    "zmm19", "zmm20", "zmm21", "zmm22", "zmm23", "zmm24", "zmm25", "zmm26", "zmm27", "zmm28",    \
+    "zmm29", "zmm30"
+
+/* a pair's group of four inputs: W its offset from the block's weights, X from the columns */
+#define Q8Z_DP2(x, s0, s1)                                \
+    "vpdpbusd %%zmm24, %%zmm" x ", %%zmm" s0 "\n\t"       \
+    "vpdpbusd %%zmm25, %%zmm" x ", %%zmm" s1 "\n\t"
+#define Q8Z_GROUP2(W, X)                                  \
+    "vmovdqu64 " W "(%[w0]), %%zmm24\n\t"                 \
+    "vmovdqu64 " W "(%[w1]), %%zmm25\n\t"                 \
+    Q8Z_X(X "(%[x])", "26")                               \
+    Q8Z_X(X "(%[x],%[n])", "27")                          \
+    Q8Z_X(X "(%[x],%[n],2)", "28")                        \
+    Q8Z_X(X "(%[x3])", "29")                              \
+    Q8Z_DP2("26", "0", "6") Q8Z_DP2("27", "1", "7")       \
+    Q8Z_DP2("28", "2", "8") Q8Z_DP2("29", "3", "9")       \
+    Q8Z_X(X "(%[x],%[n],4)", "26")                        \
+    Q8Z_X(X "(%[x3],%[n],2)", "27")                       \
+    Q8Z_DP2("26", "4", "10") Q8Z_DP2("27", "5", "11")
+
+/* a column's finish in a pair: its scale at D, its two sums into its two chains */
+#define Q8Z_FINISH2(D, S0, S1, F0, F1)                    \
+    "vbroadcastss " D ", %%zmm30\n\t"                     \
+    "vcvtdq2ps %%zmm" S0 ", %%zmm" S0 "\n\t"              \
+    "vcvtdq2ps %%zmm" S1 ", %%zmm" S1 "\n\t"              \
+    "vfmadd231ps %%zmm30, %%zmm" S0 ", %%zmm" F0 "\n\t"   \
+    "vfmadd231ps %%zmm30, %%zmm" S1 ", %%zmm" F1 "\n\t"
+
+/* nb blocks of h x 32 inputs of a pair's tile: w0 and w1 the two panels'
+ * weights, x the first of its six columns, n apart, as offset bytes, d
+ * that column's scales, the columns' ds bytes apart, s each block's two
+ * starts. Into f: panel 0's six columns, 16 floats each, then panel 1's. */
+static inline __attribute__((always_inline))
+void q8z_pair(float *f, const int8_t *w0, const int8_t *w1, const uint8_t *x, size_t n,
+              const float *d, size_t ds, const __m512i *s, size_t nb, size_t h) {
+    const uint8_t *x3 = x + 3 * n;
+    size_t i;
+    __asm__ volatile(
+        Q8Z_HEAD
+        "vmovdqa64 (%[s]), %%zmm0\n\t"
+        "vmovdqa64 64(%[s]), %%zmm6\n\t"
+        Q8Z_MOVE("0", "1") Q8Z_MOVE("0", "2") Q8Z_MOVE("0", "3") Q8Z_MOVE("0", "4") Q8Z_MOVE("0", "5")
+        Q8Z_MOVE("6", "7") Q8Z_MOVE("6", "8") Q8Z_MOVE("6", "9") Q8Z_MOVE("6", "10") Q8Z_MOVE("6", "11")
+        "mov %[h], %[i]\n"
+        "2:\n\t"
+        Q8Z_GROUP2("0", "0") Q8Z_GROUP2("64", "4") Q8Z_GROUP2("128", "8") Q8Z_GROUP2("192", "12")
+        Q8Z_GROUP2("256", "16") Q8Z_GROUP2("320", "20") Q8Z_GROUP2("384", "24") Q8Z_GROUP2("448", "28")
+        "add $512, %[w0]\n\t"
+        "add $512, %[w1]\n\t"
+        "add $32, %[x]\n\t"
+        "add $32, %[x3]\n\t"
+        "dec %[i]\n\t"
+        "jnz 2b\n\t"
+        Q8Z_FINISH2("(%[d])", "0", "6", "12", "18")
+        Q8Z_FINISH2("(%[d],%[ds])", "1", "7", "13", "19")
+        Q8Z_FINISH2("(%[d],%[ds],2)", "2", "8", "14", "20")
+        "lea (%[d],%[ds],2), %[i]\n\t"
+        Q8Z_FINISH2("(%[i],%[ds])", "3", "9", "15", "21")
+        Q8Z_FINISH2("(%[d],%[ds],4)", "4", "10", "16", "22")
+        "lea (%[i],%[ds],2), %[i]\n\t"
+        Q8Z_FINISH2("(%[i],%[ds])", "5", "11", "17", "23")
+        "add $4, %[d]\n\t"
+        "add $128, %[s]\n\t"
+        Q8Z_TAIL
+        : [w0] "+r"(w0), [w1] "+r"(w1), [x] "+r"(x), [x3] "+r"(x3), [d] "+r"(d), [s] "+r"(s),
+          [nb] "+r"(nb), [i] "=&r"(i)
+        : [n] "r"(n), [ds] "r"(ds), [h] "m"(h), [f] "m"(f)
+        : Q8Z_CLOBBERS);
+}
+
+/* one panel's group, for twelve columns */
+#define Q8Z_DP1(x, s) "vpdpbusd %%zmm24, %%zmm" x ", %%zmm" s "\n\t"
+#define Q8Z_GROUP1(W, X)                                                              \
+    "vmovdqu64 " W "(%[w0]), %%zmm24\n\t"                                             \
+    Q8Z_X(X "(%[x])", "26") Q8Z_X(X "(%[x],%[n])", "27")                              \
+    Q8Z_X(X "(%[x],%[n],2)", "28") Q8Z_X(X "(%[x3])", "29")                           \
+    Q8Z_DP1("26", "0") Q8Z_DP1("27", "1") Q8Z_DP1("28", "2") Q8Z_DP1("29", "3")       \
+    Q8Z_X(X "(%[x],%[n],4)", "26") Q8Z_X(X "(%[x3],%[n],2)", "27")                    \
+    Q8Z_X(X "(%[x6])", "28") Q8Z_X(X "(%[x6],%[n])", "29")                            \
+    Q8Z_DP1("26", "4") Q8Z_DP1("27", "5") Q8Z_DP1("28", "6") Q8Z_DP1("29", "7")       \
+    Q8Z_X(X "(%[x6],%[n],2)", "26") Q8Z_X(X "(%[x9])", "27")                          \
+    Q8Z_X(X "(%[x6],%[n],4)", "28") Q8Z_X(X "(%[x9],%[n],2)", "29")                   \
+    Q8Z_DP1("26", "8") Q8Z_DP1("27", "9") Q8Z_DP1("28", "10") Q8Z_DP1("29", "11")
+
+#define Q8Z_FINISH1(D, S, F)                              \
+    "vbroadcastss " D ", %%zmm30\n\t"                     \
+    "vcvtdq2ps %%zmm" S ", %%zmm" S "\n\t"                \
+    "vfmadd231ps %%zmm30, %%zmm" S ", %%zmm" F "\n\t"
+#define Q8Z_STEP2DS "lea (%[i],%[ds],2), %[i]\n\t"
+
+/* The same for one panel's tile of twelve columns: s a start a block, f the
+ * twelve columns. The broadcasts are its bound, 13 loads for a group's 12
+ * VPDPBUSD: 577 GMAC/s on L1-resident data where the pair's tile ran 620
+ * and eight columns 554 (CLIMB.md, 2026-11-09). */
+static inline __attribute__((always_inline))
+void q8z_lone(float *f, const int8_t *w0, const uint8_t *x, size_t n, const float *d, size_t ds,
+              const __m512i *s, size_t nb, size_t h) {
+    const uint8_t *x3 = x + 3 * n, *x6 = x + 6 * n, *x9 = x + 9 * n;
+    size_t i;
+    __asm__ volatile(
+        Q8Z_HEAD
+        "vmovdqa64 (%[s]), %%zmm0\n\t"
+        Q8Z_MOVE("0", "1") Q8Z_MOVE("0", "2") Q8Z_MOVE("0", "3") Q8Z_MOVE("0", "4") Q8Z_MOVE("0", "5")
+        Q8Z_MOVE("0", "6") Q8Z_MOVE("0", "7") Q8Z_MOVE("0", "8") Q8Z_MOVE("0", "9") Q8Z_MOVE("0", "10")
+        Q8Z_MOVE("0", "11")
+        "mov %[h], %[i]\n"
+        "2:\n\t"
+        Q8Z_GROUP1("0", "0") Q8Z_GROUP1("64", "4") Q8Z_GROUP1("128", "8") Q8Z_GROUP1("192", "12")
+        Q8Z_GROUP1("256", "16") Q8Z_GROUP1("320", "20") Q8Z_GROUP1("384", "24") Q8Z_GROUP1("448", "28")
+        "add $512, %[w0]\n\t"
+        "add $32, %[x]\n\t"
+        "add $32, %[x3]\n\t"
+        "add $32, %[x6]\n\t"
+        "add $32, %[x9]\n\t"
+        "dec %[i]\n\t"
+        "jnz 2b\n\t"
+        Q8Z_FINISH1("(%[d])", "0", "12")
+        Q8Z_FINISH1("(%[d],%[ds])", "1", "13")
+        Q8Z_FINISH1("(%[d],%[ds],2)", "2", "14")
+        "lea (%[d],%[ds],2), %[i]\n\t"
+        Q8Z_FINISH1("(%[i],%[ds])", "3", "15")
+        Q8Z_FINISH1("(%[i],%[ds],2)", "4", "16")
+        Q8Z_STEP2DS
+        Q8Z_FINISH1("(%[i],%[ds])", "5", "17")
+        Q8Z_FINISH1("(%[i],%[ds],2)", "6", "18")
+        Q8Z_STEP2DS
+        Q8Z_FINISH1("(%[i],%[ds])", "7", "19")
+        Q8Z_FINISH1("(%[i],%[ds],2)", "8", "20")
+        Q8Z_STEP2DS
+        Q8Z_FINISH1("(%[i],%[ds])", "9", "21")
+        Q8Z_FINISH1("(%[i],%[ds],2)", "10", "22")
+        Q8Z_STEP2DS
+        Q8Z_FINISH1("(%[i],%[ds])", "11", "23")
+        "add $4, %[d]\n\t"
+        "add $64, %[s]\n\t"
+        Q8Z_TAIL
+        : [w0] "+r"(w0), [x] "+r"(x), [x3] "+r"(x3), [x6] "+r"(x6), [x9] "+r"(x9), [d] "+r"(d),
+          [s] "+r"(s), [nb] "+r"(nb), [i] "=&r"(i)
+        : [n] "r"(n), [ds] "r"(ds), [h] "m"(h), [f] "m"(f)
+        : Q8Z_CLOBBERS);
+}
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
+/* What the tiles keep a thread: each block's starts for a pair of panels,
+ * and the offset copy of a column block, which is at least a tile's twelve
+ * columns of the widest input. Its address is taken once a call from a
+ * function gcc does not inline: in libpktito.so a thread-local is reached
+ * through a call to __tls_get_addr, which gcc would make at each use and
+ * clang makes once (2% of a run on one thread and 6% on sixteen when the
+ * copy was reached from the product itself, CLIMB.md, 2026-10-27). */
+#if PK_Q8_BLOCK_BYTES < 12 * 32 * PK_MAX_BLOCKS
+#error "PK_Q8_BLOCK_BYTES holds twelve columns of the widest input"
+#endif
+typedef struct {
+    __m512i s[2 * PK_MAX_BLOCKS];
+    uint8_t x[PK_Q8_BLOCK_BYTES];
+} q8z_scratch;
+
+static __attribute__((noinline)) q8z_scratch *zmm_scratch(void) {
+    static _Thread_local _Alignas(64) q8z_scratch z;
+    return &z;
+}
+
+/* a panel's blocks' starts, step vectors apart: minus 128 x the block's sums of its weights */
+static inline void q8z_starts(__m512i *s, int step, const int8_t *wp, uint32_t nb, uint32_t qb) {
+    const __m512i one = _mm512_set1_epi8(1);
+    for (uint32_t b = 0; b < nb; b++, s += step) {
+        __m512i v = _mm512_setzero_si512();
+        for (uint32_t k = b * qb; k < (b + 1) * qb; k += 4)
+            v = _mm512_dpbusd_epi32(v, one, _mm512_loadu_si512((const void *)(wp + (size_t)k * 16)));
+        *s = _mm512_sub_epi32(_mm512_setzero_si512(), _mm512_slli_epi32(v, 7));
+    }
+}
+
+/* nc columns of a panel out of a tile's floats: by the rows' scales, with the bias, onto o */
+static inline __attribute__((always_inline))
+void q8z_out(float *o, size_t os, const float *f, uint32_t nc, const float *ws, const float *bias,
+             int add) {
+    const __m512 sc = _mm512_loadu_ps(ws);
+    for (uint32_t c = 0; c < nc; c++, o += os, f += 16) {
+        __m512 v = _mm512_mul_ps(_mm512_load_ps(f), sc);
+        if (bias) v = _mm512_add_ps(v, _mm512_loadu_ps(bias));
+        if (add) { v = _mm512_add_ps(_mm512_loadu_ps(o), v); PK_HELD(v); }
+        _mm512_storeu_ps(o, v);
+    }
+}
+
+/* PK_Q8_XOFF columns or more. A last tile short of its six or twelve
+ * columns is the tile that ends at the last column: the columns it makes a
+ * second time are the same bits, and are not written. */
+static void q8_zmm_wide(float *out, size_t os, const int8_t *w, const float *ws,
+                        const float *bias, uint32_t rows, const pk_act *a, int add) {
+    const uint32_t n = a->n, qb = a->qb, nb = n / qb, T = a->T;
+    const size_t ds = (size_t)nb * sizeof(float), h = qb / 32;
+    q8z_scratch *const z = zmm_scratch();
+    const __m256i off = _mm256_set1_epi8((char)0x80);
+    _Alignas(64) float f[12 * 16];
+    uint32_t cb = PK_Q8_BLOCK_BYTES / n;
+    cb = cb < 12 ? 12 : cb - cb % 12;
+    for (uint32_t c0 = 0; c0 < T; c0 += cb) {
+        const uint32_t c1 = T - c0 < cb ? T : c0 + cb;
+        const uint32_t cs = c1 - c0 < 12 ? c1 - 12 : c0;        /* the first column copied */
+        const int8_t *src = a->q + (size_t)cs * n;
+        for (size_t i = 0; i < (size_t)(c1 - cs) * n; i += 32)
+            _mm256_store_si256((__m256i *)(void *)(z->x + i),
+                               _mm256_xor_si256(_mm256_loadu_si256((const __m256i *)(const void *)(src + i)), off));
+        uint32_t r = 0;
+        for (; r + 32 <= rows; r += 32) {
+            const int8_t *wp = w + (size_t)r * n;
+            q8z_starts(z->s, 2, wp, nb, qb);
+            q8z_starts(z->s + 1, 2, wp + (size_t)16 * n, nb, qb);
+            for (uint32_t t = c0; t < c1; t += 6) {
+                const uint32_t ts = t + 6 <= c1 ? t : c1 - 6, skip = t - ts;
+                q8z_pair(f, wp, wp + (size_t)16 * n, z->x + (size_t)(ts - cs) * n, n,
+                         a->d + (size_t)ts * nb, ds, z->s, nb, h);
+                for (uint32_t p = 0; p < 2; p++)
+                    q8z_out(out + (size_t)t * os + r + 16 * p, os, f + (6 * p + skip) * 16, 6 - skip,
+                            ws + r + 16 * p, bias ? bias + r + 16 * p : NULL, add);
+            }
+        }
+        if (r < rows) {
+            const int8_t *wp = w + (size_t)r * n;
+            q8z_starts(z->s, 1, wp, nb, qb);
+            for (uint32_t t = c0; t < c1; t += 12) {
+                const uint32_t ts = t + 12 <= c1 ? t : c1 - 12, skip = t - ts;
+                q8z_lone(f, wp, z->x + (size_t)(ts - cs) * n, n, a->d + (size_t)ts * nb, ds, z->s, nb, h);
+                q8z_out(out + (size_t)t * os + r, os, f + skip * 16, 12 - skip, ws + r,
+                        bias ? bias + r : NULL, add);
+            }
+        }
+    }
+}
+
+/* One column, which every product of the decoder is: its groups dealt in
+ * turn to eight sums and added at the block's end, the same integer. One
+ * sum a panel is one chain of VPDPBUSD, 4 cycles a group on a Zen 5, where
+ * the group's two loads would allow one a cycle (CLIMB.md, 2026-11-09). */
+static void q8_zmm_one(float *out, const int8_t *w, const float *ws, const float *bias,
+                       uint32_t rows, const pk_act *a, int add) {
+    const uint32_t n = a->n, qb = a->qb, nb = n / qb;
+    const __m512i off = _mm512_set1_epi8((char)0x80);
+    int32_t cs[PK_MAX_BLOCKS];
+    colsums(cs, a);
+    for (uint32_t r = 0; r < rows; r += 16) {
+        const int8_t *g = w + (size_t)r * n;
+        __m512 f = _mm512_setzero_ps();
+        for (uint32_t b = 0; b < nb; b++) {
+            __m512i s[8];
+            for (int j = 0; j < 8; j++) s[j] = _mm512_setzero_si512();
+            for (uint32_t k = b * qb; k < (b + 1) * qb; k += 32)
+                for (uint32_t j = 0; j < 8; j++) {
+                    const __m512i wv = _mm512_loadu_si512((const void *)(g + (size_t)(k + 4 * j) * 16));
+                    s[j] = _mm512_dpbusd_epi32(s[j], _mm512_xor_si512(wv, off),
+                                               _mm512_set1_epi32(load32(a->q + k + 4 * j)));
+                }
+            const __m512i t = _mm512_add_epi32(
+                _mm512_add_epi32(_mm512_add_epi32(s[0], s[1]), _mm512_add_epi32(s[2], s[3])),
+                _mm512_add_epi32(_mm512_add_epi32(s[4], s[5]), _mm512_add_epi32(s[6], s[7])));
+            f = _mm512_fmadd_ps(_mm512_cvtepi32_ps(_mm512_sub_epi32(t, _mm512_set1_epi32(cs[b]))),
+                                _mm512_set1_ps(a->d[b]), f);
+        }
+        __m512 v = _mm512_mul_ps(f, _mm512_loadu_ps(ws + r));
+        if (bias) v = _mm512_add_ps(v, _mm512_loadu_ps(bias + r));
+        if (add) { v = _mm512_add_ps(_mm512_loadu_ps(out + r), v); PK_HELD(v); }
+        _mm512_storeu_ps(out + r, v);
+    }
 }
 
 static void q8_zmm(float *out, size_t os, const int8_t *w, const float *ws, const float *bias,
                    uint32_t rows, const pk_act *a, int add) {
-    if (a->qb == 64)
-        q8_zmm64(out, os, w, ws, bias, rows, a, add);
+    if (a->T >= PK_Q8_XOFF)
+        q8_zmm_wide(out, os, w, ws, bias, rows, a, add);
+    else if (a->T == 1)
+        q8_zmm_one(out, w, ws, bias, rows, a, add);
+    else if (a->qb == 64)
+        q8_zmm_few64(out, os, w, ws, bias, rows, a, add);
     else
-        q8_zmm_with(out, os, w, ws, bias, rows, a, add, 0);
+        q8_zmm_few(out, os, w, ws, bias, rows, a, add, 0);
 }
 
 
@@ -482,7 +766,9 @@ static void q8_zmm(float *out, size_t os, const int8_t *w, const float *ws, cons
  * 16 rows), A is 16 columns' 32 bytes of the block, n apart, and C the 16
  * columns by the panel's 16 rows. Signed by signed, so no offset. Each
  * block's C goes to L1 and comes back a column at a time into that
- * column's float chain, as the zmm tile's sums do.
+ * column's float chain, as the zmm tile's sums do. The fast mode's block
+ * of 64 is a B tile of all 16 rows and an A of 64 bytes a column: the same
+ * product, store and chains a block for twice the inputs.
  *
  * The blocks are a software pipeline. A TDPBSSD takes 16 cycles at K = 32
  * as at 64, a TILESTORED 17 and 19 uops on port 5, and beside them every
@@ -495,10 +781,14 @@ static void q8_zmm(float *out, size_t os, const int8_t *w, const float *ws, cons
  * in a loop of it alone, and a c7i.large's `pktito bench` 25.8x became
  * 28.9x (CLIMB.md, 2026-10-24, AMX's pipelined loop). A last group short
  * of 16 columns is padded to 16 (k_gemm_q8); blocks no multiple of 4 (none
- * of the model's) take the zmm tile. */
-static void amx_config(void) {
-    static _Thread_local int ready;
-    if (ready)
+ * of the model's) take the zmm tile.
+ *
+ * A thread's tiles are shaped for the blocks of its last call, 32 or 64,
+ * and reshaped when a call's differ: once a thread a run, since a run's
+ * products are all one or the other. */
+static void amx_config(uint32_t qb) {
+    static _Thread_local uint32_t shaped;
+    if (shaped == qb)
         return;
     _Alignas(64) struct {
         uint8_t palette, start, reserved[14];
@@ -507,14 +797,14 @@ static void amx_config(void) {
     } cfg;
     memset(&cfg, 0, sizeof cfg);
     cfg.palette = 1;
-    cfg.colsb[0] = 32, cfg.rows[0] = 16;                         /* A, even blocks */
-    cfg.colsb[1] = 64, cfg.rows[1] = 8;                          /* B, even blocks */
+    cfg.colsb[0] = (uint16_t)qb, cfg.rows[0] = 16;               /* A, even blocks */
+    cfg.colsb[1] = 64, cfg.rows[1] = (uint8_t)(qb / 4);          /* B, even blocks */
     cfg.colsb[2] = 64, cfg.rows[2] = 16;                         /* C, even blocks */
     cfg.colsb[3] = 64, cfg.rows[3] = 16;                         /* C, odd blocks */
-    cfg.colsb[4] = 32, cfg.rows[4] = 16;                         /* A, odd blocks */
-    cfg.colsb[5] = 64, cfg.rows[5] = 8;                          /* B, odd blocks */
+    cfg.colsb[4] = (uint16_t)qb, cfg.rows[4] = 16;               /* A, odd blocks */
+    cfg.colsb[5] = 64, cfg.rows[5] = (uint8_t)(qb / 4);          /* B, odd blocks */
     _tile_loadconfig(&cfg);
-    ready = 1;
+    shaped = qb;
 }
 
 /* One panel by 16 columns, the blocks in the pipeline above: block b's
@@ -522,13 +812,14 @@ static void amx_config(void) {
  * buffer b % 4, from which step b + 3 takes them. The steady state is four
  * steps a turn so that every tile and buffer is a constant; nb is a
  * multiple of 4, and a constant where the caller can make it one (the
- * encoder's 32 and 128), so that the scales' offsets m nb are too: with nb
- * a variable the 16 offsets take as many registers, and the c7i.large ran
- * 26.8x against 28.6x (CLIMB.md, as above). */
+ * encoder's 32 and 128, and 16 and 64 in the fast mode), so that the
+ * scales' offsets m nb are too: with nb a variable the 16 offsets take as
+ * many registers, and the c7i.large ran 26.8x against 28.6x (CLIMB.md, as
+ * above). QB is the block, 32 or 64, a constant at every call. */
 #define AMX_TILES(A, B, C, bl)                                                                 \
     do {                                                                                       \
-        _tile_loadd(A, x + (size_t)(bl) * 32, n);                                              \
-        _tile_loadd(B, wp + (size_t)(bl) * 512, 64);                                           \
+        _tile_loadd(A, x + (size_t)(bl) * QB, n);                                              \
+        _tile_loadd(B, wp + (size_t)(bl) * (16 * QB), 64);                                     \
         _tile_zero(C);                                                                         \
         _tile_dpbssd(C, A, B);                                                                 \
     } while (0)
@@ -553,13 +844,14 @@ static void amx_config(void) {
         float *o = out + (size_t)(m) * os;                                                     \
         __m512 v = _mm512_mul_ps(f##m, sc);                                                    \
         if (bias) v = _mm512_add_ps(v, _mm512_loadu_ps(bias));                                 \
-        if (add) v = _mm512_add_ps(_mm512_loadu_ps(o), v);                                     \
+        if (add) { v = _mm512_add_ps(_mm512_loadu_ps(o), v); PK_HELD(v); }                     \
         _mm512_storeu_ps(o, v);                                                                \
     } while (0)
 
 static inline __attribute__((always_inline))
 void amx_panel(float *out, size_t os, const int8_t *x, uint32_t n, const int8_t *wp, const float *d,
-               uint32_t nb, const float *ws, const float *bias, int add, int32_t cbuf[4][256]) {
+               uint32_t nb, const float *ws, const float *bias, int add, int32_t cbuf[4][256],
+               const uint32_t QB) {
     __m512 f0 = _mm512_setzero_ps(), f1 = f0, f2 = f0, f3 = f0, f4 = f0, f5 = f0, f6 = f0, f7 = f0;
     __m512 f8 = f0, f9 = f0, f10 = f0, f11 = f0, f12 = f0, f13 = f0, f14 = f0, f15 = f0;
     AMX_TILES(0, 1, 2, 0);
@@ -598,11 +890,11 @@ static void k_gemm_q8(float *out, size_t os, const int8_t *w, const float *ws, c
                       uint32_t rows, const pk_act *a, int add) {
     const uint32_t n = a->n, qb = a->qb, nb = n / qb, T = a->T;
     const uint32_t Tamx = n <= AMX_SHORT_N ? T : T & ~15u;      /* the columns AMX takes */
-    if (qb != 32 || nb % 4 || Tamx == 0) {
+    if ((qb != 32 && qb != 64) || nb % 4 || Tamx == 0) {
         q8_zmm(out, os, w, ws, bias, rows, a, add);
         return;
     }
-    amx_config();
+    amx_config(qb);
     _Alignas(64) int32_t cbuf[4][256];
     static _Thread_local _Alignas(64) int8_t xshort[16 * AMX_SHORT_N];
     static _Thread_local _Alignas(64) float dshort[16 * (AMX_SHORT_N / 32)];
@@ -631,12 +923,19 @@ static void k_gemm_q8(float *out, size_t os, const int8_t *w, const float *ws, c
                 po = oshort;
                 pos = 16;
             }
-            if (nb == 32)
-                amx_panel(po, pos, x, n, wp, d, 32, ws + r, b, add, cbuf);
-            else if (nb == 128)
-                amx_panel(po, pos, x, n, wp, d, 128, ws + r, b, add, cbuf);
+            if (qb == 32) {
+                if (nb == 32)
+                    amx_panel(po, pos, x, n, wp, d, 32, ws + r, b, add, cbuf, 32);
+                else if (nb == 128)
+                    amx_panel(po, pos, x, n, wp, d, 128, ws + r, b, add, cbuf, 32);
+                else
+                    amx_panel(po, pos, x, n, wp, d, nb, ws + r, b, add, cbuf, 32);
+            } else if (nb == 16)
+                amx_panel(po, pos, x, n, wp, d, 16, ws + r, b, add, cbuf, 64);
+            else if (nb == 64)
+                amx_panel(po, pos, x, n, wp, d, 64, ws + r, b, add, cbuf, 64);
             else
-                amx_panel(po, pos, x, n, wp, d, nb, ws + r, b, add, cbuf);
+                amx_panel(po, pos, x, n, wp, d, nb, ws + r, b, add, cbuf, 64);
             if (nt < 16)
                 for (uint32_t m = 0; m < nt; m++) memcpy(o + (size_t)m * os, oshort + 16 * m, 64);
         }
@@ -727,6 +1026,8 @@ void q8_tile(float *out, size_t os, const int8_t *w, uint32_t n, const float *ws
         if (add) {
             v0 = _mm256_add_ps(_mm256_loadu_ps(o), v0);
             v1 = _mm256_add_ps(_mm256_loadu_ps(o + 8), v1);
+            PK_HELD(v0);
+            PK_HELD(v1);
         }
         _mm256_storeu_ps(o, v0);
         _mm256_storeu_ps(o + 8, v1);
@@ -814,9 +1115,57 @@ void k_gemm_q8_64(float *out, size_t os, const int8_t *w, const float *ws, const
     k_gemm_q8_with(out, os, w, ws, bias, rows, a, add, 64);
 }
 
+/* One column, as q8_zmm_one and for its reason: the panel's two halves,
+ * four sums each. */
+static void q8_ymm_one(float *out, const int8_t *w, const float *ws, const float *bias,
+                       uint32_t rows, const pk_act *a, int add) {
+    const uint32_t n = a->n, qb = a->qb, nb = n / qb;
+    const __m256i off = _mm256_set1_epi8((char)0x80);
+    int32_t cs[PK_MAX_BLOCKS];
+    colsums(cs, a);
+    for (uint32_t r = 0; r < rows; r += 16) {
+        const int8_t *g = w + (size_t)r * n;
+        __m256 f0 = _mm256_setzero_ps(), f1 = f0;
+        for (uint32_t b = 0; b < nb; b++) {
+            __m256i s0[4], s1[4];
+            for (int j = 0; j < 4; j++) s0[j] = s1[j] = _mm256_setzero_si256();
+            for (uint32_t k = b * qb; k < (b + 1) * qb; k += 16)
+                for (uint32_t j = 0; j < 4; j++) {
+                    const int8_t *gw = g + (size_t)(k + 4 * j) * 16;
+                    const __m256i w0 = _mm256_loadu_si256((const __m256i *)(const void *)gw);
+                    const __m256i w1 = _mm256_loadu_si256((const __m256i *)(const void *)(gw + 32));
+                    const __m256i xb = _mm256_set1_epi32(load32(a->q + k + 4 * j));
+                    s0[j] = PK_DPBUSD(s0[j], _mm256_xor_si256(w0, off), xb);
+                    s1[j] = PK_DPBUSD(s1[j], _mm256_xor_si256(w1, off), xb);
+                }
+            const __m256i t0 = _mm256_add_epi32(_mm256_add_epi32(s0[0], s0[1]), _mm256_add_epi32(s0[2], s0[3]));
+            const __m256i t1 = _mm256_add_epi32(_mm256_add_epi32(s1[0], s1[1]), _mm256_add_epi32(s1[2], s1[3]));
+            const __m256i cv = _mm256_set1_epi32(cs[b]);
+            const __m256 d = _mm256_set1_ps(a->d[b]);
+            f0 = _mm256_fmadd_ps(_mm256_cvtepi32_ps(_mm256_sub_epi32(t0, cv)), d, f0);
+            f1 = _mm256_fmadd_ps(_mm256_cvtepi32_ps(_mm256_sub_epi32(t1, cv)), d, f1);
+        }
+        __m256 v0 = _mm256_mul_ps(f0, _mm256_loadu_ps(ws + r)), v1 = _mm256_mul_ps(f1, _mm256_loadu_ps(ws + r + 8));
+        if (bias) {
+            v0 = _mm256_add_ps(v0, _mm256_loadu_ps(bias + r));
+            v1 = _mm256_add_ps(v1, _mm256_loadu_ps(bias + r + 8));
+        }
+        if (add) {
+            v0 = _mm256_add_ps(_mm256_loadu_ps(out + r), v0);
+            v1 = _mm256_add_ps(_mm256_loadu_ps(out + r + 8), v1);
+            PK_HELD(v0);
+            PK_HELD(v1);
+        }
+        _mm256_storeu_ps(out + r, v0);
+        _mm256_storeu_ps(out + r + 8, v1);
+    }
+}
+
 static void k_gemm_q8(float *out, size_t os, const int8_t *w, const float *ws, const float *bias,
                       uint32_t rows, const pk_act *a, int add) {
-    if (a->qb == 32)
+    if (a->T == 1)
+        q8_ymm_one(out, w, ws, bias, rows, a, add);
+    else if (a->qb == 32)
         k_gemm_q8_32(out, os, w, ws, bias, rows, a, add);
     else if (a->qb == 64)
         k_gemm_q8_64(out, os, w, ws, bias, rows, a, add);
@@ -877,7 +1226,7 @@ void q8_tile(float *out, size_t os, const int8_t *w, uint32_t n, uint32_t h, con
         float *o = out + (size_t)(t0 + c) * os + 8 * h;
         __m256 v = _mm256_mul_ps(f[c], sc);
         if (bias) v = _mm256_add_ps(v, _mm256_loadu_ps(bias + 8 * h));
-        if (add) v = _mm256_add_ps(_mm256_loadu_ps(o), v);
+        if (add) { v = _mm256_add_ps(_mm256_loadu_ps(o), v); PK_HELD(v); }
         _mm256_storeu_ps(o, v);
     }
 }
