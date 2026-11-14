@@ -438,6 +438,8 @@ pub extern "system" fn Java_net_pktito_app_Engine_keep<'a>(
                 item,
                 peaks,
                 segments: t.segments,
+                names: Vec::new(),
+                stretches: Vec::new(),
             };
             if let Err(why) = recent::add(&data, &t) {
                 return throw(env, &why).map(|_| JObject::null());

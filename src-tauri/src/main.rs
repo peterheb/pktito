@@ -29,9 +29,19 @@ struct Engine {
     neural: bool,
 }
 
+/// The diarizer and its model, loaded the first time speakers are asked
+/// for and kept, as the engine is. The diarizer goes first, before the
+/// model it reads.
+struct Diarizer {
+    diar: pktito::Diar,
+    model: pktito::Model,
+    path: PathBuf,
+}
+
 #[derive(Default)]
 struct AppState {
     engine: Mutex<Option<Engine>>,
+    diarizer: Mutex<Option<Diarizer>>,
     /// The model download under way, paused or failed: one at a time.
     download: Mutex<Option<Arc<download::Job>>>,
     /// The transcription asked to stop, by id; 0 for none.
@@ -205,6 +215,18 @@ struct Status {
     reveal: bool,
     media: &'static [&'static str],
     video: &'static [&'static str],
+    /// The model that tells the speakers apart, where this build offers one.
+    diarizer: Option<DiarizerOffer>,
+}
+
+/// The diarizer as the Speakers switch offers it: what it is, its size, and
+/// whether it is here.
+#[derive(Serialize)]
+struct DiarizerOffer {
+    name: &'static str,
+    license: &'static str,
+    bytes: u64,
+    have: bool,
 }
 
 /// A file dialog owned by the window on Windows, so that it is modal and in
@@ -253,6 +275,23 @@ fn ensure_engine<'a>(
             asr,
             path: path.to_path_buf(),
             neural,
+        });
+    }
+    Ok(slot.as_mut().unwrap())
+}
+
+fn ensure_diarizer<'a>(
+    slot: &'a mut Option<Diarizer>,
+    path: &Path,
+) -> Result<&'a mut Diarizer, String> {
+    if slot.as_ref().is_none_or(|d| d.path != path) {
+        *slot = None;
+        let model = pktito::Model::load(path)?;
+        let diar = pktito::Diar::new(&model, transcribe::threads_wanted())?;
+        *slot = Some(Diarizer {
+            diar,
+            model,
+            path: path.to_path_buf(),
         });
     }
     Ok(slot.as_mut().unwrap())
@@ -421,6 +460,12 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, Problem>
         reveal: !in_package,
         media: decode::MEDIA,
         video: VIDEO,
+        diarizer: model::DIARIZER.map(|d| DiarizerOffer {
+            name: d.name,
+            license: d.license,
+            bytes: d.model.bytes,
+            have: model::diarizer_file(&data).is_some(),
+        }),
     })
 }
 
@@ -509,6 +554,150 @@ fn download_model(app: AppHandle, state: State<'_, AppState>, name: String) -> R
         },
     );
     Ok(())
+}
+
+/// Download the diarizer, the first time the Speakers switch is turned on;
+/// "download" events under its name say how it goes, as a model's do.
+#[tauri::command]
+fn download_diarizer(app: AppHandle, state: State<'_, AppState>) -> Result<(), Problem> {
+    let d = model::DIARIZER.ok_or("no diarizer in this build")?;
+    let dir = data_dir(&app)?.join("models");
+    let mut slot = state.download.lock().unwrap();
+    if let Some(j) = slot.as_ref() {
+        if j.alive() && !j.ctl.cancel.load(Ordering::Relaxed) {
+            if j.name() == d.name {
+                j.resume_now();
+                return Ok(());
+            }
+            return Err(Problem::new("download.busy").with("name", j.name()));
+        }
+    }
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let w = model::Wanted::diarizer(&dir, &d);
+    let job = Arc::new(download::Job::for_file(&w));
+    *slot = Some(job.clone());
+    let tell = app.clone();
+    job.start_file(
+        w,
+        move |s| {
+            let _ = tell.emit("download", s);
+        },
+        |_| {},
+    );
+    Ok(())
+}
+
+/// Who said what in a finished transcript, from its saved recording without
+/// transcribing it again: the diarizer over the whole of it, each word given
+/// its speaker by NeMo's rule (pk_speakers), numbered by first word, and a
+/// segment that two speakers share cut where the speaker changes, as
+/// pk_sentences cuts one. Kept on the recent list, with the bar's stretches.
+#[derive(Serialize)]
+struct Found {
+    segments: Vec<transcribe::Segment>,
+    stretches: Vec<transcribe::Stretch>,
+}
+
+#[tauri::command]
+async fn find_speakers(app: AppHandle, id: String) -> Result<Found, Problem> {
+    tauri::async_runtime::spawn_blocking(move || speakers_of(&app, &id))
+        .await
+        .map_err(|e| Problem::from(e.to_string()))?
+}
+
+fn speakers_of(app: &AppHandle, id: &str) -> Result<Found, Problem> {
+    let _awake = awake::awake("pktito is finding the speakers");
+    let state = app.state::<AppState>();
+    let data = data_dir(app)?;
+    let path = model::diarizer_file(&data).ok_or_else(|| Problem::new("speakers.no_model"))?;
+    let mut t = recent::load(&data, id)?;
+    // the recording as pktito heard it, or the file again if the cache let it go
+    let wav = audio::wav_in(&audio_dir(app)?, id);
+    let x =
+        decode::decode(if wav.is_file() { &wav } else { &t.item.path }).map_err(|e| e.problem())?;
+    let mut slot = state.diarizer.lock().unwrap();
+    let d = ensure_diarizer(&mut slot, &path).map_err(Problem::from)?;
+    d.diar.reset();
+    let mut rows = Vec::new();
+    d.diar.feed(&x, &mut rows)?;
+    d.diar.finish(&mut rows)?;
+    // Parakeet's encoder frame, 80 ms: the words' times are whole frames
+    const FRAME: u32 = 1280;
+    let rate = decode::RATE as f64;
+    let at = |s: f64| (s * rate).round() as i64;
+    let spans: Vec<pktito::Span> = t
+        .segments
+        .iter()
+        .flat_map(|s| s.words.iter())
+        .map(|w| pktito::Span {
+            start: at(w.start),
+            end: at(w.end),
+        })
+        .collect();
+    let column = pktito::speakers(&d.model, &rows, FRAME, &spans);
+    let mut number = vec![0u32; d.model.speakers()];
+    let mut count = 0;
+    let mut said = column.iter().map(|&c| {
+        let n = &mut number[c as usize];
+        if *n == 0 {
+            count += 1;
+            *n = count;
+        }
+        *n
+    });
+    let mut segments = Vec::new();
+    for s in std::mem::take(&mut t.segments) {
+        let who: Vec<u32> = s.words.iter().map(|_| said.next().unwrap_or(1)).collect();
+        if who.windows(2).all(|p| p[0] == p[1]) {
+            let speaker = who.first().copied().unwrap_or(1);
+            segments.push(transcribe::Segment {
+                speaker: Some(speaker),
+                ..s
+            });
+            continue;
+        }
+        // a run of one speaker's words, a segment of its own
+        let mut k = 0;
+        while k < s.words.len() {
+            let mut e = k + 1;
+            while e < s.words.len() && who[e] == who[k] {
+                e += 1;
+            }
+            let words = s.words[k..e].to_vec();
+            segments.push(transcribe::Segment {
+                start: words[0].start,
+                end: words[words.len() - 1].end,
+                text: words
+                    .iter()
+                    .map(|w| w.text.as_str())
+                    .collect::<Vec<_>>()
+                    .join(" "),
+                words,
+                speaker: Some(who[k]),
+            });
+            k = e;
+        }
+    }
+    let stretches: Vec<transcribe::Stretch> = pktito::speaker_segments(&d.model, &rows)
+        .into_iter()
+        .filter_map(|g| {
+            let n = *number.get(g.speaker as usize)?;
+            (n > 0).then(|| transcribe::Stretch {
+                start: g.start as f64 / rate,
+                end: g.end as f64 / rate,
+                speaker: n,
+            })
+        })
+        .collect();
+    drop(slot);
+    t.segments = segments;
+    t.stretches = stretches;
+    t.names = Vec::new();
+    recent::replace(&data, &t)?;
+    Ok(Found {
+        segments: t.segments,
+        stretches: t.stretches,
+    })
 }
 
 #[tauri::command]
@@ -731,6 +920,9 @@ struct JobEvent {
     model: String,
     /// Its place on the recent list.
     recent: Option<String>,
+    /// With speakers, once it is done: each speaker's stretches of speech,
+    /// for the speaker bar; the segments say whose each is as they come.
+    stretches: Vec<transcribe::Stretch>,
     /// An error: what happened.
     problem: Option<Problem>,
 }
@@ -792,12 +984,20 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
         Ok(d) => d,
         Err(why) => return fail(Problem::from(why)),
     };
-    let Some(model_path) = model::usable(&data, &model::load_settings(&data)) else {
+    let settings = model::load_settings(&data);
+    let Some(model_path) = model::usable(&data, &settings) else {
         return fail(Problem::new("transcribe.no_model"));
+    };
+    // who said what too, with the switch on and the diarizer downloaded
+    let diarizer = match settings.prefs.speakers {
+        true => model::diarizer_file(&data),
+        false => None,
     };
     let _using = Using::new(&state.transcribing, &model_path);
     let mut slot = state.engine.lock().unwrap();
-    let loading = slot.as_ref().map(|e| e.path != model_path).unwrap_or(true);
+    let mut dslot = state.diarizer.lock().unwrap();
+    let loading = slot.as_ref().map(|e| e.path != model_path).unwrap_or(true)
+        || (diarizer.is_some() && dslot.as_ref().map(|d| d.path.as_path()) != diarizer.as_deref());
     send(JobEvent {
         step: if loading { "loading" } else { "transcribing" },
         eta: -1.0,
@@ -813,6 +1013,13 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
         Ok(e) => e,
         Err(why) => return fail(trouble("transcribe.cant_load_model", why.to_string())),
     };
+    let mut speakers = match &diarizer {
+        Some(p) => match ensure_diarizer(&mut dslot, p) {
+            Ok(Diarizer { diar, model, .. }) => Some(transcribe::Speakers::new(model, diar)),
+            Err(why) => return fail(trouble("transcribe.cant_load_model", why)),
+        },
+        None => None,
+    };
     if loading {
         send(JobEvent {
             step: "transcribing",
@@ -826,7 +1033,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
         model,
         asr,
         &x,
-        None,
+        speakers.as_mut(),
         |done, segs| {
             // the pace so far, the model's loading left out
             let spent = t1.elapsed().as_secs_f64();
@@ -850,6 +1057,8 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
     let transcribed = t1.elapsed().as_secs_f64();
     let name = model.name();
     let on_npu = *neural;
+    let stretches = speakers.map(|s| s.stretches).unwrap_or_default();
+    drop(dslot);
     drop(slot);
     if on_npu && matches!(r, Ok((_, true))) {
         model::ran_on_npu(&data, &model_path);
@@ -883,6 +1092,8 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
                     item,
                     peaks,
                     segments,
+                    names: Vec::new(),
+                    stretches: stretches.clone(),
                 },
             );
             if let (Ok(gone), Ok(dir)) = (&kept, audio_dir(app)) {
@@ -905,6 +1116,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
                 transcribed,
                 model: name,
                 recent: kept.ok().map(|_| key),
+                stretches,
                 ..Default::default()
             });
         }
@@ -1182,29 +1394,38 @@ fn forget_recent(app: AppHandle, id: String) -> Result<(), Problem> {
     Ok(())
 }
 
-/// A word of a transcript, as the window holds it: seconds.
-#[derive(Deserialize)]
-struct TimedWord {
-    text: String,
-    start: f64,
-    end: f64,
-}
-
 /// The cues of a transcript's subtitle track, from the engine's pk_captions,
-/// so that the app's .srt and .vtt are the CLI's: times in milliseconds.
+/// so that the app's .srt and .vtt are the CLI's: times in milliseconds, and
+/// with names, where the view shows speakers, a cue for each turn's start
+/// with its speaker's name counted in its line (format::raw_cues).
 #[tauri::command]
 fn captions(
-    words: Vec<TimedWord>,
-    english: i32,
+    name: String,
     duration: f64,
+    model: Option<String>,
+    segments: Vec<transcribe::Segment>,
+    names: Option<Vec<String>>,
 ) -> Result<Vec<pktito::Cue>, Problem> {
-    let ms = |s: f64| (s * 1000.0).round() as i64;
-    let w: Vec<(String, i64, i64)> = words
-        .into_iter()
-        .map(|w| (w.text, ms(w.start), ms(w.end)))
-        .collect();
-    let lang = pktito::captions_lang(&w, english);
-    Ok(pktito::captions(&w, None, lang.as_deref(), ms(duration))?)
+    Ok(format::raw_cues(&format::Transcript {
+        name: &name,
+        duration,
+        model: model.as_deref(),
+        segments: &segments,
+        names: names.as_deref(),
+    })?)
+}
+
+/// A transcript's speakers as Who's speaking or a rename left them, kept on
+/// the recent list: each segment's speaker, the names, the bar's stretches.
+#[tauri::command]
+fn set_speakers(
+    app: AppHandle,
+    id: String,
+    speakers: Vec<u32>,
+    names: Vec<String>,
+    stretches: Vec<transcribe::Stretch>,
+) -> Result<(), Problem> {
+    recent::set_speakers(&data_dir(&app)?, &id, &speakers, names, stretches)
 }
 
 /// pktito-cli on the PATH, from the macOS menu bar's Install Command Line
@@ -1282,6 +1503,7 @@ fn text_of(
     model: Option<String>,
     segments: Vec<transcribe::Segment>,
     times: bool,
+    names: Option<Vec<String>>,
 ) -> Result<String, Problem> {
     Ok(format::text(
         &format::Transcript {
@@ -1289,7 +1511,7 @@ fn text_of(
             duration,
             model: model.as_deref(),
             segments: &segments,
-            names: None,
+            names: names.as_deref(),
         },
         &ext,
         times,
@@ -2114,6 +2336,9 @@ fn main() {
             reveal,
             open_link,
             captions,
+            set_speakers,
+            find_speakers,
+            download_diarizer,
             text_of,
             install_cli,
             forget_recent,

@@ -33,6 +33,22 @@
   --scrim: rgba(16, 27, 51, 0.32);
   --focus: #101b33;
   --link: var(--ink);
+  --speaker-1: #977e03;
+  --speaker-2: #806fcd;
+  --speaker-3: #089583;
+  --speaker-4: #046a2f;
+  --speaker-5: #af1374;
+  --speaker-6: #742aaf;
+  --speaker-7: #6a6b00;
+  --speaker-8: #a0529b;
+  --speaker-bar-1: #ac9003;
+  --speaker-bar-2: #9281e1;
+  --speaker-bar-3: #10a995;
+  --speaker-bar-4: #047f3a;
+  --speaker-bar-5: #c22d84;
+  --speaker-bar-6: #8b45c9;
+  --speaker-bar-7: #7d7d04;
+  --speaker-bar-8: #b565ae;
   --shadow-float: 0 12px 32px rgba(16, 27, 51, 0.18);
   --space-1: 4px;
   --space-2: 8px;
@@ -72,6 +88,14 @@
     --tint-press: rgba(229, 235, 244, 0.16);
     --scrim: rgba(0, 0, 0, 0.55);
     --focus: #6cc4f5;
+    --speaker-1: #ac9003;
+    --speaker-2: #9281e1;
+    --speaker-3: #10a995;
+    --speaker-4: #047f3a;
+    --speaker-5: #c22d84;
+    --speaker-6: #8b45c9;
+    --speaker-7: #7d7d04;
+    --speaker-8: #b565ae;
     --shadow-float: 0 12px 32px rgba(0, 0, 0, 0.5);
   }
 }

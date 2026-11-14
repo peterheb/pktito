@@ -2534,3 +2534,287 @@ html:not([data-chrome="win"]) .pk-head > #stop {
     transition: none;
   }
 }
+
+/* -------------------------------------------------------------- speakers -- */
+/* Who said what (PKT-27): the switch beside the views, a name on each turn,
+   the speaker bar on the strip, and Who's speaking; the design's measures
+   (the speakers design, page version 7, Peter's calls of 2026-11-09). */
+
+/* the views, the switch and the names wrap to a second line before any
+   of them is cut */
+.pk-views-line {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+/* the switch: a track of one, raised as a chosen view is while it is on,
+   its check before its word */
+.pk-spk {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pk-spk[aria-pressed="true"] {
+  background: var(--ground);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink-muted);
+}
+.pk-spk svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2.5;
+}
+.pk-spk[aria-pressed="false"] svg {
+  display: none;
+}
+.pk-spk[aria-busy="true"] {
+  cursor: progress;
+}
+.pk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  min-width: 0;
+}
+.pk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font: 500 13px/16px var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pk-chip:hover,
+.pk-name:hover,
+.pk-radio:hover {
+  background: var(--tint);
+}
+.pk-chip:focus-visible,
+.pk-name:focus-visible,
+.pk-radio:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+/* A speaker's mark beside a name: a circle for speakers 1 to 4 and a
+   square a pixel smaller for 5 to 8, the same area. Every pair close in
+   color crosses that line but magenta and orchid, 5 and 8 (the design's
+   palette check, OKLab ΔE: neighbors 8.9 or more for color-blind readers). */
+.pk-mark {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+.pk-mark.is-sq {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+
+/* a turn's name above its first row, over the text's column (the row's
+   16 px, the times' 112 and their gap), 18 px below the turn before */
+.pk-who {
+  display: flex;
+  min-width: 0;
+  max-width: var(--row);
+  box-sizing: border-box;
+  padding: 0 16px 0 140px;
+  margin-top: 18px;
+}
+.pk-who.is-first {
+  margin-top: 2px;
+}
+.pk-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  min-width: 0;
+  border: 0;
+  background: none;
+  padding: 2px 6px;
+  margin: 0 -6px;
+  border-radius: var(--radius-sm);
+  font: 700 13px/20px var(--font-sans);
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+.pk-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pk-name.in-time {
+  display: none;
+}
+/* in a caption the name opens its first line, on that line's baseline, as
+   the saved file has it */
+.pk-name.in-cue {
+  display: inline-block;
+  vertical-align: baseline;
+  margin: 0 0 0 -4px;
+  padding: 0 4px;
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: 0;
+}
+.pk-name.in-cue span {
+  overflow: visible;
+  white-space: normal;
+}
+.pk-name.in-cue .pk-mark {
+  vertical-align: middle;
+  margin-right: 7px;
+}
+.pk-cue.pk-turn {
+  margin-top: 12px;
+}
+/* the time above the text: the name beside the time, on its line */
+@container (max-width: 619px) {
+  .pk-who {
+    display: none;
+  }
+  .pk-name.in-time {
+    display: inline-flex;
+    margin-left: 8px;
+  }
+  .pk-seg.pk-turn {
+    margin-top: 12px;
+  }
+}
+
+/* The speaker bar: 4 px, 8 px above the waveform (the lane's 3 px gap and
+   5 of its own); the 6 px above it hold a second speaker's line while two
+   talk at once. With it the strip is 18 px taller, and play and the
+   progress keep to the waveform's top. */
+.pk-spkbar {
+  display: none;
+  position: relative;
+  height: 10px;
+  margin-bottom: 5px;
+}
+#strip.spk .pk-spkbar {
+  display: block;
+}
+#strip.spk.has-ticks .pk-spkbar {
+  margin-bottom: 1px;
+}
+.pk-spkbar b {
+  position: absolute;
+  top: 6px;
+  height: 4px;
+  border-radius: 2px;
+}
+.pk-spkbar b.is-second {
+  top: 0;
+}
+#strip.spk .pk-transport {
+  padding-top: 30px;
+}
+#strip.spk.has-ticks .pk-transport {
+  padding-top: 26px;
+}
+#strip.spk .pk-prog {
+  margin-top: 30px;
+}
+
+/* Who's speaking: the speakers as radio buttons, then Rename and New
+   speaker; Rename's field in the same menu */
+.pk-menu.is-who {
+  width: 280px;
+}
+.pk-pop-head {
+  padding: 8px 10px 0;
+  font: 700 14px/20px var(--font-sans);
+}
+.pk-pop-sub {
+  padding: 0 10px 6px;
+  font: 400 12px/1.5 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+}
+.pk-pop-sub.is-words {
+  font-family: var(--font-sans);
+  padding-top: 8px;
+}
+.pk-pop-sub.is-words:empty {
+  display: none;
+}
+.pk-radio {
+  display: grid;
+  grid-template-columns: 16px 12px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink);
+  font: 500 14px/20px var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+.pk-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  border: 2px solid var(--ink-muted);
+}
+.pk-radio[aria-checked="true"] .pk-dot {
+  border-color: var(--ink);
+  background: radial-gradient(circle, var(--ink) 0 3.5px, transparent 4px);
+}
+.pk-rn {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pk-mi[disabled],
+.pk-mi[disabled]:hover {
+  opacity: 0.45;
+  cursor: default;
+  background: none;
+}
+.pk-pad {
+  padding: 4px 4px 0;
+}
+.pk-field {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--sunk);
+  color: var(--ink);
+  font: 500 14px/1 var(--font-sans);
+}
+.pk-field:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+/* a toast's Undo */
+.pk-toast .pk-undo {
+  flex: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--tint-term);
+  color: var(--term-ink);
+  font: 500 13px/1 var(--font-sans);
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.pk-toast .pk-undo:hover {
+  background: var(--tint-term-press);
+}

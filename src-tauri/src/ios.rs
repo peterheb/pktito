@@ -463,6 +463,8 @@ pub extern "C" fn pkapp_keep(
                 item,
                 peaks,
                 segments: t.segments,
+                names: Vec::new(),
+                stretches: Vec::new(),
             },
         )?;
         Ok(listed(&data))

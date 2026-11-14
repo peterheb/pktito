@@ -969,6 +969,7 @@ function updateDownload() {
 
 listen("download", async (e) => {
   const s = e.payload;
+  if (st.diarizer && s.name === st.diarizer.name) return diarizerDownload(s);
   // Faster's or Update's, for Manage models' row
   if (enc && enc.name === s.name) {
     const over = s.step === "done" || s.step === "cancelled";
@@ -1096,6 +1097,8 @@ async function openRecent(id) {
       peaks: t.peaks,
       audio: t.audio,
       segments: t.segments,
+      names: t.names || [],
+      stretches: t.stretches || [],
       took: t.took,
       transcribed: t.transcribed || 0,
       model: t.model,
@@ -1178,13 +1181,17 @@ $("recent-list").onclick = (e) => {
 let answer = null,
   askFrom = null;
 
-function ask(title, text, yes, from) {
+function ask(title, text, yes, from, { safe = false } = {}) {
   $("ask-title").textContent = title;
   $("ask-text").textContent = text;
   $("ask-yes").textContent = yes;
+  // a yes that destroys nothing, such as a download, is the default
+  $("ask-yes").classList.toggle("pk-btn-del", !safe);
+  $("ask-yes").classList.toggle("pk-btn-primary", safe);
+  $("ask-no").classList.toggle("pk-btn-primary", !safe);
   askFrom = from;
   $("ask").hidden = false;
-  $("ask-no").focus({ preventScroll: true });
+  $(safe ? "ask-yes" : "ask-no").focus({ preventScroll: true });
   return new Promise((r) => (answer = r));
 }
 
@@ -1309,6 +1316,9 @@ function newFile(path) {
     pos: 0,
     segments: [],
     cues: null,
+    names: [],
+    stretches: [],
+    undo: null,
     fps: 0,
     took: 0,
     transcribed: 0,
@@ -1417,6 +1427,7 @@ listen("job", (e) => {
       transcribed: j.transcribed,
       model: j.model,
       recentId: j.recent,
+      stretches: j.stretches || [],
     });
     finished(f);
   }
@@ -1546,6 +1557,9 @@ function again(f) {
     pos: 0,
     segments: [],
     cues: null,
+    names: [],
+    stretches: [],
+    undo: null,
     took: 0,
     transcribed: 0,
     recentId: null,
@@ -1786,6 +1800,7 @@ function buildMain(f, mode, key) {
   }
   $("wavebtn").disabled = !review || !playable(f);
   $("views").hidden = !review || !f.segments.length;
+  updateSpeakers(f, review);
   for (const b of $("views").children)
     b.setAttribute(
       "aria-checked",
@@ -1919,7 +1934,10 @@ function updateRunning(f) {
   $("dur").textContent = f.duration == null ? "" : lengthOf(f);
   const wave = $("wave");
   if (wave._peaks !== f.peaks) drawMainWave();
-  else setHead(wave, Math.floor((going ? f.done : 0) * wave._n));
+  else {
+    setHead(wave, Math.floor((going ? f.done : 0) * wave._n));
+    drawBar(f);
+  }
   wave.setAttribute("aria-valuenow", percent(going ? f.done : 0));
 }
 
@@ -1928,18 +1946,23 @@ function updateRunning(f) {
 /* A segment, or a cue; its time plays from there once the transcript is
    finished. A cue shows its end too, its lines as they will read, and a
    mark if it asks more than 20 characters a second of its reader. */
-function segHtml(s, i, filling) {
+function segHtml(s, i, filling, turn = -1) {
   const cue = s.endMs !== undefined;
+  // a turn's name: beside the time in a narrow window, in a cue its line's start
+  const f = turn >= 0 ? current() : null;
+  const name = (where) => (f ? nameBtn(f, turn, where) : "");
   const fast =
     cue && s.flags & 1
       ? `<span class="pk-fast" title="${esc(t("seg.fast", { rate: num(s.chars / (s.end - s.start), 1) }))}">${ICON.zap}</span>`
       : "";
   const start = tc(s.start);
   return (
-    `<div class="pk-seg${cue ? " pk-cue" : ""}" data-i="${i}"><div class="pk-seg-times"><button class="pk-seg-t" type="button" tabindex="-1" ` +
+    `<div class="pk-seg${cue ? " pk-cue" : ""}${turn >= 0 && i > 0 ? " pk-turn" : ""}" data-i="${i}"><div class="pk-seg-times"><button class="pk-seg-t" type="button" tabindex="-1" ` +
     `aria-label="${esc(t("seg.play_from", { time: start }))}"${filling ? "" : ` title="${esc(t("seg.play_here"))}"`}>${start}</button>` +
-    (cue ? `<span class="pk-seg-end">${tc(s.end)}${fast}</span>` : "") +
-    `</div><p>${bodyHtml(s, i)}</p></div>`
+    (cue
+      ? `<span class="pk-seg-end">${tc(s.end)}${fast}</span>`
+      : name("in-time")) +
+    `</div><p>${cue ? name("in-cue") : ""}${bodyHtml(s, i)}</p></div>`
   );
 }
 
@@ -2038,10 +2061,10 @@ function bodyHtml(s, i) {
 function renderTranscript(f, mode) {
   const tr = $("transcript");
   tr.classList.toggle("is-live", mode === "running");
+  tr._spk = spkShown(f);
   tr.innerHTML =
-    rowsOf(f)
-      .map((s, i) => segHtml(s, i, mode === "running"))
-      .join("") + (mode === "review" ? statsHtml(f) : "");
+    rowsHtml(f, rowsOf(f), 0, mode === "running") +
+    (mode === "review" ? statsHtml(f) : "");
   curSeg = curWord = null;
   watchRows(mode === "review" ? rowsOf(f) : []);
   if (mode === "running") markLive();
@@ -2103,10 +2126,9 @@ function appendSegs(f, segs) {
   const tr = $("transcript");
   const atEnd = tr.scrollHeight - tr.scrollTop - tr.clientHeight < 48;
   const base = f.segments.length - segs.length;
-  tr.insertAdjacentHTML(
-    "beforeend",
-    segs.map((s, k) => segHtml(s, base + k, true)).join(""),
-  );
+  // a second speaker just came: the names go on the turns before too
+  if (tr._spk !== spkShown(f)) renderTranscript(f, "running");
+  else tr.insertAdjacentHTML("beforeend", rowsHtml(f, segs, base, true));
   markLive();
   if (atEnd) tr.scrollTop = tr.scrollHeight;
   updateHead(f, "running");
@@ -2124,6 +2146,8 @@ $("transcript").addEventListener("click", (e) => {
   const touch = e.pointerType === "touch",
     t = e.target.closest(touch ? ".pk-seg" : ".pk-seg-t"),
     f = current();
+  const nb = e.target.closest(".pk-name");
+  if (nb) return openWho(nb);
   if (!t || !f || modeOf(f) !== "review") return;
   if (touch && tapClears) return getSelection().removeAllRanges();
   seek(rowsOf(f)[Number(t.closest(".pk-seg").dataset.i)].start, true);
@@ -2236,6 +2260,7 @@ function drawMainWave() {
     Math.floor(at * n),
     f.duration,
   );
+  drawBar(f);
 }
 
 /* The drop's strip: a made-up phrase, louder in the middle */
@@ -2543,7 +2568,7 @@ function showTime(t, follow = false) {
   if (t > 0 || playing) {
     const rows = rowsOf(f),
       i = at(rows, t);
-    seg = i >= 0 ? $("transcript").children[i] : null;
+    seg = i >= 0 ? rowEl(i) : null;
     if (seg) {
       const k = at(rows[i].words || [], t);
       word = k >= 0 ? seg.querySelector(`[data-w="${k}"]`) : null;
@@ -2749,10 +2774,11 @@ function markRow(i) {
   if (!stale.delete(i)) return;
   const f = current(),
     s = f && rowsOf(f)[i],
-    p = $("transcript").children[i]?.querySelector("p");
+    p = rowEl(i)?.querySelector("p");
   if (!s || !p) return;
   const lit = curWord && p.contains(curWord) ? curWord.dataset.w : null;
-  p.innerHTML = bodyHtml(s, i);
+  const nb = p.querySelector(".pk-name");
+  p.innerHTML = (nb ? nb.outerHTML : "") + bodyHtml(s, i);
   marked[i] = !!query && p.querySelector(".pk-hit") !== null;
   if (lit !== null) {
     curWord = p.querySelector(`[data-w="${lit}"]`);
@@ -2836,9 +2862,7 @@ function stepHit(d) {
 function hitPieces(k) {
   const { i, hi } = hits[k];
   markRow(i);
-  return $("transcript").children[i].querySelectorAll(
-    `[data-hit="${i}.${hi}"]`,
-  );
+  return rowEl(i).querySelectorAll(`[data-hit="${i}.${hi}"]`);
 }
 
 function goHit(k, scroll = true) {
@@ -2945,6 +2969,478 @@ $("find").addEventListener("keydown", (e) => {
   }
 });
 
+/* ------------------------------------------------------------ speakers -- */
+
+/* Who said what (PKT-27; the speakers design, page version 7, every call
+   Peter's of 2026-11-09). A segment says its speaker, numbered from 1 by
+   first word as pktito-c numbers them, eight at most, the diarizer's; a
+   change of speaker ends a sentence and a cue, so a turn is a speaker's
+   segments in a row. The names are the file's own, speaker n's at n - 1,
+   "" for "Speaker n": no voice is remembered between recordings. The
+   switch shows them, kept for the next file, and every saved format has
+   them while it does. */
+const SPEAKERS = 8;
+const slotOf = (n) => ((n - 1) % SPEAKERS) + 1;
+const markHtml = (n) =>
+  `<i class="pk-mark${slotOf(n) > 4 ? " is-sq" : ""}" style="background:var(--speaker-${slotOf(n)})"></i>`;
+
+/* f's speakers, in the order they first speak */
+function present(f) {
+  const seen = [];
+  for (const s of f.segments)
+    if (s.speaker != null && !seen.includes(s.speaker)) seen.push(s.speaker);
+  return seen;
+}
+const spkShown = (f) => !!prefs.speakers && !!f && present(f).length > 1;
+const nameOf = (f, n) =>
+  ((f.names && f.names[n - 1]) || "").trim() || t("speakers.default", { n });
+/* the names f is written with, where the view shows speakers; else none */
+const namesFor = (f) => (spkShown(f) ? f.names || [] : null);
+const turnStarts = (segs, i) =>
+  segs[i].speaker != null &&
+  (i === 0 || segs[i - 1].speaker !== segs[i].speaker);
+/* the turn starting at segment i: its segments, its speaker and its times */
+function turnAt(f, i) {
+  const s = f.segments[i].speaker;
+  let j = i;
+  while (j + 1 < f.segments.length && f.segments[j + 1].speaker === s) j++;
+  return {
+    from: i,
+    to: j,
+    s,
+    start: f.segments[i].start,
+    end: f.segments[j].end,
+  };
+}
+const nameBtn = (f, i, where = "") => {
+  const n = f.segments[i].speaker,
+    name = nameOf(f, n);
+  return (
+    `<button class="pk-name${where ? ` ${where}` : ""}" type="button" data-turn="${i}" aria-haspopup="menu" aria-expanded="false" ` +
+    `aria-label="${esc(t("speakers.name_label", { name }))}">${markHtml(n)}<span>${esc(name)}${where === "in-cue" ? ":" : ""}</span></button>`
+  );
+};
+/* row i of the transcript: the names between the rows are none */
+const rowEl = (i) => $("transcript").getElementsByClassName("pk-seg")[i];
+
+/* rows of f from row base on, with speakers shown each turn's name above
+   its first (a cue's opens its first line) */
+function rowsHtml(f, rows, base, filling) {
+  const on = spkShown(f),
+    cues = !!f.cues && rows === f.cues;
+  let out = "";
+  rows.forEach((s, k) => {
+    const i = base + k;
+    let turn = -1;
+    if (on) turn = cues ? s.turnSeg : turnStarts(f.segments, i) ? i : -1;
+    if (turn >= 0 && !cues)
+      out += `<div class="pk-who${i === 0 ? " is-first" : ""}">${nameBtn(f, turn)}</div>`;
+    out += segHtml(s, i, filling, turn);
+  });
+  return out;
+}
+
+/* what the switch is doing, if anything: "downloading" or "finding" */
+let spkBusy = "";
+
+/* The switch beside the views, where the build offers a diarizer
+   (main.rs, DiarizerOffer), and with speakers shown each one's name,
+   which renames them */
+function updateSpeakers(f, review) {
+  const offer = !!st.diarizer && review && f.segments.length > 0;
+  $("spk-track").hidden = !offer;
+  const b = $("spk"),
+    n = present(f).length;
+  b.setAttribute("aria-pressed", String(!!prefs.speakers));
+  b.setAttribute("aria-busy", String(!!spkBusy));
+  b.innerHTML = `${ICON.check}<span>${esc(t("speakers.switch"))}</span>`;
+  b.title = !prefs.speakers
+    ? t("speakers.show")
+    : n > 1
+      ? t("speakers.hide")
+      : n === 1
+        ? t("speakers.one")
+        : t("speakers.show");
+  const on = offer && spkShown(f);
+  $("chips").hidden = !on;
+  $("chips").innerHTML = on
+    ? present(f)
+        .map(
+          (x) =>
+            `<button class="pk-chip" type="button" data-s="${x}" aria-label="${esc(t("speakers.chip_label", { name: nameOf(f, x) }))}">${markHtml(x)}${esc(nameOf(f, x))}</button>`,
+        )
+        .join("")
+    : "";
+}
+
+/* f drawn again after its speakers changed, where it shows */
+function spkRefresh(f) {
+  if (!f || current() !== f || modeOf(f) !== "review" || viewName() !== "work")
+    return;
+  rebuild();
+  updateSpeakers(f, true);
+  drawBar(f);
+}
+
+$("spk").onclick = async () => {
+  const f = current();
+  if (!f || spkBusy || modeOf(f) !== "review") return;
+  closeMenu();
+  const on = !prefs.speakers;
+  const d = st.diarizer;
+  // the first time, the model: asked for, then downloaded
+  if (on && d && !d.have) {
+    const yes = await ask(
+      t("speakers.ask_title"),
+      t("speakers.ask_about", {
+        name: d.name,
+        mb: num(d.bytes / 1e6, 1),
+        license: d.license,
+      }),
+      t("speakers.download"),
+      $("spk"),
+      { safe: true },
+    );
+    if (!yes) return;
+    await setPref("speakers", true);
+    try {
+      await invoke("download_diarizer");
+      spkBusy = "downloading";
+    } catch (e) {
+      toastErr(e);
+    }
+    return spkRefresh(f);
+  }
+  await setPref("speakers", on);
+  f.cues = null;
+  if (prefs.captions) await cuesOf(f).catch(toastErr);
+  // a transcript from before: its speakers from its recording, which takes
+  // seconds, not a transcription again
+  if (on && !present(f).length) return findSpeakers(f);
+  spkRefresh(f);
+};
+
+async function diarizerDownload(s) {
+  const f = current();
+  if (s.step === "done") {
+    spkBusy = "";
+    await refresh().catch(toastErr);
+    toast(t("speakers.ready"));
+    if (f && prefs.speakers && modeOf(f) === "review" && !present(f).length)
+      return findSpeakers(f);
+    return spkRefresh(f);
+  }
+  if (s.step === "cancelled" || s.problem) {
+    spkBusy = "";
+    if (s.problem) toastErr(s.problem);
+    return spkRefresh(f);
+  }
+  spkBusy = "downloading";
+  if (s.total)
+    toast(t("speakers.downloading", { pct: percent(s.got / s.total) }));
+  if (f && current() === f && viewName() === "work")
+    updateSpeakers(f, modeOf(f) === "review");
+}
+
+/* Who said what in f, a transcript from the recent list without them: the
+   diarizer over its recording (main.rs, find_speakers) */
+async function findSpeakers(f) {
+  if (!f.recentId || spkBusy) return spkRefresh(f);
+  spkBusy = "finding";
+  updateSpeakers(f, true);
+  toast(t("speakers.finding"));
+  try {
+    const r = await invoke("find_speakers", { id: f.recentId });
+    Object.assign(f, {
+      segments: r.segments,
+      stretches: r.stretches,
+      names: [],
+      cues: null,
+    });
+    $("toast").hidden = true;
+  } catch (e) {
+    toastErr(e);
+  }
+  spkBusy = "";
+  if (prefs.captions) await cuesOf(f).catch(toastErr);
+  spkRefresh(f);
+}
+
+/* A change to f's speakers: made, drawn, kept on the recent list, and
+   undone from its toast where it says what it did */
+function edit(f, change, said) {
+  const before = {
+    speakers: f.segments.map((s) => s.speaker),
+    names: [...f.names],
+    stretches: f.stretches,
+  };
+  change();
+  spkChanged(f);
+  if (said)
+    toast(said, {
+      undo: () => {
+        f.segments.forEach((s, k) => (s.speaker = before.speakers[k]));
+        f.names = before.names;
+        f.stretches = before.stretches;
+        spkChanged(f);
+      },
+    });
+}
+
+async function spkChanged(f) {
+  f.cues = null;
+  if (prefs.captions) await cuesOf(f).catch(toastErr);
+  spkRefresh(f);
+  if (f.recentId)
+    invoke("set_speakers", {
+      id: f.recentId,
+      speakers: f.segments.map((s) => s.speaker ?? 1),
+      names: f.names,
+      stretches: f.stretches,
+    }).catch(toastErr);
+}
+
+/* a name for speaker n, the names before it kept as they are */
+function setName(f, n, name) {
+  while (f.names.length < n) f.names.push("");
+  f.names[n - 1] = name;
+}
+
+/* the stretches of speaker from between a and b given to speaker to */
+function moveStretches(list, from, to, a, b) {
+  const out = [];
+  for (const g of list) {
+    if (g.speaker !== from || g.end <= a || g.start >= b) {
+      out.push(g);
+      continue;
+    }
+    if (g.start < a) out.push({ ...g, end: a });
+    out.push({
+      start: Math.max(g.start, a),
+      end: Math.min(g.end, b),
+      speaker: to,
+    });
+    if (g.end > b) out.push({ ...g, start: b });
+  }
+  return out;
+}
+
+/* Who's speaking, for the turn whose name was clicked: the speakers as
+   radio buttons, then Rename and New speaker. New speaker is for a voice
+   the model merged into someone else's: the lowest number not in use, so
+   that no two share a color, and none past eight. */
+function openWho(btn) {
+  const f = current();
+  if (!f || modeOf(f) !== "review") return;
+  const u = turnAt(f, Number(btn.dataset.turn)),
+    all = present(f);
+  const html =
+    `<div class="pk-pop-head">${esc(t("speakers.who"))}</div><div class="pk-pop-sub">${esc(tc(u.start))}–${esc(tc(u.end))}</div>` +
+    all
+      .map(
+        (x) =>
+          `<button class="pk-radio" type="button" role="menuitemradio" aria-checked="${x === u.s}" data-to="${x}"><span class="pk-dot"></span>${markHtml(x)}<span class="pk-rn">${esc(nameOf(f, x))}</span></button>`,
+      )
+      .join("") +
+    `<div class="pk-menu-sep" aria-hidden="true"></div>` +
+    `<button class="pk-mi" type="button" role="menuitem" data-rename="1"><span>${esc(t("speakers.rename", { name: nameOf(f, u.s) }))}</span></button>` +
+    `<button class="pk-mi" type="button" role="menuitem" data-new="1"${all.length >= SPEAKERS ? " disabled" : ""}><span>${esc(t("speakers.new"))}</span></button>`;
+  openMenu(btn, true, html, "down who", (m) => {
+    m.setAttribute("aria-label", t("speakers.who"));
+    m.onclick = (e) => {
+      const r = e.target.closest(".pk-radio, [data-new]");
+      if (r && !r.disabled) {
+        const fresh = !!r.dataset.new,
+          to = fresh
+            ? [1, 2, 3, 4, 5, 6, 7, 8].find((n) => !all.includes(n))
+            : Number(r.dataset.to);
+        closeMenu();
+        if (to === u.s) return;
+        return edit(
+          f,
+          () => {
+            if (fresh) setName(f, to, "");
+            for (let k = u.from; k <= u.to; k++) f.segments[k].speaker = to;
+            f.stretches = moveStretches(f.stretches, u.s, to, u.start, u.end);
+          },
+          t("speakers.moved", { name: nameOf(f, to) }),
+        );
+      }
+      if (e.target.closest("[data-rename]")) renameIn($("menu"), f, u.s);
+    };
+  });
+  const on = $("menu").querySelector('.pk-radio[aria-checked="true"]');
+  if (on) on.focus({ preventScroll: true });
+}
+
+/* the speaker already called v, other than s: renaming s to it joins them */
+const joinee = (f, s, v) =>
+  present(f).find(
+    (x) => x !== s && nameOf(f, x).toLowerCase() === v.trim().toLowerCase(),
+  );
+
+/* Rename, in the menu that asked for it: a field with the name, which says
+   so where the name typed is another speaker's */
+function renameIn(m, f, s) {
+  const title = t("speakers.rename_title", { name: nameOf(f, s) });
+  m.setAttribute("role", "dialog");
+  m.setAttribute("aria-label", title);
+  m.onclick = null;
+  m.innerHTML =
+    `<div class="pk-pop-head">${esc(title)}</div><div class="pk-pad"><input class="pk-field" type="text" value="${esc(nameOf(f, s))}" ` +
+    `aria-label="${esc(t("speakers.name"))}" autocomplete="off" spellcheck="false"></div><div class="pk-pop-sub is-words"></div>`;
+  const field = m.querySelector("input");
+  field.oninput = () => {
+    const o = joinee(f, s, field.value);
+    m.querySelector(".is-words").textContent = o
+      ? t("speakers.joins", { name: nameOf(f, o) })
+      : "";
+  };
+  field.onkeydown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const v = field.value.trim();
+      closeMenu();
+      rename(f, s, v);
+    }
+  };
+  field.focus({ preventScroll: true });
+  field.select();
+}
+
+function rename(f, s, v) {
+  if (!v || v === nameOf(f, s)) return;
+  const other = joinee(f, s, v);
+  if (!other) return edit(f, () => setName(f, s, v), "");
+  edit(
+    f,
+    () => {
+      for (const seg of f.segments) if (seg.speaker === s) seg.speaker = other;
+      f.stretches = f.stretches.map((g) =>
+        g.speaker === s ? { ...g, speaker: other } : g,
+      );
+    },
+    t("speakers.joined", { name: nameOf(f, other) }),
+  );
+}
+
+$("chips").onclick = (e) => {
+  const c = e.target.closest(".pk-chip"),
+    f = current();
+  if (!c || !f) return;
+  openMenu(c, true, "", "down who", (m) => renameIn(m, f, Number(c.dataset.s)));
+};
+
+/* The speaker bar over the waveform: each speaker's stretches of speech,
+   the diarizer's, or while a file is transcribing its turns so far. One
+   who starts while another talks is on the second line until the first
+   stops, then on the main one; each pixel shows whoever talks most of it,
+   so that at an hour, about 6 s a pixel, it still reads. */
+function drawBar(f) {
+  const strip = $("strip"),
+    bar = $("spk-bar"),
+    mode = f ? modeOf(f) : "";
+  const on = !!f && spkShown(f) && (mode === "review" || mode === "running");
+  strip.classList.toggle("spk", on);
+  if (!on || !f.duration) {
+    bar.innerHTML = "";
+    return;
+  }
+  const px = Math.max(1, Math.floor(bar.clientWidth)),
+    per = f.duration / px;
+  const running = mode === "running";
+  const src =
+    !running && f.stretches.length
+      ? f.stretches
+      : f.segments
+          .filter((s) => s.speaker != null)
+          .map((s) => ({ start: s.start, end: s.end, speaker: s.speaker }));
+  const lines = barLines(src, running ? f.done * f.duration : Infinity);
+  let html = "";
+  for (const [cls, parts] of [
+    ["", lines.main],
+    ["is-second", lines.second],
+  ]) {
+    const who = pixels(parts, px, per);
+    for (let x = 0; x < px; ) {
+      const n = who[x];
+      let e = x + 1;
+      while (e < px && who[e] === n) e++;
+      if (n) {
+        // a pixel apart from the next, where there is room
+        const w = e - x,
+          inset = w > 3 ? 1 : 0;
+        html += `<b${cls ? ` class="${cls}"` : ""} style="left:${x + inset}px;width:${w - 2 * inset}px;background:var(--speaker-bar-${slotOf(n)})"></b>`;
+      }
+      x = e;
+    }
+  }
+  bar.innerHTML = html;
+}
+
+/* the bar's two lines from stretches, up to upto seconds */
+function barLines(stretches, upto) {
+  const by = new Map();
+  for (const g of stretches) {
+    const a = g.start,
+      b = Math.min(g.end, upto);
+    if (b <= a) continue;
+    if (!by.has(g.speaker)) by.set(g.speaker, []);
+    by.get(g.speaker).push([a, b]);
+  }
+  // a speaker's stretches that meet, one
+  const all = [];
+  for (const [s, list] of by) {
+    list.sort((x, y) => x[0] - y[0]);
+    let cur = null;
+    for (const [a, b] of list) {
+      if (cur && a <= cur.b) cur.b = Math.max(cur.b, b);
+      else all.push((cur = { s, a, b }));
+    }
+  }
+  all.sort((x, y) => x.a - y.a || x.b - y.b);
+  const main = [],
+    second = [];
+  let holder = null;
+  for (const u of all) {
+    if (holder && u.a < holder.b) {
+      second.push({ s: u.s, a: u.a, b: Math.min(u.b, holder.b) });
+      if (u.b > holder.b) {
+        main.push({ s: u.s, a: holder.b, b: u.b });
+        holder = u;
+      }
+    } else {
+      main.push({ s: u.s, a: u.a, b: u.b });
+      holder = u;
+    }
+  }
+  return { main, second };
+}
+
+/* each pixel's speaker on a line: whoever talks most of it, 0 for none */
+function pixels(parts, px, per) {
+  const time = Array.from({ length: SPEAKERS + 1 }, () => new Float64Array(px));
+  for (const p of parts) {
+    const n = slotOf(p.s),
+      x0 = Math.max(0, Math.floor(p.a / per)),
+      x1 = Math.min(px - 1, Math.floor(p.b / per));
+    for (let x = x0; x <= x1; x++) {
+      const t = Math.min(p.b, (x + 1) * per) - Math.max(p.a, x * per);
+      if (t > 0) time[n][x] += t;
+    }
+  }
+  const who = new Int32Array(px);
+  for (let x = 0; x < px; x++) {
+    let top = 0;
+    for (let n = 1; n <= SPEAKERS; n++)
+      if (time[n][x] > top) {
+        top = time[n][x];
+        who[x] = n;
+      }
+  }
+  return who;
+}
+
 /* ------------------------------------------------------------ captions -- */
 
 /* A finished transcript as its subtitle track: the engine's pk_captions
@@ -2955,22 +3451,42 @@ $("find").addEventListener("keydown", (e) => {
 async function cuesOf(f) {
   if (f.cues) return f.cues;
   const w = f.segments.flatMap((s) => s.words || []);
-  const m = st.catalog.find((x) => x.name === f.model);
+  // each word's segment, and each segment's first word: a cue that starts
+  // a turn names its speaker
+  const segOf = f.segments.flatMap((s, i) => (s.words || []).map(() => i));
+  const firstOf = [];
+  f.segments.forEach(
+    (s, i) =>
+      (firstOf[i] = i
+        ? firstOf[i - 1] + (f.segments[i - 1].words || []).length
+        : 0),
+  );
+  const names = namesFor(f);
   // the English model's words are English; the multilingual model's say
-  // which they are (the engine's pk_language)
-  const english =
-    !!m && m.languages.length === 1 && m.languages[0] === "en" ? 1 : -1;
+  // which they are (the engine's pk_language). With speakers shown, a
+  // change of speaker ends a cue, and the name counts in its line.
   const raw = await invoke("captions", {
-    words: w.map((x) => ({ text: x.text, start: x.start, end: x.end })),
-    english,
+    name: f.name,
     duration: f.duration || 0,
+    model: f.model || null,
+    segments: f.segments,
+    names,
   });
   // each cue a row of the transcript: its text with its line break, its
   // words, its times; one a pause cut in mid-sentence ends in an ellipsis
   // (pktito's PK_CUE_PAUSE, which its line has room for)
   f.cues = raw.map((c) => {
     const ws = w.slice(c.first, c.first + c.n);
+    const seg = segOf[c.first];
     return {
+      // the segment whose turn this cue starts, -1 for one that starts none
+      turnSeg:
+        names &&
+        seg != null &&
+        firstOf[seg] === c.first &&
+        turnStarts(f.segments, seg)
+          ? seg
+          : -1,
       start: c.start / 1000,
       end: c.end / 1000,
       startMs: c.start,
@@ -3064,6 +3580,7 @@ const textOf = (f, ext, times = !!prefs.times) =>
     model: f.model || null,
     segments: f.segments,
     times,
+    names: namesFor(f),
   });
 
 /* What the view shows: a finished transcript's captions as an .srt's text,
@@ -3238,6 +3755,9 @@ function openMenu(anchor, keys, html, place, wire) {
   const m = $("menu");
   m.innerHTML = html;
   m.classList.toggle("is-wide", place.includes("wide"));
+  m.classList.toggle("is-who", place.includes("who"));
+  m.setAttribute("role", "menu");
+  m.removeAttribute("aria-label");
   m.hidden = false;
   menuFor = anchor;
   anchor.setAttribute("aria-expanded", "true");
@@ -3302,13 +3822,24 @@ function toastErr(e) {
 }
 
 /* A few words; what said so, if anything, in the tooltip */
-function toast(text, { reveal = null, err = false, detail = "" } = {}) {
+function toast(
+  text,
+  { reveal = null, err = false, detail = "", undo = null } = {},
+) {
   const box = $("toast");
   box.innerHTML =
     `${err ? ICON.alert : ICON.check}<span></span>` +
     (reveal
       ? `<button class="pk-linkbtn" type="button">${esc(revealLabel())}</button>`
+      : "") +
+    (undo
+      ? `<button class="pk-undo" type="button">${esc(t("speakers.undo"))}</button>`
       : "");
+  if (undo)
+    box.querySelector(".pk-undo").onclick = () => {
+      box.hidden = true;
+      undo();
+    };
   box.querySelector("span").textContent = text;
   box.querySelector("span").title = detail || text;
   if (reveal)
@@ -3320,7 +3851,7 @@ function toast(text, { reveal = null, err = false, detail = "" } = {}) {
     () => {
       box.hidden = true;
     },
-    reveal || err ? 6000 : 3500,
+    reveal || err || undo ? 6000 : 3500,
   );
 }
 

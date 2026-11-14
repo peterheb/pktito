@@ -204,6 +204,45 @@ const PK_CUE_PAUSE: i32 = 8;
 /// the name (pk_captions; pktito-c's --srt writes the same). The Android
 /// app's Captions view shows them as they are (android.rs).
 pub fn cues(t: &Transcript) -> Result<Vec<Cue>, String> {
+    let (timed, words, raw) = captioned(t)?;
+    Ok(raw
+        .iter()
+        .map(|c| {
+            let (first, n) = (c.first as usize, c.n as usize);
+            let mut text = String::new();
+            for (k, w) in timed.iter().enumerate().skip(first).take(n) {
+                if k > first {
+                    text.push(if k as i32 == c.line2 { '\n' } else { ' ' });
+                }
+                text.push_str(&w.0);
+            }
+            if c.flags & PK_CUE_PAUSE != 0 {
+                text.push('\u{2026}');
+            }
+            Cue {
+                start: c.start,
+                end: c.end,
+                text,
+                first,
+                n,
+                speaker: words.get(first).and_then(|s| *s),
+            }
+        })
+        .collect())
+}
+
+/// pk_captions' own cues for t, as cues() makes them: for the desktop
+/// window, which draws a cue from its words, and a turn's name as a button.
+pub fn raw_cues(t: &Transcript) -> Result<Vec<pktito::Cue>, String> {
+    Ok(captioned(t)?.2)
+}
+
+/// t's words as pk_captions is given them, a turn's first with its name in
+/// front where t shows speakers; each word's speaker; and the cues.
+#[allow(clippy::type_complexity)]
+fn captioned(
+    t: &Transcript,
+) -> Result<(Vec<(String, i64, i64)>, Vec<Option<u32>>, Vec<pktito::Cue>), String> {
     let ms = |s: f64| (s * 1000.0).round() as i64;
     let words: Vec<(&crate::transcribe::Word, Option<u32>)> = t
         .segments
@@ -231,32 +270,8 @@ pub fn cues(t: &Transcript) -> Result<Vec<Cue>, String> {
             }
         }
     }
-    Ok(
-        pktito::captions(&timed, speaker.as_deref(), lang.as_deref(), ms(t.duration))?
-            .iter()
-            .map(|c| {
-                let (first, n) = (c.first as usize, c.n as usize);
-                let mut text = String::new();
-                for k in first..first + n {
-                    if k > first {
-                        text.push(if k as i32 == c.line2 { '\n' } else { ' ' });
-                    }
-                    text.push_str(&timed[k].0);
-                }
-                if c.flags & PK_CUE_PAUSE != 0 {
-                    text.push('\u{2026}');
-                }
-                Cue {
-                    start: c.start,
-                    end: c.end,
-                    text,
-                    first,
-                    n,
-                    speaker: words.get(first).and_then(|(_, s)| *s),
-                }
-            })
-            .collect(),
-    )
+    let raw = pktito::captions(&timed, speaker.as_deref(), lang.as_deref(), ms(t.duration))?;
+    Ok((timed, words.iter().map(|(_, s)| *s).collect(), raw))
 }
 
 /// A segment to a few lines, a word to a line, the cues as their lines

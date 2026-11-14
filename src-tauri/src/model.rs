@@ -110,6 +110,12 @@ pub struct Diarizer {
     pub model: Part,
 }
 
+/// The diarizer's model in the app's models, where it has been downloaded.
+pub fn diarizer_file(data: &Path) -> Option<PathBuf> {
+    let p = data.join("models").join(DIARIZER?.model.file);
+    p.is_file().then_some(p)
+}
+
 /// A file models.pktito.net serves, under the first twelve digits of its
 /// SHA-256 (part_url): file is its name with its extension.
 #[derive(Clone, Copy, Debug, Serialize)]
@@ -555,6 +561,10 @@ pub struct Prefs {
     pub volume: f64,
     /// A wide window's recent list's width in pixels; 0 for its default.
     pub side: f64,
+    /// Who said what: a transcription runs the diarizer too, once its model
+    /// is here, and the window shows each turn's speaker. The switch beside
+    /// the views, kept for the next file (speakers UI, PKT-27).
+    pub speakers: bool,
 }
 
 impl Default for Prefs {
@@ -569,6 +579,7 @@ impl Default for Prefs {
             speed: 1.0,
             volume: 1.0,
             side: 0.0,
+            speakers: false,
         }
     }
 }
@@ -731,6 +742,18 @@ impl Wanted {
             sha256: p.sha256,
             part: dir.join(format!("{}.part", p.file)),
             dst: editions::landing(dir, p),
+        }
+    }
+
+    /// The diarizer's .pkf, into dir under its own name.
+    pub fn diarizer(dir: &Path, d: &Diarizer) -> Wanted {
+        Wanted {
+            name: d.name.into(),
+            url: part_url(&d.model),
+            bytes: d.model.bytes,
+            sha256: d.model.sha256,
+            part: dir.join(format!("{}.part", d.model.file)),
+            dst: dir.join(d.model.file),
         }
     }
 

@@ -39,6 +39,22 @@ class Palette(
     val scrim: Color,
     val focus: Color,
     val link: Color,
+    val speaker1: Color,
+    val speaker2: Color,
+    val speaker3: Color,
+    val speaker4: Color,
+    val speaker5: Color,
+    val speaker6: Color,
+    val speaker7: Color,
+    val speaker8: Color,
+    val speakerBar1: Color,
+    val speakerBar2: Color,
+    val speakerBar3: Color,
+    val speakerBar4: Color,
+    val speakerBar5: Color,
+    val speakerBar6: Color,
+    val speakerBar7: Color,
+    val speakerBar8: Color,
 )
 
 val Light =
@@ -68,6 +84,22 @@ val Light =
         scrim = Color(0xFF101B33).copy(alpha = 0.32f),
         focus = Color(0xFF101B33),
         link = Color(0xFF101B33), // {ink}
+        speaker1 = Color(0xFF977E03),
+        speaker2 = Color(0xFF806FCD),
+        speaker3 = Color(0xFF089583),
+        speaker4 = Color(0xFF046A2F),
+        speaker5 = Color(0xFFAF1374),
+        speaker6 = Color(0xFF742AAF),
+        speaker7 = Color(0xFF6A6B00),
+        speaker8 = Color(0xFFA0529B),
+        speakerBar1 = Color(0xFFAC9003),
+        speakerBar2 = Color(0xFF9281E1),
+        speakerBar3 = Color(0xFF10A995),
+        speakerBar4 = Color(0xFF047F3A),
+        speakerBar5 = Color(0xFFC22D84),
+        speakerBar6 = Color(0xFF8B45C9),
+        speakerBar7 = Color(0xFF7D7D04),
+        speakerBar8 = Color(0xFFB565AE),
     )
 
 val Dark =
@@ -97,6 +129,22 @@ val Dark =
         scrim = Color(0xFF000000).copy(alpha = 0.55f),
         focus = Color(0xFF6CC4F5),
         link = Color(0xFFE5EBF4), // {ink}
+        speaker1 = Color(0xFFAC9003),
+        speaker2 = Color(0xFF9281E1),
+        speaker3 = Color(0xFF10A995),
+        speaker4 = Color(0xFF047F3A),
+        speaker5 = Color(0xFFC22D84),
+        speaker6 = Color(0xFF8B45C9),
+        speaker7 = Color(0xFF7D7D04),
+        speaker8 = Color(0xFFB565AE),
+        speakerBar1 = Color(0xFFAC9003),
+        speakerBar2 = Color(0xFF9281E1),
+        speakerBar3 = Color(0xFF10A995),
+        speakerBar4 = Color(0xFF047F3A),
+        speakerBar5 = Color(0xFFC22D84),
+        speakerBar6 = Color(0xFF8B45C9),
+        speakerBar7 = Color(0xFF7D7D04),
+        speakerBar8 = Color(0xFFB565AE),
     )
 
 object Fonts {

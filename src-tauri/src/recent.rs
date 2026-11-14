@@ -3,7 +3,7 @@
 //! transcript under recent/, and recent/index.json listing them.
 
 use crate::strings::Problem;
-use crate::transcribe::Segment;
+use crate::transcribe::{Segment, Stretch};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -71,6 +71,14 @@ pub struct Transcript {
     pub item: Item,
     pub peaks: Vec<u8>,
     pub segments: Vec<Segment>,
+    /// With speakers: the names given, speaker n's at n - 1, "" for one
+    /// still "Speaker n" (format::Transcript's names); and each speaker's
+    /// stretches of speech, the window's speaker bar. Left out without
+    /// speakers, so a transcript without them is the bytes it was.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub names: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub stretches: Vec<Stretch>,
 }
 
 fn dir(data: &Path) -> PathBuf {
@@ -186,6 +194,44 @@ pub fn relink(data: &Path, id: &str, path: &Path, size: u64, modified: u64) -> R
     write_list(data, &items)
 }
 
+/// A transcript's speakers as the window changed them (Who's speaking, a
+/// rename): each segment's speaker, in order, the names and the bar's
+/// stretches in place of the ones it had.
+pub fn set_speakers(
+    data: &Path,
+    id: &str,
+    speakers: &[u32],
+    names: Vec<String>,
+    stretches: Vec<Stretch>,
+) -> Result<(), Problem> {
+    let mut t = load(data, id)?;
+    if speakers.len() != t.segments.len() {
+        return Err("the speakers don't match the transcript".into());
+    }
+    for (s, &n) in t.segments.iter_mut().zip(speakers) {
+        s.speaker = Some(n);
+    }
+    t.names = names;
+    t.stretches = stretches;
+    fs::write(
+        dir(data).join(format!("{id}.json")),
+        serde_json::to_vec(&t).unwrap(),
+    )
+    .map_err(|e| Problem::from(e.to_string()))
+}
+
+/// A transcript written again in place, as it is now.
+pub fn replace(data: &Path, t: &Transcript) -> Result<(), Problem> {
+    if !valid(&t.item.id) {
+        return Err("no such transcript".into());
+    }
+    fs::write(
+        dir(data).join(format!("{}.json", t.item.id)),
+        serde_json::to_vec(t).unwrap(),
+    )
+    .map_err(|e| Problem::from(e.to_string()))
+}
+
 pub fn clear(data: &Path) {
     let _ = fs::remove_dir_all(dir(data));
 }
@@ -225,6 +271,8 @@ mod tests {
             item: item("17", "content://a/1"),
             peaks: vec![1, 2],
             segments: Vec::new(),
+            names: Vec::new(),
+            stretches: Vec::new(),
         };
         add(&data, &t).unwrap();
         relink(&data, "17", Path::new("content://b/2"), 1234, 99).unwrap();
