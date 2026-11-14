@@ -26,6 +26,8 @@ PATH is a file or a folder of them.
                       (default: the app's)
   -f, --format F      txt, md, srt, vtt or json (txt); or --txt, --md, ...
       --times         each sentence's start time, in txt and md
+      --speakers      who said what: each turn named, Speaker 1 and on
+      --diarizer FILE the diarizer's .pkf for --speakers (and says it)
   -o, --output PATH   write to PATH; with several files, into folder PATH
   -t, --threads N     threads (default: one per core)
       --cpu           on a Mac, the CPU instead of the Neural Engine; with
@@ -69,6 +71,9 @@ struct Opts {
     cpu: bool,
     /// bench's references, a folder of NAME.txt
     reference: Option<PathBuf>,
+    /// who said what, with the diarizer at diarizer or the app's
+    speakers: bool,
+    diarizer: Option<PathBuf>,
 }
 
 fn run(args: &[String]) -> Result<i32, String> {
@@ -109,6 +114,8 @@ fn run(args: &[String]) -> Result<i32, String> {
         quiet: false,
         cpu: false,
         reference: None,
+        speakers: false,
+        diarizer: None,
     };
     let mut it = args.iter();
     while let Some(a) = it.next() {
@@ -118,6 +125,11 @@ fn run(args: &[String]) -> Result<i32, String> {
             "-f" | "--format" => o.ext = value(a)?.to_lowercase(),
             "--txt" | "--md" | "--srt" | "--vtt" | "--json" => o.ext = a[2..].into(),
             "--times" => o.times = true,
+            "--speakers" => o.speakers = true,
+            "--diarizer" => {
+                o.diarizer = Some(PathBuf::from(value(a)?));
+                o.speakers = true;
+            }
             "-o" | "--output" => o.output = Some(PathBuf::from(value(a)?)),
             "-t" | "--threads" => {
                 o.threads = value(a)?
@@ -154,6 +166,16 @@ fn transcribe_all(o: &Opts) -> Result<i32, String> {
     let mut asr = pktito::Asr::new(&model, o.threads)?;
     encoder(&mut asr, &model, &path, o)?;
     let name = model.name();
+    // the diarizer, with --speakers: its own model and working memory
+    let diarizer = match o.speakers {
+        true => {
+            let d = pktito::Model::load(&diarizer_path(o.diarizer.as_deref())?)?;
+            let diar = pktito::Diar::new(&d, o.threads)?;
+            Some((d, diar))
+        }
+        false => None,
+    };
+    let mut diarizer = diarizer;
     let show = !o.quiet && std::io::stderr().is_terminal();
     let mut failed = 0;
     for f in &o.files {
@@ -167,10 +189,14 @@ fn transcribe_all(o: &Opts) -> Result<i32, String> {
                 status(&format!("{label}: reading the audio"));
             }
             let x = decode::decode(file).map_err(|e| e.message())?;
+            let mut speakers = diarizer
+                .as_mut()
+                .map(|(d, diar)| transcribe::Speakers::new(d, diar));
             let (segs, windows, _) = transcribe::run_windows(
                 &model,
                 &mut asr,
                 &x,
+                speakers.as_mut(),
                 |done, _| {
                     if show {
                         status(&format!("{label}: transcribing {:.0}%", done * 100.0));
@@ -183,6 +209,8 @@ fn transcribe_all(o: &Opts) -> Result<i32, String> {
                 duration: x.len() as f64 / decode::RATE as f64,
                 model: Some(name.as_str()),
                 segments: &segs,
+                // the default names, "Speaker 1" and on
+                names: speakers.as_ref().map(|_| &[][..]),
             };
             // json with pktito's chunks, for measuring its cuts
             let text = format::text_windows(&t, &o.ext, o.times, &windows)?;
@@ -215,6 +243,25 @@ fn transcribe_all(o: &Opts) -> Result<i32, String> {
         }
     }
     Ok(if failed > 0 { 1 } else { 0 })
+}
+
+/// The diarizer's .pkf: the one named, else the app's (model::DIARIZER),
+/// downloaded into its models.
+fn diarizer_path(named: Option<&Path>) -> Result<PathBuf, String> {
+    if let Some(p) = named {
+        return Ok(p.to_path_buf());
+    }
+    let d = model::DIARIZER
+        .ok_or("this pktito-cli has no diarizer to offer: name one with --diarizer")?;
+    let data = model::data_dir().ok_or("no folder for the app's data")?;
+    let p = data.join("models").join(d.model.file);
+    if !p.is_file() {
+        return Err(format!(
+            "no diarizer at {}: name one with --diarizer",
+            p.display()
+        ));
+    }
+    Ok(p)
 }
 
 /// The files bench times: each one named, and a folder's audio and video
@@ -292,6 +339,7 @@ fn bench_all(o: &Opts) -> Result<i32, String> {
                 &model,
                 &mut asr,
                 &x,
+                None,
                 |done, _| {
                     if show {
                         status(&format!("{label}: transcribing {:.0}%", done * 100.0));

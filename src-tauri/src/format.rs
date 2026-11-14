@@ -41,12 +41,34 @@ pub fn stem_of(original: &Path) -> String {
 }
 
 /// What a transcript is written from: the file's name, the recording's
-/// length in seconds, the model that made it, and its segments.
+/// length in seconds, the model that made it, and its segments; and where
+/// it shows its speakers (the window's switch, pktito-cli's --speakers),
+/// their names, the name of speaker n at n - 1, "Speaker n" for one not
+/// there or empty. Without names a file has no speakers, whatever its
+/// segments know of them.
 pub struct Transcript<'a> {
     pub name: &'a str,
     pub duration: f64,
     pub model: Option<&'a str>,
     pub segments: &'a [Segment],
+    pub names: Option<&'a [String]>,
+}
+
+impl Transcript<'_> {
+    /// The speaker of a segment, where the file shows speakers.
+    fn speaker(&self, s: &Segment) -> Option<u32> {
+        self.names.and(s.speaker)
+    }
+
+    /// Speaker n's name: the one given, else "Speaker n", as pktito-c writes
+    /// it (its core/cli.c, --speakers).
+    fn name_of(&self, n: u32) -> String {
+        self.names
+            .and_then(|names| names.get((n as usize).wrapping_sub(1)))
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map_or_else(|| format!("Speaker {n}"), str::to_string)
+    }
 }
 
 /// t in a format: times before each sentence of .txt and .md if asked.
@@ -63,28 +85,55 @@ pub fn text_windows(
     windows: &[Window],
 ) -> Result<String, String> {
     let segs = t.segments;
+    // the name that starts each segment beginning a turn, where the file shows
+    // speakers: a turn is a speaker's segments in a row
+    let turns: Vec<Option<String>> = segs
+        .iter()
+        .enumerate()
+        .map(|(i, s)| {
+            let who = t.speaker(s)?;
+            let before = i.checked_sub(1).and_then(|p| t.speaker(&segs[p]));
+            (before != Some(who)).then(|| t.name_of(who))
+        })
+        .collect();
     Ok(match ext {
+        // a turn starts after a blank line, with its speaker's name, as
+        // pktito-c writes it (cli.c's print_sentences)
         "txt" => {
-            let lines: Vec<String> = segs
-                .iter()
-                .map(|s| {
-                    if times {
-                        format!("{}  {}", stamp(s.start), s.text)
-                    } else {
-                        s.text.clone()
-                    }
-                })
-                .collect();
-            lines.join("\n") + "\n"
+            let mut out = String::new();
+            for (i, (s, name)) in segs.iter().zip(&turns).enumerate() {
+                if i > 0 && name.is_some() {
+                    out.push('\n');
+                }
+                if times {
+                    out.push_str(&stamp(s.start));
+                    out.push_str("  ");
+                }
+                if let Some(n) = name {
+                    out.push_str(n);
+                    out.push_str(": ");
+                }
+                out.push_str(&s.text);
+                out.push('\n');
+            }
+            if out.is_empty() {
+                out.push('\n');
+            }
+            out
         }
         "md" => {
             let paras: Vec<String> = segs
                 .iter()
-                .map(|s| {
+                .zip(&turns)
+                .map(|(s, name)| {
+                    let said = match name {
+                        Some(n) => format!("**{}:** {}", md_esc(n), md_esc(&s.text)),
+                        None => md_esc(&s.text),
+                    };
                     if times {
-                        format!("`{}` {}", stamp(s.start), md_esc(&s.text))
+                        format!("`{}` {said}", stamp(s.start))
                     } else {
-                        md_esc(&s.text)
+                        said
                     }
                 })
                 .collect();
@@ -103,13 +152,17 @@ pub fn text_windows(
                 )
             })
             .collect(),
+        // with speakers each cue names its voice too, as pktito-c's does
         "vtt" => {
             let body: String = cues(t)?
                 .iter()
                 .enumerate()
                 .map(|(i, c)| {
+                    let voice = c.speaker.map_or(String::new(), |n| {
+                        format!("<v {}>", vtt_text(&t.name_of(n)))
+                    });
                     format!(
-                        "{}\n{} --> {}\n{}\n\n",
+                        "{}\n{} --> {}\n{voice}{}\n\n",
                         i + 1,
                         ms_stamp(c.start, '.'),
                         ms_stamp(c.end, '.'),
@@ -136,52 +189,74 @@ pub struct Cue {
     pub text: String,
     pub first: usize,
     pub n: usize,
+    /// Whose words they are, where the transcript shows speakers: a change
+    /// of speaker ends a cue, so a cue is one speaker's.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub speaker: Option<u32>,
 }
 
 const PK_CUE_PAUSE: i32 = 8;
 
 /// The subtitle track of t: English's rules for a model of English alone,
 /// and for any other the engine's own guess whether its words are English.
-/// The Android app's Captions view shows them as they are (android.rs).
+/// With speakers, a change of speaker ends a cue, and the first word of each
+/// turn carries its speaker's name, "Speaker 1: ", so that its line counts
+/// the name (pk_captions; pktito-c's --srt writes the same). The Android
+/// app's Captions view shows them as they are (android.rs).
 pub fn cues(t: &Transcript) -> Result<Vec<Cue>, String> {
     let ms = |s: f64| (s * 1000.0).round() as i64;
-    let words: Vec<&crate::transcribe::Word> = t.segments.iter().flat_map(|s| &s.words).collect();
-    let timed: Vec<(String, i64, i64)> = words
+    let words: Vec<(&crate::transcribe::Word, Option<u32>)> = t
+        .segments
         .iter()
-        .map(|w| (w.text.clone(), ms(w.start), ms(w.end)))
+        .flat_map(|s| s.words.iter().map(move |w| (w, t.speaker(s))))
+        .collect();
+    let mut timed: Vec<(String, i64, i64)> = words
+        .iter()
+        .map(|(w, _)| (w.text.clone(), ms(w.start), ms(w.end)))
         .collect();
     let english = match t.model.and_then(model::entry) {
         Some(e) if e.languages == ["en"] => 1,
         _ => -1,
     };
+    // the words' own language, before any name goes in
     let lang = pktito::captions_lang(&timed, english);
-    Ok(pktito::captions(&timed, lang.as_deref(), ms(t.duration))?
+    let speaker: Option<Vec<i32>> = words
         .iter()
-        .map(|c| {
-            let (first, n) = (c.first as usize, c.n as usize);
-            let mut text = String::new();
-            for (k, w) in words[first..first + n].iter().enumerate() {
-                if k > 0 {
-                    text.push(if (first + k) as i32 == c.line2 {
-                        '\n'
-                    } else {
-                        ' '
-                    });
+        .any(|(_, s)| s.is_some())
+        .then(|| words.iter().map(|(_, s)| s.unwrap_or(0) as i32).collect());
+    if let Some(spk) = &speaker {
+        for i in 0..timed.len() {
+            if words[i].1.is_some() && (i == 0 || spk[i] != spk[i - 1]) {
+                timed[i].0 = format!("{}: {}", t.name_of(spk[i] as u32), timed[i].0);
+            }
+        }
+    }
+    Ok(
+        pktito::captions(&timed, speaker.as_deref(), lang.as_deref(), ms(t.duration))?
+            .iter()
+            .map(|c| {
+                let (first, n) = (c.first as usize, c.n as usize);
+                let mut text = String::new();
+                for k in first..first + n {
+                    if k > first {
+                        text.push(if k as i32 == c.line2 { '\n' } else { ' ' });
+                    }
+                    text.push_str(&timed[k].0);
                 }
-                text.push_str(&w.text);
-            }
-            if c.flags & PK_CUE_PAUSE != 0 {
-                text.push('\u{2026}');
-            }
-            Cue {
-                start: c.start,
-                end: c.end,
-                text,
-                first,
-                n,
-            }
-        })
-        .collect())
+                if c.flags & PK_CUE_PAUSE != 0 {
+                    text.push('\u{2026}');
+                }
+                Cue {
+                    start: c.start,
+                    end: c.end,
+                    text,
+                    first,
+                    n,
+                    speaker: words.get(first).and_then(|(_, s)| *s),
+                }
+            })
+            .collect(),
+    )
 }
 
 /// A segment to a few lines, a word to a line, the cues as their lines
@@ -200,14 +275,23 @@ fn json(t: &Transcript, cues: &[Cue], windows: &[Window]) -> String {
                 )
             })
             .collect();
+        let who = t
+            .speaker(s)
+            .map_or(String::new(), |n| format!(", \"speaker\": {n}"));
         format!(
-            "    {{\"start\": {}, \"end\": {}, \"text\": {}, \"words\": [\n{}\n    ]}}",
+            "    {{\"start\": {}, \"end\": {}, \"text\": {}{who}, \"words\": [\n{}\n    ]}}",
             r3(s.start),
             r3(s.end),
             j(&s.text),
             words.join(",\n")
         )
     };
+    // the speakers' names, speaker n's at n - 1, where the file shows them
+    let heard = t.segments.iter().filter_map(|s| t.speaker(s)).max();
+    let speakers = heard.map_or(String::new(), |most| {
+        let names: Vec<String> = (1..=most).map(|n| j(&t.name_of(n))).collect();
+        format!("\n  \"speakers\": [{}],", names.join(", "))
+    });
     let cue = |c: &Cue| {
         let lines: Vec<&str> = c.text.split('\n').collect();
         format!(
@@ -246,7 +330,7 @@ fn json(t: &Transcript, cues: &[Cue], windows: &[Window]) -> String {
         format!(",\n  \"windows\": [\n{}\n  ]", windows.join(",\n"))
     };
     format!(
-        "{{\n  \"file\": {},\n  \"duration\": {},\n  \"model\": {},\n  \"segments\": [\n{}\n  ],\n  \"captions\": [\n{}\n  ]{}\n}}\n",
+        "{{\n  \"file\": {},\n  \"duration\": {},\n  \"model\": {},{speakers}\n  \"segments\": [\n{}\n  ],\n  \"captions\": [\n{}\n  ]{}\n}}\n",
         j(t.name),
         r3(t.duration),
         t.model.filter(|m| !m.is_empty()).map(j).unwrap_or_else(|| "null".into()),
@@ -334,6 +418,96 @@ mod tests {
             end: words.last().unwrap().end,
             text,
             words,
+            speaker: None,
+        }
+    }
+
+    fn said(speaker: u32, words: Vec<Word>) -> Segment {
+        Segment {
+            speaker: Some(speaker),
+            ..segment(words)
+        }
+    }
+
+    /// Turns, a one-sentence interruption, and a name given to one speaker
+    /// of two, in every format; and the same segments without names, which
+    /// have no speakers in any.
+    #[test]
+    fn speakers_in_every_format() {
+        let segs = vec![
+            said(1, vec![word("Good", 0.5, 0.8), word("morning.", 0.8, 1.3)]),
+            said(1, vec![word("Shall", 1.6, 1.9), word("we?", 1.9, 2.3)]),
+            said(2, vec![word("Yes.", 2.6, 3.0)]),
+            said(1, vec![word("Then", 3.4, 3.7), word("begin.", 3.7, 4.2)]),
+        ];
+        let names = vec!["Ada <A>".to_string()];
+        let t = Transcript {
+            name: "talk.wav",
+            duration: 5.0,
+            model: Some("parakeet-tdt-0.6b-v2"),
+            segments: &segs,
+            names: Some(&names),
+        };
+        assert_eq!(
+            text(&t, "txt", false).unwrap(),
+            "Ada <A>: Good morning.\nShall we?\n\nSpeaker 2: Yes.\n\nAda <A>: Then begin.\n"
+        );
+        assert_eq!(
+            text(&t, "txt", true).unwrap(),
+            "00:00:00.50  Ada <A>: Good morning.\n00:00:01.60  Shall we?\n\n00:00:02.60  Speaker 2: Yes.\n\n00:00:03.40  Ada <A>: Then begin.\n"
+        );
+        assert_eq!(
+            text(&t, "md", false).unwrap(),
+            "# talk.wav\n\n**Ada \\<A\\>:** Good morning.\n\nShall we?\n\n**Speaker 2:** Yes.\n\n**Ada \\<A\\>:** Then begin.\n"
+        );
+        // a change of speaker ends a cue, and a turn's first cue names them;
+        // the engine cuts the rest where it reads best (here at the pause)
+        let c: Vec<(Option<u32>, String)> = cues(&t)
+            .unwrap()
+            .into_iter()
+            .map(|c| (c.speaker, c.text))
+            .collect();
+        assert_eq!(
+            c,
+            [
+                (Some(1), "Ada <A>: Good morning.".to_string()),
+                (Some(1), "Shall we?".to_string()),
+                (Some(2), "Speaker 2: Yes.".to_string()),
+                (Some(1), "Ada <A>: Then begin.".to_string()),
+            ]
+        );
+        let vtt = text(&t, "vtt", false).unwrap();
+        assert!(
+            vtt.contains("\n<v Ada &lt;A&gt;>Ada &lt;A&gt;: Good morning."),
+            "{vtt}"
+        );
+        assert!(vtt.contains("\n<v Speaker 2>Speaker 2: Yes.\n"), "{vtt}");
+        let srt = text(&t, "srt", false).unwrap();
+        assert!(
+            srt.contains("\nSpeaker 2: Yes.\n") && !srt.contains("<v"),
+            "{srt}"
+        );
+        let json = text(&t, "json", false).unwrap();
+        assert!(
+            json.contains("\"speakers\": [\"Ada <A>\", \"Speaker 2\"],"),
+            "{json}"
+        );
+        assert!(
+            json.contains("\"text\": \"Yes.\", \"speaker\": 2, \"words\""),
+            "{json}"
+        );
+        // no names: no speakers anywhere
+        let plain = Transcript { names: None, ..t };
+        assert_eq!(
+            text(&plain, "txt", false).unwrap(),
+            "Good morning.\nShall we?\nYes.\nThen begin.\n"
+        );
+        for ext in ["srt", "vtt", "json"] {
+            let s = text(&plain, ext, false).unwrap();
+            assert!(
+                !s.contains("Speaker") && !s.contains("speaker"),
+                "{ext}: {s}"
+            );
         }
     }
 
@@ -373,6 +547,7 @@ mod tests {
             duration: 63.0,
             model: Some("parakeet-tdt-0.6b-v2"),
             segments: &segs,
+            names: None,
         };
         assert_eq!(text(&t, "txt", false).unwrap(), "Hello there.\n# Two\n");
         assert_eq!(

@@ -826,6 +826,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
         model,
         asr,
         &x,
+        None,
         |done, segs| {
             // the pace so far, the model's loading left out
             let spent = t1.elapsed().as_secs_f64();
@@ -1203,7 +1204,7 @@ fn captions(
         .map(|w| (w.text, ms(w.start), ms(w.end)))
         .collect();
     let lang = pktito::captions_lang(&w, english);
-    Ok(pktito::captions(&w, lang.as_deref(), ms(duration))?)
+    Ok(pktito::captions(&w, None, lang.as_deref(), ms(duration))?)
 }
 
 /// pktito-cli on the PATH, from the macOS menu bar's Install Command Line
@@ -1288,6 +1289,7 @@ fn text_of(
             duration,
             model: model.as_deref(),
             segments: &segments,
+            names: None,
         },
         &ext,
         times,
@@ -1652,6 +1654,7 @@ fn headless(args: &[String]) -> Result<(), String> {
         &model,
         &mut asr,
         &x,
+        None,
         |_, segs| {
             for s in segs.iter().filter(|_| !json) {
                 println!("{:>10.2}  {}", s.start, s.text);

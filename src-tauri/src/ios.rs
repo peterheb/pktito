@@ -346,6 +346,7 @@ pub extern "C" fn pkapp_transcribe(
             &l.model,
             &mut l.asr,
             &x,
+            None,
             |done, segs| {
                 let segs = CString::new(
                     serde_json::to_string(segs)
@@ -396,6 +397,7 @@ pub extern "C" fn pkapp_format(
                 duration: t.duration,
                 model: Some(&t.model),
                 segments: &t.segments,
+                names: None,
             },
             &ext,
             times,
@@ -415,6 +417,7 @@ pub extern "C" fn pkapp_captions(transcript: *const c_char) -> *mut c_char {
             duration: t.duration,
             model: Some(&t.model),
             segments: &t.segments,
+            names: None,
         })?;
         Ok(json!({ "cues": cues }))
     })

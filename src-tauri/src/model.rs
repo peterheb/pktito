@@ -100,6 +100,16 @@ impl Entry {
     }
 }
 
+/// The model that says who speaks when (build.rs's DIARIZER, models.json's
+/// default diarizer): its name, its licence, and its file, which runs on any
+/// CPU and is downloaded the first time speakers are asked for.
+#[derive(Clone, Copy, Debug, Serialize)]
+pub struct Diarizer {
+    pub name: &'static str,
+    pub license: &'static str,
+    pub model: Part,
+}
+
 /// A file models.pktito.net serves, under the first twelve digits of its
 /// SHA-256 (part_url): file is its name with its extension.
 #[derive(Clone, Copy, Debug, Serialize)]

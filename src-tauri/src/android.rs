@@ -246,6 +246,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
                 &l.model,
                 &mut l.asr,
                 &x,
+                None,
                 |done, segs| {
                     let segs = serde_json::to_string(segs).unwrap_or_default();
                     // a frame of its own, so a long recording's calls leave
@@ -330,6 +331,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_format<'a>(
                     duration: t.duration,
                     model: Some(&t.model),
                     segments: &t.segments,
+                    names: None,
                 },
                 &ext,
                 times,
@@ -365,6 +367,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_captions<'a>(
                 duration: t.duration,
                 model: Some(&t.model),
                 segments: &t.segments,
+                names: None,
             });
             match cues {
                 Ok(c) => Ok(env

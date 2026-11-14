@@ -41,6 +41,12 @@ const CORE: &[&str] = &[
     "captions.c",
     "language.c",
     "sentences.c",
+    // the encoder's passes, which the diarizer's encoder runs too
+    "passes.c",
+    // who speaks when (Nemotron 3 Diarization), and which speaker said each
+    // word
+    "diar.c",
+    "speakers.c",
 ];
 
 /// The instructions a backend's assembly names for itself, which its flags
@@ -291,7 +297,61 @@ fn catalog(json: &Path, engine: [u64; 3], out: &Path) {
     );
     let names = offered("models.json", &v, engine, &mut rs);
     let _ = writeln!(rs, "#[cfg(test)]\npub const MODELS: &[&str] = &{names:?};");
+    diarizer("models.json", &v, engine, &mut rs);
     std::fs::write(out, rs).expect("OUT_DIR/catalog.rs");
+}
+
+/// The diarizer the app offers, as DIARIZER: the first diarize entry of a
+/// catalog in models.json's form that is stable and that this engine loads
+/// (the approved design's default diarizer), with its licence and its CPU
+/// edition's file; None where there is none. With PKTITO_DIARIZER_PREVIEW
+/// set, the first one whatever its status and needs: for building speakers
+/// into the app (PKT-27) before the entry goes stable with the engine that
+/// loads it. A release is built without it.
+fn diarizer(src: &str, v: &serde_json::Value, engine: [u64; 3], rs: &mut String) {
+    let any = env::var_os("PKTITO_DIARIZER_PREVIEW").is_some();
+    let s = |v: &serde_json::Value, what: &str| -> String {
+        v.as_str()
+            .unwrap_or_else(|| panic!("{src}: {what} isn't a string"))
+            .to_string()
+    };
+    let found = v["models"]
+        .as_array()
+        .unwrap_or_else(|| panic!("{src}: models"))
+        .iter()
+        .find(|m| {
+            m["task"].as_str() == Some("diarize")
+                && (any
+                    || (m["status"].as_str() == Some("stable")
+                        && m.get("needs").is_none_or(|n| {
+                            needs::version(&s(n, "a diarizer's needs"))
+                                .unwrap_or_else(|| panic!("{src}: a diarizer's needs"))
+                                <= engine
+                        })))
+        });
+    let Some(m) = found else {
+        let _ = writeln!(rs, "pub const DIARIZER: Option<Diarizer> = None;");
+        return;
+    };
+    let name = s(&m["name"], "a diarizer's name");
+    let cpu = m["editions"]
+        .as_array()
+        .unwrap_or_else(|| panic!("{src}: {name}'s editions"))
+        .iter()
+        .find(|ed| ed["runtime"]["kind"].as_str() == Some("cpu"))
+        .unwrap_or_else(|| panic!("{src}: {name} has no CPU edition"));
+    let p = &cpu["model"];
+    let _ = writeln!(
+        rs,
+        "pub const DIARIZER: Option<Diarizer> = Some(Diarizer {{ name: {name:?}, license: {:?}, \
+         model: Part {{ file: {:?}, bytes: {}, sha256: {:?} }} }});",
+        s(&m["license"], "a diarizer's license"),
+        s(&p["file"], "a file"),
+        p["bytes"]
+            .as_u64()
+            .unwrap_or_else(|| panic!("{src}: a file's bytes")),
+        s(&p["sha256"], "a sha256"),
+    );
 }
 
 /// pktito's made-up catalog for the rules (tests/editions-rules.json),
@@ -358,6 +418,7 @@ fn main() {
     println!("cargo:rerun-if-changed=../vendor/pktito");
     println!("cargo:rerun-if-changed=native");
     println!("cargo:rerun-if-env-changed=QNN_SDK");
+    println!("cargo:rerun-if-env-changed=PKTITO_DIARIZER_PREVIEW");
     // the catalog's models the app offers, and those of the made-up one
     // that holds it to the rules (catalog, rules)
     let out = PathBuf::from(env::var_os("OUT_DIR").unwrap());

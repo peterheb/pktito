@@ -1,1 +1,5 @@
-pktito 7fbf08b, copied 2026-11-10 from /Users/phebert/pktito
+pktito diar 149c726 merged with main 59ecd94, copied 2026-11-14: a merge made
+here for the app's speakers branch, not libpktito's own (two conflicts, both
+additions side by side: pktito.h's pk_model_speakers before main's pk_audio;
+asr.c's pk_audio functions without pk_prof, which diar moved to passes.c).
+Vendor again from libpktito once diar is on its main.

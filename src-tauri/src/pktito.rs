@@ -135,22 +135,67 @@ extern "C" {
     fn pk_words(m: *const RawModel, t: *const Tok, n: usize, out: *mut Word) -> usize;
     fn pk_backend() -> *const c_char;
     fn pk_compiler() -> *const c_char;
+    // speaker NULL: no speakers, the cues as before them
     fn pk_captions(
         w: *const CapWord,
         n: usize,
+        speaker: *const i32,
         lang: *const c_char,
         media_end: i64,
         out: *mut Cue,
     ) -> c_long;
     fn pk_language(w: *const CapWord, n: usize) -> *const c_char;
+    // speaker NULL: no speakers, the sentences as before them
     fn pk_sentences(
         m: *const RawModel,
         t: *const Tok,
         n: usize,
+        speaker: *const i32,
         lang: *const c_char,
         done: c_int,
         out: *mut Sentence,
     ) -> c_long;
+    fn pk_model_speakers(m: *const RawModel) -> c_int;
+    fn pk_diar_new(m: *const RawModel, threads: c_int) -> *mut RawDiar;
+    fn pk_diar_free(d: *mut RawDiar);
+    fn pk_diar_feed(d: *mut RawDiar, x: *const f32, n: usize, f: RowsFn, arg: *mut c_void)
+        -> c_int;
+    fn pk_diar_finish(d: *mut RawDiar, f: RowsFn, arg: *mut c_void) -> c_int;
+    fn pk_diar_reset(d: *mut RawDiar);
+    fn pk_speakers(
+        d: *const RawModel,
+        p: *const f32,
+        rows: usize,
+        frame: u32,
+        w: *const Span,
+        n: usize,
+        out: *mut i32,
+    );
+    fn pk_speaker_segments(
+        d: *const RawModel,
+        p: *const f32,
+        rows: usize,
+        out: *mut SpkSeg,
+    ) -> usize;
+}
+
+#[repr(C)]
+pub struct RawDiar {
+    _private: [u8; 0],
+}
+
+/// A diarizer's rows as it hands them over (pk_diar_fn): rows [row, row + n)
+/// of S floats each.
+type RowsFn = unsafe extern "C" fn(*mut c_void, i64, usize, *const f32) -> c_int;
+
+/// A stretch of one speaker's speech (pk_spk_seg), in samples, end
+/// exclusive; speaker is the diarizer's column, 0 the first to speak.
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct SpkSeg {
+    pub start: i64,
+    pub end: i64,
+    pub speaker: i32,
 }
 
 // pktito's npu/ane.m, which the Apple builds compile (build.rs): the
@@ -242,12 +287,16 @@ pub fn captions_lang(words: &[(String, i64, i64)], english: i32) -> Option<Strin
 
 /// The cues of a subtitle track for words and their times in milliseconds,
 /// as the CLI's --srt has them (core/captions.c): English's rules where
-/// lang is "en", punctuation and pauses alone for any other or None.
+/// lang is "en", punctuation and pauses alone for any other or None. With
+/// speaker, each word's, a change of speaker ends a cue; a speaker's name,
+/// to be counted in its line, is in the text of their turn's first word.
 pub fn captions(
     words: &[(String, i64, i64)],
+    speaker: Option<&[i32]>,
     lang: Option<&str>,
     media_end: i64,
 ) -> Result<Vec<Cue>, String> {
+    assert!(speaker.is_none_or(|s| s.len() == words.len()));
     // a NUL inside a word would end it early: none comes from pk_text
     let texts: Vec<CString> = words
         .iter()
@@ -268,6 +317,7 @@ pub fn captions(
         pk_captions(
             raw.as_ptr(),
             raw.len(),
+            speaker.map_or(ptr::null(), |s| s.as_ptr()),
             lang.as_ref().map_or(ptr::null(), |l| l.as_ptr()),
             media_end,
             out.as_mut_ptr(),
@@ -365,16 +415,19 @@ impl Model {
     }
 
     /// The sentences of toks, their frames counted from the recording's
-    /// start (pk_sentences): lang, pk_language's code for their words or
-    /// None; done, whether they run to the recording's end - if not, the
-    /// words after the last sentence's end are none yet, and come again with
-    /// the next chunk's.
+    /// start (pk_sentences): speaker, each token's where there are speakers,
+    /// a change of which ends a sentence too; lang, pk_language's code for
+    /// their words or None; done, whether they run to the recording's end -
+    /// if not, the words after the last sentence's end are none yet, and come
+    /// again with the next chunk's.
     pub fn sentences(
         &self,
         toks: &[Tok],
+        speaker: Option<&[i32]>,
         lang: Option<&str>,
         done: bool,
     ) -> Result<Vec<Sentence>, String> {
+        assert!(speaker.is_none_or(|s| s.len() == toks.len()));
         let lang = lang.map(|l| CString::new(l).unwrap());
         let mut out = vec![Sentence::default(); toks.len()];
         let n = unsafe {
@@ -382,6 +435,7 @@ impl Model {
                 self.raw,
                 toks.as_ptr(),
                 toks.len(),
+                speaker.map_or(ptr::null(), |s| s.as_ptr()),
                 lang.as_ref().map_or(ptr::null(), |l| l.as_ptr()),
                 done as c_int,
                 out.as_mut_ptr(),
@@ -396,6 +450,12 @@ impl Model {
 
     pub fn raw(&self) -> *const RawModel {
         self.raw
+    }
+
+    /// The speakers a diarizer's model tells apart (8 for Nemotron 3
+    /// Diarization), 0 for a recognizer's.
+    pub fn speakers(&self) -> usize {
+        unsafe { pk_model_speakers(self.raw) as usize }
     }
 
     /// Whether the file holds the encoder: not a slim one (model.rs,
@@ -563,4 +623,124 @@ impl Drop for Asr {
     fn drop(&mut self) {
         unsafe { pk_asr_free(self.raw) };
     }
+}
+
+/// A diarizer (pk_diar, core/diar.c): who speaks when in a recording heard
+/// in pieces, as each speaker's probability of speaking, a row every 10 ms
+/// of S = Model::speakers floats. Its own working memory and threads, one
+/// recording at a time.
+pub struct Diar {
+    raw: *mut RawDiar,
+    width: usize,
+}
+
+unsafe impl Send for Diar {}
+
+/// A diarizer's rows handed over, kept in the Vec<f32> at arg
+unsafe extern "C" fn keep_rows(arg: *mut c_void, _row: i64, n: usize, p: *const f32) -> c_int {
+    let (rows, width) = unsafe { &mut *(arg as *mut (&mut Vec<f32>, usize)) };
+    rows.extend_from_slice(unsafe { std::slice::from_raw_parts(p, n * *width) });
+    0
+}
+
+impl Diar {
+    /// threads 0: one a core.
+    pub fn new(model: &Model, threads: i32) -> Result<Diar, String> {
+        let width = model.speakers();
+        if width == 0 {
+            return Err(format!(
+                "{} says what is said, not who speaks when",
+                model.name()
+            ));
+        }
+        let raw = unsafe { pk_diar_new(model.raw(), threads) };
+        if raw.is_null() {
+            return Err("not enough memory to tell the speakers apart".into());
+        }
+        Ok(Diar { raw, width })
+    }
+
+    /// The next samples of the recording (16 kHz mono), and the rows they
+    /// complete appended to rows: those of each 27.2 s chunk once the 3.2 s
+    /// after it are heard too, so the rows trail what is fed by up to about
+    /// 30.4 s. The pieces' sizes change nothing (pk_diar_feed).
+    pub fn feed(&mut self, x: &[f32], rows: &mut Vec<f32>) -> Result<(), String> {
+        let mut arg = (rows, self.width);
+        let rc = unsafe {
+            pk_diar_feed(
+                self.raw,
+                x.as_ptr(),
+                x.len(),
+                keep_rows,
+                &mut arg as *mut (&mut Vec<f32>, usize) as *mut c_void,
+            )
+        };
+        if rc != 0 {
+            return Err("out of memory while telling the speakers apart".into());
+        }
+        Ok(())
+    }
+
+    /// The recording has ended: the rest of its rows appended to rows, and
+    /// the diarizer ready for the next (pk_diar_finish).
+    pub fn finish(&mut self, rows: &mut Vec<f32>) -> Result<(), String> {
+        let mut arg = (rows, self.width);
+        let rc = unsafe {
+            pk_diar_finish(
+                self.raw,
+                keep_rows,
+                &mut arg as *mut (&mut Vec<f32>, usize) as *mut c_void,
+            )
+        };
+        if rc != 0 {
+            return Err("out of memory while telling the speakers apart".into());
+        }
+        Ok(())
+    }
+
+    /// Ready for the next recording, with what was fed of this one dropped.
+    pub fn reset(&mut self) {
+        unsafe { pk_diar_reset(self.raw) }
+    }
+}
+
+impl Drop for Diar {
+    fn drop(&mut self) {
+        unsafe { pk_diar_free(self.raw) };
+    }
+}
+
+/// Which speaker said each word, the diarizer's column, 0 the first to speak
+/// (pk_speakers, NeMo's rule): words, each one's samples in the recording;
+/// rows, the diarizer's for it, which cover the frame each word ends in;
+/// frame, the recognizer's encoder frame in samples (1280 for Parakeet's).
+pub fn speakers(diarizer: &Model, rows: &[f32], frame: u32, words: &[Span]) -> Vec<i32> {
+    let width = diarizer.speakers().max(1);
+    let mut out = vec![0i32; words.len()];
+    if !words.is_empty() {
+        unsafe {
+            pk_speakers(
+                diarizer.raw(),
+                rows.as_ptr(),
+                rows.len() / width,
+                frame,
+                words.as_ptr(),
+                words.len(),
+                out.as_mut_ptr(),
+            )
+        };
+    }
+    out
+}
+
+/// Each speaker's stretches of speech in a diarizer's rows: runs where its
+/// probability is over one half, ordered by start, then speaker
+/// (pk_speaker_segments). They overlap where two speak at once.
+pub fn speaker_segments(diarizer: &Model, rows: &[f32]) -> Vec<SpkSeg> {
+    let width = diarizer.speakers().max(1);
+    let n = rows.len() / width;
+    let mut out = vec![SpkSeg::default(); width * (n + 1) / 2];
+    let k = unsafe { pk_speaker_segments(diarizer.raw(), rows.as_ptr(), n, out.as_mut_ptr()) };
+    out.truncate(k);
+    out
 }
