@@ -6,12 +6,21 @@ import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -27,13 +36,17 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import java.io.File
 import net.pktito.app.ui.About
+import net.pktito.app.ui.Confirm
 import net.pktito.app.ui.Finder
 import net.pktito.app.ui.Follow
 import net.pktito.app.ui.Manage
@@ -43,15 +56,19 @@ import net.pktito.app.ui.Opened
 import net.pktito.app.ui.PktitoTheme
 import net.pktito.app.ui.Ready
 import net.pktito.app.ui.ReadyActions
+import net.pktito.app.ui.RenameSpeaker
 import net.pktito.app.ui.Setup
 import net.pktito.app.ui.SetupActions
 import net.pktito.app.ui.Side
 import net.pktito.app.ui.Sound
+import net.pktito.app.ui.SpeakersView
 import net.pktito.app.ui.Timebase
+import net.pktito.app.ui.UndoToast
 import net.pktito.app.ui.Work
 import net.pktito.app.ui.WorkActions
 import net.pktito.app.ui.findIn
 import net.pktito.app.ui.pk
+import org.json.JSONObject
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -1153,5 +1170,200 @@ class Shots {
                 emptyList(),
                 error = "Can't read this file (Android has no decoder for audio/alac)",
             )
+        }
+
+    // a talk of two, conv2.wav (libpktito's diar tests) as the app keeps it with its speakers,
+    // from the desktop's UI harness: who said what (Who.kt)
+    private val talk = JSONObject(String(resource("conv2.json")))
+    private val talkRows = Transcriber.parse(talk.getJSONArray("segments"))
+    private val talkBar = Stretch.parse(talk.getJSONArray("stretches"))
+    private val talkPeaks =
+        talk.getJSONArray("peaks").let { a -> ByteArray(a.length()) { a.getInt(it).toByte() } }
+
+    @Composable
+    private fun talk(
+        names: List<String> = emptyList(),
+        on: Boolean = true,
+        busy: Boolean = false,
+        rows: List<Seg> = talkRows,
+        bar: List<Stretch> = talkBar,
+        heard: Double? = null,
+    ) {
+        val res = LocalContext.current.resources
+        val present = Speakers.present(rows)
+        val tb = Timebase(duration = 60.0)
+        Work(
+            name = "Kitchen conversation.wav",
+            step = "done",
+            done = 1.0,
+            duration = 60.0,
+            peaks = talkPeaks,
+            rows = rows,
+            error = null,
+            why = null,
+            locate = null,
+            stats = "Transcribed in 0:06, 10.9× real time",
+            pace = null,
+            captions = false,
+            times = false,
+            playable = true,
+            playing = false,
+            position = 0.0,
+            follow = Follow(rememberLazyListState()),
+            sound = Sound(1.0, Player.SPEEDS, 1.0, false, {}, { _, _ -> }, {}),
+            chosen = Timebase(),
+            find = Finder(),
+            hits = emptyList(),
+            a = actions,
+            spk =
+                SpeakersView(
+                    offered = true,
+                    on = on,
+                    busy = busy,
+                    heard = heard,
+                    shown = on && present.size > 1,
+                    editable = true,
+                    present = present,
+                    nameOf = { Speakers.nameOf(res, names, it) },
+                    bar = bar,
+                    upto = Double.MAX_VALUE,
+                    toggle = {},
+                    move = { _, _, _ -> },
+                    rename = {},
+                    times = { u -> "${tb.at(u.start)}–${tb.at(u.end)}" },
+                ),
+        )
+    }
+
+    @Test fun speakers() = shot("speakers", false) { talk() }
+
+    @Test fun speakersDark() = shot("speakers", true) { talk() }
+
+    @Test fun speakersNamed() = shot("speakers-named", false) { talk(listOf("Ada", "Ben Okafor")) }
+
+    @Test
+    fun speakersNamedDark() = shot("speakers-named", true) { talk(listOf("Ada", "Ben Okafor")) }
+
+    @Test fun speakersWide() = shot("speakers", false, wide = true) { talk(listOf("Ada")) }
+
+    @Test fun speakersWideDark() = shot("speakers", true, wide = true) { talk(listOf("Ada")) }
+
+    @Test fun speakersOff() = shot("speakers-off", false) { talk(on = false) }
+
+    // twice the text size, as the system's setting gives it: Compose's sp
+    // follow LocalDensity's fontScale (the configuration's alone moves none)
+    @Test
+    fun speakersLarge() =
+        shot("speakers-large", false) {
+            val d = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(d.density, 2f)) { talk() }
+        }
+
+    @Test fun speakersXa() = shot("speakers-360", false, narrow = true, xa = true) { talk() }
+
+    // a transcript from before the switch, its speakers being found: the ring in play's place
+    @Test
+    fun speakersFinding() =
+        shot("speakers-finding", false) {
+            talk(busy = true, rows = talkRows.map { it.by(null) }, bar = emptyList(), heard = 0.42)
+        }
+
+    @Test
+    fun speakersFindingDark() =
+        shot("speakers-finding", true) {
+            talk(busy = true, rows = talkRows.map { it.by(null) }, bar = emptyList(), heard = 0.42)
+        }
+
+    // all 8 of the diarizer's speakers in use, conv2's rows dealt among them: the (i) after the
+    // names, and what it says
+    private val eight = talkRows.mapIndexed { k, r -> r.by(k % Speakers.MOST + 1) }
+    private val eightBar = eight.map { Stretch(it.start, it.end, it.speaker!!) }
+    private val limitNote = {
+        compose.onNodeWithContentDescription("Up to 8 speakers").performClick()
+        compose.onNode(isPopup())
+    }
+
+    @Test fun speakersEight() = shot("speakers-eight", false) { talk(rows = eight, bar = eightBar) }
+
+    @Test
+    fun speakersLimit() =
+        shot("speakers-limit", false, act = limitNote) { talk(rows = eight, bar = eightBar) }
+
+    @Test
+    fun speakersLimitDark() =
+        shot("speakers-limit", true, act = limitNote) { talk(rows = eight, bar = eightBar) }
+
+    private val whoMenu = {
+        compose.onNodeWithContentDescription("Speaker 2: who’s speaking").performClick()
+        compose.onNode(isPopup())
+    }
+
+    @Test fun speakersWho() = shot("speakers-who", false, act = whoMenu) { talk() }
+
+    @Test fun speakersWhoDark() = shot("speakers-who", true, act = whoMenu) { talk() }
+
+    private val renameAsk = { compose.onNode(isDialog()) }
+
+    @Test
+    fun speakersRename() =
+        shot("speakers-rename", false, act = renameAsk) {
+            var who by remember { mutableStateOf<Int?>(null) }
+            Box {
+                talk()
+                who?.let { n ->
+                    RenameSpeaker(
+                        "Speaker $n",
+                        joins = { v ->
+                            if (v.trim().equals("Speaker 2", true)) "Joins Speaker 2" else null
+                        },
+                        onRename = { who = null },
+                        onCancel = { who = null },
+                    )
+                }
+            }
+            LaunchedEffect(Unit) { who = 1 }
+        }
+
+    @Test
+    fun speakersUndo() =
+        shot("speakers-undo", false) {
+            Box(Modifier.fillMaxSize()) {
+                talk()
+                UndoToast(
+                    "Moved to Speaker 2",
+                    {},
+                    Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp),
+                )
+            }
+        }
+
+    @Test
+    fun speakersUndoDark() =
+        shot("speakers-undo", true) {
+            Box(Modifier.fillMaxSize()) {
+                talk()
+                UndoToast(
+                    "Moved to Speaker 2",
+                    {},
+                    Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp),
+                )
+            }
+        }
+
+    @Test
+    fun speakersAsk() =
+        shot("speakers-ask", false, act = { compose.onNode(isDialog()) }) {
+            Box {
+                talk(on = false)
+                Confirm(
+                    "Download the speaker model",
+                    "To tell the speakers apart, pktito needs a second open-source AI model " +
+                        "from NVIDIA (100\u00a0MB). It handles up to 8 speakers. Download it now?",
+                    "Download",
+                    {},
+                    {},
+                    safe = true,
+                )
+            }
         }
 }

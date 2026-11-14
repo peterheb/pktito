@@ -126,6 +126,13 @@ object Downloads {
         get() = state?.let { d -> Models.offers.find { it.name == d.name }?.have } == true
 
     /**
+     * Whether the download shown is the speaker model's (Speakers): the work screen shows how far
+     * it has got, not the setup screen, and the model in use stays in use.
+     */
+    val speakers: Boolean
+        get() = state?.let { d -> d.name == Speakers.offer?.name } == true
+
+    /**
      * The files of the model of that name downloaded (Offer.get), or their download gone on with
      * from what it kept: the screen says so at once, from what is here, as app.js's startDownload;
      * a download that is waiting to try again tries now.
@@ -133,12 +140,25 @@ object Downloads {
     fun start(context: Context, o: Offer) {
         if (running) return Engine.retryDownload()
         val get = o.get ?: return
-        files = JSONArray(get.files).toString()
-        val got = get.kept
-        val total = get.bytes
+        begin(context, o.name, JSONArray(get.files).toString(), get.kept, get.bytes)
+    }
+
+    /**
+     * The speaker model downloaded (Speakers.offer), or its download gone on with from what it
+     * kept, for the switch: the work screen says how far it has got, and once it is here the
+     * speakers of the transcript shown are found.
+     */
+    fun startSpeakers(context: Context) {
+        if (running) return Engine.retryDownload()
+        val d = Speakers.offer?.takeUnless { it.have } ?: return
+        begin(context, d.name, JSONArray(listOf(d.file)).toString(), d.kept, d.bytes)
+    }
+
+    private fun begin(context: Context, name: String, files: String, got: Long, total: Long) {
+        this.files = files
         state =
             Download(
-                o.name,
+                name,
                 "downloading",
                 got,
                 total,
@@ -151,14 +171,14 @@ object Downloads {
         if (Build.VERSION.SDK_INT < 34)
             context.startForegroundService(
                 Intent(context, DownloadService::class.java)
-                    .putExtra(NAME, o.name)
+                    .putExtra(NAME, name)
                     .putExtra(FILES, files)
             )
-        else if (!DownloadJob.schedule(context, o.name, files, total - got)) {
-            Log.w(TAG, "${o.name}: JobScheduler refused the download's job")
+        else if (!DownloadJob.schedule(context, name, files, total - got)) {
+            Log.w(TAG, "$name: JobScheduler refused the download's job")
             state =
                 Download(
-                    o.name,
+                    name,
                     "failed",
                     got,
                     total,
@@ -221,11 +241,16 @@ object Downloads {
     @Synchronized
     fun run(context: Context, name: String, files: String, over: () -> Unit): Boolean {
         val app = context.applicationContext
-        val o = Models.catalog(app).find { it.name == name } ?: return false
+        // the speaker model, the switch's and not the catalog's (Speakers)
+        val spk = Speakers.offer?.takeIf { it.name == name }
+        val o =
+            if (spk == null) Models.catalog(app).find { it.name == name } ?: return false else null
         // what the offer still lists of files: those here, put in place or
         // waiting for it, it lists no more
         val names = JSONArray(files).let { a -> (0 until a.length()).map { a.getString(it) } }
-        val get = o.get?.takeIf { g -> names.any { it in g.files } } ?: return false
+        val get = o?.get?.takeIf { g -> names.any { it in g.files } }
+        // nothing left to fetch: the speaker model here, or no file of files still offered
+        if (spk?.have == true || (spk == null && get == null)) return false
         this.files = files
         this.over = over
         if (worker?.isAlive == true) {
@@ -234,9 +259,9 @@ object Downloads {
         }
         // the NPU's edition or an update for a model here, which leaves the one
         // in use as it is
-        val faster = o.have
-        val need = get.bytes - get.kept
-        worker = thread(name = "download") { download(app, name, files, need, faster) }
+        val faster = o?.have == true
+        val need = if (spk != null) spk.bytes - spk.kept else get!!.bytes - get.kept
+        worker = thread(name = "download") { download(app, name, files, need, faster, spk != null) }
         return true
     }
 
@@ -259,6 +284,7 @@ object Downloads {
         files: String,
         need: Long,
         faster: Boolean,
+        speakers: Boolean,
     ) {
         // room for the rest made where Android can make it (Models.room); where
         // it cannot, the download stops when the storage is full, as the
@@ -310,12 +336,15 @@ object Downloads {
             }
         if (path.isNotEmpty()) {
             // in use once it checks, as the desktop's (main.rs, download_model)
-            if (!faster) Models.use(app, name)
+            if (!faster && !speakers) Models.use(app, name)
             Log.i(TAG, "downloaded $name: $files")
         }
         main.post {
             Models.refresh(app)
-            if (path.isNotEmpty())
+            if (speakers) {
+                Speakers.refresh(app)
+                if (path.isNotEmpty()) Models.news = app.getString(R.string.speakers_ready)
+            } else if (path.isNotEmpty())
                 Models.offers
                     .find { it.name == name }
                     ?.let {
@@ -359,10 +388,13 @@ object Downloads {
             Models.offers.find { it.name == name }?.key
                 ?: Models.catalog(context).find { it.name == name }?.key
                 ?: ""
+        val title =
+            if (name == Speakers.offer?.name) res.getString(R.string.download_title_speakers)
+            else res.getString(R.string.download_title, Models.label(res, key))
         val b =
             Notification.Builder(context, CHANNEL)
                 .setSmallIcon(R.drawable.ic_note)
-                .setContentTitle(res.getString(R.string.download_title, Models.label(res, key)))
+                .setContentTitle(title)
                 .setContentIntent(open)
                 .setOngoing(true)
         when {

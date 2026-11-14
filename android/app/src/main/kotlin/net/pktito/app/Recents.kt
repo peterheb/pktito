@@ -308,6 +308,13 @@ object Recents {
     fun load(context: Context, id: String): String = Engine.openRecent(data(context), id)
 
     /**
+     * Transcript id's speakers as transcript, a transcript's JSON, has them now: found, or changed
+     * on the screen (Speakers). Off the main thread.
+     */
+    fun keepSpeakers(context: Context, id: String, transcript: String) =
+        Engine.keepSpeakers(data(context), id, transcript)
+
+    /**
      * One transcript off the list, and its copy; the file it was made from stays (app.js, forget).
      */
     fun forget(context: Context, id: String) {

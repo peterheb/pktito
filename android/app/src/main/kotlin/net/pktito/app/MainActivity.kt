@@ -40,6 +40,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,6 +64,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.pktito.app.ui.About
+import net.pktito.app.ui.Confirm
 import net.pktito.app.ui.Finder
 import net.pktito.app.ui.Follow
 import net.pktito.app.ui.Manage
@@ -72,12 +74,15 @@ import net.pktito.app.ui.Opened
 import net.pktito.app.ui.PktitoTheme
 import net.pktito.app.ui.Ready
 import net.pktito.app.ui.ReadyActions
+import net.pktito.app.ui.RenameSpeaker
 import net.pktito.app.ui.Setup
 import net.pktito.app.ui.SetupActions
 import net.pktito.app.ui.Side
 import net.pktito.app.ui.Sound
+import net.pktito.app.ui.SpeakersView
 import net.pktito.app.ui.Timebase
 import net.pktito.app.ui.Toast
+import net.pktito.app.ui.UndoToast
 import net.pktito.app.ui.Work
 import net.pktito.app.ui.WorkActions
 import net.pktito.app.ui.byFinger
@@ -130,6 +135,12 @@ class MainActivity : ComponentActivity() {
     /** The strip's choice of how times are written, the video's own rate aside. */
     private var base by mutableStateOf(Timebase())
     private var toast by mutableStateOf<String?>(null)
+    /** An edit of the speakers that Undo takes back, and what its toast says (Speakers). */
+    private var undo by mutableStateOf<Pair<String, Speakers.Before>?>(null)
+    /** The speaker Rename is up for (RenameSpeaker). */
+    private var renaming by mutableStateOf<Int?>(null)
+    /** The speaker model's download, asked about. */
+    private var askSpeakers by mutableStateOf(false)
     /** About is up, over the start screen. */
     private var about by mutableStateOf(false)
     /** Manage models is up, over the screen it was opened from (the model menu's). */
@@ -201,6 +212,7 @@ class MainActivity : ComponentActivity() {
         // first frame shows the sizes of the edition the phone runs
         Editions.ask(this, 1000)
         Models.refresh(this)
+        Speakers.load(this)
         Models.start(this)
         Recents.refresh(this)
         Recents.prune(this)
@@ -262,7 +274,7 @@ class MainActivity : ComponentActivity() {
      */
     private fun setup() =
         Models.ready == null ||
-            (Downloads.state != null && !Downloads.faster) ||
+            (Downloads.state != null && !Downloads.faster && !Downloads.speakers) ||
             Models.copying != null
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -298,6 +310,18 @@ class MainActivity : ComponentActivity() {
         SideEffect { Player.keysOnly = finger }
         val review = t.step == "done" || t.step == "stopped"
         val rows = if (captions && review) t.cues ?: emptyList() else t.segments
+        // who said what (Speakers): those of the transcript in the order they
+        // first speak, shown with the switch on where there are two or more
+        val present by remember { derivedStateOf { Speakers.present(t.segments) } }
+        val spoken = Speakers.on && present.size > 1
+        // the bar's stretches, the diarizer's, or while a file is transcribing
+        // its turns so far (app.js, drawBar)
+        val bar by remember {
+            derivedStateOf {
+                if (!t.running && t.stretches.isNotEmpty()) t.stretches
+                else t.segments.mapNotNull { s -> s.speaker?.let { Stretch(s.start, s.end, it) } }
+            }
+        }
         // a search's matches in the rows shown, a finished transcript's only
         val hits =
             remember(rows, finder.query, review, t.segments.size) {
@@ -350,7 +374,8 @@ class MainActivity : ComponentActivity() {
         // the playhead to s, playing on if it was or if play, and the reader
         // with it (Finder.follow)
         val seek = { s: Double, play: Boolean ->
-            Player.seek(this@MainActivity, s, play)
+            // nothing plays while the ring has play's place (Speakers.heard)
+            Player.seek(this@MainActivity, s, play && !Speakers.finding)
             finder.follow(hits, Player.position, true)
         }
         // the match to be on once the matches or the search change, the
@@ -370,13 +395,13 @@ class MainActivity : ComponentActivity() {
             snapshotFlow { Player.position }.collect { finder.follow(hits, it, false) }
         }
         // the cues, the first time the transcript is shown as captions
-        LaunchedEffect(captions, t.transcript) {
+        LaunchedEffect(captions, t.transcript, spoken) {
             val tr = t.transcript
             if (captions && tr != null && t.cues == null)
                 t.cues =
                     runCatching {
                             Transcriber.parseCues(
-                                Engine.captions(tr),
+                                Engine.captions(tr, spoken),
                                 t.segments.flatMap { it.words },
                             )
                         }
@@ -421,6 +446,21 @@ class MainActivity : ComponentActivity() {
                 delay(2000)
                 toast = null
             }
+        }
+        LaunchedEffect(undo) {
+            if (undo != null) {
+                delay(6000)
+                undo = null
+            }
+        }
+        // the speaker model downloaded for the switch: the speakers of the
+        // transcript shown found, where it has none (app.js, diarizerDownload)
+        val diarizer = Speakers.offer?.have == true
+        var hadDiarizer by remember { mutableStateOf(diarizer) }
+        LaunchedEffect(diarizer) {
+            if (diarizer && !hadDiarizer && Speakers.on && review && present.isEmpty())
+                Speakers.find(this@MainActivity) { toast = it }
+            hadDiarizer = diarizer
         }
         // a model downloaded, said so
         LaunchedEffect(Models.news) {
@@ -545,7 +585,7 @@ class MainActivity : ComponentActivity() {
                                 captions = it
                                 prefs.edit().putBoolean("captions", it).apply()
                             },
-                            play = { Player.toggle(this@MainActivity) },
+                            play = { if (!Speakers.finding) Player.toggle(this@MainActivity) },
                             seek = seek,
                             jump = { s ->
                                 seek(s, false)
@@ -560,6 +600,28 @@ class MainActivity : ComponentActivity() {
                                     .putFloat("fps", it.fps.toFloat())
                                     .putBoolean("video_rate", it.videoRate)
                                     .apply()
+                            },
+                        ),
+                    spk =
+                        SpeakersView(
+                            offered = Speakers.offer != null && review && t.segments.isNotEmpty(),
+                            on = Speakers.on,
+                            busy =
+                                Speakers.finding ||
+                                    (Downloads.speakers && Downloads.state?.step != "failed"),
+                            heard = if (Speakers.finding) Speakers.heard else null,
+                            shown = spoken,
+                            editable = review,
+                            present = present,
+                            nameOf = { n -> Speakers.nameOf(resources, t.names, n) },
+                            bar = bar,
+                            upto = if (t.running) t.done * t.duration else Double.MAX_VALUE,
+                            toggle = ::toggleSpeakers,
+                            move = ::moveSpeaker,
+                            rename = { renaming = it },
+                            times = { u ->
+                                val tb = base.copy(video = t.fps, duration = t.duration)
+                                "${tb.at(u.start)}–${tb.at(u.end)}"
                             },
                         ),
                 )
@@ -624,10 +686,57 @@ class MainActivity : ComponentActivity() {
                     )
                 else if (t.step.isEmpty()) Ready(Recents.items, readyActions, model) else work()
                 // over Manage models while it is up, which has it too
-                if (!managing)
-                    toast?.let {
-                        Toast(it, Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp))
+                if (!managing) {
+                    val foot = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp)
+                    val u = undo
+                    val said = toast
+                    val note = speakersNote()
+                    when {
+                        u != null ->
+                            UndoToast(
+                                u.first,
+                                {
+                                    undo = null
+                                    Speakers.undo(this@MainActivity, u.second)
+                                },
+                                foot,
+                            )
+                        said != null -> Toast(said, foot)
+                        note != null -> Toast(note, foot)
                     }
+                }
+                renaming?.let { n ->
+                    RenameSpeaker(
+                        Speakers.nameOf(resources, t.names, n),
+                        joins = { v ->
+                            Speakers.joinee(resources, t.segments, t.names, n, v)?.let {
+                                getString(
+                                    R.string.speakers_joins,
+                                    Speakers.nameOf(resources, t.names, it),
+                                )
+                            }
+                        },
+                        onRename = { v ->
+                            renaming = null
+                            renameSpeaker(n, v)
+                        },
+                        onCancel = { renaming = null },
+                    )
+                }
+                val offer = Speakers.offer
+                if (askSpeakers && offer != null)
+                    Confirm(
+                        getString(R.string.speakers_ask_title),
+                        getString(R.string.speakers_ask_about, mb(offer.bytes), Speakers.MOST),
+                        getString(R.string.speakers_download),
+                        onYes = {
+                            askSpeakers = false
+                            Speakers.set(this@MainActivity, true)
+                            Downloads.startSpeakers(this@MainActivity)
+                        },
+                        onCancel = { askSpeakers = false },
+                        safe = true,
+                    )
             }
             if (managing) {
                 // the room left, again after each delete, not each frame of a transcript playing
@@ -711,7 +820,8 @@ class MainActivity : ComponentActivity() {
                 !typing &&
                 !about
         ) {
-            if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) Player.toggle(this)
+            if (event.action == KeyEvent.ACTION_UP && !event.isCanceled && !Speakers.finding)
+                Player.toggle(this)
             return true
         }
         if (event.action != KeyEvent.ACTION_DOWN) return false
@@ -791,7 +901,7 @@ class MainActivity : ComponentActivity() {
     private fun ownFile(uri: Uri) {
         Models.open(this, uri) { said, used ->
             toast = said
-            if (used && Downloads.state != null) Downloads.cancel(this)
+            if (used && Downloads.state != null && !Downloads.speakers) Downloads.cancel(this)
         }
     }
 
@@ -847,7 +957,67 @@ class MainActivity : ComponentActivity() {
     /** The transcript in a format, the desktop's bytes for it. */
     private fun text(ext: String, times: Boolean): String? {
         val tr = Transcriber.transcript ?: return null
-        return Engine.format(tr, ext, Transcriber.name, times)
+        val spoken = Speakers.on && Speakers.present(Transcriber.segments).size > 1
+        return Engine.format(tr, ext, Transcriber.name, times, spoken)
+    }
+
+    /**
+     * The switch (app.js, the switch's click): on, the first time it asks to download the speaker
+     * model, and for a transcript from before finds its speakers, which takes seconds, not a
+     * transcription again; pressed again, the names go from the screen and the formats, kept for
+     * when it is on again. On with none found yet, it finds them; while their model's download has
+     * failed, it tries again.
+     */
+    private fun toggleSpeakers() {
+        val t = Transcriber
+        if ((t.step != "done" && t.step != "stopped") || Speakers.finding) return
+        val d = Downloads.state?.takeIf { Downloads.speakers }
+        if (d != null) {
+            if (d.step == "failed") Downloads.retry(this)
+            return
+        }
+        val none = Speakers.present(t.segments).isEmpty()
+        val on = !Speakers.on || none
+        if (on && Speakers.offer?.have == false) {
+            askSpeakers = true
+            return
+        }
+        Speakers.set(this, on)
+        t.cues = null
+        if (on && none) Speakers.find(this) { toast = it }
+    }
+
+    /** A turn given to a speaker in Who's speaking, a new one where fresh; its toast's Undo. */
+    private fun moveSpeaker(u: Speakers.Turn, to: Int, fresh: Boolean) {
+        val before = Speakers.move(this, u, to, fresh) ?: return
+        val name = Speakers.nameOf(resources, Transcriber.names, to)
+        undo = getString(R.string.speakers_moved, name) to before
+    }
+
+    /** Rename's name for speaker n: where it is another's, the two join, and Undo parts them. */
+    private fun renameSpeaker(n: Int, v: String) {
+        val (other, before) = Speakers.rename(this, n, v) ?: return
+        if (other != null)
+            undo =
+                getString(
+                    R.string.speakers_joined,
+                    Speakers.nameOf(resources, Transcriber.names, other),
+                ) to before
+    }
+
+    /**
+     * What the speakers' work says at the screen's foot while it goes on (app.js's toasts): their
+     * model's download and how far it has got, or why it failed. Finding them says so in the strip
+     * (Work, the ring).
+     */
+    private fun speakersNote(): String? {
+        val d = Downloads.state?.takeIf { Downloads.speakers } ?: return null
+        return if (d.step == "failed") words(resources, d.problem?.key, d.problem?.host ?: "")
+        else
+            getString(
+                R.string.speakers_downloading,
+                percent(d.got.toDouble() / d.total.coerceAtLeast(1)),
+            )
     }
 
     /** Its text, or as captions its subtitles, on the clipboard, as the desktop's Copy. */

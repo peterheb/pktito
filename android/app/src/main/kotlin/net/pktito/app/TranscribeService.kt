@@ -122,46 +122,50 @@ class TranscribeService : Service() {
         val file =
             copy?.let { ParcelFileDescriptor.open(it, ParcelFileDescriptor.MODE_READ_ONLY) }
                 ?: readable(this, uri)
+        // with the switch on and the speaker model here, who said what, heard
+        // in the same pass (Speakers)
+        val diarizer = if (Speakers.on) Speakers.file(this) else null
         file.use { pfd ->
-            val t =
-                Engine.transcribe(
-                    handle,
-                    pfd.fd,
-                    name,
-                    object : Engine.Progress {
-                        override fun audio(duration: Double, fps: Double, peaks: ByteArray) {
-                            began = SystemClock.elapsedRealtime()
-                            video = fps
-                            loudness = peaks
-                            Transcriber.post {
-                                this.duration = duration
-                                this.fps = fps
-                                this.peaks = peaks
-                                step = "transcribing"
-                            }
+            val progress =
+                object : Engine.Progress {
+                    override fun audio(duration: Double, fps: Double, peaks: ByteArray) {
+                        began = SystemClock.elapsedRealtime()
+                        video = fps
+                        loudness = peaks
+                        Transcriber.post {
+                            this.duration = duration
+                            this.fps = fps
+                            this.peaks = peaks
+                            step = "transcribing"
                         }
+                    }
 
-                        override fun update(done: Double, segments: String) {
-                            val segs = Transcriber.parse(segments)
-                            val spent = (SystemClock.elapsedRealtime() - began) / 1000.0
-                            Transcriber.post {
-                                this.done = done
-                                this.segments.addAll(segs)
-                                transcribed = spent
-                            }
-                            // Android drops a notification's updates past a few a second
-                            val now = SystemClock.elapsedRealtime()
-                            if (now - shown >= 500) {
-                                shown = now
-                                val percent = (done * 100).toInt()
-                                notes.notify(
-                                    NOTE,
-                                    note(getString(R.string.status_transcribing, percent), percent),
-                                )
-                            }
+                    override fun update(done: Double, segments: String) {
+                        val segs = Transcriber.parse(segments)
+                        val spent = (SystemClock.elapsedRealtime() - began) / 1000.0
+                        Transcriber.post {
+                            this.done = done
+                            this.segments.addAll(segs)
+                            transcribed = spent
                         }
-                    },
-                )
+                        // Android drops a notification's updates past a few a second
+                        val now = SystemClock.elapsedRealtime()
+                        if (now - shown >= 500) {
+                            shown = now
+                            val percent = (done * 100).toInt()
+                            notes.notify(
+                                NOTE,
+                                note(getString(R.string.status_transcribing, percent), percent),
+                            )
+                        }
+                    }
+                }
+            val t =
+                if (diarizer == null) Engine.transcribe(handle, 0L, pfd.fd, name, progress)
+                else
+                    Speakers.with(diarizer) { diar ->
+                        Engine.transcribe(handle, diar, pfd.fd, name, progress)
+                    }
             val o = JSONObject(t)
             val complete = o.getBoolean("complete")
             // for adb's logcat: what was done, and how fast
@@ -195,8 +199,10 @@ class TranscribeService : Service() {
                 } catch (e: Exception) {
                     Log.w(TAG, "keeping $name on the recent list", e)
                 }
+            val bar = Stretch.parse(o.optJSONArray("stretches"))
             Transcriber.post {
                 transcript = t
+                stretches = bar
                 step = if (complete) "done" else "stopped"
             }
         }

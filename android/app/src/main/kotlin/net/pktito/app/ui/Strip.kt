@@ -134,6 +134,10 @@ fun Strip(
     onTick: (Int) -> Unit = {},
     why: String? = null,
     locate: (() -> Unit)? = null,
+    /**
+     * the speaker bar (SpeakerBar), where the speakers show: 10 dp over the waveform, 8 above it
+     */
+    bar: (@Composable (Modifier) -> Unit)? = null,
 ) {
     val p = pk
     val silent = review && why != null
@@ -147,6 +151,9 @@ fun Strip(
     // waveform's middle.
     val wave = if (ticks.isEmpty()) 64.dp else 56.dp
     val gap = if (ticks.isEmpty()) 3.dp else 7.dp
+    // with the speaker bar the strip is 18 dp taller, and play and the ring
+    // keep to the waveform's middle (app.css, #strip.spk)
+    val lead = if (bar != null) 18.dp else 0.dp
     // where a thumb dragging on the waveform or the lane has the playhead, 0 to 1, until it lets go
     var scrub by remember { mutableStateOf<Double?>(null) }
     val seek by rememberUpdatedState(onSeek)
@@ -181,7 +188,7 @@ fun Strip(
         if (review && !silent)
             // play, and the speed at the foot, on the times' line (app.css, .pk-transport)
             Column(
-                Modifier.fillMaxHeight().padding(top = (wave - button) / 2),
+                Modifier.fillMaxHeight().padding(top = lead + (wave - button) / 2),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
@@ -207,8 +214,11 @@ fun Strip(
                 }
                 Speed(sound, playable)
             }
-        else if (!review) Box(Modifier.padding(top = (wave - button) / 2)) { Ring(done, button) }
+        else if (!review)
+            Box(Modifier.padding(top = lead + (wave - button) / 2)) { Ring(done, button) }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(gap)) {
+            // 8 dp over the waveform, the lane's gap and its own (app.css, .pk-spkbar)
+            bar?.invoke(Modifier.padding(bottom = 8.dp - gap))
             val at = scrub ?: if (review) (if (duration > 0) position / duration else 0.0) else done
             Waveform(
                 peaks,

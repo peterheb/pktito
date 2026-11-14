@@ -560,11 +560,22 @@ fun Modifier.floating(): Modifier {
 
 /**
  * A question before something is deleted, as a Modal: what, what it means, and its button in the
- * error's red beside Cancel, which the keys start on where there are keys, so that Enter does not
- * delete.
+ * error's red after Cancel, which the keys start on where there are keys, so that Enter does not
+ * delete. A safe question's (safe: the speaker model's download, app.js's ask with safe) is the one
+ * asked for, in plume, and the keys start on it. Cancel first and the question's own button at the
+ * end, where Android's dialogs put them (Material's: the dismissing action before the confirming
+ * one), as the desktop's follow its system's (app.js, ask-btns: Cancel first on macOS and Linux,
+ * last on Windows; Peter, 2026-11-14).
  */
 @Composable
-fun Confirm(title: String, text: String, yes: String, onYes: () -> Unit, onCancel: () -> Unit) {
+fun Confirm(
+    title: String,
+    text: String,
+    yes: String,
+    onYes: () -> Unit,
+    onCancel: () -> Unit,
+    safe: Boolean = false,
+) {
     val p = pk
     val cancel = remember { FocusRequester() }
     val keys = hasKeys()
@@ -583,13 +594,27 @@ fun Confirm(title: String, text: String, yes: String, onYes: () -> Unit, onCance
                 Modifier.fillMaxWidth().padding(top = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
             ) {
-                PkButton(yes, onYes, Modifier.widthIn(min = 80.dp), kind = Kind.Del)
-                PkButton(
-                    stringResource(R.string.ask_cancel),
-                    onCancel,
-                    Modifier.widthIn(min = 80.dp).focusRequester(cancel),
-                    kind = Kind.Primary,
-                )
+                if (safe) {
+                    PkButton(
+                        stringResource(R.string.ask_cancel),
+                        onCancel,
+                        Modifier.widthIn(min = 80.dp),
+                    )
+                    PkButton(
+                        yes,
+                        onYes,
+                        Modifier.widthIn(min = 80.dp).focusRequester(cancel),
+                        kind = Kind.Primary,
+                    )
+                } else {
+                    PkButton(
+                        stringResource(R.string.ask_cancel),
+                        onCancel,
+                        Modifier.widthIn(min = 80.dp).focusRequester(cancel),
+                        kind = Kind.Primary,
+                    )
+                    PkButton(yes, onYes, Modifier.widthIn(min = 80.dp), kind = Kind.Del)
+                }
             }
         }
     }
@@ -671,12 +696,15 @@ fun Item(
     hint: (@Composable () -> Unit)? = null,
     selected: Boolean? = null,
     note: AnnotatedString? = null,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     val words = Type.ui.copy(lineHeight = 1.35.em)
     Row(
-        Modifier.control(
+        Modifier.alpha(if (enabled) 1f else 0.45f)
+            .control(
                 CornerSm,
+                enabled = enabled,
                 role = if (selected != null) Role.RadioButton else Role.Button,
                 onClick = onClick,
             )

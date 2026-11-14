@@ -49,6 +49,7 @@ object Icons {
             "M12 15V3",
         )
     val alert = icon("alert", "M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z", "M12 8v4", "M12 16h0.01")
+    val info = icon("info", "M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z", "M12 16v-4", "M12 8h0.01")
     val x = icon("x", "M18 6L6 18", "M6 6L18 18")
     // a recent transcript's, before its name
     val file =

@@ -34,6 +34,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.selection.SelectionState
 import androidx.compose.foundation.text.selection.rememberSelectionState
@@ -107,6 +108,7 @@ import kotlinx.coroutines.flow.first
 import net.pktito.app.R
 import net.pktito.app.Recents
 import net.pktito.app.Seg
+import net.pktito.app.Speakers
 
 /**
  * What the start screen does with what it is asked: choose a file, About, and the recent list's
@@ -708,8 +710,9 @@ private fun whenDone(secs: Long): String {
 
 /**
  * Clearing the list asks first, as the desktop's window does (app.js, askClear): what it does, then
- * Clear, in the error's red, and Cancel, the one the question is for. Back, Esc and a tap beside it
- * are Cancel; with keys, Cancel has the focus, so that Enter does not clear the list.
+ * Cancel, the one the question is for, and Clear after it in the error's red, where Android's
+ * dialogs put the confirming action (Confirm). Back, Esc and a tap beside it are Cancel; with keys,
+ * Cancel has the focus, so that Enter does not clear the list.
  */
 @Composable
 private fun AskClear(onClear: () -> Unit, onCancel: () -> Unit) =
@@ -803,6 +806,8 @@ fun Work(
     find: Finder,
     hits: List<Hit>,
     a: WorkActions,
+    /** who said what, where the build offers it (Who.kt) */
+    spk: SpeakersView = SpeakersView.NONE,
 ) {
     val p = pk
     // the file's times written with its length's hours
@@ -888,16 +893,20 @@ fun Work(
                     }
                 }
             if (step != "error" && !makeRoom)
+                // while the speakers are found, the ring in play's place and the waveform
+                // filling, as while it was transcribed (app.js, showFinding; Peter,
+                // 2026-11-14: a 3-hour file showed no progress)
                 Strip(
                     peaks = peaks,
-                    review = review,
-                    done = if (step == "transcribing") done else 0.0,
+                    review = review && spk.heard == null,
+                    done = spk.heard ?: if (step == "transcribing") done else 0.0,
                     playing = playing,
                     playable = playable,
                     position = position,
                     duration = duration,
                     left =
                         when {
+                            spk.heard != null -> stringResource(R.string.speakers_finding)
                             review -> base.at(position)
                             step == "loading" -> stringResource(R.string.status_loading)
                             step == "reading" -> stringResource(R.string.status_reading)
@@ -928,6 +937,10 @@ fun Work(
                             .padding(start = edge, end = edge, top = 5.dp),
                     why = why,
                     locate = locate,
+                    bar =
+                        if (spk.shown && duration > 0)
+                            ({ m -> SpeakerBar(spk.bar, duration, spk.upto, m) })
+                        else null,
                 )
             if (review && rows.isNotEmpty())
                 // a step takes the playhead to its match (Finder.step)
@@ -940,6 +953,15 @@ fun Work(
                     makeRoom,
                     Modifier.onSizeChanged { if (!makeRoom) line = it.height }
                         .padding(start = edge, end = edge, top = 16.dp),
+                    spk,
+                )
+            // with the names shown, each speaker's chip, which renames them (app.css, .pk-chips)
+            if (review && rows.isNotEmpty() && spk.offered && spk.shown && !makeRoom)
+                Chips(
+                    spk.present,
+                    spk.nameOf,
+                    spk.rename,
+                    Modifier.padding(start = edge, end = edge, top = 8.dp),
                 )
             val msg =
                 when {
@@ -978,6 +1000,7 @@ fun Work(
                 a,
                 edge,
                 Modifier.weight(1f),
+                spk,
             )
         }
     }
@@ -1058,6 +1081,7 @@ private fun Head(
  * the strip make room for the keyboard (Work): the field by itself across the line, the same field
  * as beside the views, so that it keeps the keys and the keyboard stays up as it moves.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Views(
     captions: Boolean,
@@ -1067,17 +1091,39 @@ private fun Views(
     seek: (Double) -> Unit,
     alone: Boolean,
     modifier: Modifier,
+    spk: SpeakersView,
 ) {
     val first = stringResource(R.string.sentences)
     val second = stringResource(R.string.captions)
+    // the switch pressed while names are shown or being found: on with none
+    // found yet, it finds them (MainActivity.toggleSpeakers)
+    val pressed = spk.on && (spk.present.isNotEmpty() || spk.busy)
+    val state =
+        stringResource(
+            when {
+                !pressed -> R.string.speakers_show
+                spk.present.size > 1 -> R.string.speakers_hide
+                spk.present.size == 1 -> R.string.speakers_one
+                else -> R.string.speakers_show
+            }
+        )
     val label = stringResource(R.string.find_label)
     val opened = find.open || find.query.isNotBlank()
     val width = (if (find.query.isNotBlank()) 280.dp else 200.dp).withText()
     SubcomposeLayout(modifier.fillMaxWidth()) { c ->
         val gap = 12.dp.roundToPx()
         val loose = c.copy(minWidth = 0, minHeight = 0)
+        // the switch beside the views, or under them where the two don't fit
         val v =
-            subcompose("views") { Switch2(first, second, captions, setCaptions) }
+            subcompose("views") {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Switch2(first, second, captions, setCaptions)
+                        if (spk.offered) SpeakersSwitch(pressed, spk.busy, state, spk.toggle)
+                    }
+                }
                 .first()
                 .measure(loose.copy(maxWidth = c.maxWidth - gap - 40.dp.roundToPx()))
         val field = width.roundToPx()
@@ -1162,6 +1208,7 @@ private fun Rows(
     /** the work's edge (Work): the rows' boxes stand on it */
     edge: Dp,
     modifier: Modifier,
+    spk: SpeakersView,
 ) {
     val p = pk
     val current =
@@ -1200,6 +1247,12 @@ private fun Rows(
                 itemsIndexed(rows) { i, s ->
                     val now = i == current
                     val word = if (now) s.words.indexOfLast { it.start <= position + 1e-3 } else -1
+                    // with the names shown, a turn's over its first sentence; a
+                    // cue's are in its words, as the saved captions have them
+                    val turn =
+                        if (spk.shown && !captions && Speakers.turnStarts(rows, i))
+                            Speakers.turnAt(rows, i)
+                        else null
                     SegRow(
                         s,
                         now,
@@ -1212,6 +1265,10 @@ private fun Rows(
                         review,
                         base,
                         selection,
+                        turn?.let { u ->
+                            { m: Modifier -> DisableSelection { NameTag(u, spk, m) } }
+                        },
+                        i == 0,
                     ) {
                         a.seek(s.start, true)
                     }
@@ -1248,6 +1305,9 @@ private fun SegRow(
     review: Boolean,
     base: Timebase,
     selection: SelectionState,
+    /** a turn's name, where it starts one (NameTag) */
+    tag: (@Composable (Modifier) -> Unit)?,
+    first: Boolean,
     onTime: () -> Unit,
 ) {
     val p = pk
@@ -1331,24 +1391,45 @@ private fun SegRow(
                 else Modifier
             )
     if (column != null)
-        // a row of one line 48 dp tall at the least, Android's least for a
-        // finger, its line in the middle: it was 44, iOS's 44 pt (the layout
-        // audit, 2026-11-01). With its time over it, a row has two lines.
-        Row(
-            box.heightIn(min = 48.dp)
-                .wrapContentHeight()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            time(Modifier.width(column).alignByBaseline())
-            Spacer(Modifier.width(12.dp))
-            Sentence(s, word, marks, at, shown, Modifier.weight(1f).alignByBaseline())
+        Column {
+            // a turn's name over its first row, on the text's column (app.css,
+            // .pk-who): the row's 16 dp, the times' column and their 12; 18 dp
+            // under the turn before, 2 at the top
+            tag?.invoke(
+                Modifier.padding(
+                    start = 16.dp + column + 12.dp,
+                    end = 16.dp,
+                    top = if (first) 2.dp else 18.dp,
+                )
+            )
+            // a row of one line 48 dp tall at the least, Android's least for a
+            // finger, its line in the middle: it was 44, iOS's 44 pt (the layout
+            // audit, 2026-11-01). With its time over it, a row has two lines.
+            Row(
+                box.heightIn(min = 48.dp)
+                    .wrapContentHeight()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                time(Modifier.width(column).alignByBaseline())
+                Spacer(Modifier.width(12.dp))
+                Sentence(s, word, marks, at, shown, Modifier.weight(1f).alignByBaseline())
+            }
         }
     else
-        Column(
-            box.padding(horizontal = 16.dp, vertical = 8.dp),
+    // the time over the text: a turn's name beside its time, on its line,
+    // and the turn 12 dp under the one before (app.css, .pk-name.in-time)
+    Column(
+            (if (tag != null && !first) Modifier.padding(top = 12.dp) else Modifier)
+                .then(box)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            time(Modifier)
+            if (tag != null)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    time(Modifier)
+                    tag(Modifier.padding(start = 8.dp))
+                }
+            else time(Modifier)
             Sentence(s, word, marks, at, shown, Modifier)
         }
 }

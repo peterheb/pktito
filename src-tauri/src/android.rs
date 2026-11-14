@@ -45,6 +45,37 @@ struct Transcript {
     complete: bool,
     model: String,
     segments: Vec<transcribe::Segment>,
+    /// With speakers: the names given in place of Speaker N, by number from
+    /// 1 ("" keeps Speaker N), and each speaker's stretches for the bar.
+    /// Left out without them, so a transcript without speakers is the JSON
+    /// it was.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    names: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    stretches: Vec<transcribe::Stretch>,
+}
+
+impl Transcript {
+    /// What format.rs takes of it, named name: with its speakers where the
+    /// switch shows them (speakers), as the window's formats have them.
+    fn formatted<'t>(&'t self, name: &'t str, speakers: bool) -> format::Transcript<'t> {
+        format::Transcript {
+            name,
+            duration: self.duration,
+            model: Some(&self.model),
+            segments: &self.segments,
+            names: speakers.then_some(&self.names[..]),
+        }
+    }
+}
+
+/// What Engine.loadDiarizer's Long stands for: the diarizer's model and a
+/// diarizer for it, for transcribe() and findSpeakers() (Kotlin's Speakers
+/// holds it while the switch is on).
+struct DiarLoaded {
+    // declared first, so dropped first: it reads the model
+    diar: pktito::Diar,
+    model: pktito::Model,
 }
 
 /// stop()'s word to the transcription running, read before each chunk.
@@ -191,9 +222,11 @@ pub extern "system" fn Java_net_pktito_app_Engine_npu<'a>(
         .resolve::<ThrowRuntimeExAndDefault>()
 }
 
-/// Engine.transcribe(handle, fd, name, progress): the recording open at fd
-/// (name: what to call it in an error), read and transcribed, as a
-/// Transcript's JSON. Once it is read, progress.audio(seconds, a video's
+/// Engine.transcribe(handle, diar, fd, name, progress): the recording open
+/// at fd (name: what to call it in an error), read and transcribed, as a
+/// Transcript's JSON; with diar (loadDiarizer's, or 0 for none) each
+/// segment one speaker's and saying whose, the diarizer fed in the same
+/// pass (transcribe::Speakers), and the speakers' stretches with them. Once it is read, progress.audio(seconds, a video's
 /// frame rate or 0, the loudness in audio::PEAKS slices) draws the strip;
 /// progress.update(fraction, the segments just done, in JSON) after each
 /// chunk. All on this thread. The screen plays the recording itself (the
@@ -207,6 +240,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
     mut unowned: EnvUnowned<'a>,
     _class: JClass<'a>,
     handle: jlong,
+    diar: jlong,
     fd: jint,
     name: JString<'a>,
     progress: JObject<'a>,
@@ -214,6 +248,10 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
     unowned
         .with_env(|env| -> jni::errors::Result<JObject<'a>> {
             let l = unsafe { &mut *(handle as *mut Loaded) };
+            let mut d = (diar != 0).then(|| unsafe { &mut *(diar as *mut DiarLoaded) });
+            let mut speakers = d
+                .as_mut()
+                .map(|d| transcribe::Speakers::new(&d.model, &mut d.diar));
             let name = name.try_to_string(env)?;
             STOP.store(false, Ordering::Relaxed);
             let fps = decode::frame_rate_fd(fd).unwrap_or(0.0);
@@ -246,7 +284,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
                 &l.model,
                 &mut l.asr,
                 &x,
-                None,
+                speakers.as_mut(),
                 |done, segs| {
                     let segs = serde_json::to_string(segs).unwrap_or_default();
                     // a frame of its own, so a long recording's calls leave
@@ -288,6 +326,8 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
                 complete,
                 model: l.model.name(),
                 segments,
+                names: Vec::new(),
+                stretches: speakers.map(|s| s.stretches).unwrap_or_default(),
             };
             let json = serde_json::to_string(&t).unwrap_or_default();
             Ok(env.new_string(json)?.into())
@@ -304,9 +344,10 @@ pub extern "system" fn Java_net_pktito_app_Engine_stop<'a>(
     STOP.store(true, Ordering::Relaxed);
 }
 
-/// Engine.format(transcript, ext, name, times): a Transcript's JSON as a
-/// file of the kind ext names (txt, md, srt, vtt, json), the desktop's;
-/// times puts each sentence's time before it in txt and md.
+/// Engine.format(transcript, ext, name, times, speakers): a Transcript's
+/// JSON as a file of the kind ext names (txt, md, srt, vtt, json), the
+/// desktop's; times puts each sentence's time before it in txt and md, and
+/// speakers each turn's name, where the switch shows them.
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_net_pktito_app_Engine_format<'a>(
     mut unowned: EnvUnowned<'a>,
@@ -315,6 +356,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_format<'a>(
     ext: JString<'a>,
     name: JString<'a>,
     times: jboolean,
+    speakers: jboolean,
 ) -> JObject<'a> {
     unowned
         .with_env(|env| -> jni::errors::Result<JObject<'a>> {
@@ -325,17 +367,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_format<'a>(
                 Ok(t) => t,
                 Err(e) => return throw(env, &e.to_string()).map(|_| JObject::null()),
             };
-            let text = format::text(
-                &format::Transcript {
-                    name: &name,
-                    duration: t.duration,
-                    model: Some(&t.model),
-                    segments: &t.segments,
-                    names: None,
-                },
-                &ext,
-                times,
-            );
+            let text = format::text(&t.formatted(&name, speakers), &ext, times);
             match text {
                 Ok(text) => Ok(env.new_string(text)?.into()),
                 Err(why) => throw(env, &why).map(|_| JObject::null()),
@@ -344,16 +376,18 @@ pub extern "system" fn Java_net_pktito_app_Engine_format<'a>(
         .resolve::<ThrowRuntimeExAndDefault>()
 }
 
-/// Engine.captions(transcript): a Transcript's subtitle track, the cues its
-/// .srt and .vtt have (format::cues), as JSON: each cue's start and end in
-/// milliseconds, its text, a line break where its second line begins, and
-/// its words, n of the transcript's from the first. The Captions view shows
-/// them.
+/// Engine.captions(transcript, speakers): a Transcript's subtitle track,
+/// the cues its .srt and .vtt have (format::cues), as JSON: each cue's
+/// start and end in milliseconds, its text, a line break where its second
+/// line begins, and its words, n of the transcript's from the first; with
+/// speakers, a turn's first cue opens with its name, as the window's do.
+/// The Captions view shows them.
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_net_pktito_app_Engine_captions<'a>(
     mut unowned: EnvUnowned<'a>,
     _class: JClass<'a>,
     transcript: JString<'a>,
+    speakers: jboolean,
 ) -> JObject<'a> {
     unowned
         .with_env(|env| -> jni::errors::Result<JObject<'a>> {
@@ -362,18 +396,182 @@ pub extern "system" fn Java_net_pktito_app_Engine_captions<'a>(
                 Ok(t) => t,
                 Err(e) => return throw(env, &e.to_string()).map(|_| JObject::null()),
             };
-            let cues = format::cues(&format::Transcript {
-                name: "",
-                duration: t.duration,
-                model: Some(&t.model),
-                segments: &t.segments,
-                names: None,
-            });
+            let cues = format::cues(&t.formatted("", speakers));
             match cues {
                 Ok(c) => Ok(env
                     .new_string(serde_json::to_string(&c).unwrap_or_default())?
                     .into()),
                 Err(why) => throw(env, &why).map(|_| JObject::null()),
+            }
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.diarizer(dir): the diarizer the app offers (model::DIARIZER), as
+/// JSON: its name, licence, file and bytes, what a download that stopped
+/// kept of it, and whether it is in dir, the app's models folder; "" where
+/// this build offers none.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_diarizer<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    dir: JString<'a>,
+) -> JObject<'a> {
+    unowned
+        .with_env(|env| -> jni::errors::Result<JObject<'a>> {
+            let dir = PathBuf::from(dir.try_to_string(env)?);
+            let json = model::DIARIZER.map_or_else(String::new, |d| {
+                let w = model::Wanted::diarizer(&dir, &d);
+                serde_json::json!({
+                    "name": d.name,
+                    "license": d.license,
+                    "file": d.model.file,
+                    "bytes": d.model.bytes,
+                    "kept": w.partial(),
+                    "have": w.here(),
+                })
+                .to_string()
+            });
+            Ok(env.new_string(json)?.into())
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.loadDiarizer(path): the diarizer's model at path and a diarizer
+/// for it, on the transcriber's threads: a handle for transcribe() and
+/// findSpeakers(), let go with freeDiarizer().
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_loadDiarizer<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    path: JString<'a>,
+) -> jlong {
+    unowned
+        .with_env(|env| -> jni::errors::Result<jlong> {
+            let path = path.try_to_string(env)?;
+            let loaded = pktito::Model::load(Path::new(&path)).and_then(|model| {
+                let diar = pktito::Diar::new(&model, transcribe::threads_wanted())?;
+                Ok(DiarLoaded { diar, model })
+            });
+            match loaded {
+                Ok(d) => Ok(Box::into_raw(Box::new(d)) as jlong),
+                Err(why) => throw(env, &why).map(|_| 0),
+            }
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_freeDiarizer<'a>(
+    _unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    handle: jlong,
+) {
+    if handle != 0 {
+        drop(unsafe { Box::from_raw(handle as *mut DiarLoaded) });
+    }
+}
+
+/// Engine.findSpeakers(diar, fd, name, transcript, progress): who said what
+/// in a finished transcript (a Transcript's JSON), from its recording open
+/// at fd, without transcribing it again (transcribe::find): the transcript
+/// with each segment one speaker's, its speakers' stretches, and no names
+/// yet; progress.done(fraction of the recording heard) a whole percent at a
+/// time, on this thread. A recording that can't be read throws its problem
+/// as transcribe() throws it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_findSpeakers<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    diar: jlong,
+    fd: jint,
+    name: JString<'a>,
+    transcript: JString<'a>,
+    progress: JObject<'a>,
+) -> JObject<'a> {
+    unowned
+        .with_env(|env| -> jni::errors::Result<JObject<'a>> {
+            let d = unsafe { &mut *(diar as *mut DiarLoaded) };
+            let name = name.try_to_string(env)?;
+            let json = transcript.try_to_string(env)?;
+            let mut t: Transcript = match serde_json::from_str(&json) {
+                Ok(t) => t,
+                Err(e) => return throw(env, &e.to_string()).map(|_| JObject::null()),
+            };
+            let x = match decode::decode_fd(fd, &name) {
+                Ok(x) => x,
+                Err(e) => {
+                    let p = e.problem();
+                    let why = serde_json::json!({ "key": p.key, "detail": p.detail });
+                    return throw(env, &why.to_string()).map(|_| JObject::null());
+                }
+            };
+            let segments = std::mem::take(&mut t.segments);
+            let (mut shown, mut failed) = (0, None);
+            let tell = |done: f64| {
+                let pct = (done * 100.0) as u32;
+                if pct <= shown || failed.is_some() {
+                    return;
+                }
+                shown = pct;
+                let call = env.call_method(
+                    &progress,
+                    jni_str!("done"),
+                    jni_sig!("(D)V"),
+                    &[JValue::Double(done)],
+                );
+                if let Err(e) = call {
+                    failed = Some(e);
+                }
+            };
+            let found = transcribe::find(&d.model, &mut d.diar, &x, segments, tell);
+            if let Some(e) = failed {
+                return Err(e);
+            }
+            match found {
+                Ok((segments, stretches)) => {
+                    t.segments = segments;
+                    t.stretches = stretches;
+                    t.names = Vec::new();
+                    let json = serde_json::to_string(&t).unwrap_or_default();
+                    Ok(env.new_string(json)?.into())
+                }
+                Err(why) => throw(env, &why).map(|_| JObject::null()),
+            }
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.keepSpeakers(data, id, transcript): a kept transcript's speakers
+/// as transcript (a Transcript's JSON) has them now, found or changed on
+/// the screen: its segments, names and stretches in place of the ones it
+/// was kept with, as the window's find_speakers and set_speakers keep them.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_keepSpeakers<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    data: JString<'a>,
+    id: JString<'a>,
+    transcript: JString<'a>,
+) {
+    unowned
+        .with_env(|env| -> jni::errors::Result<()> {
+            let data = PathBuf::from(data.try_to_string(env)?);
+            let id = id.try_to_string(env)?;
+            let json = transcript.try_to_string(env)?;
+            let t: Transcript = match serde_json::from_str(&json) {
+                Ok(t) => t,
+                Err(e) => return throw(env, &e.to_string()),
+            };
+            let kept = recent::load(&data, &id).and_then(|mut k| {
+                k.segments = t.segments;
+                k.names = t.names;
+                k.stretches = t.stretches;
+                recent::replace(&data, &k)
+            });
+            match kept {
+                Ok(()) => Ok(()),
+                Err(p) => throw(env, &p.line()),
             }
         })
         .resolve::<ThrowRuntimeExAndDefault>()
@@ -438,8 +636,8 @@ pub extern "system" fn Java_net_pktito_app_Engine_keep<'a>(
                 item,
                 peaks,
                 segments: t.segments,
-                names: Vec::new(),
-                stretches: Vec::new(),
+                names: t.names,
+                stretches: t.stretches,
             };
             if let Err(why) = recent::add(&data, &t) {
                 return throw(env, &why).map(|_| JObject::null());
@@ -754,6 +952,10 @@ pub extern "system" fn Java_net_pktito_app_Engine_delete<'a>(
 /// names, names (model::Wanted::named), in dir; why not, for one it does
 /// not have.
 fn wanted(dir: &Path, name: &str, files: &str) -> Result<Vec<model::Wanted>, String> {
+    // the diarizer, whose one file is all there is of it
+    if let Some(d) = model::DIARIZER.filter(|d| d.name == name) {
+        return Ok(vec![model::Wanted::diarizer(dir, &d)]);
+    }
     let e = model::entry(name).ok_or_else(|| format!("{name}: no such model"))?;
     let names: Vec<String> = serde_json::from_str(files).map_err(|err| err.to_string())?;
     let w = names

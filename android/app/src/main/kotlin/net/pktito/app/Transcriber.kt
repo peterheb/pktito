@@ -16,8 +16,54 @@ import org.json.JSONObject
 /** A word of a transcript, its times in seconds. */
 class Word(val text: String, val start: Double, val end: Double)
 
-/** A sentence of a transcript, or a cue of its subtitle track (no words): times in seconds. */
-class Seg(val start: Double, val end: Double, val text: String, val words: List<Word> = emptyList())
+/**
+ * A sentence of a transcript, or a cue of its subtitle track (no words): times in seconds; with
+ * speakers, whose it is, numbered from 1 by first word (Speakers).
+ */
+class Seg(
+    val start: Double,
+    val end: Double,
+    val text: String,
+    val words: List<Word> = emptyList(),
+    val speaker: Int? = null,
+) {
+    /** The same sentence, said by speaker. */
+    fun by(speaker: Int?) = Seg(start, end, text, words, speaker)
+
+    /** As Engine.transcribe gives it, for Engine.format and Engine.captions. */
+    fun json(): JSONObject =
+        JSONObject()
+            .put("start", start)
+            .put("end", end)
+            .put("text", text)
+            .put(
+                "words",
+                JSONArray(
+                    words.map {
+                        JSONObject().put("start", it.start).put("end", it.end).put("text", it.text)
+                    }
+                ),
+            )
+            .apply { if (speaker != null) put("speaker", speaker) }
+}
+
+/**
+ * A stretch of one speaker's speech, in seconds, for the speaker bar: they overlap where two talk.
+ */
+class Stretch(val start: Double, val end: Double, val speaker: Int) {
+    fun json(): JSONObject =
+        JSONObject().put("start", start).put("end", end).put("speaker", speaker)
+
+    companion object {
+        fun parse(a: JSONArray?): List<Stretch> =
+            if (a == null) emptyList()
+            else
+                (0 until a.length()).map {
+                    val o = a.getJSONObject(it)
+                    Stretch(o.getDouble("start"), o.getDouble("end"), o.getInt("speaker"))
+                }
+    }
+}
 
 /**
  * The NPU's failure with a slim model, which has no encoder of its own to go on with
@@ -54,6 +100,10 @@ object Transcriber {
     var transcribed by mutableStateOf(0.0)
     /** The finished transcript's JSON, for Engine.format and Engine.captions. */
     var transcript by mutableStateOf<String?>(null)
+    /** With speakers: the names given, speaker n's at n - 1, "" for Speaker n (Speakers.nameOf). */
+    var names by mutableStateOf<List<String>>(emptyList())
+    /** With speakers: each one's stretches of speech, for the bar (Speakers.lines). */
+    var stretches by mutableStateOf<List<Stretch>>(emptyList())
     /** Its cues, made the first time the Captions view is shown. */
     var cues by mutableStateOf<List<Seg>?>(null)
     /** A video's frame rate, for times in frames; 0 for audio. */
@@ -103,6 +153,8 @@ object Transcriber {
         error = null
         transcribed = 0.0
         transcript = null
+        names = emptyList()
+        stretches = emptyList()
         cues = null
         fps = 0.0
         reopened = false
@@ -144,6 +196,8 @@ object Transcriber {
         fps = o.optDouble("fps", 0.0)
         peaks = ByteArray(loud.length()) { loud.getInt(it).toByte() }
         segments.addAll(parse(segs))
+        names = o.optJSONArray("names").strings()
+        stretches = Stretch.parse(o.optJSONArray("stretches"))
         transcribed = o.optDouble("transcribed", 0.0)
         // what Engine.format and Engine.captions take, as Engine.transcribe gave it
         transcript =
@@ -152,6 +206,10 @@ object Transcriber {
                 .put("complete", true)
                 .put("model", o.getString("model"))
                 .put("segments", segs)
+                .apply {
+                    if (names.isNotEmpty()) put("names", JSONArray(names))
+                    o.optJSONArray("stretches")?.let { put("stretches", it) }
+                }
                 .toString()
         done = 1.0
         reopened = true
@@ -161,7 +219,7 @@ object Transcriber {
     /** The segments of Engine.transcribe's JSON. */
     fun parse(json: String): List<Seg> = parse(JSONArray(json))
 
-    private fun parse(a: JSONArray): List<Seg> {
+    fun parse(a: JSONArray): List<Seg> {
         return (0 until a.length()).map { i ->
             val s = a.getJSONObject(i)
             val w = s.getJSONArray("words")
@@ -173,9 +231,14 @@ object Transcriber {
                     val o = w.getJSONObject(j)
                     Word(o.getString("text"), o.getDouble("start"), o.getDouble("end"))
                 },
+                if (s.has("speaker")) s.getInt("speaker") else null,
             )
         }
     }
+
+    /** An array of strings, as a list; none for none. */
+    private fun JSONArray?.strings(): List<String> =
+        if (this == null) emptyList() else (0 until length()).map { getString(it) }
 
     /**
      * The cues of Engine.captions' JSON, in seconds, each with its words, which it takes from

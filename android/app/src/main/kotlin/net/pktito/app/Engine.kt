@@ -26,6 +26,12 @@ object Engine {
         fun update(done: Double, segments: String)
     }
 
+    /** Told how far findSpeakers has got, on its thread. */
+    fun interface Heard {
+        /** The fraction of the recording the diarizer has heard, a whole percent at a time. */
+        fun done(fraction: Double)
+    }
+
     /** Told how a model's download stands, on its thread. */
     interface Download {
         /**
@@ -67,10 +73,17 @@ object Engine {
     /**
      * The recording open at fd, read and transcribed on this thread: the transcript. fd stays the
      * caller's; name is what an error calls it. One that can't be read throws its problem
-     * (problem).
+     * (problem). With diar (loadDiarizer's, or 0 for none), each segment one speaker's and saying
+     * whose, the diarizer heard in the same pass, and the speakers' stretches with them.
      */
     @JvmStatic
-    external fun transcribe(handle: Long, fd: Int, name: String, progress: Progress): String
+    external fun transcribe(
+        handle: Long,
+        diar: Long,
+        fd: Int,
+        name: String,
+        progress: Progress,
+    ): String
 
     /**
      * The catalog's key (strings.rs, Problem; words) for a recording transcribe could not read,
@@ -87,16 +100,59 @@ object Engine {
 
     /**
      * A transcript as a file of the kind ext names: txt, md, srt, vtt or json, the desktop's bytes;
-     * times puts each sentence's time before it in txt and md.
+     * times puts each sentence's time before it in txt and md, and speakers each turn's name, where
+     * the switch shows them (Speakers.shown).
      */
     @JvmStatic
-    external fun format(transcript: String, ext: String, name: String, times: Boolean): String
+    external fun format(
+        transcript: String,
+        ext: String,
+        name: String,
+        times: Boolean,
+        speakers: Boolean,
+    ): String
 
     /**
      * A transcript's subtitle track, as its .srt has it: JSON, each cue's start and end in ms, its
-     * text, and its words, n of the transcript's from the first.
+     * text, and its words, n of the transcript's from the first; with speakers, a turn's first cue
+     * opens with its name.
      */
-    @JvmStatic external fun captions(transcript: String): String
+    @JvmStatic external fun captions(transcript: String, speakers: Boolean): String
+
+    /**
+     * The diarizer the app offers, as JSON: its name, licence, file and bytes, what a download that
+     * stopped kept of it, and whether it is in dir, the models folder; "" where this build has
+     * none.
+     */
+    @JvmStatic external fun diarizer(dir: String): String
+
+    /**
+     * The diarizer's model at path and a diarizer for it: a handle for transcribe and findSpeakers.
+     */
+    @JvmStatic external fun loadDiarizer(path: String): Long
+
+    @JvmStatic external fun freeDiarizer(handle: Long)
+
+    /**
+     * Who said what in a finished transcript, from its recording open at fd, without transcribing
+     * it again: the transcript with each segment one speaker's, the speakers' stretches, and no
+     * names; heard told how far it has got. One that can't be read throws its problem, as
+     * transcribe does.
+     */
+    @JvmStatic
+    external fun findSpeakers(
+        diar: Long,
+        fd: Int,
+        name: String,
+        transcript: String,
+        heard: Heard,
+    ): String
+
+    /**
+     * A kept transcript's speakers as transcript has them now, found or changed on the screen: its
+     * segments, names and stretches in place of the ones it was kept with.
+     */
+    @JvmStatic external fun keepSpeakers(data: String, id: String, transcript: String)
 
     /**
      * The recent list in data, the app's files (Recents.data), newest first, as JSON: each
