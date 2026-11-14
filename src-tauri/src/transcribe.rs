@@ -91,6 +91,106 @@ impl<'a> Speakers<'a> {
     }
 }
 
+/// Who said what in a finished transcript, from its recording x, without
+/// transcribing it again: the diarizer (model and diar) over the whole of
+/// x, each word given its speaker by NeMo's rule (pk_speakers), numbered
+/// from 1 by first word as a transcription with speakers numbers them, and
+/// a segment that two speakers share cut where the speaker changes, as
+/// pk_sentences cuts one, each part's text its words' with a space between.
+/// The segments, and each speaker's stretches for the bar. The window,
+/// Android and iOS all find them here.
+///
+/// progress(fraction of x heard) comes after each hundredth of it, for a
+/// meter: x goes to the diarizer in pieces, whose sizes change none of its
+/// rows (pk_diar_feed; find_in_pieces_is_whole checks it).
+pub fn find(
+    model: &Model,
+    diar: &mut Diar,
+    x: &[f32],
+    segments: Vec<Segment>,
+    mut progress: impl FnMut(f64),
+) -> Result<(Vec<Segment>, Vec<Stretch>), String> {
+    diar.reset();
+    let mut rows = Vec::new();
+    // a second at least, as fewer samples than that do nothing but call
+    let piece = (x.len() / 100).max(model.rate());
+    let mut heard = 0;
+    for p in x.chunks(piece) {
+        diar.feed(p, &mut rows)?;
+        heard += p.len();
+        progress(heard as f64 / x.len() as f64);
+    }
+    diar.finish(&mut rows)?;
+    // Parakeet's encoder frame, 80 ms at 16 kHz: the words' times are whole frames
+    const FRAME: u32 = 1280;
+    let rate = model.rate() as f64;
+    let at = |s: f64| (s * rate).round() as i64;
+    let spans: Vec<Span> = segments
+        .iter()
+        .flat_map(|s| s.words.iter())
+        .map(|w| Span {
+            start: at(w.start),
+            end: at(w.end),
+        })
+        .collect();
+    let column = pktito::speakers(model, &rows, FRAME, &spans);
+    let mut number = vec![0u32; model.speakers()];
+    let mut count = 0;
+    let mut said = column.iter().map(|&c| {
+        let n = &mut number[c as usize];
+        if *n == 0 {
+            count += 1;
+            *n = count;
+        }
+        *n
+    });
+    let mut out = Vec::new();
+    for s in segments {
+        let who: Vec<u32> = s.words.iter().map(|_| said.next().unwrap_or(1)).collect();
+        if who.windows(2).all(|p| p[0] == p[1]) {
+            let speaker = who.first().copied().unwrap_or(1);
+            out.push(Segment {
+                speaker: Some(speaker),
+                ..s
+            });
+            continue;
+        }
+        // a run of one speaker's words, a segment of its own
+        let mut k = 0;
+        while k < s.words.len() {
+            let mut e = k + 1;
+            while e < s.words.len() && who[e] == who[k] {
+                e += 1;
+            }
+            let words = s.words[k..e].to_vec();
+            out.push(Segment {
+                start: words[0].start,
+                end: words[words.len() - 1].end,
+                text: words
+                    .iter()
+                    .map(|w| w.text.as_str())
+                    .collect::<Vec<_>>()
+                    .join(" "),
+                words,
+                speaker: Some(who[k]),
+            });
+            k = e;
+        }
+    }
+    let stretches = pktito::speaker_segments(model, &rows)
+        .into_iter()
+        .filter_map(|g| {
+            let n = *number.get(g.speaker as usize)?;
+            (n > 0).then(|| Stretch {
+                start: g.start as f64 / rate,
+                end: g.end as f64 / rate,
+                speaker: n,
+            })
+        })
+        .collect();
+    Ok((out, stretches))
+}
+
 /// Transcribe x, calling progress(fraction of the audio done, the segments
 /// just finished) after each chunk; stop(), before the first and after each
 /// but the last, says whether to stop there. With speakers, each segment is
@@ -447,4 +547,36 @@ fn sentences(
         open.spk.drain(..used);
     }
     out
+}
+
+#[cfg(test)]
+mod files {
+    /// `PKAPP_DIARIZER=nemotron-3-diarization.pkf PKAPP_SPEECH=conv2.wav
+    /// cargo test find_in_pieces_is_whole -- --ignored`: the diarizer's rows
+    /// for a recording fed in find's pieces are those for it fed whole, to
+    /// the bit, so find's meter changes no speaker
+    #[test]
+    #[ignore]
+    fn find_in_pieces_is_whole() {
+        let var = |k| std::path::PathBuf::from(std::env::var(k).expect(k));
+        let model = crate::pktito::Model::load(&var("PKAPP_DIARIZER")).unwrap();
+        let mut diar = crate::pktito::Diar::new(&model, 0).unwrap();
+        let x = crate::decode::decode(&var("PKAPP_SPEECH")).unwrap();
+        let rows = |pieces: usize, diar: &mut crate::pktito::Diar| {
+            diar.reset();
+            let mut r = Vec::new();
+            for p in x.chunks(pieces) {
+                diar.feed(p, &mut r).unwrap();
+            }
+            diar.finish(&mut r).unwrap();
+            r.iter().map(|v| v.to_bits()).collect::<Vec<u32>>()
+        };
+        let whole = rows(x.len(), &mut diar);
+        assert!(!whole.is_empty());
+        // find's own, then a tenth of a chunk, an odd size, and a sample
+        // over one of the diarizer's 27.2 s chunks
+        for pieces in [(x.len() / 100).max(model.rate()), 43_520, 4321, 435_201] {
+            assert_eq!(rows(pieces, &mut diar), whole, "pieces of {pieces}");
+        }
+    }
 }

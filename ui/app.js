@@ -116,6 +116,9 @@ const ICON = {
   alert: svg(
     '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
   ),
+  info: svg(
+    '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+  ),
   x: svg(
     '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
   ),
@@ -1823,6 +1826,7 @@ function buildMain(f, mode, key) {
   if (review) {
     loadAudio(f);
     showTime(f.pos);
+    if (f.finding) showFinding(f);
   } else if (mode === "running") updateRunning(f);
 }
 
@@ -2248,9 +2252,11 @@ function drawMainWave() {
   const n = barsIn(wave);
   const at =
     mode === "review"
-      ? f.duration
-        ? f.pos / f.duration
-        : 0
+      ? f.finding
+        ? f.finding.done
+        : f.duration
+          ? f.pos / f.duration
+          : 0
       : f.step === "transcribing"
         ? f.done
         : 0;
@@ -2438,6 +2444,7 @@ function setPlayIcon() {
 function togglePlay() {
   const f = current();
   if (!f || modeOf(f) !== "review" || !playable(f) || playId !== f.id) return;
+  if (f.finding) return;
   if (!player.paused) return pausePlayback();
   if (f.pos >= f.duration - 0.05) f.pos = 0;
   playFrom(f.pos);
@@ -2480,7 +2487,7 @@ function pausePlayback() {
 
 function seek(t, play) {
   const f = current();
-  if (!f || !playable(f)) return;
+  if (!f || !playable(f) || f.finding) return;
   f.pos = Math.max(0, Math.min(f.duration, t));
   showTime(f.pos, true);
   if (play && player.paused) playFrom(f.pos);
@@ -2561,7 +2568,7 @@ function showTime(t, follow = false) {
   if (!f) return;
   $("time").textContent = tc(t, f);
   const wave = $("wave");
-  if (wave._n && f.duration)
+  if (wave._n && f.duration && !f.finding)
     setHead(wave, Math.floor((t / f.duration) * wave._n));
   let seg = null,
     word = null;
@@ -3051,10 +3058,13 @@ function updateSpeakers(f, review) {
   $("spk-track").hidden = !offer;
   const b = $("spk"),
     n = present(f).length;
-  b.setAttribute("aria-pressed", String(!!prefs.speakers));
+  // pressed while names are shown or being found: on with none found yet,
+  // as a transcript from before the switch has, a click finds them
+  const pressed = !!prefs.speakers && (n > 0 || !!spkBusy);
+  b.setAttribute("aria-pressed", String(pressed));
   b.setAttribute("aria-busy", String(!!spkBusy));
   b.innerHTML = `${ICON.check}<span>${esc(t("speakers.switch"))}</span>`;
-  b.title = !prefs.speakers
+  b.title = !pressed
     ? t("speakers.show")
     : n > 1
       ? t("speakers.hide")
@@ -3063,15 +3073,27 @@ function updateSpeakers(f, review) {
         : t("speakers.show");
   const on = offer && spkShown(f);
   $("chips").hidden = !on;
+  const chip = (x) =>
+    `<button class="pk-chip" type="button" data-s="${x}" aria-label="${esc(t("speakers.chip_label", { name: nameOf(f, x) }))}">${markHtml(x)}${esc(nameOf(f, x))}</button>`;
+  // the (i) wraps with the last name, never on a line of its own
   $("chips").innerHTML = on
     ? present(f)
-        .map(
-          (x) =>
-            `<button class="pk-chip" type="button" data-s="${x}" aria-label="${esc(t("speakers.chip_label", { name: nameOf(f, x) }))}">${markHtml(x)}${esc(nameOf(f, x))}</button>`,
+        .map((x, k) =>
+          n >= SPEAKERS && k === n - 1
+            ? `<span class="pk-glue">${chip(x)}${limitHtml()}</span>`
+            : chip(x),
         )
         .join("")
     : "";
 }
+
+/* With every one of the diarizer's 8 speakers in use, an (i) after their
+   names that says so: a recording with more voices has some of them mixed
+   up, which at 12 readers of 12 chapters looked like a fault (Peter,
+   2026-11-14, Alice's chapter 11). Its tooltip says what it is about, a
+   click the rest. */
+const limitHtml = () =>
+  `<button class="pk-limit" type="button" aria-haspopup="dialog" aria-expanded="false" title="${esc(t("speakers.limit", { n: num(SPEAKERS) }))}">${ICON.info}</button>`;
 
 /* f drawn again after its speakers changed, where it shows */
 function spkRefresh(f) {
@@ -3086,17 +3108,14 @@ $("spk").onclick = async () => {
   const f = current();
   if (!f || spkBusy || modeOf(f) !== "review") return;
   closeMenu();
-  const on = !prefs.speakers;
+  // on, or on with none found yet: found (updateSpeakers, pressed)
+  const on = !prefs.speakers || !present(f).length;
   const d = st.diarizer;
   // the first time, the model: asked for, then downloaded
   if (on && d && !d.have) {
     const yes = await ask(
       t("speakers.ask_title"),
-      t("speakers.ask_about", {
-        name: d.name,
-        mb: num(d.bytes / 1e6, 1),
-        license: d.license,
-      }),
+      t("speakers.ask_about", { mb: num(d.bytes / 1e6), n: num(SPEAKERS) }),
       t("speakers.download"),
       $("spk"),
       { safe: true },
@@ -3147,8 +3166,10 @@ async function diarizerDownload(s) {
 async function findSpeakers(f) {
   if (!f.recentId || spkBusy) return spkRefresh(f);
   spkBusy = "finding";
+  if (playId === f.id) pausePlayback();
+  f.finding = { done: 0 };
   updateSpeakers(f, true);
-  toast(t("speakers.finding"));
+  showFinding(f);
   try {
     const r = await invoke("find_speakers", { id: f.recentId });
     Object.assign(f, {
@@ -3157,13 +3178,68 @@ async function findSpeakers(f) {
       names: [],
       cues: null,
     });
-    $("toast").hidden = true;
   } catch (e) {
     toastErr(e);
   }
+  f.finding = null;
   spkBusy = "";
+  showFinding(f);
   if (prefs.captions) await cuesOf(f).catch(toastErr);
   spkRefresh(f);
+}
+
+/* How far the find has got (main.rs, Finding), a whole percent at a time */
+listen("finding", (e) => {
+  const { recent, done } = e.payload,
+    f = files.find((x) => x.recentId === recent && x.finding);
+  if (!f) return;
+  const g = f.finding;
+  // the pace from the first, after the recording was read
+  if (g.t0 == null) Object.assign(g, { t0: performance.now(), d0: done });
+  g.done = done;
+  showFinding(f);
+});
+
+/* f's strip while its speakers are found, as while it was transcribed (Peter,
+   2026-11-14: a 3-hour file showed nothing once the toast had gone): the
+   meter in play's place, the waveform filling as the diarizer hears the
+   recording, and what is happening under it, with the time it has left in
+   the meter's tooltip. Then play, the time and the volume again, and the
+   playhead where it was. */
+function showFinding(f) {
+  if (current() !== f || viewName() !== "work" || modeOf(f) !== "review")
+    return;
+  const g = f.finding,
+    wave = $("wave");
+  $("transport").hidden = $("time").hidden = $("vol-box").hidden = !!g;
+  $("prog").hidden = $("pace").hidden = !g;
+  $("wavebtn").disabled = !!g || !playable(f);
+  if (!g) {
+    for (const a of [
+      "role",
+      "aria-label",
+      "aria-valuemin",
+      "aria-valuemax",
+      "aria-valuenow",
+    ])
+      wave.removeAttribute(a);
+    $("wavebtn").setAttribute("aria-label", t("wave.jump"));
+    return showTime(f.pos);
+  }
+  $("pct").textContent = `${percent(g.done)}%`;
+  $("prog").style.setProperty("--done", `${g.done * 100}%`);
+  const took = g.t0 == null ? 0 : (performance.now() - g.t0) / 1000,
+    rate = took > 0 ? (g.done - g.d0) / took : 0;
+  $("prog").title =
+    rate > 0 && g.done - g.d0 >= 0.02 ? timeLeft((1 - g.done) / rate) : "";
+  $("pace").textContent = t("speakers.finding");
+  $("wavebtn").removeAttribute("aria-label");
+  wave.setAttribute("role", "progressbar");
+  wave.setAttribute("aria-label", t("speakers.finding"));
+  wave.setAttribute("aria-valuemin", "0");
+  wave.setAttribute("aria-valuemax", "100");
+  wave.setAttribute("aria-valuenow", percent(g.done));
+  setHead(wave, Math.floor(g.done * wave._n));
 }
 
 /* A change to f's speakers: made, drawn, kept on the recent list, and
@@ -3327,6 +3403,20 @@ function rename(f, s, v) {
 $("chips").onclick = (e) => {
   const c = e.target.closest(".pk-chip"),
     f = current();
+  const i = e.target.closest(".pk-limit");
+  if (i) {
+    const head = t("speakers.limit", { n: num(SPEAKERS) });
+    return openMenu(
+      i,
+      false,
+      `<div class="pk-pop-head">${esc(head)}</div><div class="pk-pop-sub is-words">${esc(t("speakers.limit_about", { n: num(SPEAKERS) }))}</div>`,
+      "down who",
+      (m) => {
+        m.setAttribute("role", "dialog");
+        m.setAttribute("aria-label", head);
+      },
+    );
+  }
   if (!c || !f) return;
   openMenu(c, true, "", "down who", (m) => renameIn(m, f, Number(c.dataset.s)));
 };
@@ -4288,8 +4378,8 @@ async function start() {
     $(id).title = keyTip(t("sheet.close"), t("key.esc"));
   }
   // the question's buttons where the system's own dialogs put Cancel: first
-  // on macOS, last on Windows
-  if (isMac()) $("ask-btns").prepend($("ask-no"));
+  // on macOS and in GNOME's (Ubuntu's, the .deb's), last on Windows
+  if (isMac() || isLinux()) $("ask-btns").prepend($("ask-no"));
   $("msg-sum").innerHTML = `${ICON.down}${esc(t("work.details"))}`;
   $("find-box").title = tip(t("find.tip"), "F");
   $("find-prev").innerHTML = ICON.up;

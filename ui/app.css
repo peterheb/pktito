@@ -2569,7 +2569,10 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 .pk-spk[aria-busy="true"] {
   cursor: progress;
 }
-.pk-chips {
+/* the speakers' names, left to right and wrapping from the line's start: a
+   class of their own, as the drop zone's centered .pk-chips gave them its
+   centering and its 480 px (the Windows beta, 2026-11-14) */
+.pk-names {
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
@@ -2588,12 +2591,38 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   white-space: nowrap;
   cursor: pointer;
 }
+/* the (i) after the names with all 8 of the diarizer's in use: the
+   chips' height, as quiet as their names' marks, and kept on the last
+   name's line */
+.pk-glue {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.pk-limit {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.pk-limit svg {
+  width: 16px;
+  height: 16px;
+}
 .pk-chip:hover,
+.pk-limit:hover,
 .pk-name:hover,
 .pk-radio:hover {
   background: var(--tint);
 }
 .pk-chip:focus-visible,
+.pk-limit:focus-visible,
 .pk-name:focus-visible,
 .pk-radio:focus-visible {
   outline: 2px solid var(--focus);

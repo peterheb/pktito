@@ -598,6 +598,14 @@ struct Found {
     stretches: Vec<transcribe::Stretch>,
 }
 
+/// How far find_speakers is through the recording of the transcript at
+/// recent: done, 0 to 1, for the window's meter in play's place.
+#[derive(Clone, Serialize)]
+struct Finding<'a> {
+    recent: &'a str,
+    done: f64,
+}
+
 #[tauri::command]
 async fn find_speakers(app: AppHandle, id: String) -> Result<Found, Problem> {
     tauri::async_runtime::spawn_blocking(move || speakers_of(&app, &id))
@@ -617,78 +625,22 @@ fn speakers_of(app: &AppHandle, id: &str) -> Result<Found, Problem> {
         decode::decode(if wav.is_file() { &wav } else { &t.item.path }).map_err(|e| e.problem())?;
     let mut slot = state.diarizer.lock().unwrap();
     let d = ensure_diarizer(&mut slot, &path).map_err(Problem::from)?;
-    d.diar.reset();
-    let mut rows = Vec::new();
-    d.diar.feed(&x, &mut rows)?;
-    d.diar.finish(&mut rows)?;
-    // Parakeet's encoder frame, 80 ms: the words' times are whole frames
-    const FRAME: u32 = 1280;
-    let rate = decode::RATE as f64;
-    let at = |s: f64| (s * rate).round() as i64;
-    let spans: Vec<pktito::Span> = t
-        .segments
-        .iter()
-        .flat_map(|s| s.words.iter())
-        .map(|w| pktito::Span {
-            start: at(w.start),
-            end: at(w.end),
-        })
-        .collect();
-    let column = pktito::speakers(&d.model, &rows, FRAME, &spans);
-    let mut number = vec![0u32; d.model.speakers()];
-    let mut count = 0;
-    let mut said = column.iter().map(|&c| {
-        let n = &mut number[c as usize];
-        if *n == 0 {
-            count += 1;
-            *n = count;
+    // a whole percent at a time: a 3-hour recording is fed in hundredths
+    let mut shown = 0;
+    let tell = |done: f64| {
+        let pct = (done * 100.0) as u32;
+        if pct > shown {
+            shown = pct;
+            let _ = app.emit("finding", Finding { recent: id, done });
         }
-        *n
-    });
-    let mut segments = Vec::new();
-    for s in std::mem::take(&mut t.segments) {
-        let who: Vec<u32> = s.words.iter().map(|_| said.next().unwrap_or(1)).collect();
-        if who.windows(2).all(|p| p[0] == p[1]) {
-            let speaker = who.first().copied().unwrap_or(1);
-            segments.push(transcribe::Segment {
-                speaker: Some(speaker),
-                ..s
-            });
-            continue;
-        }
-        // a run of one speaker's words, a segment of its own
-        let mut k = 0;
-        while k < s.words.len() {
-            let mut e = k + 1;
-            while e < s.words.len() && who[e] == who[k] {
-                e += 1;
-            }
-            let words = s.words[k..e].to_vec();
-            segments.push(transcribe::Segment {
-                start: words[0].start,
-                end: words[words.len() - 1].end,
-                text: words
-                    .iter()
-                    .map(|w| w.text.as_str())
-                    .collect::<Vec<_>>()
-                    .join(" "),
-                words,
-                speaker: Some(who[k]),
-            });
-            k = e;
-        }
-    }
-    let stretches: Vec<transcribe::Stretch> = pktito::speaker_segments(&d.model, &rows)
-        .into_iter()
-        .filter_map(|g| {
-            let n = *number.get(g.speaker as usize)?;
-            (n > 0).then(|| transcribe::Stretch {
-                start: g.start as f64 / rate,
-                end: g.end as f64 / rate,
-                speaker: n,
-            })
-        })
-        .collect();
+    };
+    let (segments, stretches) = transcribe::find(
+        &d.model,
+        &mut d.diar,
+        &x,
+        std::mem::take(&mut t.segments),
+        tell,
+    )?;
     drop(slot);
     t.segments = segments;
     t.stretches = stretches;
