@@ -1952,9 +1952,8 @@ function updateRunning(f) {
    mark if it asks more than 20 characters a second of its reader. */
 function segHtml(s, i, filling, turn = -1) {
   const cue = s.endMs !== undefined;
-  // a turn's name: beside the time in a narrow window, in a cue its line's start
+  // a turn's name opens its text (app.css, .pk-speaker)
   const f = turn >= 0 ? current() : null;
-  const name = (where) => (f ? nameBtn(f, turn, where) : "");
   const fast =
     cue && s.flags & 1
       ? `<span class="pk-fast" title="${esc(t("seg.fast", { rate: num(s.chars / (s.end - s.start), 1) }))}">${ICON.zap}</span>`
@@ -1963,10 +1962,8 @@ function segHtml(s, i, filling, turn = -1) {
   return (
     `<div class="pk-seg${cue ? " pk-cue" : ""}${turn >= 0 && i > 0 ? " pk-turn" : ""}" data-i="${i}"><div class="pk-seg-times"><button class="pk-seg-t" type="button" tabindex="-1" ` +
     `aria-label="${esc(t("seg.play_from", { time: start }))}"${filling ? "" : ` title="${esc(t("seg.play_here"))}"`}>${start}</button>` +
-    (cue
-      ? `<span class="pk-seg-end">${tc(s.end)}${fast}</span>`
-      : name("in-time")) +
-    `</div><p>${cue ? name("in-cue") : ""}${bodyHtml(s, i)}</p></div>`
+    (cue ? `<span class="pk-seg-end">${tc(s.end)}${fast}</span>` : "") +
+    `</div><p>${f ? nameBtn(f, turn) : ""}${bodyHtml(s, i)}</p></div>`
   );
 }
 
@@ -2150,7 +2147,7 @@ $("transcript").addEventListener("click", (e) => {
   const touch = e.pointerType === "touch",
     t = e.target.closest(touch ? ".pk-seg" : ".pk-seg-t"),
     f = current();
-  const nb = e.target.closest(".pk-name");
+  const nb = e.target.closest(".pk-speaker");
   if (nb) return openWho(nb);
   if (!t || !f || modeOf(f) !== "review") return;
   if (touch && tapClears) return getSelection().removeAllRanges();
@@ -2784,7 +2781,7 @@ function markRow(i) {
     p = rowEl(i)?.querySelector("p");
   if (!s || !p) return;
   const lit = curWord && p.contains(curWord) ? curWord.dataset.w : null;
-  const nb = p.querySelector(".pk-name");
+  const nb = p.querySelector(".pk-speaker");
   p.innerHTML = (nb ? nb.outerHTML : "") + bodyHtml(s, i);
   marked[i] = !!query && p.querySelector(".pk-hit") !== null;
   if (lit !== null) {
@@ -3019,19 +3016,19 @@ function turnAt(f, i) {
     end: f.segments[j].end,
   };
 }
-const nameBtn = (f, i, where = "") => {
+const nameBtn = (f, i) => {
   const n = f.segments[i].speaker,
     name = nameOf(f, n);
   return (
-    `<button class="pk-name${where ? ` ${where}` : ""}" type="button" data-turn="${i}" aria-haspopup="menu" aria-expanded="false" ` +
-    `aria-label="${esc(t("speakers.name_label", { name }))}">${markHtml(n)}<span>${esc(name)}${where === "in-cue" ? ":" : ""}</span></button>`
+    `<button class="pk-speaker" type="button" data-turn="${i}" aria-haspopup="menu" aria-expanded="false" ` +
+    `aria-label="${esc(t("speakers.name_label", { name }))}">${markHtml(n)}<span>${esc(name)}:</span></button>`
   );
 };
-/* row i of the transcript: the names between the rows are none */
+/* row i of the transcript */
 const rowEl = (i) => $("transcript").getElementsByClassName("pk-seg")[i];
 
-/* rows of f from row base on, with speakers shown each turn's name above
-   its first (a cue's opens its first line) */
+/* rows of f from row base on, with speakers shown each turn's name opening
+   its first */
 function rowsHtml(f, rows, base, filling) {
   const on = spkShown(f),
     cues = !!f.cues && rows === f.cues;
@@ -3040,8 +3037,6 @@ function rowsHtml(f, rows, base, filling) {
     const i = base + k;
     let turn = -1;
     if (on) turn = cues ? s.turnSeg : turnStarts(f.segments, i) ? i : -1;
-    if (turn >= 0 && !cues)
-      out += `<div class="pk-who${i === 0 ? " is-first" : ""}">${nameBtn(f, turn)}</div>`;
     out += segHtml(s, i, filling, turn);
   });
   return out;

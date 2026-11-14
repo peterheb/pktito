@@ -2617,13 +2617,13 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 }
 .pk-chip:hover,
 .pk-limit:hover,
-.pk-name:hover,
+.pk-speaker:hover,
 .pk-radio:hover {
   background: var(--tint);
 }
 .pk-chip:focus-visible,
 .pk-limit:focus-visible,
-.pk-name:focus-visible,
+.pk-speaker:focus-visible,
 .pk-radio:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: -2px;
@@ -2646,78 +2646,32 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   border-radius: 2px;
 }
 
-/* a turn's name above its first row, over the text's column (the row's
-   16 px, the times' 112 and their gap), 18 px below the turn before */
-.pk-who {
-  display: flex;
-  min-width: 0;
-  max-width: var(--row);
-  box-sizing: border-box;
-  padding: 0 16px 0 140px;
-  margin-top: 18px;
-}
-.pk-who.is-first {
-  margin-top: 2px;
-}
-.pk-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  max-width: 100%;
-  min-width: 0;
+/* A turn's name opens its first row's text, sentence or caption, on the
+   text's baseline and in its size, as the saved files have it ("Speaker 1:
+   ..."), and a turn starts 12 px below the row before. Peter's pick of
+   three, 2026-11-14: above the row it read as a heading of its own. A
+   class of its own: as .pk-name it had given the recent list's and the
+   setup's names its padding and hover. */
+.pk-speaker {
+  display: inline-block;
+  vertical-align: baseline;
   border: 0;
   background: none;
-  padding: 2px 6px;
-  margin: 0 -6px;
+  margin: 0 0 0 -4px;
+  padding: 0 4px;
   border-radius: var(--radius-sm);
-  font: 700 13px/20px var(--font-sans);
-  letter-spacing: 0.01em;
+  font: inherit;
+  font-weight: 700;
   color: var(--ink);
   cursor: pointer;
   text-align: left;
 }
-.pk-name span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.pk-name.in-time {
-  display: none;
-}
-/* in a caption the name opens its first line, on that line's baseline, as
-   the saved file has it */
-.pk-name.in-cue {
-  display: inline-block;
-  vertical-align: baseline;
-  margin: 0 0 0 -4px;
-  padding: 0 4px;
-  font-size: inherit;
-  line-height: inherit;
-  letter-spacing: 0;
-}
-.pk-name.in-cue span {
-  overflow: visible;
-  white-space: normal;
-}
-.pk-name.in-cue .pk-mark {
+.pk-speaker .pk-mark {
   vertical-align: middle;
   margin-right: 7px;
 }
-.pk-cue.pk-turn {
+.pk-seg.pk-turn {
   margin-top: 12px;
-}
-/* the time above the text: the name beside the time, on its line */
-@container (max-width: 619px) {
-  .pk-who {
-    display: none;
-  }
-  .pk-name.in-time {
-    display: inline-flex;
-    margin-left: 8px;
-  }
-  .pk-seg.pk-turn {
-    margin-top: 12px;
-  }
 }
 
 /* The speaker bar: 4 px, 8 px above the waveform (the lane's 3 px gap and

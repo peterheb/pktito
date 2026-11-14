@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -34,7 +35,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.selection.SelectionState
 import androidx.compose.foundation.text.selection.rememberSelectionState
@@ -88,6 +88,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.LineBreak
@@ -95,6 +96,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -103,6 +105,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import net.pktito.app.R
@@ -836,6 +839,9 @@ fun Work(
     // widths): it was 16 at every width (the layout audit, 2026-11-01)
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val edge = if (maxWidth < 600.dp) 16.dp else 24.dp
+        // a phone's width, Material's compact: the names' chips give way to
+        // Who's speaking as a dialog from a turn's name (WhoPicker)
+        val compact = maxWidth < 600.dp
         Column(Modifier.fillMaxSize().onSizeChanged { tall = it.height }) {
             // the header's buttons in the middle of its 62 dp (app.css, .pk-head),
             // the way back's arrow on the cards' line, the screen's edge, its
@@ -955,8 +961,9 @@ fun Work(
                         .padding(start = edge, end = edge, top = 16.dp),
                     spk,
                 )
-            // with the names shown, each speaker's chip, which renames them (app.css, .pk-chips)
-            if (review && rows.isNotEmpty() && spk.offered && spk.shown && !makeRoom)
+            // with the names shown, each speaker's chip, which renames them (app.css, .pk-names),
+            // where the screen is wider than a phone's
+            if (review && rows.isNotEmpty() && spk.offered && spk.shown && !makeRoom && !compact)
                 Chips(
                     spk.present,
                     spk.nameOf,
@@ -1001,6 +1008,7 @@ fun Work(
                 edge,
                 Modifier.weight(1f),
                 spk,
+                compact,
             )
         }
     }
@@ -1209,6 +1217,8 @@ private fun Rows(
     edge: Dp,
     modifier: Modifier,
     spk: SpeakersView,
+    /** a phone's width: Who's speaking as a dialog (WhoPicker) */
+    compact: Boolean,
 ) {
     val p = pk
     val current =
@@ -1247,7 +1257,7 @@ private fun Rows(
                 itemsIndexed(rows) { i, s ->
                     val now = i == current
                     val word = if (now) s.words.indexOfLast { it.start <= position + 1e-3 } else -1
-                    // with the names shown, a turn's over its first sentence; a
+                    // with the names shown, a turn's opens its first sentence; a
                     // cue's are in its words, as the saved captions have them
                     val turn =
                         if (spk.shown && !captions && Speakers.turnStarts(rows, i))
@@ -1265,9 +1275,9 @@ private fun Rows(
                         review,
                         base,
                         selection,
-                        turn?.let { u ->
-                            { m: Modifier -> DisableSelection { NameTag(u, spk, m) } }
-                        },
+                        turn,
+                        spk,
+                        compact,
                         i == 0,
                     ) {
                         a.seek(s.start, true)
@@ -1305,8 +1315,11 @@ private fun SegRow(
     review: Boolean,
     base: Timebase,
     selection: SelectionState,
-    /** a turn's name, where it starts one (NameTag) */
-    tag: (@Composable (Modifier) -> Unit)?,
+    /** the turn this row starts, if any: its name opens the text (Sentence) */
+    turn: Speakers.Turn?,
+    spk: SpeakersView,
+    /** Who's speaking as a dialog (WhoPicker) */
+    dialog: Boolean,
     first: Boolean,
     onTime: () -> Unit,
 ) {
@@ -1390,47 +1403,40 @@ private fun SegRow(
                         }
                 else Modifier
             )
+    // a turn 12 dp under the one before (app.css, .pk-seg.pk-turn)
+    val gap = if (turn != null && !first) Modifier.padding(top = 12.dp) else Modifier
     if (column != null)
-        Column {
-            // a turn's name over its first row, on the text's column (app.css,
-            // .pk-who): the row's 16 dp, the times' column and their 12; 18 dp
-            // under the turn before, 2 at the top
-            tag?.invoke(
-                Modifier.padding(
-                    start = 16.dp + column + 12.dp,
-                    end = 16.dp,
-                    top = if (first) 2.dp else 18.dp,
-                )
+        // a row of one line 48 dp tall at the least, Android's least for a
+        // finger, its line in the middle: it was 44, iOS's 44 pt (the layout
+        // audit, 2026-11-01). With its time over it, a row has two lines.
+        Row(
+            gap.then(box)
+                .heightIn(min = 48.dp)
+                .wrapContentHeight()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            time(Modifier.width(column).alignByBaseline())
+            Spacer(Modifier.width(12.dp))
+            Sentence(
+                s,
+                word,
+                marks,
+                at,
+                shown,
+                Modifier.weight(1f).alignByBaseline(),
+                turn,
+                spk,
+                dialog,
             )
-            // a row of one line 48 dp tall at the least, Android's least for a
-            // finger, its line in the middle: it was 44, iOS's 44 pt (the layout
-            // audit, 2026-11-01). With its time over it, a row has two lines.
-            Row(
-                box.heightIn(min = 48.dp)
-                    .wrapContentHeight()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                time(Modifier.width(column).alignByBaseline())
-                Spacer(Modifier.width(12.dp))
-                Sentence(s, word, marks, at, shown, Modifier.weight(1f).alignByBaseline())
-            }
         }
     else
-    // the time over the text: a turn's name beside its time, on its line,
-    // and the turn 12 dp under the one before (app.css, .pk-name.in-time)
+    // the time over the text
     Column(
-            (if (tag != null && !first) Modifier.padding(top = 12.dp) else Modifier)
-                .then(box)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+            gap.then(box).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            if (tag != null)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    time(Modifier)
-                    tag(Modifier.padding(start = 8.dp))
-                }
-            else time(Modifier)
-            Sentence(s, word, marks, at, shown, Modifier)
+            time(Modifier)
+            Sentence(s, word, marks, at, shown, Modifier, turn, spk, dialog)
         }
 }
 
@@ -1451,18 +1457,37 @@ private fun Sentence(
     at: Int,
     shown: Int,
     modifier: Modifier,
+    /** the turn it starts, whose name opens it (speakerName), and Who's speaking from that */
+    turn: Speakers.Turn? = null,
+    spk: SpeakersView = SpeakersView.NONE,
+    dialog: Boolean = false,
 ) {
     val p = pk
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    var who by remember { mutableStateOf(false) }
     val span = remember(s, word) { if (word < 0) null else wordSpan(s, word) }
     val on = marks?.firstOrNull { it.index == at }?.value
-    val text =
-        remember(s, on, p) {
-            buildAnnotatedString {
+    val name = turn?.let { spk.nameOf(it.speaker) }
+    // a touched or hovered name's box, the desktop's (app.css, .pk-speaker:hover)
+    val links =
+        TextLinkStyles(
+            focusedStyle = SpanStyle(background = p.tint),
+            hoveredStyle = SpanStyle(background = p.tint),
+            pressedStyle = SpanStyle(background = p.tintPress),
+        )
+    val editable = spk.editable
+    // the sentence's own text after the name, where one opens it: lead
+    // characters on, for the search's marks and the word playing
+    val (text, lead) =
+        remember(s, on, p, name, editable) {
+            var lead = 0
+            val t = buildAnnotatedString {
+                if (name != null) lead = speakerName(name, links) { if (editable) who = true }
                 append(s.text)
                 if (on != null && on.end <= s.text.length)
-                    addStyle(SpanStyle(color = p.onPlume), on.start, on.end)
+                    addStyle(SpanStyle(color = p.onPlume), lead + on.start, lead + on.end)
             }
+            t to lead
         }
     val hl = mix(p.ground, p.plume, 0.45f)
     val sight = remember { BringIntoViewRequester() }
@@ -1472,39 +1497,50 @@ private fun Sentence(
     LaunchedEffect(shown) {
         if (shown == first || on == null || on.end > s.text.length) return@LaunchedEffect
         val l = snapshotFlow { layout }.filterNotNull().first()
-        val top = l.getLineTop(l.getLineForOffset(on.start))
-        val bottom = l.getLineBottom(l.getLineForOffset(maxOf(on.start, on.end - 1)))
+        val top = l.getLineTop(l.getLineForOffset(lead + on.start))
+        val bottom = l.getLineBottom(l.getLineForOffset(lead + maxOf(on.start, on.end - 1)))
         sight.bringIntoView(Rect(0f, top - pad, l.size.width.toFloat(), bottom + pad))
     }
-    Text(
-        text,
-        style = Type.transcript,
-        color = p.ink,
-        onTextLayout = { layout = it },
-        modifier =
-            modifier.bringIntoViewRequester(sight).drawBehind {
-                val l = layout ?: return@drawBehind
-                for (m in marks.orEmpty()) {
-                    val current = m.index == at
-                    mark(
-                        l,
-                        m.value.start,
-                        m.value.end,
-                        if (current) p.plume else hl,
-                        if (current) p.ink else null,
-                    )
-                }
-                val (a, b) = span ?: return@drawBehind
-                if (b <= a || b > l.layoutInput.text.length) return@drawBehind
-                val line = l.getLineForOffset(a)
-                val y = l.getLineBaseline(line) + 4.dp.toPx()
-                val x0 = l.getHorizontalPosition(a, true)
-                val x1 =
-                    if (l.getLineForOffset(b - 1) == line) l.getHorizontalPosition(b, true)
-                    else l.getLineRight(line)
-                drawLine(p.beak, Offset(x0, y), Offset(x1, y), 2.dp.toPx())
-            },
-    )
+    Box(modifier) {
+        Text(
+            text,
+            style = Type.transcript,
+            color = p.ink,
+            onTextLayout = { layout = it },
+            inlineContent =
+                if (turn == null) emptyMap() else mapOf(SPEAKER_MARK to speakerMark(turn.speaker)),
+            modifier =
+                Modifier.bringIntoViewRequester(sight).drawBehind {
+                    val l = layout ?: return@drawBehind
+                    for (m in marks.orEmpty()) {
+                        val current = m.index == at
+                        mark(
+                            l,
+                            lead + m.value.start,
+                            lead + m.value.end,
+                            if (current) p.plume else hl,
+                            if (current) p.ink else null,
+                        )
+                    }
+                    val (a, b) = span?.let { (a, b) -> lead + a to lead + b } ?: return@drawBehind
+                    if (b <= a || b > l.layoutInput.text.length) return@drawBehind
+                    val line = l.getLineForOffset(a)
+                    val y = l.getLineBaseline(line) + 4.dp.toPx()
+                    val x0 = l.getHorizontalPosition(a, true)
+                    val x1 =
+                        if (l.getLineForOffset(b - 1) == line) l.getHorizontalPosition(b, true)
+                        else l.getLineRight(line)
+                    drawLine(p.beak, Offset(x0, y), Offset(x1, y), 2.dp.toPx())
+                },
+        )
+        // Who's speaking under the name's line, where the name opens the text
+        if (turn != null) {
+            val y = layout?.getLineBottom(0)?.roundToInt() ?: 0
+            Box(Modifier.offset { IntOffset(0, y) }) {
+                WhoPicker(who, dialog, { who = false }, turn, spk)
+            }
+        }
+    }
 }
 
 /**

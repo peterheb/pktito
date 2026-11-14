@@ -41,6 +41,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -1286,21 +1287,45 @@ class Shots {
     @Test fun speakersEight() = shot("speakers-eight", false) { talk(rows = eight, bar = eightBar) }
 
     @Test
+    fun speakersEightWide() =
+        shot("speakers-eight", false, wide = true) { talk(rows = eight, bar = eightBar) }
+
+    // a phone's: the note at Who's speaking's foot, where New speaker is off
+    @Test
+    fun speakersEightWho() =
+        shot("speakers-eight-who", false, act = whoDialog) { talk(rows = eight, bar = eightBar) }
+
+    @Test
     fun speakersLimit() =
-        shot("speakers-limit", false, act = limitNote) { talk(rows = eight, bar = eightBar) }
+        shot("speakers-limit", false, wide = true, act = limitNote) {
+            talk(rows = eight, bar = eightBar)
+        }
 
     @Test
     fun speakersLimitDark() =
-        shot("speakers-limit", true, act = limitNote) { talk(rows = eight, bar = eightBar) }
+        shot("speakers-limit", true, wide = true, act = limitNote) {
+            talk(rows = eight, bar = eightBar)
+        }
 
+    // a turn's name in its text, a link (Sentence): on a phone Who's speaking is a dialog, on a
+    // tablet a menu under the name
+    private fun tapName(name: String) =
+        compose.onAllNodesWithText("$name:", substring = true).onFirst().performFirstLinkClick()
+
+    private val whoDialog = {
+        tapName("Speaker 2")
+        compose.onNode(isDialog())
+    }
     private val whoMenu = {
-        compose.onNodeWithContentDescription("Speaker 2: who’s speaking").performClick()
+        tapName("Speaker 2")
         compose.onNode(isPopup())
     }
 
-    @Test fun speakersWho() = shot("speakers-who", false, act = whoMenu) { talk() }
+    @Test fun speakersWho() = shot("speakers-who", false, act = whoDialog) { talk() }
 
-    @Test fun speakersWhoDark() = shot("speakers-who", true, act = whoMenu) { talk() }
+    @Test fun speakersWhoDark() = shot("speakers-who", true, act = whoDialog) { talk() }
+
+    @Test fun speakersWhoWide() = shot("speakers-who", false, wide = true, act = whoMenu) { talk() }
 
     private val renameAsk = { compose.onNode(isDialog()) }
 

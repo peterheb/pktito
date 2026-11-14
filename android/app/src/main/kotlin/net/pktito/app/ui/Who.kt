@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -19,8 +20,10 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,18 +42,27 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withLink
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -142,9 +154,9 @@ fun Palette.speakerBar(n: Int): Color =
     }
 
 /**
- * A speaker's mark beside a name (app.css, .pk-mark): a 10 dp circle for speakers 1 to 4 and a 9
- * dp square with 2 dp corners for 5 to 8, about the same area. Every pair close in color crosses
- * that line but magenta and orchid, 5 and 8 (the design's palette check).
+ * A speaker's mark beside a name (app.css, .pk-mark): a 10 dp circle for speakers 1 to 4 and a 9 dp
+ * square with 2 dp corners for 5 to 8, about the same area. Every pair close in color crosses that
+ * line but magenta and orchid, 5 and 8 (the design's palette check).
  */
 @Composable
 fun Mark(n: Int, modifier: Modifier = Modifier) {
@@ -157,9 +169,9 @@ fun Mark(n: Int, modifier: Modifier = Modifier) {
 }
 
 /**
- * The switch beside the views (app.css, .pk-spk), in a track of its own as the views are, its
- * words theirs: Speakers, pressed while it is on, with a check before the word then. busy, it
- * waits for the finding or the download under way.
+ * The switch beside the views (app.css, .pk-spk), in a track of its own as the views are, its words
+ * theirs: Speakers, pressed while it is on, with a check before the word then. busy, it waits for
+ * the finding or the download under way.
  */
 @Composable
 fun SpeakersSwitch(on: Boolean, busy: Boolean, state: String, onClick: () -> Unit) {
@@ -187,14 +199,23 @@ fun SpeakersSwitch(on: Boolean, busy: Boolean, state: String, onClick: () -> Uni
 }
 
 /**
- * With the names shown, each speaker's, in the order they first speak (app.css, .pk-chips): a chip
- * renames its speaker. 48 dp tall for a finger, the views line's 40 with keys.
+ * With the names shown on a screen wider than a phone's, each speaker's, in the order they first
+ * speak (app.css, .pk-names): a chip renames its speaker. 32 dp tall, the desktop's 28 and a
+ * little: at 48 for a finger the lines of a full eight were 50 dp apart with 16 of words, gappy
+ * beside the desktop's (Peter, 2026-11-14). A finger's touch is still 48: Compose widens a smaller
+ * target's reach to the system's least (ViewConfiguration.minimumTouchTargetSize), the nearer
+ * target taking a touch two reach.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun Chips(present: List<Int>, nameOf: (Int) -> String, onRename: (Int) -> Unit, modifier: Modifier) {
+fun Chips(
+    present: List<Int>,
+    nameOf: (Int) -> String,
+    onRename: (Int) -> Unit,
+    modifier: Modifier,
+) {
     val p = pk
-    val tall = if (byFinger()) 48.dp else 40.dp
+    val tall = 32.dp
     FlowRow(
         modifier,
         horizontalArrangement = Arrangement.spacedBy(2.dp),
@@ -204,7 +225,10 @@ fun Chips(present: List<Int>, nameOf: (Int) -> String, onRename: (Int) -> Unit, 
         fun chip(n: Int) {
             val name = nameOf(n)
             Row(
-                Modifier.control(CornerSm, label = stringResource(R.string.speakers_chip_label, name)) {
+                Modifier.control(
+                        CornerSm,
+                        label = stringResource(R.string.speakers_chip_label, name),
+                    ) {
                         onRename(n)
                     }
                     .heightIn(min = tall)
@@ -273,52 +297,66 @@ private fun Limit(tall: Dp) {
     }
 }
 
+/** The inline content that is a turn's mark in its first sentence (speakerName, speakerMark). */
+const val SPEAKER_MARK = "speaker-mark"
+
 /**
- * A turn's name (app.css, .pk-name), bold at 13 sp, its mark before it; in a finished transcript
- * Who's speaking from it. Its box is 6 dp wider than its words either side, hung past their edge,
- * so that the mark keeps to the text's column (Modifier.hang).
+ * A turn's name opening its first sentence's text (app.css, .pk-speaker): its mark, then the name
+ * bold with a colon, as the saved files have it ("Speaker 1: ..."), a link that opens Who's
+ * speaking. Peter's pick of three (2026-11-14): over the row the name read as a heading of its own.
+ * The sentence's own text starts at the length this returns.
+ */
+fun AnnotatedString.Builder.speakerName(
+    name: String,
+    styles: TextLinkStyles,
+    onClick: () -> Unit,
+): Int {
+    withLink(LinkAnnotation.Clickable("speaker", styles) { onClick() }) {
+        appendInlineContent(SPEAKER_MARK, "\u2060")
+        withStyle(SpanStyle(fontWeight = FontWeight.W700)) { append("$name:") }
+    }
+    append(" ")
+    return length
+}
+
+/** The mark before a turn's name in its text: 10 dp, and 7 to the name, as the desktop's. */
+@Composable
+fun speakerMark(n: Int): InlineTextContent {
+    val d = LocalDensity.current
+    return InlineTextContent(
+        with(d) { Placeholder(17.dp.toSp(), 10.dp.toSp(), PlaceholderVerticalAlign.TextCenter) }
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) { Mark(n) }
+    }
+}
+
+/**
+ * Who's speaking for the turn whose name was tapped: on a phone a dialog in the middle of the
+ * screen, where the names' chips no longer are (Peter, 2026-11-14: "maybe on mobile managing
+ * speaker names is a dialog?"), as tall as eight speakers, Rename and New speaker need; on a wider
+ * screen a menu under the name, as the desktop's.
  */
 @Composable
-fun NameTag(
+fun WhoPicker(
+    open: Boolean,
+    dialog: Boolean,
+    close: () -> Unit,
     turn: Speakers.Turn,
     spk: SpeakersView,
-    modifier: Modifier = Modifier,
 ) {
-    val p = pk
-    val name = spk.nameOf(turn.speaker)
-    var open by remember { mutableStateOf(false) }
-    Box(modifier) {
-        Row(
-            Modifier.hang(start = 6.dp, end = 6.dp)
-                .control(
-                    CornerSm,
-                    enabled = spk.editable,
-                    label = stringResource(R.string.speakers_name_label, name),
-                    held = open,
-                ) {
-                    open = true
-                }
-                .padding(horizontal = 6.dp, vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Mark(turn.speaker)
-            Text(
-                name,
-                style =
-                    Type.ui.copy(
-                        fontSize = 13.sp,
-                        lineHeight = 20.sp,
-                        fontWeight = FontWeight.W700,
-                        letterSpacing = 0.01.em,
-                    ),
-                color = p.ink,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+    if (!dialog) return Menu(open, close) { Who(turn, spk, close) }
+    if (open)
+        Modal(close) {
+            Column(
+                Modifier.widthIn(max = 400.dp)
+                    .fillMaxWidth()
+                    .floating()
+                    .padding(horizontal = 6.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Who(turn, spk, close)
+            }
         }
-        Menu(open, { open = false }) { Who(turn, spk) { open = false } }
-    }
 }
 
 /**
@@ -341,11 +379,10 @@ private fun Who(turn: Speakers.Turn, spk: SpeakersView, close: () -> Unit) {
         color = p.inkMuted,
         modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 6.dp),
     )
-    for (n in spk.present)
-        Radio(n, spk.nameOf(n), n == turn.speaker) {
-            close()
-            spk.move(turn, n, false)
-        }
+    for (n in spk.present) Radio(n, spk.nameOf(n), n == turn.speaker) {
+        close()
+        spk.move(turn, n, false)
+    }
     MenuLine()
     Item(stringResource(R.string.speakers_rename, spk.nameOf(turn.speaker)), null) {
         close()
@@ -356,6 +393,15 @@ private fun Who(turn: Speakers.Turn, spk: SpeakersView, close: () -> Unit) {
         close()
         if (fresh != null) spk.move(turn, fresh, true)
     }
+    // with all 8 in use, why New speaker is off, and why voices may be mixed up: a phone has no
+    // chips for the (i) to follow (Limit)
+    if (fresh == null)
+        Text(
+            stringResource(R.string.speakers_limit_about, Speakers.MOST),
+            style = Type.ui.copy(fontSize = 13.sp, lineHeight = 20.sp),
+            color = p.inkMuted,
+            modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 8.dp),
+        )
 }
 
 /** One of Who's speaking's speakers (app.css, .pk-radio): the dot, the mark and the name. */
@@ -408,7 +454,11 @@ fun RenameSpeaker(
     val label = stringResource(R.string.speakers_name)
     Modal(onCancel) {
         Column(Modifier.widthIn(max = 400.dp).fillMaxWidth().floating().padding(24.dp)) {
-            Text(stringResource(R.string.speakers_rename_title, name), style = Type.ui, color = p.ink)
+            Text(
+                stringResource(R.string.speakers_rename_title, name),
+                style = Type.ui,
+                color = p.ink,
+            )
             BasicTextField(
                 value = v,
                 onValueChange = { v = it },
@@ -454,7 +504,11 @@ fun RenameSpeaker(
                 Modifier.fillMaxWidth().padding(top = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
             ) {
-                PkButton(stringResource(R.string.ask_cancel), onCancel, Modifier.widthIn(min = 80.dp))
+                PkButton(
+                    stringResource(R.string.ask_cancel),
+                    onCancel,
+                    Modifier.widthIn(min = 80.dp),
+                )
                 PkButton(
                     stringResource(R.string.speakers_rename_do),
                     { onRename(v.text) },
@@ -475,8 +529,8 @@ fun RenameSpeaker(
  * line, and 2 dp above it a second line for one who starts while another talks, until the first
  * stops (Speakers.lines). Each dp of it shows whoever talks most of it (Speakers.pixels), so that
  * an hour still reads, about 14 s a dp on a 393 dp phone (its waveform's 257 dp), and a run of one
- * speaker's wider than 3 dp stands 1 dp clear of the next either side. 10 dp tall; the strip puts it 8 dp over the
- * waveform.
+ * speaker's wider than 3 dp stands 1 dp clear of the next either side. 10 dp tall; the strip puts
+ * it 8 dp over the waveform.
  */
 @Composable
 fun SpeakerBar(stretches: List<Stretch>, duration: Double, upto: Double, modifier: Modifier) {

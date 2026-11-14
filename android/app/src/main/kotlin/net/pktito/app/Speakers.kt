@@ -24,9 +24,9 @@ import org.json.JSONObject
  * first word as pktito-c numbers them, eight at most, the diarizer's; a change of speaker ends a
  * sentence and a cue, so a turn is a speaker's segments in a row. The names are the file's own,
  * speaker n's at n - 1, "" for Speaker n: no voice is remembered between recordings. The switch
- * shows them, kept for the next file, and every format shared or copied has them while it does.
- * The transcript itself is Transcriber's; this changes its speakers and keeps them on the recent
- * list (Engine.keepSpeakers).
+ * shows them, kept for the next file, and every format shared or copied has them while it does. The
+ * transcript itself is Transcriber's; this changes its speakers and keeps them on the recent list
+ * (Engine.keepSpeakers).
  */
 object Speakers {
     /** The diarizer's most, and the colors' (the tokens' speaker1 to speaker8). */
@@ -62,7 +62,9 @@ object Speakers {
     var finding by mutableStateOf(false)
         private set
 
-    /** Of its recording, how much the diarizer has heard while finding, 0 to 1: the strip's ring. */
+    /**
+     * Of its recording, how much the diarizer has heard while finding, 0 to 1: the strip's ring.
+     */
     var heard by mutableDoubleStateOf(0.0)
         private set
 
@@ -90,20 +92,20 @@ object Speakers {
     fun refresh(context: Context) {
         offer =
             runCatching {
-                    val json = Engine.diarizer(Models.dir(context).path)
-                    if (json.isEmpty()) null
-                    else
-                        JSONObject(json).let { o ->
-                            Offer(
-                                o.getString("name"),
-                                o.getString("license"),
-                                o.getString("file"),
-                                o.getLong("bytes"),
-                                o.getLong("kept"),
-                                o.getBoolean("have"),
-                            )
-                        }
-                }
+                val json = Engine.diarizer(Models.dir(context).path)
+                if (json.isEmpty()) null
+                else
+                    JSONObject(json).let { o ->
+                        Offer(
+                            o.getString("name"),
+                            o.getString("license"),
+                            o.getString("file"),
+                            o.getLong("bytes"),
+                            o.getLong("kept"),
+                            o.getBoolean("have"),
+                        )
+                    }
+            }
                 .onFailure { Log.w(TAG, "the diarizer's offer", it) }
                 .getOrNull()
     }
@@ -117,15 +119,14 @@ object Speakers {
      * loading its 100 MB takes a moment beside a transcription's seconds, and the phone keeps none
      * of it between them.
      */
-    fun <T> with(path: File, block: (Long) -> T): T =
-        working.withLock {
-            val h = Engine.loadDiarizer(path.path)
-            try {
-                block(h)
-            } finally {
-                Engine.freeDiarizer(h)
-            }
+    fun <T> with(path: File, block: (Long) -> T): T = working.withLock {
+        val h = Engine.loadDiarizer(path.path)
+        try {
+            block(h)
+        } finally {
+            Engine.freeDiarizer(h)
         }
+    }
 
     /** The speakers of segs, in the order they first speak. */
     fun present(segs: List<Seg>): List<Int> {
@@ -150,7 +151,9 @@ object Speakers {
         return Turn(i, j, s, segs[i].start, segs[j].end)
     }
 
-    /** New speaker's number: the lowest not in use, so that no two share a color; none past eight. */
+    /**
+     * New speaker's number: the lowest not in use, so that no two share a color; none past eight.
+     */
     fun fresh(present: List<Int>): Int? = (1..MOST).firstOrNull { it !in present }
 
     /** The speaker already called v, other than s: renaming s to it joins the two. */
@@ -184,8 +187,8 @@ object Speakers {
                 ?: return null to edit(context) { names = named(names, s, name) }
         return other to
             edit(context) {
-                for (k in segments.indices)
-                    if (segments[k].speaker == s) segments[k] = segments[k].by(other)
+                for (k in segments.indices) if (segments[k].speaker == s)
+                    segments[k] = segments[k].by(other)
                 stretches = stretches.map {
                     if (it.speaker == s) Stretch(it.start, it.end, other) else it
                 }
@@ -224,7 +227,8 @@ object Speakers {
                 // the recording's copy where it was shared, as it plays (Recents.open)
                 val copy = Recents.copyOf(app, id)
                 val file =
-                    if (copy.isFile) ParcelFileDescriptor.open(copy, ParcelFileDescriptor.MODE_READ_ONLY)
+                    if (copy.isFile)
+                        ParcelFileDescriptor.open(copy, ParcelFileDescriptor.MODE_READ_ONLY)
                     else readable(app, uri)
                 file.use { pfd ->
                     with(path) { h ->
@@ -249,7 +253,10 @@ object Speakers {
                     .onFailure { e ->
                         Log.w(TAG, "finding the speakers of $name", e)
                         val key = Engine.problem(e)
-                        failed(if (key == null) e.message ?: e.toString() else words(app.resources, key))
+                        failed(
+                            if (key == null) e.message ?: e.toString()
+                            else words(app.resources, key)
+                        )
                     }
             }
         }
@@ -264,7 +271,9 @@ object Speakers {
         return before
     }
 
-    /** The transcript's JSON as its speakers are now, for the formats, the captions and the list. */
+    /**
+     * The transcript's JSON as its speakers are now, for the formats, the captions and the list.
+     */
     private fun changed(context: Context) {
         val t = Transcriber
         val tr = t.transcript ?: return
@@ -296,7 +305,13 @@ object Speakers {
     }
 
     /** The stretches of speaker from between a and b given to speaker to. */
-    private fun moved(list: List<Stretch>, from: Int, to: Int, a: Double, b: Double): List<Stretch> {
+    private fun moved(
+        list: List<Stretch>,
+        from: Int,
+        to: Int,
+        a: Double,
+        b: Double,
+    ): List<Stretch> {
         val out = ArrayList<Stretch>()
         for (g in list) {
             if (g.speaker != from || g.end <= a || g.start >= b) {
@@ -334,10 +349,11 @@ object Speakers {
             for ((a, b) in list) {
                 val c = cur
                 if (c != null && a <= c.b) c.b = maxOf(c.b, b)
-                else Run(s, a, b).also {
-                    all.add(it)
-                    cur = it
-                }
+                else
+                    Run(s, a, b).also {
+                        all.add(it)
+                        cur = it
+                    }
             }
         }
         all.sortWith(compareBy<Run>({ it.a }, { it.b }))
@@ -360,7 +376,9 @@ object Speakers {
         return main to second
     }
 
-    /** Each of px pixels' speaker on a line, per seconds a pixel: whoever talks most of it; 0 none. */
+    /**
+     * Each of px pixels' speaker on a line, per seconds a pixel: whoever talks most of it; 0 none.
+     */
     fun pixels(parts: List<Part>, px: Int, per: Double): IntArray {
         val time = Array(MOST + 1) { DoubleArray(px) }
         for (p in parts) {
@@ -375,11 +393,10 @@ object Speakers {
         val who = IntArray(px)
         for (x in 0 until px) {
             var top = 0.0
-            for (n in 1..MOST)
-                if (time[n][x] > top) {
-                    top = time[n][x]
-                    who[x] = n
-                }
+            for (n in 1..MOST) if (time[n][x] > top) {
+                top = time[n][x]
+                who[x] = n
+            }
         }
         return who
     }
