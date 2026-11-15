@@ -603,11 +603,16 @@ struct Found {
 }
 
 /// How far find_speakers is through the recording of the transcript at
-/// recent: done, 0 to 1, for the window's meter in play's place.
+/// recent: done, 0 to 1, for the window's meter in play's place; and for its
+/// speaker bar, the stretches that have ended since the last (closed) and
+/// those going where the diarizer has got to (open), as transcribe::SoFar
+/// has them.
 #[derive(Clone, Serialize)]
 struct Finding<'a> {
     recent: &'a str,
     done: f64,
+    closed: &'a [transcribe::Stretch],
+    open: &'a [transcribe::Stretch],
 }
 
 #[tauri::command]
@@ -629,13 +634,23 @@ fn speakers_of(app: &AppHandle, id: &str) -> Result<Found, Problem> {
         decode::decode(if wav.is_file() { &wav } else { &t.item.path }).map_err(|e| e.problem())?;
     let mut slot = state.diarizer.lock().unwrap();
     let d = ensure_diarizer(&mut slot, &path).map_err(Problem::from)?;
-    // a whole percent at a time: a 3-hour recording is fed in hundredths
-    let mut shown = 0;
-    let tell = |done: f64| {
+    // a whole percent at a time: a 3-hour recording is fed in hundredths;
+    // the stretches ended since the last one sent with each
+    let (mut shown, mut sent) = (0, 0);
+    let tell = |done: f64, bar: &transcribe::SoFar| {
         let pct = (done * 100.0) as u32;
         if pct > shown {
             shown = pct;
-            let _ = app.emit("finding", Finding { recent: id, done });
+            let _ = app.emit(
+                "finding",
+                Finding {
+                    recent: id,
+                    done,
+                    closed: &bar.closed[sent..],
+                    open: &bar.open,
+                },
+            );
+            sent = bar.closed.len();
         }
     };
     let (segments, stretches) = transcribe::find(
@@ -905,6 +920,10 @@ struct JobEvent {
     audio: Option<String>,
     /// A video's frame rate, 0 for audio: for times in frames.
     fps: f64,
+    /// With the outline: whether the run finds the speakers too, as the
+    /// switch was on and the diarizer downloaded, so that the strip keeps
+    /// the speaker bar's place from the start.
+    speakers: bool,
     took: f64,
     /// Of that, the seconds transcribing it; while it goes, those so far.
     transcribed: f64,
@@ -1000,6 +1019,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
         peaks: peaks.clone(),
         audio,
         fps,
+        speakers: diarizer.is_some(),
         ..Default::default()
     });
     let Engine {

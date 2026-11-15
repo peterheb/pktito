@@ -1,5 +1,7 @@
 package net.pktito.app.ui
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -90,13 +94,21 @@ class SpeakersView(
      * shows it as it shows a transcription's progress (app.js, showFinding)
      */
     val heard: Double?,
-    /** the names show: the switch on and two speakers or more */
+    /** the names show: the switch on and a speaker or more */
     val shown: Boolean,
+    /**
+     * the strip keeps the speaker bar's place: the names shown, the speakers being found, or a
+     * transcription finding them as it goes, so that the bar fills in as they are heard (app.js,
+     * barShown)
+     */
+    val place: Boolean,
     /** a finished transcript's names can be changed */
     val editable: Boolean,
     val present: List<Int>,
     val nameOf: (Int) -> String,
-    /** the bar's stretches, and the seconds it is drawn to */
+    /**
+     * the bar's stretches, those heard so far while they are found, and the seconds it is drawn to
+     */
     val bar: List<Stretch>,
     val upto: Double,
     val toggle: () -> Unit,
@@ -114,6 +126,7 @@ class SpeakersView(
                 busy = false,
                 heard = null,
                 shown = false,
+                place = false,
                 editable = false,
                 present = emptyList(),
                 nameOf = { "" },
@@ -171,7 +184,9 @@ fun Mark(n: Int, modifier: Modifier = Modifier) {
 /**
  * The switch beside the views (app.css, .pk-spk), in a track of its own as the views are, its words
  * theirs: Speakers, pressed while it is on, with a check before the word then. busy, it waits for
- * the finding or the download under way.
+ * the finding or the download under way. One width on or off, so that a second touch where the
+ * first was turns them off again (Peter, 2026-11-15): off, the check keeps its place unseen and the
+ * word moves half of it over, to the middle, in the strip's 150 ms.
  */
 @Composable
 fun SpeakersSwitch(on: Boolean, busy: Boolean, state: String, onClick: () -> Unit) {
@@ -187,9 +202,16 @@ fun SpeakersSwitch(on: Boolean, busy: Boolean, state: String, onClick: () -> Uni
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            if (on) Icon(Icons.check, null, tint = p.ink, modifier = Modifier.size(12.dp))
+            val shift by animateDpAsState(if (on) 0.dp else (-9).dp, tween(150), label = "word")
+            Icon(
+                Icons.check,
+                null,
+                tint = p.ink,
+                modifier = Modifier.size(12.dp).alpha(if (on) 1f else 0f),
+            )
             Text(
                 stringResource(R.string.speakers_switch),
+                Modifier.offset(x = shift),
                 style = Type.ui.copy(fontSize = 13.sp, lineHeight = 16.sp),
                 color = if (on) p.ink else p.inkMuted,
                 maxLines = 1,

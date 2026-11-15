@@ -91,6 +91,120 @@ impl<'a> Speakers<'a> {
     }
 }
 
+/// Parakeet's encoder frame, 80 ms at 16 kHz, in samples: the words' times
+/// are whole frames (pk_speakers' frame).
+const FRAME: u32 = 1280;
+
+/// The speaker bar while find goes (its progress): the stretches of speech
+/// in the diarizer's rows so far, each numbered as find numbers its speaker,
+/// by first word, and only once that speaker has said a word whose rows are
+/// all in, so that no stretch changes colour when the find ends. closed
+/// holds those that have ended, in the order they could be numbered; open
+/// those going where the rows stop, cut there. The stretches are
+/// pk_speaker_segments' runs over one half, found as the rows come
+/// (find_as_it_goes_is_found checks them against the end's).
+#[derive(Default)]
+pub struct SoFar {
+    pub closed: Vec<Stretch>,
+    pub open: Vec<Stretch>,
+}
+
+/// find's bar as the diarizer's rows come (SoFar)
+struct Growing {
+    width: usize,
+    /// samples a row: 160, 10 ms (pk_model_frame_seconds)
+    row: i64,
+    /// rows looked through for stretches
+    scanned: usize,
+    /// each column's stretch going where the rows stop: its first row
+    going: Vec<Option<usize>>,
+    /// stretches ended of columns not numbered yet: the column, its rows
+    waiting: Vec<(usize, usize, usize)>,
+    /// words given their speakers
+    said: usize,
+    number: Vec<u32>,
+    count: u32,
+    so_far: SoFar,
+}
+
+impl Growing {
+    fn new(model: &Model) -> Growing {
+        let width = model.speakers();
+        Growing {
+            width,
+            row: (model.frame_seconds() * model.rate() as f64).round() as i64,
+            scanned: 0,
+            going: vec![None; width],
+            waiting: Vec::new(),
+            said: 0,
+            number: vec![0; width],
+            count: 0,
+            so_far: SoFar::default(),
+        }
+    }
+
+    /// The bar again for rows, all the diarizer has handed over, of the
+    /// recording whose words are words.
+    fn grow(&mut self, model: &Model, rows: &[f32], words: &[Span]) {
+        let n = rows.len() / self.width.max(1);
+        // the words whose rows are all in, numbered as find numbers them:
+        // pk_speakers takes a word's frames and the one before, and frame
+        // j's rows are those that start in it
+        let (f, have) = (FRAME as i64, n as i64 * self.row);
+        let heard = words[self.said..]
+            .iter()
+            .take_while(|w| {
+                let f0 = w.start / f;
+                ((w.end + f - 1) / f).max(f0 + 1) * f <= have
+            })
+            .count();
+        let k = self.said + heard;
+        if k > self.said {
+            for c in pktito::speakers(model, rows, FRAME, &words[self.said..k]) {
+                let m = &mut self.number[c as usize];
+                if *m == 0 {
+                    self.count += 1;
+                    *m = self.count;
+                }
+            }
+            self.said = k;
+        }
+        for r in self.scanned..n {
+            for (s, going) in self.going.iter_mut().enumerate() {
+                match (*going, rows[r * self.width + s] > 0.5) {
+                    (None, true) => *going = Some(r),
+                    (Some(a), false) => {
+                        self.waiting.push((s, a, r));
+                        *going = None;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        self.scanned = n;
+        let (rate, row, number) = (model.rate() as f64, self.row, &self.number);
+        let stretch = |s: usize, a: usize, b: usize| Stretch {
+            start: (a as i64 * row) as f64 / rate,
+            end: (b as i64 * row) as f64 / rate,
+            speaker: number[s],
+        };
+        let closed = &mut self.so_far.closed;
+        self.waiting.retain(|&(s, a, b)| {
+            if number[s] == 0 {
+                return true;
+            }
+            closed.push(stretch(s, a, b));
+            false
+        });
+        self.so_far.open = self
+            .going
+            .iter()
+            .enumerate()
+            .filter_map(|(s, g)| g.filter(|_| number[s] > 0).map(|a| stretch(s, a, n)))
+            .collect();
+    }
+}
+
 /// Who said what in a finished transcript, from its recording x, without
 /// transcribing it again: the diarizer (model and diar) over the whole of
 /// x, each word given its speaker by NeMo's rule (pk_speakers), numbered
@@ -100,29 +214,17 @@ impl<'a> Speakers<'a> {
 /// The segments, and each speaker's stretches for the bar. The window,
 /// Android and iOS all find them here.
 ///
-/// progress(fraction of x heard) comes after each hundredth of it, for a
-/// meter: x goes to the diarizer in pieces, whose sizes change none of its
+/// progress(fraction of x heard, the bar so far) comes after each hundredth
+/// of it, for a meter and for the bar to fill in as the speakers are heard
+/// (SoFar): x goes to the diarizer in pieces, whose sizes change none of its
 /// rows (pk_diar_feed; find_in_pieces_is_whole checks it).
 pub fn find(
     model: &Model,
     diar: &mut Diar,
     x: &[f32],
     segments: Vec<Segment>,
-    mut progress: impl FnMut(f64),
+    mut progress: impl FnMut(f64, &SoFar),
 ) -> Result<(Vec<Segment>, Vec<Stretch>), String> {
-    diar.reset();
-    let mut rows = Vec::new();
-    // a second at least, as fewer samples than that do nothing but call
-    let piece = (x.len() / 100).max(model.rate());
-    let mut heard = 0;
-    for p in x.chunks(piece) {
-        diar.feed(p, &mut rows)?;
-        heard += p.len();
-        progress(heard as f64 / x.len() as f64);
-    }
-    diar.finish(&mut rows)?;
-    // Parakeet's encoder frame, 80 ms at 16 kHz: the words' times are whole frames
-    const FRAME: u32 = 1280;
     let rate = model.rate() as f64;
     let at = |s: f64| (s * rate).round() as i64;
     let spans: Vec<Span> = segments
@@ -133,6 +235,19 @@ pub fn find(
             end: at(w.end),
         })
         .collect();
+    diar.reset();
+    let mut rows = Vec::new();
+    let mut bar = Growing::new(model);
+    // a second at least, as fewer samples than that do nothing but call
+    let piece = (x.len() / 100).max(model.rate());
+    let mut heard = 0;
+    for p in x.chunks(piece) {
+        diar.feed(p, &mut rows)?;
+        heard += p.len();
+        bar.grow(model, &rows, &spans);
+        progress(heard as f64 / x.len() as f64, &bar.so_far);
+    }
+    diar.finish(&mut rows)?;
     let column = pktito::speakers(model, &rows, FRAME, &spans);
     let mut number = vec![0u32; model.speakers()];
     let mut count = 0;
@@ -578,5 +693,77 @@ mod files {
         for pieces in [(x.len() / 100).max(model.rate()), 43_520, 4321, 435_201] {
             assert_eq!(rows(pieces, &mut diar), whole, "pieces of {pieces}");
         }
+    }
+
+    /// `PKAPP_DIARIZER=nemotron-3-diarization.pkf PKAPP_SPEECH=talk.mp3
+    /// cargo test find_as_it_goes_is_found -- --ignored`: the bar find shows
+    /// as it goes is the end's: each stretch it gave as ended is one of the
+    /// end's, its speaker numbered the same, and each going is the start of
+    /// one. A word every 0.4 s stands in for a transcript's.
+    #[test]
+    #[ignore]
+    fn find_as_it_goes_is_found() {
+        use super::{Segment, Stretch, Word};
+        let var = |k| std::path::PathBuf::from(std::env::var(k).expect(k));
+        let model = crate::pktito::Model::load(&var("PKAPP_DIARIZER")).unwrap();
+        let mut diar = crate::pktito::Diar::new(&model, 0).unwrap();
+        let x = crate::decode::decode(&var("PKAPP_SPEECH")).unwrap();
+        let secs = x.len() as f64 / model.rate() as f64;
+        let words = (0..(secs / 0.4) as usize)
+            .map(|i| Word {
+                start: i as f64 * 0.4,
+                end: i as f64 * 0.4 + 0.3,
+                text: "w".into(),
+            })
+            .collect();
+        let segments = vec![Segment {
+            start: 0.0,
+            end: secs,
+            text: String::new(),
+            words,
+            speaker: None,
+        }];
+        let mut seen: Vec<(Vec<Stretch>, Vec<Stretch>)> = Vec::new();
+        let (_, end) = super::find(&model, &mut diar, &x, segments, |_, bar| {
+            seen.push((bar.closed.clone(), bar.open.clone()))
+        })
+        .unwrap();
+        let key = |g: &Stretch| (g.start.to_bits(), g.end.to_bits(), g.speaker);
+        let all: std::collections::HashSet<_> = end.iter().map(key).collect();
+        let closed = &seen.last().unwrap().0;
+        assert!(closed.len() > 10, "{} ended", closed.len());
+        for g in closed {
+            assert!(
+                all.contains(&key(g)),
+                "{} to {}, {}",
+                g.start,
+                g.end,
+                g.speaker
+            );
+        }
+        for g in seen.iter().flat_map(|(_, open)| open) {
+            assert!(
+                end.iter()
+                    .any(|e| e.start == g.start && e.speaker == g.speaker && e.end >= g.end),
+                "going {} to {}, {}",
+                g.start,
+                g.end,
+                g.speaker
+            );
+        }
+        let speakers = |v: &[Stretch]| {
+            let mut s: Vec<u32> = v.iter().map(|g| g.speaker).collect();
+            s.sort();
+            s.dedup();
+            s
+        };
+        println!(
+            "{} calls; {} ended by the last, of {}; speakers {:?} of {:?}",
+            seen.len(),
+            closed.len(),
+            end.len(),
+            speakers(closed),
+            speakers(&end)
+        );
     }
 }

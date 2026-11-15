@@ -136,6 +136,7 @@ class TranscribeService : Service() {
                             this.duration = duration
                             this.fps = fps
                             this.peaks = peaks
+                            diarizing = diarizer != null
                             step = "transcribing"
                         }
                     }

@@ -1264,7 +1264,8 @@ class Shots {
                     on = on,
                     busy = busy,
                     heard = heard,
-                    shown = on && present.size > 1,
+                    shown = on && present.isNotEmpty(),
+                    place = (on && present.isNotEmpty()) || heard != null,
                     editable = true,
                     present = present,
                     nameOf = { Speakers.nameOf(res, names, it) },
@@ -1304,17 +1305,31 @@ class Shots {
 
     @Test fun speakersXa() = shot("speakers-360", false, narrow = true, xa = true) { talk() }
 
-    // a transcript from before the switch, its speakers being found: the ring in play's place
+    // a transcript from before the switch, its speakers being found: the ring in play's place,
+    // and the bar filling in as the diarizer tells them apart, its rows some way behind what it
+    // has heard (Speakers.growing)
+    private val talkHeard =
+        talkBar
+            .filter { it.start < 18.0 }
+            .map { Stretch(it.start, minOf(it.end, 18.0), it.speaker) }
+
     @Test
     fun speakersFinding() =
         shot("speakers-finding", false) {
-            talk(busy = true, rows = talkRows.map { it.by(null) }, bar = emptyList(), heard = 0.42)
+            talk(busy = true, rows = talkRows.map { it.by(null) }, bar = talkHeard, heard = 0.42)
         }
 
     @Test
     fun speakersFindingDark() =
         shot("speakers-finding", true) {
-            talk(busy = true, rows = talkRows.map { it.by(null) }, bar = emptyList(), heard = 0.42)
+            talk(busy = true, rows = talkRows.map { it.by(null) }, bar = talkHeard, heard = 0.42)
+        }
+
+    // the find just begun: the bar's place, empty, the strip its height without speakers
+    @Test
+    fun speakersFindingStart() =
+        shot("speakers-finding-start", false) {
+            talk(busy = true, rows = talkRows.map { it.by(null) }, bar = emptyList(), heard = 0.0)
         }
 
     // all 8 of the diarizer's speakers in use, conv2's rows dealt among them: the (i) after the

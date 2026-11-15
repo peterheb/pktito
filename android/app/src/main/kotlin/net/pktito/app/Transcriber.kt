@@ -104,6 +104,11 @@ object Transcriber {
     var names by mutableStateOf<List<String>>(emptyList())
     /** With speakers: each one's stretches of speech, for the bar (Speakers.lines). */
     var stretches by mutableStateOf<List<Stretch>>(emptyList())
+    /**
+     * Whether this run finds the speakers as it goes, the switch on and their model here
+     * (TranscribeService), so that the strip keeps the bar's place from the start.
+     */
+    var diarizing by mutableStateOf(false)
     /** Its cues, made the first time the Captions view is shown. */
     var cues by mutableStateOf<List<Seg>?>(null)
     /** A video's frame rate, for times in frames; 0 for audio. */
@@ -155,6 +160,7 @@ object Transcriber {
         transcript = null
         names = emptyList()
         stretches = emptyList()
+        diarizing = false
         cues = null
         fps = 0.0
         reopened = false

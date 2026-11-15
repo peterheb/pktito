@@ -1,5 +1,8 @@
 package net.pktito.app.ui
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -93,6 +96,11 @@ fun rate(s: Double): String = (if (s == floor(s)) s.toInt().toString() else s.to
 fun stepped(speeds: List<Double>, now: Double, d: Int): Double =
     speeds[(speeds.indexOf(now) + d).coerceIn(0, speeds.size - 1)]
 
+/** The speaker bar last shown, for it to fade out once it has gone (Strip). */
+private class Held {
+    var bar: (@Composable (Modifier) -> Unit)? = null
+}
+
 /**
  * The file's strip, on term in both themes (app.css, .pk-strip): play, the speed under it on the
  * times' line, or at work the progress in play's place and size, so that the waveform keeps its
@@ -109,7 +117,7 @@ fun stepped(speeds: List<Double>, now: Double, d: Int): Double =
  * volume keys set the level (Player.keysOnly); the ticks' lane 24 dp, 32 with ticks, where the
  * times' line had taken a thumb's taps under its 15 (the S25's mute, 2026-10-26); and a drag on the
  * waveform or the lane moves the playhead and the time with the thumb, seeking where it is let go.
- * 125 dp tall to the desktop's 116.
+ * 143 dp tall to the desktop's 134, each with the speaker bar's place (lead).
  */
 @Composable
 fun Strip(
@@ -149,11 +157,20 @@ fun Strip(
     // above and the times' line below, and the desktop's lane read as crowded
     // (Peter, 2026-10-27). The strip keeps its height, and play keeps to the
     // waveform's middle.
-    val wave = if (ticks.isEmpty()) 64.dp else 56.dp
     val gap = if (ticks.isEmpty()) 3.dp else 7.dp
-    // with the speaker bar the strip is 18 dp taller, and play and the ring
-    // keep to the waveform's middle (app.css, #strip.spk)
-    val lead = if (bar != null) 18.dp else 0.dp
+    // The strip is one height with the speaker bar or without (Peter,
+    // 2026-11-15: turning speakers on moved the switch out from under the
+    // pointer that had turned it on): the bar has the lane's top 18 dp, and
+    // without it the waveform reaches up into them, 82 dp tall to the bar's
+    // 64 (74 and 56 with ticks). Play and the ring keep to the waveform's
+    // middle, so they move 9 dp with it, in the desktop's 0.15 s (app.css,
+    // #strip.spk).
+    val lead by animateDpAsState(if (bar != null) 18.dp else 0.dp, tween(150), label = "bar")
+    val wave = (if (ticks.isEmpty()) 64.dp else 56.dp) + 18.dp - lead
+    // the bar last shown, which fades out once it has gone
+    val held = remember { Held() }
+    if (bar != null) held.bar = bar
+    val seen by animateFloatAsState(if (bar != null) 1f else 0f, tween(150), label = "bar seen")
     // where a thumb dragging on the waveform or the lane has the playhead, 0 to 1, until it lets go
     var scrub by remember { mutableStateOf<Double?>(null) }
     val seek by rememberUpdatedState(onSeek)
@@ -217,28 +234,34 @@ fun Strip(
         else if (!review)
             Box(Modifier.padding(top = lead + (wave - button) / 2)) { Ring(done, button) }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(gap)) {
-            // 8 dp over the waveform, the lane's gap and its own (app.css, .pk-spkbar)
-            bar?.invoke(Modifier.padding(bottom = 8.dp - gap))
             val at = scrub ?: if (review) (if (duration > 0) position / duration else 0.0) else done
-            Waveform(
-                peaks,
-                at,
-                duration,
-                Modifier.testTag("wave")
-                    .alpha(if (review && !playable && !silent) 0.45f else 1f)
-                    .then(
-                        if (review)
-                            Modifier.pointerInput(Unit) {
-                                detectTapGestures { o ->
-                                    seek((o.x / size.width).toDouble().coerceIn(0.0, 1.0))
+            // the waveform under the bar's place, a tap on which moves the playhead as one on
+            // the waveform does (app.css, #strip.spk .pk-wavebtn); the bar in its top 10 dp, 8
+            // over the waveform, fading in and out as the waveform gives its place and takes it
+            // back (app.css, .pk-spkbar)
+            Box {
+                Waveform(
+                    peaks,
+                    at,
+                    duration,
+                    Modifier.testTag("wave")
+                        .alpha(if (review && !playable && !silent) 0.45f else 1f)
+                        .then(
+                            if (review)
+                                Modifier.pointerInput(Unit) {
+                                    detectTapGestures { o ->
+                                        seek((o.x / size.width).toDouble().coerceIn(0.0, 1.0))
+                                    }
                                 }
-                            }
-                        else Modifier
-                    )
-                    .then(dragged),
-                wave,
-            )
-            // the desktop's lane for a search's ticks, 9 dp, which keeps the strip its 116; a
+                            else Modifier
+                        )
+                        .then(dragged)
+                        .padding(top = lead),
+                    wave,
+                )
+                if (seen > 0f) held.bar?.invoke(Modifier.alpha(seen))
+            }
+            // the desktop's lane for a search's ticks, 9 dp, which keeps the strip its 134; a
             // finger's, 18
             Ticks(ticks, tickAt, onTick, finger, gap, if (finger && review) seek else null, dragged)
             if (silent) Why(why!!, locate)

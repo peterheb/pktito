@@ -28,8 +28,12 @@ object Engine {
 
     /** Told how far findSpeakers has got, on its thread. */
     fun interface Heard {
-        /** The fraction of the recording the diarizer has heard, a whole percent at a time. */
-        fun done(fraction: Double)
+        /**
+         * The fraction of the recording the diarizer has heard, a whole percent at a time, and the
+         * speaker bar so far as JSON: the stretches ended since the last ("closed") and those going
+         * where it has got to ("open"), each as the transcript's stretches are.
+         */
+        fun done(fraction: Double, bar: String)
     }
 
     /** Told how a model's download stands, on its thread. */
@@ -143,8 +147,8 @@ object Engine {
     /**
      * Who said what in a finished transcript, from its recording open at fd, without transcribing
      * it again: the transcript with each segment one speaker's, the speakers' stretches, and no
-     * names; heard told how far it has got. One that can't be read throws its problem, as
-     * transcribe does.
+     * names; heard told how far it has got, and the bar as it fills. One that can't be read throws
+     * its problem, as transcribe does.
      */
     @JvmStatic
     external fun findSpeakers(

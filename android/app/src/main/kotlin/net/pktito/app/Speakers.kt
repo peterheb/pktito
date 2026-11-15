@@ -68,6 +68,14 @@ object Speakers {
     var heard by mutableDoubleStateOf(0.0)
         private set
 
+    /**
+     * While finding, the speaker bar so far: the stretches the diarizer has told apart, those ended
+     * and those going where it has got to (Engine.Heard), for the bar to fill in as they are heard
+     * (Peter, 2026-11-15).
+     */
+    var growing by mutableStateOf<List<Stretch>>(emptyList())
+        private set
+
     private val main = Handler(Looper.getMainLooper())
     /** One diarizer at work at a time: a transcription's or find's (with). */
     private val working = ReentrantLock()
@@ -240,9 +248,12 @@ object Speakers {
         val app = context.applicationContext
         finding = true
         heard = 0.0
+        growing = emptyList()
         // the strip's ring has play's place until they are found (Work)
         Player.pause(context)
         thread(name = "speakers") {
+            // the bar's stretches ended so far, on this thread
+            val ended = ArrayList<Stretch>()
             val got = runCatching {
                 // the recording's copy where it was shared, as it plays (Recents.open)
                 val copy = Recents.copyOf(app, id)
@@ -252,12 +263,21 @@ object Speakers {
                     else readable(app, uri)
                 file.use { pfd ->
                     with(path) { h ->
-                        Engine.findSpeakers(h, pfd.fd, name, tr) { d -> main.post { heard = d } }
+                        Engine.findSpeakers(h, pfd.fd, name, tr) { d, bar ->
+                            val o = JSONObject(bar)
+                            ended.addAll(Stretch.parse(o.optJSONArray("closed")))
+                            val now = ended + Stretch.parse(o.optJSONArray("open"))
+                            main.post {
+                                heard = d
+                                growing = now
+                            }
+                        }
                     }
                 }
             }
             main.post {
                 finding = false
+                growing = emptyList()
                 got.onSuccess { json ->
                         // the screen's transcript still, not one opened since
                         if (t.id != id || t.transcript != tr) return@onSuccess

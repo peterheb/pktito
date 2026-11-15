@@ -502,9 +502,11 @@ pub extern "system" fn Java_net_pktito_app_Engine_freeDiarizer<'a>(
 /// in a finished transcript (a Transcript's JSON), from its recording open
 /// at fd, without transcribing it again (transcribe::find): the transcript
 /// with each segment one speaker's, its speakers' stretches, and no names
-/// yet; progress.done(fraction of the recording heard) a whole percent at a
-/// time, on this thread. A recording that can't be read throws its problem
-/// as transcribe() throws it.
+/// yet; progress.done(fraction of the recording heard, the bar so far) a
+/// whole percent at a time, on this thread, the bar's JSON the stretches
+/// ended since the last ("closed") and those going ("open"), as
+/// transcribe::SoFar has them. A recording that can't be read throws its
+/// problem as transcribe() throws it.
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_net_pktito_app_Engine_findSpeakers<'a>(
     mut unowned: EnvUnowned<'a>,
@@ -533,19 +535,30 @@ pub extern "system" fn Java_net_pktito_app_Engine_findSpeakers<'a>(
                 }
             };
             let segments = std::mem::take(&mut t.segments);
-            let (mut shown, mut failed) = (0, None);
-            let tell = |done: f64| {
+            let (mut shown, mut sent, mut failed) = (0, 0, None);
+            let tell = |done: f64, bar: &transcribe::SoFar| {
                 let pct = (done * 100.0) as u32;
                 if pct <= shown || failed.is_some() {
                     return;
                 }
                 shown = pct;
-                let call = env.call_method(
-                    &progress,
-                    jni_str!("done"),
-                    jni_sig!("(D)V"),
-                    &[JValue::Double(done)],
-                );
+                // the bar's stretches ended since the last, and those going,
+                // as the window's find has them (main.rs, Finding)
+                let json = serde_json::json!({ "closed": &bar.closed[sent..], "open": &bar.open })
+                    .to_string();
+                sent = bar.closed.len();
+                // a frame of its own, so a long recording's calls leave no
+                // local references behind
+                let call = env.with_local_frame(2, |env| -> jni::errors::Result<()> {
+                    let bar = env.new_string(json)?;
+                    env.call_method(
+                        &progress,
+                        jni_str!("done"),
+                        jni_sig!("(DLjava/lang/String;)V"),
+                        &[JValue::Double(done), JValue::from(&bar)],
+                    )?;
+                    Ok(())
+                });
                 if let Err(e) = call {
                     failed = Some(e);
                 }

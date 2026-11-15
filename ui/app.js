@@ -1491,6 +1491,10 @@ listen("job", (e) => {
   const f = files.find((x) => x.id === j.id);
   if (!f) return;
   f.step = j.step;
+  // whether this run finds the speakers as it goes, as the event with the
+  // outline says (main.rs, JobEvent)
+  if (j.step === "reading") f.diarizing = false;
+  if (j.speakers) f.diarizing = true;
   if (j.duration) f.duration = j.duration;
   if (j.peaks.length) f.peaks = j.peaks;
   if (j.audio) f.audio = j.audio;
@@ -2282,10 +2286,11 @@ function rangeOf(peaks, seconds) {
 /* Bars across el from the outline (0-255 a slice) of a recording seconds
    long, the playhead at bar k; no outline draws the empty strip. A bar is
    the mean of the slices under it: their loudest hid every pause shorter
-   than a bar. */
+   than a bar. Each bar's height is its share of the waveform's (--v, app.css,
+   .pk-wave i), so that the bars follow the waveform's height as the speaker
+   bar's place is given or taken, with nothing drawn again. */
 function drawWave(el, peaks, k, seconds) {
   const n = barsIn(el);
-  const top = el.clientHeight || 64;
   const [lo, hi] = peaks && peaks.length ? rangeOf(peaks, seconds) : [0, 255];
   const h = [];
   for (let i = 0; i < n; i++) {
@@ -2296,15 +2301,16 @@ function drawWave(el, peaks, k, seconds) {
       for (let j = a; j < b; j++) v += peaks[j];
       v = Math.min(1, Math.max(0, (v / (b - a) - lo) / (hi - lo)));
     }
-    // the playhead alone reaches the top
-    h.push(3 + Math.round(v * (top - 7)));
+    h.push(v);
   }
-  Object.assign(el, { _peaks: peaks, _n: n, _h: h, _k: -1 });
+  Object.assign(el, { _peaks: peaks, _n: n, _k: -1 });
   el.classList.toggle("is-idle", !peaks);
-  el.innerHTML = h.map((v) => `<i style="height:${v}px"></i>`).join("");
+  el.innerHTML = h.map((v) => `<i style="--v:${v.toFixed(4)}"></i>`).join("");
   setHead(el, k);
 }
 
+/* the playhead at bar k of el, the bars before it played: the playhead
+   alone reaches the top (app.css, .pk-wave i.head) */
 function setHead(el, k) {
   if (!el._n) return;
   k = Math.max(0, Math.min(el._n - 1, k || 0));
@@ -2312,12 +2318,8 @@ function setHead(el, k) {
   const bars = el.children;
   const [a, b] =
     el._k < 0 ? [0, el._n - 1] : [Math.min(el._k, k), Math.max(el._k, k)];
-  for (let i = a; i <= b; i++) {
-    bars[i].className = i < k ? "on" : "";
-    bars[i].style.height = `${el._h[i]}px`;
-  }
+  for (let i = a; i <= b; i++) bars[i].className = i < k ? "on" : "";
   bars[k].className = "head";
-  bars[k].style.height = `${el.clientHeight || 64}px`;
   el._k = k;
 }
 
@@ -2326,7 +2328,7 @@ function drawMainWave() {
   if (!f || viewName() !== "work") return;
   const mode = modeOf(f),
     wave = $("wave");
-  if (mode === "error") return;
+  if (mode === "error") return drawBar(f);
   const n = barsIn(wave);
   const at =
     mode === "review"
@@ -2360,8 +2362,13 @@ function drawDecor(el) {
 }
 
 /* The strip redrawn when its width changes: the window resized, or its
-   screen shown again. */
+   screen shown again. A change of height alone draws nothing: the bars are
+   shares of it (drawWave). */
+let waveWidth = 0;
 const resized = new ResizeObserver(() => {
+  const w = $("wave").clientWidth;
+  if (w === waveWidth) return;
+  waveWidth = w;
   if (viewName() === "work") drawMainWave();
 });
 resized.observe($("wave"));
@@ -2991,11 +2998,8 @@ function findCount() {
         .join("")
     : "";
   // the waveform a little shorter while there are ticks (app.css), its bars
-  // drawn again to its height
-  const strip = $("strip"),
-    was = strip.classList.contains("has-ticks");
-  if (strip.classList.toggle("has-ticks", !!dur && hits.length > 0) !== was)
-    drawMainWave();
+  // with it (drawWave)
+  $("strip").classList.toggle("has-ticks", !!dur && hits.length > 0);
 }
 
 function clearFind() {
@@ -3258,7 +3262,9 @@ async function findSpeakers(f) {
   spkBusy = "finding";
   manageRunning();
   if (playId === f.id) pausePlayback();
-  f.finding = { done: 0 };
+  // the bar's stretches as the diarizer hears them: those ended, and those
+  // going where it has got to (main.rs, Finding)
+  f.finding = { done: 0, closed: [], open: [] };
   updateSpeakers(f, true);
   showFinding(f);
   try {
@@ -3280,15 +3286,18 @@ async function findSpeakers(f) {
   spkRefresh(f);
 }
 
-/* How far the find has got (main.rs, Finding), a whole percent at a time */
+/* How far the find has got (main.rs, Finding), a whole percent at a time,
+   and the bar's stretches since the last */
 listen("finding", (e) => {
-  const { recent, done } = e.payload,
+  const { recent, done, closed, open } = e.payload,
     f = files.find((x) => x.recentId === recent && x.finding);
   if (!f) return;
   const g = f.finding;
   // the pace from the first, after the recording was read
   if (g.t0 == null) Object.assign(g, { t0: performance.now(), d0: done });
   g.done = done;
+  g.closed.push(...closed);
+  g.open = open;
   showFinding(f);
 });
 
@@ -3296,13 +3305,15 @@ listen("finding", (e) => {
    2026-11-14: a 3-hour file showed nothing once the toast had gone): the
    meter in play's place, the waveform filling as the diarizer hears the
    recording, and what is happening under it, with the time it has left in
-   the meter's tooltip. Then play, the time and the volume again, and the
-   playhead where it was. */
+   the meter's tooltip, and the speaker bar over it filling in as the
+   diarizer tells them apart (Peter, 2026-11-15). Then play, the time and the
+   volume again, and the playhead where it was. */
 function showFinding(f) {
   if (current() !== f || viewName() !== "work" || modeOf(f) !== "review")
     return;
   const g = f.finding,
     wave = $("wave");
+  drawBar(f);
   $("transport").hidden = $("time").hidden = $("vol-box").hidden = !!g;
   $("prog").hidden = $("pace").hidden = !g;
   $("wavebtn").disabled = !!g || !playable(f);
@@ -3517,26 +3528,38 @@ $("chips").onclick = (e) => {
   openMenu(c, true, "", "down who", (m) => renameIn(m, f, Number(c.dataset.s)));
 };
 
+/* Whether f's strip has the speaker bar: with its speakers shown, while
+   they are found, and while a transcription finds them as it goes (the
+   job's speakers), so that the bar fills in as they are heard. Without it
+   the waveform has the bar's place (app.css, #strip.spk). */
+function barShown(f) {
+  const mode = modeOf(f);
+  if (mode === "review") return spkShown(f) || !!f.finding;
+  return mode === "running" && !!f.diarizing;
+}
+
 /* The speaker bar over the waveform: each speaker's stretches of speech,
-   the diarizer's, or while a file is transcribing its turns so far. One
-   who starts while another talks is on the second line until the first
-   stops, then on the main one; each pixel shows whoever talks most of it,
-   so that at an hour, about 6 s a pixel, it still reads. */
+   the diarizer's; while they are found, those it has heard so far; while a
+   file is transcribing, its turns so far. One who starts while another
+   talks is on the second line until the first stops, then on the main one;
+   each pixel shows whoever talks most of it, so that at an hour, about 6 s
+   a pixel, it still reads. Hidden, it keeps what it drew as it fades. */
 function drawBar(f) {
-  const strip = $("strip"),
-    bar = $("spk-bar"),
-    mode = f ? modeOf(f) : "";
-  const on = !!f && spkShown(f) && (mode === "review" || mode === "running");
-  strip.classList.toggle("spk", on);
-  if (!on || !f.duration) {
+  const bar = $("spk-bar"),
+    on = !!f && barShown(f);
+  $("strip").classList.toggle("spk", on);
+  if (!on) return;
+  if (!f.duration) {
     bar.innerHTML = "";
     return;
   }
   const px = Math.max(1, Math.floor(bar.clientWidth)),
     per = f.duration / px;
-  const running = mode === "running";
-  const src =
-    !running && f.stretches.length
+  const running = modeOf(f) === "running",
+    g = f.finding;
+  const src = g
+    ? g.closed.concat(g.open)
+    : !running && f.stretches.length
       ? f.stretches
       : f.segments
           .filter((s) => s.speaker != null)

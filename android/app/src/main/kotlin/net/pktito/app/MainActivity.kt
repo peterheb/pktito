@@ -613,10 +613,13 @@ class MainActivity : ComponentActivity() {
                                     (Downloads.speakers && Downloads.state?.step != "failed"),
                             heard = if (Speakers.finding) Speakers.heard else null,
                             shown = spoken,
+                            place =
+                                (review && (spoken || Speakers.finding)) ||
+                                    (t.running && t.diarizing),
                             editable = review,
                             present = present,
                             nameOf = { n -> Speakers.nameOf(resources, t.names, n) },
-                            bar = bar,
+                            bar = if (Speakers.finding) Speakers.growing else bar,
                             upto = if (t.running) t.done * t.duration else Double.MAX_VALUE,
                             toggle = ::toggleSpeakers,
                             move = ::moveSpeaker,

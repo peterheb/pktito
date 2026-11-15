@@ -944,7 +944,7 @@ fun Work(
                     why = why,
                     locate = locate,
                     bar =
-                        if (spk.shown && duration > 0)
+                        if (spk.place && duration > 0)
                             ({ m -> SpeakerBar(spk.bar, duration, spk.upto, m) })
                         else null,
                 )
