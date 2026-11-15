@@ -316,12 +316,11 @@ class MainActivity : ComponentActivity() {
         // right (Peter, 2026-11-14)
         val present by remember { derivedStateOf { Speakers.present(t.segments) } }
         val spoken = Speakers.on && present.isNotEmpty()
-        // the bar's stretches, the diarizer's, or while a file is transcribing
-        // its turns so far (app.js, drawBar)
+        // the bar: the transcript's turns, the speakers its text shows, a
+        // change included (app.js, drawBar)
         val bar by remember {
             derivedStateOf {
-                if (!t.running && t.stretches.isNotEmpty()) t.stretches
-                else t.segments.mapNotNull { s -> s.speaker?.let { Stretch(s.start, s.end, it) } }
+                t.segments.mapNotNull { s -> s.speaker?.let { Stretch(s.start, s.end, it) } }
             }
         }
         // a search's matches in the rows shown, a finished transcript's only

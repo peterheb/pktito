@@ -3586,12 +3586,17 @@ function barShown(f) {
   return mode === "running" && !!f.diarizing;
 }
 
-/* The speaker bar over the waveform: each speaker's stretches of speech,
-   the diarizer's; while they are found, those it has heard so far; while a
-   file is transcribing, its turns so far. One who starts while another
-   talks is on the second line until the first stops, then on the main one;
-   each pixel shows whoever talks most of it, so that at an hour, about 6 s
-   a pixel, it still reads. Hidden, it keeps what it drew as it fades. */
+/* The speaker bar over the waveform: the transcript's turns, each in its
+   speaker's color, the same speakers its text shows, a change of yours
+   included; while speakers are found, the stretches the diarizer has heard
+   so far. Each pixel shows whoever talks most of it, so that at an hour,
+   about 6 s a pixel, it still reads, and a turn too short to win a pixel
+   still gets the one at its middle: a word given to another speaker shows,
+   to be found and put right. A second voice heard over the one talking
+   has no line of its own: the transcript has no words for it, so a mark
+   there led nowhere (Peter, 2026-11-15; 21 such marks in a 40-minute
+   podcast, each under two thirds of a second, none with a word). Hidden,
+   the bar keeps what it drew as it fades. */
 function drawBar(f) {
   const bar = $("spk-bar"),
     on = !!f && barShown(f);
@@ -3607,36 +3612,35 @@ function drawBar(f) {
     g = f.finding;
   const src = g
     ? g.closed.concat(g.open)
-    : !running && f.stretches.length
-      ? f.stretches
-      : f.segments
-          .filter((s) => s.speaker != null)
-          .map((s) => ({ start: s.start, end: s.end, speaker: s.speaker }));
-  const lines = barLines(src, running ? f.done * f.duration : Infinity);
+    : f.segments
+        .filter((s) => s.speaker != null)
+        .map((s) => ({ start: s.start, end: s.end, speaker: s.speaker }));
+  const who = pixels(
+    barParts(src, running ? f.done * f.duration : Infinity),
+    px,
+    per,
+    !g,
+  );
   let html = "";
-  for (const [cls, parts] of [
-    ["", lines.main],
-    ["is-second", lines.second],
-  ]) {
-    const who = pixels(parts, px, per);
-    for (let x = 0; x < px; ) {
-      const n = who[x];
-      let e = x + 1;
-      while (e < px && who[e] === n) e++;
-      if (n) {
-        // a pixel apart from the next, where there is room
-        const w = e - x,
-          inset = w > 3 ? 1 : 0;
-        html += `<b${cls ? ` class="${cls}"` : ""} style="left:${x + inset}px;width:${w - 2 * inset}px;background:var(--speaker-bar-${slotOf(n)})"></b>`;
-      }
-      x = e;
+  for (let x = 0; x < px; ) {
+    const n = who[x];
+    let e = x + 1;
+    while (e < px && who[e] === n) e++;
+    if (n) {
+      // a pixel apart from the next, where there is room
+      const w = e - x,
+        inset = w > 3 ? 1 : 0;
+      html += `<b style="left:${x + inset}px;width:${w - 2 * inset}px;background:var(--speaker-bar-${slotOf(n)})"></b>`;
     }
+    x = e;
   }
   bar.innerHTML = html;
 }
 
-/* the bar's two lines from stretches, up to upto seconds */
-function barLines(stretches, upto) {
+/* the bar's parts from stretches, up to upto seconds: a speaker's that meet
+   made one, and where two overlap (the diarizer's can), the one who was
+   talking keeps the line until they stop */
+function barParts(stretches, upto) {
   const by = new Map();
   for (const g of stretches) {
     const a = g.start,
@@ -3645,7 +3649,6 @@ function barLines(stretches, upto) {
     if (!by.has(g.speaker)) by.set(g.speaker, []);
     by.get(g.speaker).push([a, b]);
   }
-  // a speaker's stretches that meet, one
   const all = [];
   for (const [s, list] of by) {
     list.sort((x, y) => x[0] - y[0]);
@@ -3656,12 +3659,10 @@ function barLines(stretches, upto) {
     }
   }
   all.sort((x, y) => x.a - y.a || x.b - y.b);
-  const main = [],
-    second = [];
+  const main = [];
   let holder = null;
   for (const u of all) {
     if (holder && u.a < holder.b) {
-      second.push({ s: u.s, a: u.a, b: Math.min(u.b, holder.b) });
       if (u.b > holder.b) {
         main.push({ s: u.s, a: holder.b, b: u.b });
         holder = u;
@@ -3671,11 +3672,12 @@ function barLines(stretches, upto) {
       holder = u;
     }
   }
-  return { main, second };
+  return main;
 }
 
-/* each pixel's speaker on a line: whoever talks most of it, 0 for none */
-function pixels(parts, px, per) {
+/* each pixel's speaker: whoever talks most of it, 0 for none; with
+   everyTurn, a part that wins no pixel takes the one at its middle */
+function pixels(parts, px, per, everyTurn) {
   const time = Array.from({ length: SPEAKERS + 1 }, () => new Float64Array(px));
   for (const p of parts) {
     const n = slotOf(p.s),
@@ -3695,6 +3697,17 @@ function pixels(parts, px, per) {
         who[x] = n;
       }
   }
+  if (everyTurn)
+    for (const p of parts) {
+      const n = slotOf(p.s),
+        x0 = Math.max(0, Math.floor(p.a / per)),
+        x1 = Math.min(px - 1, Math.floor(p.b / per));
+      let shown = false;
+      for (let x = x0; x <= x1 && !shown; x++) shown = who[x] === n;
+      if (!shown)
+        who[Math.min(px - 1, Math.max(0, Math.floor((p.a + p.b) / 2 / per)))] =
+          n;
+    }
   return who;
 }
 

@@ -945,7 +945,15 @@ fun Work(
                     locate = locate,
                     bar =
                         if (spk.place && duration > 0)
-                            ({ m -> SpeakerBar(spk.bar, duration, spk.upto, m) })
+                            ({ m ->
+                                SpeakerBar(
+                                    spk.bar,
+                                    duration,
+                                    spk.upto,
+                                    m,
+                                    finding = spk.heard != null,
+                                )
+                            })
                         else null,
                 )
             if (review && rows.isNotEmpty())

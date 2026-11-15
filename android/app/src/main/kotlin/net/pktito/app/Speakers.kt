@@ -369,11 +369,11 @@ object Speakers {
     class Part(val speaker: Int, val a: Double, val b: Double)
 
     /**
-     * The bar's two lines (the desktop's barLines): each speaker's stretches up to upto seconds,
-     * those that meet made one, on the main line, and one who starts while another talks on the
-     * second until the first stops, then on the main one.
+     * The bar's parts (the desktop's barParts): each speaker's stretches up to upto seconds, those
+     * that meet made one, and where two overlap (the diarizer's can), the one who was talking keeps
+     * the line until they stop.
      */
-    fun lines(stretches: List<Stretch>, upto: Double): Pair<List<Part>, List<Part>> {
+    fun parts(stretches: List<Stretch>, upto: Double): List<Part> {
         val by = sortedMapOf<Int, MutableList<Pair<Double, Double>>>()
         for (g in stretches) {
             val a = g.start
@@ -398,12 +398,10 @@ object Speakers {
         }
         all.sortWith(compareBy<Run>({ it.a }, { it.b }))
         val main = ArrayList<Part>()
-        val second = ArrayList<Part>()
         var holder: Run? = null
         for (u in all) {
             val h = holder
             if (h != null && u.a < h.b) {
-                second.add(Part(u.s, u.a, minOf(u.b, h.b)))
                 if (u.b > h.b) {
                     main.add(Part(u.s, h.b, u.b))
                     holder = u
@@ -413,13 +411,15 @@ object Speakers {
                 holder = u
             }
         }
-        return main to second
+        return main
     }
 
     /**
-     * Each of px pixels' speaker on a line, per seconds a pixel: whoever talks most of it; 0 none.
+     * Each of px pixels' speaker, per seconds a pixel: whoever talks most of it; 0 none. With
+     * everyTurn, a part that wins no pixel takes the one at its middle, so that a word given to
+     * another speaker shows on the bar, to be found and put right (app.js, pixels).
      */
-    fun pixels(parts: List<Part>, px: Int, per: Double): IntArray {
+    fun pixels(parts: List<Part>, px: Int, per: Double, everyTurn: Boolean = false): IntArray {
         val time = Array(MOST + 1) { DoubleArray(px) }
         for (p in parts) {
             val n = slotOf(p.speaker)
@@ -438,6 +438,14 @@ object Speakers {
                 who[x] = n
             }
         }
+        if (everyTurn)
+            for (p in parts) {
+                val n = slotOf(p.speaker)
+                val x0 = maxOf(0, (p.a / per).toInt())
+                val x1 = minOf(px - 1, (p.b / per).toInt())
+                if ((x0..x1).none { who[it] == n })
+                    who[((p.a + p.b) / 2 / per).toInt().coerceIn(0, px - 1)] = n
+            }
         return who
     }
 

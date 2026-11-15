@@ -107,7 +107,8 @@ class SpeakersView(
     val present: List<Int>,
     val nameOf: (Int) -> String,
     /**
-     * the bar's stretches, those heard so far while they are found, and the seconds it is drawn to
+     * the bar's turns, or while speakers are found the stretches heard so far, and the seconds it
+     * is drawn to
      */
     val bar: List<Stretch>,
     val upto: Double,
@@ -547,41 +548,47 @@ fun RenameSpeaker(
 }
 
 /**
- * The speaker bar over the waveform (app.js, drawBar): each speaker's stretches of speech on a 4 dp
- * line, and 2 dp above it a second line for one who starts while another talks, until the first
- * stops (Speakers.lines). Each dp of it shows whoever talks most of it (Speakers.pixels), so that
- * an hour still reads, about 14 s a dp on a 393 dp phone (its waveform's 257 dp), and a run of one
- * speaker's wider than 3 dp stands 1 dp clear of the next either side. 10 dp tall; the strip puts
- * it 8 dp over the waveform.
+ * The speaker bar over the waveform (app.js, drawBar): the transcript's turns on a 4 dp line, each
+ * in its speaker's color; while speakers are found, the stretches the diarizer has heard so far
+ * (finding). Each dp of it shows whoever talks most of it (Speakers.pixels), so that an hour still
+ * reads, about 14 s a dp on a 393 dp phone (its waveform's 257 dp), and a turn too short to win a
+ * dp still gets the one at its middle; a run of one speaker's wider than 3 dp stands 1 dp clear of
+ * the next either side. A second voice heard over the one talking has no line of its own: the
+ * transcript has no words for it (Peter, 2026-11-15). 10 dp tall; the strip puts it 8 dp over the
+ * waveform.
  */
 @Composable
-fun SpeakerBar(stretches: List<Stretch>, duration: Double, upto: Double, modifier: Modifier) {
+fun SpeakerBar(
+    stretches: List<Stretch>,
+    duration: Double,
+    upto: Double,
+    modifier: Modifier,
+    finding: Boolean = false,
+) {
     val p = pk
-    val lines = remember(stretches, upto) { Speakers.lines(stretches, upto) }
+    val parts = remember(stretches, upto) { Speakers.parts(stretches, upto) }
     val label = stringResource(R.string.speakers_bar)
     Canvas(modifier.fillMaxWidth().height(10.dp).semantics { contentDescription = label }) {
         if (duration <= 0) return@Canvas
         val dp = density
         val px = maxOf(1, (size.width / dp).toInt())
         val per = duration / px
-        for ((parts, top) in listOf(lines.first to 6f * dp, lines.second to 0f)) {
-            val who = Speakers.pixels(parts, px, per)
-            var x = 0
-            while (x < px) {
-                val n = who[x]
-                var e = x + 1
-                while (e < px && who[e] == n) e++
-                if (n != 0) {
-                    val w = e - x
-                    val inset = if (w > 3) 1 else 0
-                    drawRect(
-                        p.speakerBar(n),
-                        Offset((x + inset) * dp, top),
-                        Size((w - 2 * inset) * dp, 4f * dp),
-                    )
-                }
-                x = e
+        val who = Speakers.pixels(parts, px, per, everyTurn = !finding)
+        var x = 0
+        while (x < px) {
+            val n = who[x]
+            var e = x + 1
+            while (e < px && who[e] == n) e++
+            if (n != 0) {
+                val w = e - x
+                val inset = if (w > 3) 1 else 0
+                drawRect(
+                    p.speakerBar(n),
+                    Offset((x + inset) * dp, 6f * dp),
+                    Size((w - 2 * inset) * dp, 4f * dp),
+                )
             }
+            x = e
         }
     }
 }

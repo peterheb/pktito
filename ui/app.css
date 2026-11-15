@@ -2768,9 +2768,6 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   height: 4px;
   border-radius: 2px;
 }
-.pk-spkbar b.is-second {
-  top: 0;
-}
 /* a click on the bar, or between it and the waveform, puts the playhead
    there as one on the waveform does (Peter, 2026-11-14): the waveform's
    button keeps the bar's place over the waveform, drawn after the bar, so
