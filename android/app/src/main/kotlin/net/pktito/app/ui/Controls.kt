@@ -647,10 +647,11 @@ fun Toast(text: String, modifier: Modifier = Modifier) {
 }
 
 /**
- * The desktop's menu: on the ground, its corners the app's, a ring of sunk and the shadow of what
- * floats, its items 6 dp in from its sides and 2 apart (app.css, .pk-menu), and Material's 8 above
- * and below them; at most 420 dp wide, or 480 for the time menu's rates (.pk-menu.is-wide). Items
- * are Item and Check below. What opened it keeps its press while it is up (control, held).
+ * The desktop's menu: on the ground, its corners the app's, a ring of menuEdge (sunk in light; in
+ * dark the toast's edge, where the shadow is lost on the ground: Peter, 2026-11-15) and the shadow
+ * of what floats, its items 6 dp in from its sides and 2 apart (app.css, .pk-menu), and Material's
+ * 8 above and below them; at most 420 dp wide, or 480 for the time menu's rates (.pk-menu.is-wide).
+ * Items are Item and Check below. What opened it keeps its press while it is up (control, held).
  */
 @Composable
 fun Menu(
@@ -668,7 +669,7 @@ fun Menu(
         shape = Corner,
         containerColor = p.ground,
         shadowElevation = 12.dp,
-        border = BorderStroke(1.dp, p.sunk),
+        border = BorderStroke(1.dp, p.menuEdge),
     ) {
         Column(
             Modifier.widthIn(min = 240.dp, max = if (wide) 480.dp else 420.dp)

@@ -2357,6 +2357,9 @@ html:not([data-chrome="win"]) .pk-head > #stop {
    (Peter, 2026-10-31; the layout audit, 2026-11-01) */
 
 /* ------------------------------------------------------------------ menus -- */
+/* its ring 1 px of menu-edge: sunk in light; in dark, where its shadow is
+   lost on the ground it shares with the window, the toast's edge (Peter,
+   2026-11-15) */
 .pk-menu {
   position: fixed;
   z-index: 40;
@@ -2364,7 +2367,7 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   border-radius: var(--radius-ui);
   box-shadow:
     var(--shadow-float),
-    0 0 0 1px var(--sunk);
+    0 0 0 1px var(--menu-edge);
   padding: 6px;
   display: grid;
   gap: 2px;
@@ -2641,8 +2644,10 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   outline-offset: -2px;
 }
 
-/* A speaker's mark beside a name: a circle for speakers 1 to 4 and a
-   square a pixel smaller for 5 to 8, the same area. Every pair close in
+/* A speaker's mark beside a name, in the names over the transcript and in
+   Who's speaking: a swatch, not the transcript's line, which 3 px wide
+   beside a name read as a divider (Peter, 2026-11-15). A circle for
+   speakers 1 to 4 and a square a pixel smaller for 5 to 8, the same area. Every pair close in
    color crosses that line but magenta and orchid, 5 and 8 (the design's
    palette check, OKLab ΔE: neighbors 8.9 or more for color-blind readers). */
 .pk-mark {
@@ -2682,19 +2687,22 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   vertical-align: middle;
   margin-right: 7px;
 }
-/* A turn's line (the prototype of Peter's 2026-11-15 question): each row
-   of a speaker's turn carries a 3 px line in the speaker's colour in the
-   gap before its text, 6 px from it, so that a turn reads as a paragraph
-   of its own and its name, at its top, says whose; it starts and ends 10
-   px inside the turn's first and last rows, and turns stand 12 px apart
-   (.pk-turn). With the time above the text, at the row's left edge. */
+/* A turn's line (Peter's question of 2026-11-15): each row of a
+   speaker's turn carries a 3 px line in the speaker's colour between the
+   times and the text, so that a turn reads as a paragraph of its own and
+   its name, at its top, says whose; it starts and ends 10 px inside the
+   turn's first and last rows, and turns stand 12 px apart (.pk-turn). 114
+   px in, 23 px before the text: 4 px from it, the line and its button sat
+   crowded against the text beside the times' wide gutter (Peter,
+   2026-11-15). With the time above the text, at the row's left edge. */
 .pk-seg[data-spk] {
   position: relative;
+  --line-x: 114px;
 }
 .pk-seg[data-spk]::before {
   content: "";
   position: absolute;
-  left: calc(16px + 112px + 5px);
+  left: var(--line-x);
   width: 3px;
   top: 0;
   bottom: 0;
@@ -2709,15 +2717,17 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   border-bottom-left-radius: 1.5px;
   border-bottom-right-radius: 1.5px;
 }
-/* a sentence's speaker (app.js, dotBtn): a button just before its line,
-   at its first line of text, in the times' column's room after the time,
-   shown while the pointer is on the row, that gives that sentence alone to
-   another speaker; a person with a pencil, in a ring of the speaker's
-   colour. With the time above the text, after the time on its line. */
+/* a sentence's speaker (app.js, dotBtn): a button on its line, centred
+   on it at the sentence's first line of text, shown while the pointer is
+   on the row, that gives that sentence alone to another speaker; a person
+   with a pencil, in a ring of the speaker's colour. On the line it is 12
+   px from the text and 9.5 from an hour's time (1:02:03.45 ends 94 px in,
+   measured in WebKit): beside the line there was no room for both. With
+   the time above the text, after the time on its line. */
 .pk-sdot {
   position: absolute;
   top: 9.6px;
-  left: calc(16px + 112px + 5px - 2px - 24px);
+  left: calc(var(--line-x) + 1.5px - 12px);
   width: 24px;
   height: 24px;
   display: grid;
@@ -2958,14 +2968,4 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 }
 .pk-toast .pk-undo:hover {
   background: var(--tint-term-press);
-}
-
-/* every speaker's mark, the names over the transcript's (.pk-chip) and
-   Who's speaking's: a short line, the transcript's, not a dot (the line
-   prototype) */
-.pk-mark,
-.pk-mark.is-sq {
-  width: 3px;
-  height: 14px;
-  border-radius: 1.5px;
 }

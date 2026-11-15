@@ -19,6 +19,7 @@ enum Pk {
     static let termDim = Color(light: 0x8FA0BD, dark: 0x8FA0BD)
     static let termLine = Color(light: 0x2A3A5A, dark: 0x2C3D5F)
     static let toastEdge = Color(light: 0xE5EBF4, dark: 0xE5EBF4, lightAlpha: 0, darkAlpha: 0.18)
+    static let menuEdge = Color(light: 0xDBE1EA, dark: 0xE5EBF4, darkAlpha: 0.18)
     static let wave = Color(light: 0x4F77B0, dark: 0x4F77B0)
     static let wavePlayed = Color(light: 0x6CC4F5, dark: 0x6CC4F5)
     static let ok = Color(light: 0x17673F, dark: 0x6FD39B)

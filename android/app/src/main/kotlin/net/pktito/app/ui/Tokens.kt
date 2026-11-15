@@ -28,6 +28,7 @@ class Palette(
     val termDim: Color,
     val termLine: Color,
     val toastEdge: Color,
+    val menuEdge: Color,
     val wave: Color,
     val wavePlayed: Color,
     val ok: Color,
@@ -73,6 +74,7 @@ val Light =
         termDim = Color(0xFF8FA0BD),
         termLine = Color(0xFF2A3A5A),
         toastEdge = Color(0xFFE5EBF4).copy(alpha = 0f),
+        menuEdge = Color(0xFFDBE1EA), // {sunk}
         wave = Color(0xFF4F77B0),
         wavePlayed = Color(0xFF6CC4F5), // {plume}
         ok = Color(0xFF17673F),
@@ -118,6 +120,7 @@ val Dark =
         termDim = Color(0xFF8FA0BD),
         termLine = Color(0xFF2C3D5F),
         toastEdge = Color(0xFFE5EBF4).copy(alpha = 0.18f),
+        menuEdge = Color(0xFFE5EBF4).copy(alpha = 0.18f),
         wave = Color(0xFF4F77B0),
         wavePlayed = Color(0xFF6CC4F5), // {plume}
         ok = Color(0xFF6FD39B),
