@@ -165,6 +165,12 @@ const ICON = {
 let st = null; // the Rust side's status: the model, the catalog, the platform
 let prefs = {}; // how transcripts are saved
 let dl = null; // the model download, as its last event told it
+/* The speaker model to download once the first model is in, in the setup's
+   place (Peter, 2026-11-15: fetched with the first model, deletable after);
+   dl.speakers while it downloads. Elsewhere it comes with the switch. */
+let speakersNext = false;
+const wantSpeakers = () =>
+  !!prefs.speakers && !!st.diarizer && !st.diarizer.have;
 let choice = null; // the model picked on the setup screen
 let recent = []; // the recent list, newest first
 const files = []; // the files open: one, or a batch, in the order they are transcribed
@@ -890,9 +896,11 @@ function renderSetup() {
     $("dl-file").onclick = useOwnFile;
   } else {
     $("dl-pause").onclick = () =>
-      (dl.step === "paused"
-        ? invoke("download_model", { name: dl.name })
-        : invoke("pause_download")
+      (dl.step !== "paused"
+        ? invoke("pause_download")
+        : dl.speakers
+          ? invoke("download_diarizer")
+          : invoke("download_model", { name: dl.name })
       ).catch((e) => toastErr(e));
   }
   updateDownload();
@@ -964,12 +972,19 @@ function updateChoose() {
       : t("setup.download", { label: labelOf(m), mb: mb(m.bytes) });
   $("go").innerHTML = `${m.have ? ICON.check : ICON.download}${esc(go)}`;
   const w = waiting();
-  $("go-note").textContent = w ? t("setup.waiting", { n: w }) : "";
+  $("go-note").textContent = w
+    ? t("setup.waiting", { n: w })
+    : !m.have && wantSpeakers()
+      ? t("setup.then_speakers", { mb: mb(st.diarizer.bytes) })
+      : "";
 }
 
 async function go() {
   const m = st.catalog.find((x) => x.name === choice);
-  if (!m.have) return startDownload(m);
+  if (!m.have) {
+    speakersNext = wantSpeakers();
+    return startDownload(m);
+  }
   try {
     await invoke("choose_model", { name: m.name });
     await refresh();
@@ -980,8 +995,11 @@ async function go() {
 
 function downloadHtml() {
   const m = st.catalog.find((x) => x.name === dl.name);
+  const title = dl.speakers
+    ? t("download.title_speakers")
+    : t("download.title", { label: m ? labelOf(m) : dl.name });
   return `${WORDMARK()}
-    <div class="pk-intro"><h1 class="pk-lead">${esc(t("download.title", { label: m ? labelOf(m) : dl.name }))}</h1>
+    <div class="pk-intro"><h1 class="pk-lead">${esc(title)}</h1>
       <p class="pk-text">${t("download.from_html", { file: esc(dl.name), host: '<span id="dl-host"></span>' })}</p></div>
     <div class="pk-dl">
       <div class="pk-spread"><span class="pk-figure" id="dl-pct"></span><span class="pk-stamp" id="dl-nums"></span></div>
@@ -1071,6 +1089,32 @@ listen("download", async (e) => {
     return;
   }
   if (s.step === "done" || s.step === "cancelled") {
+    // the first model in: the speaker model next, the setup still up, so
+    // that the files waiting are transcribed with their speakers
+    if (s.step === "done" && speakersNext && wantSpeakers()) {
+      speakersNext = false;
+      dl = {
+        name: st.diarizer.name,
+        step: "downloading",
+        got: 0,
+        total: st.diarizer.bytes,
+        speed: 0,
+        host: s.host,
+        problem: null,
+        retry: false,
+        trying: false,
+        speakers: true,
+      };
+      setupKey = "";
+      renderSetup();
+      return invoke("download_diarizer").catch(async (e) => {
+        dl = null;
+        setupKey = "";
+        await refresh();
+        toastErr(e);
+      });
+    }
+    speakersNext = false;
     dl = null;
     setupKey = "";
     await refresh();
@@ -3432,6 +3476,21 @@ async function spkWhileRunning(f) {
 }
 
 async function diarizerDownload(s) {
+  // the setup's, after the first model (speakersNext): its screen until it
+  // ends; a problem leaves it to the switch, the speech model ready
+  if (dl && dl.speakers) {
+    if (s.step === "done" || s.step === "cancelled" || s.problem) {
+      dl = null;
+      setupKey = "";
+      await refresh().catch(toastErr);
+      if (s.step === "done") toast(t("speakers.ready"));
+      else if (s.problem) toastErr(s.problem);
+      return;
+    }
+    dl = { ...s, speakers: true };
+    if (viewName() === "setup") renderSetup();
+    return;
+  }
   const f = current();
   if (s.step === "done") {
     spkBusy = "";

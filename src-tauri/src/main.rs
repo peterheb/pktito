@@ -563,8 +563,9 @@ fn download_model(app: AppHandle, state: State<'_, AppState>, name: String) -> R
     Ok(())
 }
 
-/// Download the diarizer, the first time the Speakers switch is turned on;
-/// "download" events under its name say how it goes, as a model's do.
+/// Download the diarizer, after the first model in the setup or the first
+/// time the Speakers switch is turned on; "download" events under its name
+/// say how it goes, as a model's do.
 #[tauri::command]
 fn download_diarizer(app: AppHandle, state: State<'_, AppState>) -> Result<(), Problem> {
     let d = model::DIARIZER.ok_or("no diarizer in this build")?;
@@ -576,7 +577,15 @@ fn download_diarizer(app: AppHandle, state: State<'_, AppState>) -> Result<(), P
                 j.resume_now();
                 return Ok(());
             }
-            return Err(Problem::new("download.busy").with("name", j.name()));
+            // the first model's, done and on its way out, which the
+            // speaker model follows (app.js, the setup's download)
+            if j.state().step != "done" {
+                return Err(Problem::new("download.busy").with("name", j.name()));
+            }
+        }
+        let t = Instant::now();
+        while j.alive() && t.elapsed() < Duration::from_secs(3) {
+            std::thread::sleep(Duration::from_millis(20));
         }
     }
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;

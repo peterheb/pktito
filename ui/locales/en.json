@@ -124,11 +124,13 @@
   "setup.details": "Details",
   "setup.have_file": "I already have a model file…",
   "setup.waiting": { "one": "{n} file waiting", "other": "{n} files waiting" },
+  "setup.then_speakers": "Then the speaker model, {mb}\u00a0MB",
   "setup.use": "Use the {label} model",
   "setup.download": "Download the {label} model\u00a0· {mb}\u00a0MB",
   "setup.download_rest": "Download the {label} model\u00a0· {mb}\u00a0MB\u00a0to\u00a0go",
 
   "download.title": "Downloading the {label} model",
+  "download.title_speakers": "Downloading the speaker model",
   "download.from_html": "{file} from {host}",
   "download.bar": "Model download",
   "download.bar_stopped": "Model download, stopped",

@@ -115,10 +115,12 @@
     "one": "[{n} fįłę wąįțįńg ·····]",
     "other": "[{n} fįłęș wąįțįńg ······]"
   },
+  "setup.then_speakers": "[Țhęń țhę șpęąkęř mőďęł, {mb} MB ····· ··]",
   "setup.use": "[Űșę țhę {label} mőďęł ······]",
   "setup.download": "[Ďőwńłőąď țhę {label} mőďęł · {mb} MB ····· ·]",
   "setup.download_rest": "[Ďőwńłőąď țhę {label} mőďęł · {mb} MB țő gő ····· ····]",
   "download.title": "[Ďőwńłőąďįńg țhę {label} mőďęł ······]",
+  "download.title_speakers": "[Ďőwńłőąďįńg țhę șpęąkęř mőďęł ····· ···]",
   "download.from_html": "[{file} fřőm {host} ···]",
   "download.bar": "[Mőďęł ďőwńłőąď ······]",
   "download.bar_stopped": "[Mőďęł ďőwńłőąď, șțőppęď ····· ·]",
