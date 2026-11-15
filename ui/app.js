@@ -2044,7 +2044,7 @@ function segHtml(s, i, filling, turn = -1, dot = false) {
       : "";
   const start = tc(s.start);
   return (
-    `<div class="pk-seg${cue ? " pk-cue" : ""}${turn >= 0 && i > 0 ? " pk-turn" : ""}" data-i="${i}"><div class="pk-seg-times"><button class="pk-seg-t" type="button" tabindex="-1" ` +
+    `<div class="pk-seg${cue ? " pk-cue" : ""}${turn >= 0 && i > 0 ? " pk-turn" : ""}" data-i="${i}" data-t="${s.start}"><div class="pk-seg-times"><button class="pk-seg-t" type="button" tabindex="-1" ` +
     `aria-label="${esc(t("seg.play_from", { time: start }))}"${filling ? "" : ` title="${esc(t("seg.play_here"))}"`}>${start}</button>` +
     (cue ? `<span class="pk-seg-end">${tc(s.end)}${fast}</span>` : "") +
     (dot ? dotBtn(f, i) : "") +
@@ -2643,6 +2643,37 @@ function at(list, t) {
   return lo - 1;
 }
 
+/* The reader's place in the transcript as drawn: row if it is in sight,
+   else the first row in sight; its time (data-t, so that it holds whatever
+   rows the file has now) and where it is in the window. toPlace puts the
+   row of that time there again once the transcript is drawn anew: in the
+   window, not in the transcript, so that the text stays still while the
+   names over it come or go (eight of them took two lines) and the pointer
+   stays on the mark it clicked. */
+function placeOf(row) {
+  const tr = $("transcript"),
+    top = tr.getBoundingClientRect().top,
+    rows = tr.getElementsByClassName("pk-seg");
+  let el = row && row.isConnected && inSight(row) ? row : null;
+  if (!el) {
+    let lo = 0,
+      hi = rows.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (rows[mid].getBoundingClientRect().bottom <= top) lo = mid + 1;
+      else hi = mid;
+    }
+    el = rows[lo];
+  }
+  return el
+    ? { t: Number(el.dataset.t), y: el.getBoundingClientRect().top }
+    : null;
+}
+function toPlace(f, place) {
+  const el = place && rowEl(at(rowsOf(f), place.t));
+  if (el) $("transcript").scrollTop += el.getBoundingClientRect().top - place.y;
+}
+
 /* The playhead at t: the time, the waveform, and the segment and word
    under it, brought into sight when follow says how: "smooth" while it
    plays, at once after a jump. */
@@ -3185,13 +3216,28 @@ function updateSpeakers(f, review) {
 const limitHtml = () =>
   `<button class="pk-limit" type="button" aria-haspopup="dialog" aria-expanded="false" title="${esc(t("speakers.limit", { n: num(SPEAKERS) }))}">${ICON.info}</button>`;
 
-/* f drawn again after its speakers changed, where it shows */
-function spkRefresh(f) {
+/* f drawn again after its speakers changed, where it shows, the reader
+   left where they were (Peter, 2026-11-15: a speaker changed from a
+   sentence's mark snapped the transcript back to the playhead, as a change
+   of view does): row, the one just changed, where it was on the screen if
+   it was in sight, else the first row in sight; a search kept with its
+   match, as retime keeps them. Names come and go and cues are cut again,
+   so the rows above can change height: the row is kept, not the pixels. */
+function spkRefresh(f, row) {
   if (!f || current() !== f || modeOf(f) !== "review" || viewName() !== "work")
     return;
-  rebuild();
+  const place = placeOf(row),
+    on = hitAt;
+  // the names over the transcript first: they move it
   updateSpeakers(f, true);
   drawBar(f);
+  renderTranscript(f, "review");
+  showTime(f.pos);
+  if (query) {
+    runFind();
+    if (on >= 0 && on < hits.length) goHit(on, false);
+  }
+  toPlace(f, place);
 }
 
 $("spk").onclick = async () => {
@@ -3345,16 +3391,17 @@ function showFinding(f) {
   setHead(wave, Math.floor(g.done * wave._n));
 }
 
-/* A change to f's speakers: made, drawn, kept on the recent list, and
-   undone from its toast where it says what it did */
-function edit(f, change, said) {
+/* A change to f's speakers: made, drawn with row, the one changed, where
+   it was (spkRefresh), kept on the recent list, and undone from its toast
+   where it says what it did */
+function edit(f, change, said, row) {
   const before = {
     speakers: f.segments.map((s) => s.speaker),
     names: [...f.names],
     stretches: f.stretches,
   };
   change();
-  spkChanged(f);
+  spkChanged(f, row);
   if (said)
     toast(said, {
       undo: () => {
@@ -3366,10 +3413,10 @@ function edit(f, change, said) {
     });
 }
 
-async function spkChanged(f) {
+async function spkChanged(f, row) {
   f.cues = null;
   if (prefs.captions) await cuesOf(f).catch(toastErr);
-  spkRefresh(f);
+  spkRefresh(f, row);
   if (f.recentId)
     invoke("set_speakers", {
       id: f.recentId,
@@ -3447,6 +3494,7 @@ function openWho(btn) {
             f.stretches = moveStretches(f.stretches, u.s, to, u.start, u.end);
           },
           t("speakers.moved", { name: nameOf(f, to) }),
+          btn.closest(".pk-seg"),
         );
       }
       if (e.target.closest("[data-rename]")) renameIn($("menu"), f, u.s);
