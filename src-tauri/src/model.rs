@@ -587,7 +587,9 @@ pub struct Prefs {
     pub side: f64,
     /// Who said what: a transcription runs the diarizer too, once its model
     /// is here, and the window shows each turn's speaker. The switch beside
-    /// the views, kept for the next file (speakers UI, PKT-27).
+    /// the views, kept for the next file (speakers UI, PKT-27); on to begin
+    /// with, one voice showing nothing more than without (Peter,
+    /// 2026-11-15).
     pub speakers: bool,
 }
 
@@ -603,7 +605,7 @@ impl Default for Prefs {
             speed: 1.0,
             volume: 1.0,
             side: 0.0,
-            speakers: false,
+            speakers: true,
         }
     }
 }

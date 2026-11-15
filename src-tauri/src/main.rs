@@ -46,6 +46,9 @@ struct AppState {
     download: Mutex<Option<Arc<download::Job>>>,
     /// The transcription asked to stop, by id; 0 for none.
     stop: AtomicU32,
+    /// The transcription whose speakers the window's switch turned off
+    /// while it ran, by id; 0 for none (transcribe::Speakers::off_when).
+    quiet: AtomicU32,
     /// The model file the transcription under way uses, from its reading of
     /// the settings to its end (Using): Manage models can't delete it
     /// meanwhile, whichever model is in use by then (delete_model).
@@ -1030,7 +1033,10 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
     };
     let mut speakers = match (&diarizer, dslot.as_mut()) {
         (Some(p), Some(d)) => match ensure_diarizer(d, p) {
-            Ok(Diarizer { diar, model, .. }) => Some(transcribe::Speakers::new(model, diar)),
+            Ok(Diarizer { diar, model, .. }) => Some(
+                transcribe::Speakers::new(model, diar)
+                    .off_when(|| state.quiet.load(Ordering::Relaxed) == id),
+            ),
             Err(why) => return fail(trouble("transcribe.cant_load_model", why)),
         },
         _ => None,
@@ -1080,6 +1086,9 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
     }
     let _ = state
         .stop
+        .compare_exchange(id, 0, Ordering::Relaxed, Ordering::Relaxed);
+    let _ = state
+        .quiet
         .compare_exchange(id, 0, Ordering::Relaxed, Ordering::Relaxed);
     match r {
         Ok((segments, true)) => {
@@ -1148,6 +1157,15 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
 #[tauri::command]
 fn stop(state: State<'_, AppState>, id: u32) {
     state.stop.store(id, Ordering::Relaxed);
+}
+
+/// The Speakers switch turned off while a transcription runs: from the
+/// chunk after the one it is on, it finds no speakers, and its transcript
+/// has none (Peter, 2026-11-15: one who knows a recording has one voice
+/// can have it go at the transcription's own speed).
+#[tauri::command]
+fn quiet(state: State<'_, AppState>, id: u32) {
+    state.quiet.store(id, Ordering::Relaxed);
 }
 
 #[tauri::command]
@@ -2340,6 +2358,7 @@ fn main() {
             pick_files,
             transcribe,
             stop,
+            quiet,
             recent_list,
             open_recent,
             reload_audio,

@@ -79,6 +79,8 @@ pub struct Speakers<'a> {
     pub model: &'a Model,
     pub diar: &'a mut Diar,
     pub stretches: Vec<Stretch>,
+    /// Whether the window's switch has turned speakers off partway (off_when)
+    off: Option<Box<dyn Fn() -> bool + 'a>>,
 }
 
 impl<'a> Speakers<'a> {
@@ -87,7 +89,20 @@ impl<'a> Speakers<'a> {
             model,
             diar,
             stretches: Vec::new(),
+            off: None,
         }
+    }
+
+    /// Speakers the window's switch can turn off while the run goes on
+    /// (main.rs, quiet): from the next chunk the diarizer is fed no more,
+    /// and the transcript has no speakers, as one transcribed without them.
+    pub fn off_when(mut self, off: impl Fn() -> bool + 'a) -> Speakers<'a> {
+        self.off = Some(Box::new(off));
+        self
+    }
+
+    fn turned_off(&self) -> bool {
+        self.off.as_ref().is_some_and(|off| off())
     }
 }
 
@@ -359,6 +374,8 @@ pub fn run_windows(
         return Ok((all, windows, false));
     }
     let mut heard = speakers.map(Heard::new);
+    // speakers turned off partway (Speakers::off_when)
+    let mut dropped = false;
     let mut open = Open::default();
     let mut done = 0.0;
     // the diarizer's trouble, which ends the run as the chunk callback can't
@@ -368,6 +385,10 @@ pub fn run_windows(
         let held = open.words(model);
         // the recording's end, or where it stops: the sentence still open ends
         let end = c.last || stopping;
+        if heard.as_ref().is_some_and(|h| h.s.turned_off()) {
+            heard = None;
+            dropped = true;
+        }
         let spk = match heard.as_mut().map(|h| h.tokens(model, x, c)).transpose() {
             Ok(s) => s,
             Err(why) => {
@@ -402,7 +423,15 @@ pub fn run_windows(
         return Err(why);
     }
     // a sentence still open where pktito ended with no last chunk to close it
-    let rest: Vec<Segment> = open.close(model).into_iter().collect();
+    let mut rest: Vec<Segment> = open.close(model).into_iter().collect();
+    // none of the speakers found before they were turned off: the
+    // transcript is one without them, whose speakers the switch finds
+    // again from the recording
+    if dropped {
+        for s in all.iter_mut().chain(rest.iter_mut()) {
+            s.speaker = None;
+        }
+    }
     if !rest.is_empty() {
         progress(done, &rest);
         all.extend(rest);
@@ -666,6 +695,50 @@ fn sentences(
 
 #[cfg(test)]
 mod files {
+    /// `PKAPP_MODEL=parakeet-tdt-0.6b-v2.pkf
+    /// PKAPP_DIARIZER=nemotron-3-diarization.pkf PKAPP_SPEECH=conv2.wav
+    /// cargo test speakers_turned_off_partway -- --ignored`: speakers the
+    /// switch turns off once the first chunk is in leave a transcript with
+    /// none and no bar, its words those of a run without speakers
+    #[test]
+    #[ignore]
+    fn speakers_turned_off_partway() {
+        use std::cell::Cell;
+        let var = |k| std::path::PathBuf::from(std::env::var(k).expect(k));
+        let model = crate::pktito::Model::load(&var("PKAPP_MODEL")).unwrap();
+        let mut asr = crate::pktito::Asr::new(&model, super::threads_wanted()).unwrap();
+        let heard = crate::pktito::Model::load(&var("PKAPP_DIARIZER")).unwrap();
+        let mut diar = crate::pktito::Diar::new(&heard, 0).unwrap();
+        let x = crate::decode::decode(&var("PKAPP_SPEECH")).unwrap();
+        let words = |segs: &[super::Segment]| {
+            segs.iter()
+                .flat_map(|s| s.words.iter().map(|w| w.text.clone()))
+                .collect::<Vec<_>>()
+        };
+        {
+            let mut on = super::Speakers::new(&heard, &mut diar);
+            let (with, _) =
+                super::run(&model, &mut asr, &x, Some(&mut on), |_, _| {}, || false).unwrap();
+            assert!(with.iter().any(|s| s.speaker.is_some()), "speakers when on");
+        }
+        let chunks = Cell::new(0);
+        let mut off = super::Speakers::new(&heard, &mut diar).off_when(|| chunks.get() > 0);
+        let (without, whole) = super::run(
+            &model,
+            &mut asr,
+            &x,
+            Some(&mut off),
+            |_, _| chunks.set(chunks.get() + 1),
+            || false,
+        )
+        .unwrap();
+        assert!(whole && chunks.get() > 1, "{} chunks", chunks.get());
+        assert!(without.iter().all(|s| s.speaker.is_none()));
+        assert!(off.stretches.is_empty());
+        let (plain, _) = super::run(&model, &mut asr, &x, None, |_, _| {}, || false).unwrap();
+        assert_eq!(words(&without), words(&plain));
+    }
+
     /// `PKAPP_DIARIZER=nemotron-3-diarization.pkf PKAPP_SPEECH=conv2.wav
     /// cargo test find_in_pieces_is_whole -- --ignored`: the diarizer's rows
     /// for a recording fed in find's pieces are those for it fed whole, to

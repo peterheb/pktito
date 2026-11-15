@@ -1499,8 +1499,11 @@ listen("job", (e) => {
   f.step = j.step;
   // whether this run finds the speakers as it goes, as the event with the
   // outline says (main.rs, JobEvent)
-  if (j.step === "reading") f.diarizing = false;
-  if (j.speakers) f.diarizing = true;
+  if (j.step === "reading") f.diarizing = f.quiet = f.findAfter = false;
+  if (j.speakers && !f.quiet) f.diarizing = true;
+  // turned off while it ran (spkWhileRunning): the sentences still to come
+  // without the speakers they were found with
+  if (f.quiet) for (const s of j.segments) s.speaker = null;
   if (j.duration) f.duration = j.duration;
   if (j.peaks.length) f.peaks = j.peaks;
   if (j.audio) f.audio = j.audio;
@@ -1522,6 +1525,12 @@ listen("job", (e) => {
       stretches: j.stretches || [],
     });
     finished(f);
+    // turned on while it ran: its speakers from its recording, once the
+    // model is here (diarizerDownload finds them if it comes after)
+    if (f.findAfter && st.diarizer && st.diarizer.have) {
+      f.findAfter = false;
+      findSpeakers(f);
+    }
   }
   update(f, j.segments);
   // nothing of the batch still to come: what Save all chose for the rest is done
@@ -3210,18 +3219,30 @@ let spkBusy = "";
    (main.rs, DiarizerOffer), and with speakers shown each one's name,
    which renames them */
 function updateSpeakers(f, review) {
-  const offer = !!st.diarizer && review && f.segments.length > 0;
+  // and while a transcription runs, where turned off it stops that file's
+  // speaker search at once (spkWhileRunning)
+  const running = modeOf(f) === "running",
+    offer = !!st.diarizer && (running || (review && f.segments.length > 0));
   $("spk-track").hidden = !offer;
   const b = $("spk"),
     n = present(f).length;
   // pressed while names are shown or being found: on with none found yet,
-  // as a transcript from before the switch has, a click finds them
-  const pressed = !!prefs.speakers && (n > 0 || !!spkBusy);
+  // as a transcript from before the switch has, a click finds them. While
+  // a transcription runs, while it finds them or will once it is done.
+  const pressed = running
+    ? !!f.diarizing || !!f.findAfter
+    : !!prefs.speakers && (n > 0 || !!spkBusy);
   b.setAttribute("aria-pressed", String(pressed));
   b.setAttribute("aria-busy", String(!!spkBusy));
   b.innerHTML = `${ICON.check}<span>${esc(t("speakers.switch"))}</span>`;
-  b.title = pressed && n > 0 ? t("speakers.hide") : t("speakers.show");
-  const on = offer && spkShown(f);
+  b.title = running
+    ? t(f.diarizing ? "speakers.stop" : "speakers.show")
+    : pressed && n > 0
+      ? t("speakers.hide")
+      : t("speakers.show");
+  // the names once it is done: renamed while it runs, a name would have
+  // to follow the turns as they come
+  const on = offer && !running && spkShown(f);
   $("chips").hidden = !on;
   const chip = (x) =>
     `<button class="pk-chip" type="button" data-s="${x}" aria-label="${esc(t("speakers.chip_label", { name: nameOf(f, x) }))}">${markHtml(x)}${esc(nameOf(f, x))}</button>`;
@@ -3330,7 +3351,9 @@ function closeUp(was, joined) {
 
 $("spk").onclick = async () => {
   const f = current();
-  if (!f || spkBusy || modeOf(f) !== "review") return;
+  if (!f || spkBusy) return;
+  if (modeOf(f) === "running") return spkWhileRunning(f);
+  if (modeOf(f) !== "review") return;
   closeMenu();
   // on, or on with none found yet: found (updateSpeakers, pressed)
   const on = !prefs.speakers || !present(f).length;
@@ -3362,6 +3385,51 @@ $("spk").onclick = async () => {
   if (on && !present(f).length) return findSpeakers(f);
   spkRefresh(f);
 };
+
+/* The switch while f is transcribed (Peter, 2026-11-15: one who knows a
+   recording has one voice can have it go at the transcription's speed).
+   Off, its speaker search stops at the next chunk and what it found goes,
+   so that its transcript is one without speakers (main.rs, quiet); on,
+   they are found from the recording once it is done, as for a transcript
+   from before (finished), the model downloaded first where it isn't here.
+   Kept for the next file either way. */
+async function spkWhileRunning(f) {
+  closeMenu();
+  if (f.diarizing || f.findAfter) {
+    f.findAfter = false;
+    if (f.diarizing) {
+      f.diarizing = false;
+      f.quiet = true;
+      invoke("quiet", { id: f.id }).catch(() => {});
+      for (const s of f.segments) s.speaker = null;
+    }
+    await setPref("speakers", false);
+  } else {
+    const d = st.diarizer;
+    if (d && !d.have) {
+      const yes = await ask(
+        t("speakers.ask_title"),
+        t("speakers.ask_about", { mb: num(d.bytes / 1e6), n: num(SPEAKERS) }),
+        t("speakers.download"),
+        $("spk"),
+        { safe: true },
+      );
+      if (!yes || modeOf(f) !== "running") return;
+      try {
+        await invoke("download_diarizer");
+        spkBusy = "downloading";
+      } catch (e) {
+        return toastErr(e);
+      }
+    }
+    f.findAfter = true;
+    await setPref("speakers", true);
+  }
+  if (current() !== f || modeOf(f) !== "running") return;
+  updateSpeakers(f, false);
+  drawBar(f);
+  renderTranscript(f, "running");
+}
 
 async function diarizerDownload(s) {
   const f = current();

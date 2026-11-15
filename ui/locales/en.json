@@ -225,6 +225,7 @@
   "speakers.switch": "Speakers",
   "speakers.show": "Show who said what",
   "speakers.hide": "Hide speakers",
+  "speakers.stop": "Stop finding the speakers",
   "speakers.default": "Speaker {n}",
   "speakers.bar": "Who talks when",
   "speakers.name_label": "{name}: who’s speaking",
