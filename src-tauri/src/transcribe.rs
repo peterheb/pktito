@@ -40,7 +40,7 @@ pub fn threads_wanted() -> i32 {
         .unwrap_or(0)
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Word {
     pub start: f64,
     pub end: f64,

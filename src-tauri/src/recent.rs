@@ -195,22 +195,35 @@ pub fn relink(data: &Path, id: &str, path: &Path, size: u64, modified: u64) -> R
 }
 
 /// A transcript's speakers as the window changed them (Who's speaking, a
-/// rename): each segment's speaker, in order, the names and the bar's
-/// stretches in place of the ones it had.
+/// rename): its sentences, each with its speaker, the names and the bar's
+/// stretches in place of the ones it had. The sentences may be grouped
+/// anew (a sentence a change of speaker cut, joined again, or cut again by
+/// Undo), but their words must be the transcript's, every one as it was:
+/// anything else is refused, so that the window can change who said what
+/// and never what was said.
 pub fn set_speakers(
     data: &Path,
     id: &str,
-    speakers: &[u32],
+    segments: Vec<Segment>,
     names: Vec<String>,
     stretches: Vec<Stretch>,
 ) -> Result<(), Problem> {
     let mut t = load(data, id)?;
-    if speakers.len() != t.segments.len() {
+    // what was said, however it is grouped: every word, and the text (a
+    // sentence joined again is its parts' texts with a space between)
+    let said = |s: &[Segment]| {
+        let words: Vec<_> = s.iter().flat_map(|s| s.words.iter()).cloned().collect();
+        let text = s
+            .iter()
+            .map(|s| s.text.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
+        (words, text)
+    };
+    if said(&segments) != said(&t.segments) {
         return Err("the speakers don't match the transcript".into());
     }
-    for (s, &n) in t.segments.iter_mut().zip(speakers) {
-        s.speaker = Some(n);
-    }
+    t.segments = segments;
     t.names = names;
     t.stretches = stretches;
     fs::write(
@@ -287,6 +300,74 @@ mod tests {
             ("content://b/2", 1234, vec![1, 2])
         );
         assert!(relink(&data, "18", Path::new("x"), 0, 0).is_err());
+        let _ = fs::remove_dir_all(&data);
+    }
+
+    /// A sentence a change of speaker cut, joined again by the window and
+    /// cut again by Undo, is kept either way; a change to what was said is
+    /// not.
+    #[test]
+    fn speakers_regrouped() {
+        let data = std::env::temp_dir().join(format!("pkapp-recent-spk-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&data);
+        let w = |a: f64, b: f64, t: &str| crate::transcribe::Word {
+            start: a,
+            end: b,
+            text: t.into(),
+        };
+        let seg = |words: Vec<crate::transcribe::Word>, n: u32| Segment {
+            start: words[0].start,
+            end: words[words.len() - 1].end,
+            text: words
+                .iter()
+                .map(|w| w.text.as_str())
+                .collect::<Vec<_>>()
+                .join(" "),
+            words,
+            speaker: Some(n),
+        };
+        let cut = vec![
+            seg(
+                vec![w(0.0, 0.4, "When"), w(0.4, 0.9, "it's"), w(0.9, 1.2, "up,")],
+                2,
+            ),
+            seg(vec![w(1.2, 1.4, "you")], 4),
+            seg(vec![w(1.4, 1.8, "know,"), w(1.8, 2.3, "okay.")], 2),
+        ];
+        let t = Transcript {
+            item: item("21", "/a.mp3"),
+            peaks: vec![],
+            segments: cut.clone(),
+            names: Vec::new(),
+            stretches: Vec::new(),
+        };
+        add(&data, &t).unwrap();
+        let mut one = cut[0].clone();
+        for s in &cut[1..] {
+            one.end = s.end;
+            one.text = format!("{} {}", one.text, s.text);
+            one.words.extend(s.words.iter().cloned());
+        }
+        assert_eq!(one.text, "When it's up, you know, okay.");
+        set_speakers(&data, "21", vec![one.clone()], vec![], vec![])
+            .ok()
+            .unwrap();
+        assert_eq!(load(&data, "21").ok().unwrap().segments.len(), 1);
+        set_speakers(&data, "21", cut.clone(), vec![], vec![])
+            .ok()
+            .unwrap();
+        assert_eq!(load(&data, "21").ok().unwrap().segments.len(), 3);
+        // a word changed, one lost, the text changed: each refused
+        let mut changed = one.clone();
+        changed.words[3].text = "yew".into();
+        assert!(set_speakers(&data, "21", vec![changed], vec![], vec![]).is_err());
+        let mut lost = cut.clone();
+        lost.pop();
+        assert!(set_speakers(&data, "21", lost, vec![], vec![]).is_err());
+        let mut retold = one;
+        retold.text = "When it's up, you know, fine.".into();
+        assert!(set_speakers(&data, "21", vec![retold], vec![], vec![]).is_err());
+        assert_eq!(load(&data, "21").ok().unwrap().segments.len(), 3);
         let _ = fs::remove_dir_all(&data);
     }
 }

@@ -1431,16 +1431,17 @@ fn captions(
 }
 
 /// A transcript's speakers as Who's speaking or a rename left them, kept on
-/// the recent list: each segment's speaker, the names, the bar's stretches.
+/// the recent list: its sentences with their speakers (a cut one may have
+/// joined again), the names, the bar's stretches.
 #[tauri::command]
 fn set_speakers(
     app: AppHandle,
     id: String,
-    speakers: Vec<u32>,
+    segments: Vec<transcribe::Segment>,
     names: Vec<String>,
     stretches: Vec<transcribe::Stretch>,
 ) -> Result<(), Problem> {
-    recent::set_speakers(&data_dir(&app)?, &id, &speakers, names, stretches)
+    recent::set_speakers(&data_dir(&app)?, &id, segments, names, stretches)
 }
 
 /// pktito-cli on the PATH, from the macOS menu bar's Install Command Line

@@ -3223,11 +3223,12 @@ const limitHtml = () =>
    it was in sight, else the first row in sight; a search kept with its
    match, as retime keeps them. Names come and go and cues are cut again,
    so the rows above can change height: the row is kept, not the pixels. */
-function spkRefresh(f, row) {
+function spkRefresh(f, row, joined) {
   if (!f || current() !== f || modeOf(f) !== "review" || viewName() !== "work")
     return;
   const place = placeOf(row),
-    on = hitAt;
+    on = hitAt,
+    was = joined ? rowTops() : null;
   // the names over the transcript first: they move it
   updateSpeakers(f, true);
   drawBar(f);
@@ -3238,6 +3239,64 @@ function spkRefresh(f, row) {
     if (on >= 0 && on < hits.length) goHit(on, false);
   }
   toPlace(f, place);
+  if (joined) closeUp(was, joined);
+}
+
+/* each row in sight's top on the screen, by its time (data-t) */
+function rowTops() {
+  const tr = $("transcript"),
+    box = tr.getBoundingClientRect(),
+    tops = new Map();
+  for (const el of tr.getElementsByClassName("pk-seg")) {
+    const r = el.getBoundingClientRect();
+    if (r.bottom < box.top) continue;
+    if (r.top > box.bottom) break;
+    tops.set(el.dataset.t, r.top);
+  }
+  return tops;
+}
+
+/* After a cut sentence joined again: the rows in sight that moved slide up
+   from where they were into their places, 0.15 s as the strip's changes
+   take, and the words that joined the row are lit in its speaker's tint a
+   moment, to show where the text went; with less motion asked for, they
+   are just there. */
+function closeUp(was, joined) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const tr = $("transcript"),
+    box = tr.getBoundingClientRect();
+  for (const el of tr.getElementsByClassName("pk-seg")) {
+    const r = el.getBoundingClientRect();
+    if (r.bottom < box.top) continue;
+    if (r.top > box.bottom) break;
+    const top = was.get(el.dataset.t);
+    if (top !== undefined && Math.abs(top - r.top) > 1)
+      el.animate(
+        [{ transform: `translateY(${top - r.top}px)` }, { transform: "none" }],
+        {
+          duration: 150,
+          easing: "ease-out",
+        },
+      );
+  }
+  const el = rowEl(joined.at);
+  if (!el) return;
+  el.style.setProperty("--joined", `var(--speaker-${slotOf(joined.speaker)})`);
+  const ws = [...el.querySelectorAll("[data-w]")].filter(
+    (w) => Number(w.dataset.w) >= joined.words,
+  );
+  if (!ws.length) return;
+  // the words and the spaces between them lit as one stretch
+  const r = document.createRange(),
+    lit = document.createElement("span");
+  lit.className = "pk-joined";
+  try {
+    r.setStartBefore(ws[0]);
+    r.setEndAfter(ws[ws.length - 1]);
+    r.surroundContents(lit);
+  } catch {
+    for (const w of ws) w.classList.add("pk-joined");
+  }
 }
 
 $("spk").onclick = async () => {
@@ -3393,19 +3452,22 @@ function showFinding(f) {
 
 /* A change to f's speakers: made, drawn with row, the one changed, where
    it was (spkRefresh), kept on the recent list, and undone from its toast
-   where it says what it did */
+   where it says what it did. A change that puts a cut sentence back
+   together (rejoin) returns what it joined: the joined row is the one kept
+   in place, the rows under it close up, and the words that joined it are
+   lit a moment. Undo puts back the sentences as they were, cut. */
 function edit(f, change, said, row) {
   const before = {
-    speakers: f.segments.map((s) => s.speaker),
+    segments: f.segments.map((s) => ({ ...s })),
     names: [...f.names],
     stretches: f.stretches,
   };
-  change();
-  spkChanged(f, row);
+  const joined = change();
+  spkChanged(f, joined ? rowEl(joined.at) || row : row, joined);
   if (said)
     toast(said, {
       undo: () => {
-        f.segments.forEach((s, k) => (s.speaker = before.speakers[k]));
+        f.segments = before.segments;
         f.names = before.names;
         f.stretches = before.stretches;
         spkChanged(f);
@@ -3413,17 +3475,55 @@ function edit(f, change, said, row) {
     });
 }
 
-async function spkChanged(f, row) {
+async function spkChanged(f, row, joined) {
   f.cues = null;
   if (prefs.captions) await cuesOf(f).catch(toastErr);
-  spkRefresh(f, row);
+  spkRefresh(f, row, joined);
   if (f.recentId)
     invoke("set_speakers", {
       id: f.recentId,
-      speakers: f.segments.map((s) => s.speaker ?? 1),
+      segments: f.segments,
       names: f.names,
       stretches: f.stretches,
     }).catch(toastErr);
+}
+
+/* A sentence a change of speaker cut, put back together once the change is
+   undone in effect (Peter, 2026-11-15): where a sentence has no end of its
+   own (. ? ! or …, a closing quote or bracket after it) and the next is now
+   the same speaker's, the two are one again, and on along as many as follow,
+   up to the 30 s libpktito's pk_sentences holds a sentence to. Only around
+   rows from to to, the ones just changed: elsewhere a cut without an end is
+   pk_sentences' own. The row the others joined and how many words it had,
+   or null where nothing joined. In four podcasts (2 h) the 8 such cuts
+   joined into sentences of 1.4 to 15.9 s. */
+const ENDS = /[.?!…]["”’')\]]*$/;
+function rejoin(f, from, to) {
+  const segs = f.segments;
+  let joined = null,
+    k = Math.max(0, from - 1),
+    last = Math.min(segs.length - 1, to + 1);
+  while (k < last) {
+    const a = segs[k],
+      b = segs[k + 1];
+    if (
+      a.speaker != null &&
+      a.speaker === b.speaker &&
+      !ENDS.test(a.text.trim()) &&
+      b.end - a.start <= 30
+    ) {
+      if (!joined || joined.at !== k)
+        joined = { at: k, words: (a.words || []).length, speaker: a.speaker };
+      segs.splice(k, 2, {
+        ...a,
+        end: b.end,
+        text: `${a.text} ${b.text}`,
+        words: (a.words || []).concat(b.words || []),
+      });
+      last--;
+    } else k++;
+  }
+  return joined;
 }
 
 /* a name for speaker n, the names before it kept as they are */
@@ -3492,6 +3592,7 @@ function openWho(btn) {
             if (fresh) setName(f, to, "");
             for (let k = u.from; k <= u.to; k++) f.segments[k].speaker = to;
             f.stretches = moveStretches(f.stretches, u.s, to, u.start, u.end);
+            return rejoin(f, u.from, u.to);
           },
           t("speakers.moved", { name: nameOf(f, to) }),
           btn.closest(".pk-seg"),
@@ -3546,10 +3647,19 @@ function rename(f, s, v) {
   edit(
     f,
     () => {
-      for (const seg of f.segments) if (seg.speaker === s) seg.speaker = other;
+      let first = -1,
+        last = -1;
+      f.segments.forEach((seg, k) => {
+        if (seg.speaker !== s) return;
+        seg.speaker = other;
+        if (first < 0) first = k;
+        last = k;
+      });
       f.stretches = f.stretches.map((g) =>
         g.speaker === s ? { ...g, speaker: other } : g,
       );
+      // no row of the screen's to keep: the reader's first in sight stays
+      if (first >= 0) rejoin(f, first, last);
     },
     t("speakers.joined", { name: nameOf(f, other) }),
   );

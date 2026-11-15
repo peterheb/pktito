@@ -2762,6 +2762,24 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 #strip.spk.has-ticks .pk-wave {
   height: 56px;
 }
+/* the words that joined a cut sentence again (app.js, closeUp): lit a
+   moment in their speaker's tint, to show where the text went */
+.pk-joined {
+  margin: 0 -0.15em;
+  padding: 0 0.15em;
+  border-radius: 3px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  animation: pk-joined 1.6s ease-out;
+}
+@keyframes pk-joined {
+  from {
+    background-color: color-mix(in srgb, var(--joined) 30%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
 .pk-spkbar b {
   position: absolute;
   top: 6px;
