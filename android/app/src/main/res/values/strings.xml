@@ -23,7 +23,7 @@
     <string name="format_txt">Text</string>
     <string name="format_txt_times">Text with times</string>
     <string name="format_srt">Subtitles</string>
-    <string name="format_vtt">Web subtitles</string>
+    <string name="format_vtt">Podcast and web subtitles</string>
     <string name="format_md">Markdown</string>
     <string name="format_md_times">Markdown with times</string>
     <string name="format_json">JSON with word timings</string>

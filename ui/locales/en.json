@@ -297,7 +297,7 @@
   "format.txt": "Text",
   "format.txt_times": "Text with times",
   "format.srt": "Subtitles",
-  "format.vtt": "Web subtitles",
+  "format.vtt": "Podcast and web subtitles",
   "format.md": "Markdown",
   "format.md_times": "Markdown with times",
   "format.json": "JSON with word timings",

@@ -698,6 +698,18 @@
         }
       }
     },
+    "download_title_speakers": {
+      "extractionState": "manual",
+      "comment": "the speaker model's download notification (Speakers)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading the speaker model"
+          }
+        }
+      }
+    },
     "download_too_much": {
       "extractionState": "manual",
       "localizations": {
@@ -874,7 +886,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Web subtitles"
+            "value": "Podcast and web subtitles"
           }
         }
       }
@@ -941,6 +953,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete the paused download?"
+          }
+        }
+      }
+    },
+    "manage_ask_speakers_part_text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This frees %1$@ MB. Downloading the speaker model again starts over."
+          }
+        }
+      }
+    },
+    "manage_ask_speakers_text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This frees %1$@ MB. Speakers already found stay, and you can download it again."
+          }
+        }
+      }
+    },
+    "manage_ask_speakers_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the speaker model?"
           }
         }
       }
@@ -1186,6 +1231,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ MB"
+          }
+        }
+      }
+    },
+    "manage_speakers": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaker model"
+          }
+        }
+      }
+    },
+    "manage_speakers_busy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pktito is using the speaker model. Try again when it's done."
           }
         }
       }
@@ -2236,6 +2303,296 @@
           "stringUnit": {
             "state": "translated",
             "value": "Close"
+          }
+        }
+      }
+    },
+    "speakers_ask_about": {
+      "extractionState": "manual",
+      "comment": "%2$d is how many speakers the model tells apart: 8",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To tell the speakers apart, pktito needs a second open-source AI model from NVIDIA (%1$@ MB). It handles up to %2$lld speakers. Download it now?"
+          }
+        }
+      }
+    },
+    "speakers_ask_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download the speaker model"
+          }
+        }
+      }
+    },
+    "speakers_bar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Who talks when"
+          }
+        }
+      }
+    },
+    "speakers_chip_label": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@: rename"
+          }
+        }
+      }
+    },
+    "speakers_default": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaker %1$lld"
+          }
+        }
+      }
+    },
+    "speakers_download": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download"
+          }
+        }
+      }
+    },
+    "speakers_downloading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading the speaker model, %1$lld%%"
+          }
+        }
+      }
+    },
+    "speakers_finding": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finding the speakers…"
+          }
+        }
+      }
+    },
+    "speakers_hide": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide speakers"
+          }
+        }
+      }
+    },
+    "speakers_joined": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joined %1$@"
+          }
+        }
+      }
+    },
+    "speakers_joins": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joins %1$@"
+          }
+        }
+      }
+    },
+    "speakers_limit": {
+      "extractionState": "manual",
+      "comment": "the (i) after the names with all of the model's speakers in use; %1$d is 8",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Up to %1$lld speakers"
+          }
+        }
+      }
+    },
+    "speakers_limit_about": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The speaker model can tell up to %1$lld speakers apart. With more voices than that, some get mixed up."
+          }
+        }
+      }
+    },
+    "speakers_moved": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moved to %1$@"
+          }
+        }
+      }
+    },
+    "speakers_name": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
+          }
+        }
+      }
+    },
+    "speakers_name_label": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@: who’s speaking"
+          }
+        }
+      }
+    },
+    "speakers_new": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New speaker"
+          }
+        }
+      }
+    },
+    "speakers_no_model": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The speaker model isn’t downloaded"
+          }
+        }
+      }
+    },
+    "speakers_ready": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaker model ready"
+          }
+        }
+      }
+    },
+    "speakers_rename": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename %1$@…"
+          }
+        }
+      }
+    },
+    "speakers_rename_do": {
+      "extractionState": "manual",
+      "comment": "the rename's button: a phone's keyboard has no Enter for it, as the desktop's field has",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename"
+          }
+        }
+      }
+    },
+    "speakers_rename_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename %1$@"
+          }
+        }
+      }
+    },
+    "speakers_show": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show who said what"
+          }
+        }
+      }
+    },
+    "speakers_switch": {
+      "extractionState": "manual",
+      "comment": "Speakers (PKT-27), the desktop's speakers.*: who said what, named Speaker 1 to 8 by first word",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speakers"
+          }
+        }
+      }
+    },
+    "speakers_undo": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo"
+          }
+        }
+      }
+    },
+    "speakers_who": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Who’s speaking"
           }
         }
       }
