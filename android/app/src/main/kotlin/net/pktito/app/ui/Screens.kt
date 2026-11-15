@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -513,6 +512,13 @@ private val rowStart = 10.dp
 
 /** A time or a length, in the stamp's type with figures of one width. */
 private val figures = Type.stamp.copy(fontFeatureSettings = "tnum")
+
+/**
+ * Between a row's times and its text, 46 dp, the desktop's (app.css, --gutter): the same beside
+ * every file's times, so that a turn's line in its middle stands as far from them in each, and the
+ * text takes what the times leave of the row (Peter, 2026-11-15).
+ */
+private val GUTTER = 46.dp
 
 /**
  * onForget: true from the keyboard, which then goes on to the next row. The transcript open beside
@@ -1244,14 +1250,14 @@ private fun Rows(
     // the list from one gap under the views line, its rows scrolling under
     // that edge, not up to the line, where the playing row's card had met the
     // search's field (Peter, the S25, 2026-10-27)
-    // the time's column 112 dp, the desktop's, or as wide as the file's
-    // longest time and the beak after it (SegRow) need, at a larger text size
+    // the times' column as wide as the file's times, the desktop's (app.css,
+    // .pk-seg): all of a file's as long as its length's, which stamp gives
+    // the hours of the file's length, measured at the reader's text size
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val times =
         remember(base, measurer, density) {
-            with(density) { measurer.measure(base.at(base.duration), figures).size.width.toDp() } +
-                10.dp
+            with(density) { measurer.measure(base.at(base.duration), figures).size.width.toDp() }
         }
     // the list's bar, its thumb to drag on a long transcript (Scrollbar.kt)
     val bar = rememberBar(follow.list)
@@ -1280,11 +1286,11 @@ private fun Rows(
         if (at >= 0 && at < follow.list.firstVisibleItemIndex) follow.list.requestScrollToItem(at)
     }
     BoxWithConstraints(modifier.fillMaxWidth().padding(top = 16.dp).scrollbar(bar)) {
-        // a column from 620 dp at the default text size, the desktop's
-        // (app.css, max-width: 619px), where the text keeps 416 beside 112:
-        // the list's 24 dp and the row's 16 either side, and the gap's 12;
-        // further out as the time's column grows with the text
-        val column = maxOf(112.dp, times).takeIf { maxWidth >= 508.dp + it }
+        // a column from 620 dp with an hour's times at the default text size,
+        // the desktop's (app.css, max-width: 619px), where the text keeps 416
+        // beside them: the list's 24 dp and the row's 16 either side, and the
+        // gutter; further out as the times grow with the text
+        val column = times.takeIf { maxWidth >= 496.dp + GUTTER + it }
         SelectionContainer(selection) {
             LazyColumn(
                 Modifier.hands(follow),
@@ -1300,6 +1306,17 @@ private fun Rows(
                         if (spk.turns && !captions && Speakers.turnStarts(rows, i))
                             Speakers.turnAt(rows, i)
                         else null
+                    // and each row has its turn's line, ending inside its first and last
+                    val line =
+                        s.speaker
+                            ?.takeIf { spk.turns }
+                            ?.let {
+                                TurnLine(
+                                    it,
+                                    Speakers.turnStarts(rows, i),
+                                    i == rows.lastIndex || rows[i + 1].speaker != it,
+                                )
+                            }
                     // the rows after a sentence made one again sliding up into its
                     // place over 150 ms, the desktop's (app.js, closeUp)
                     Box(Modifier.animateItem(null, tween(150, easing = EaseOut), null)) {
@@ -1316,6 +1333,7 @@ private fun Rows(
                             base,
                             selection,
                             turn,
+                            line,
                             spk,
                             compact,
                             i == 0,
@@ -1332,7 +1350,7 @@ private fun Rows(
                             color = p.inkMuted,
                             modifier =
                                 Modifier.padding(
-                                    start = if (column != null) column + 28.dp else 16.dp,
+                                    start = if (column != null) 16.dp + column + GUTTER else 16.dp,
                                     top = 16.dp,
                                 ),
                         )
@@ -1358,6 +1376,8 @@ private fun SegRow(
     selection: SelectionState,
     /** the turn this row starts, if any: its name opens the text (Sentence) */
     turn: Speakers.Turn?,
+    /** its turn's line, with the turns shown */
+    turnLine: TurnLine?,
     spk: SpeakersView,
     /** Who's speaking as a dialog (WhoPicker) */
     dialog: Boolean,
@@ -1375,42 +1395,23 @@ private fun SegRow(
         @Composable { mod: Modifier ->
             Text(base.at(s.end), style = stamp, color = p.inkMuted, modifier = mod)
         }
-    // the row playing: the beak's square after its time, on its baseline
-    val beak =
-        @Composable { scope: RowScope ->
-            if (now)
-                with(scope) {
-                    Spacer(Modifier.width(3.dp))
-                    Box(Modifier.size(7.dp).alignBy { it.measuredHeight }.background(p.beak))
-                }
-        }
     // a cue's end under its start, or on a narrow screen after it as a
-    // range, 00:02.88 – 00:05.60, the beak after the range: side by side, a
-    // start with the beak after it and the end beside that read as two
-    // times of their own (Peter, the S25, 2026-10-26). A range too wide for
-    // the line takes its end to the next whole: at 2.0 times the text size
-    // a phone's line broke the end's time in two.
+    // range, 00:02.88 – 00:05.60 (Peter, the S25, 2026-10-26). A range too
+    // wide for the line takes its end to the next whole: at 2.0 times the
+    // text size a phone's line broke the end's time in two. The row playing
+    // is its ground alone: the beak's square after its time went, as on the
+    // desktop, where beside the speakers' marks it read as one of them
+    // (Peter, 2026-11-14), and with the turn's line beside it here.
     val time =
         @Composable { mod: Modifier ->
             if (cue && column == null)
                 FlowRow(mod) {
                     Text("${base.at(s.start)} – ", style = line, color = p.inkMuted)
-                    Row {
-                        Text(
-                            base.at(s.end),
-                            style = line,
-                            color = p.inkMuted,
-                            modifier = Modifier.alignByBaseline(),
-                        )
-                        beak(this)
-                    }
+                    Text(base.at(s.end), style = line, color = p.inkMuted)
                 }
             else
                 Column(mod, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Row {
-                        start(Modifier.alignByBaseline())
-                        beak(this)
-                    }
+                    start(Modifier)
                     if (cue) end(Modifier)
                 }
         }
@@ -1446,18 +1447,30 @@ private fun SegRow(
             )
     // a turn 12 dp under the one before (app.css, .pk-seg.pk-turn)
     val gap = if (turn != null && !first) Modifier.padding(top = 12.dp) else Modifier
+    // its turn's line in the middle of the gutter, past the row's 16 dp and
+    // the times; with the time over the text, 5 dp in, as the desktop's
+    // narrow window has it
+    val ruled =
+        turnLine?.let {
+            Modifier.turnLine(
+                it,
+                p.speaker(it.speaker),
+                if (column != null) 16.dp + column + GUTTER / 2 else 6.5.dp,
+            )
+        } ?: Modifier
     if (column != null)
         // a row of one line 48 dp tall at the least, Android's least for a
         // finger, its line in the middle: it was 44, iOS's 44 pt (the layout
         // audit, 2026-11-01). With its time over it, a row has two lines.
         Row(
             gap.then(box)
+                .then(ruled)
                 .heightIn(min = 48.dp)
                 .wrapContentHeight()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             time(Modifier.width(column).alignByBaseline())
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(GUTTER))
             Sentence(
                 s,
                 word,
@@ -1473,7 +1486,7 @@ private fun SegRow(
     else
     // the time over the text
     Column(
-            gap.then(box).padding(horizontal = 16.dp, vertical = 8.dp),
+            gap.then(box).then(ruled).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             time(Modifier)
@@ -1562,8 +1575,6 @@ private fun Sentence(
             style = Type.transcript,
             color = p.ink,
             onTextLayout = { layout = it },
-            inlineContent =
-                if (turn == null) emptyMap() else mapOf(SPEAKER_MARK to speakerMark(turn.speaker)),
             modifier =
                 Modifier.bringIntoViewRequester(sight).drawBehind {
                     val l = layout ?: return@drawBehind

@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -23,10 +22,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,14 +36,18 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -55,8 +56,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.Placeholder
-import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextRange
@@ -68,6 +67,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -327,14 +327,12 @@ private fun Limit(tall: Dp) {
     }
 }
 
-/** The inline content that is a turn's mark in its first sentence (speakerName, speakerMark). */
-const val SPEAKER_MARK = "speaker-mark"
-
 /**
- * A turn's name opening its first sentence's text (app.css, .pk-speaker): its mark, then the name
- * bold with a colon, as the saved files have it ("Speaker 1: ..."), a link that opens Who's
- * speaking. Peter's pick of three (2026-11-14): over the row the name read as a heading of its own.
- * The sentence's own text starts at the length this returns.
+ * A turn's name opening its first sentence's text (app.css, .pk-speaker): the name bold with a
+ * colon, as the saved files have it ("Speaker 1: ..."), a link that opens Who's speaking. Peter's
+ * pick of three (2026-11-14): over the row the name read as a heading of its own. No mark before
+ * it: the turn's line beside it is in its speaker's colour (TurnLine). The sentence's own text
+ * starts at the length this returns.
  */
 fun AnnotatedString.Builder.speakerName(
     name: String,
@@ -342,22 +340,39 @@ fun AnnotatedString.Builder.speakerName(
     onClick: () -> Unit,
 ): Int {
     withLink(LinkAnnotation.Clickable("speaker", styles) { onClick() }) {
-        appendInlineContent(SPEAKER_MARK, "\u2060")
         withStyle(SpanStyle(fontWeight = FontWeight.W700)) { append("$name:") }
     }
     append(" ")
     return length
 }
 
-/** The mark before a turn's name in its text: 10 dp, and 7 to the name, as the desktop's. */
-@Composable
-fun speakerMark(n: Int): InlineTextContent {
-    val d = LocalDensity.current
-    return InlineTextContent(
-        with(d) { Placeholder(17.dp.toSp(), 10.dp.toSp(), PlaceholderVerticalAlign.TextCenter) }
-    ) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) { Mark(n) }
-    }
+/**
+ * A row's place in its speaker's turn, for the line beside its text (app.css, .pk-seg[data-spk];
+ * Peter, 2026-11-15): a 3 dp line in the speaker's colour down each row of a turn, so that a turn
+ * reads as a paragraph of its own and its name, at its top, says whose. It starts and ends 10 dp
+ * inside the turn's first and last rows, round there.
+ */
+class TurnLine(val speaker: Int, val first: Boolean, val last: Boolean)
+
+/** The turn's line, its middle mid from the row's start edge (Screens.kt, SegRow). */
+fun Modifier.turnLine(line: TurnLine, color: Color, mid: Dp): Modifier = drawBehind {
+    val w = 3.dp.toPx()
+    val inset = 10.dp.toPx()
+    val top = if (line.first) inset else 0f
+    val bottom = size.height - if (line.last) inset else 0f
+    if (bottom <= top) return@drawBehind
+    val at = if (layoutDirection == LayoutDirection.Rtl) size.width - mid.toPx() else mid.toPx()
+    val round = CornerRadius(w / 2)
+    val head = if (line.first) round else CornerRadius.Zero
+    val foot = if (line.last) round else CornerRadius.Zero
+    drawPath(
+        Path().apply {
+            addRoundRect(
+                RoundRect(Rect(at - w / 2, top, at + w / 2, bottom), head, head, foot, foot)
+            )
+        },
+        color,
+    )
 }
 
 /**
