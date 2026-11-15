@@ -8,6 +8,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.contextmenu.data.TextContextMenuComponent
+import androidx.compose.foundation.text.contextmenu.data.TextContextMenuItem
+import androidx.compose.foundation.text.contextmenu.data.TextContextMenuSession
+import androidx.compose.foundation.text.contextmenu.provider.LocalTextContextMenuToolbarProvider
+import androidx.compose.foundation.text.contextmenu.provider.TextContextMenuDataProvider
+import androidx.compose.foundation.text.contextmenu.provider.TextContextMenuProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -46,6 +52,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import java.io.File
+import kotlinx.coroutines.awaitCancellation
 import net.pktito.app.ui.About
 import net.pktito.app.ui.Confirm
 import net.pktito.app.ui.Finder
@@ -71,6 +78,7 @@ import net.pktito.app.ui.findIn
 import net.pktito.app.ui.pk
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -1234,6 +1242,7 @@ class Shots {
         heard: Double? = null,
         /** the row at the list's top */
         first: Int = 0,
+        move: (Speakers.Turn, Int, Boolean) -> Unit = { _, _, _ -> },
     ) {
         val res = LocalContext.current.resources
         val present = Speakers.present(rows)
@@ -1276,11 +1285,80 @@ class Shots {
                     bar = bar,
                     upto = Double.MAX_VALUE,
                     toggle = {},
-                    move = { _, _, _ -> },
+                    move = move,
                     rename = {},
                     times = { u -> "${tb.at(u.start)}–${tb.at(u.end)}" },
                 ),
         )
+    }
+
+    // Change speaker in the menu a held word's selection brings (Rows): Robolectric draws no
+    // toolbar of the platform's, so its items are taken by a provider of the test's own
+    private val held = ArrayList<TextContextMenuComponent>()
+    private val toolbar =
+        object : TextContextMenuProvider {
+            override suspend fun showTextContextMenu(dataProvider: TextContextMenuDataProvider) {
+                held.clear()
+                held.addAll(dataProvider.data().components)
+                awaitCancellation()
+            }
+        }
+
+    /** word held, Change speaker chosen in its menu: Who's speaking for its sentence alone */
+    private fun changeSpeaker(word: String) = {
+        // the text's own node, not its row's, which merges it: the row's middle is past the word
+        compose.onNodeWithText(word, substring = true, useUnmergedTree = true).performTouchInput {
+            longClick()
+        }
+        compose.waitForIdle()
+        held
+            .filterIsInstance<TextContextMenuItem>()
+            .first { it.label == "Change speaker" }
+            .onClick(
+                object : TextContextMenuSession {
+                    override fun close() {}
+                }
+            )
+        compose.waitForIdle()
+        compose.onNode(isDialog())
+    }
+
+    @Test
+    @Config(shadows = [NoMagnifier::class])
+    fun speakersChange() {
+        val moved = ArrayList<Pair<Speakers.Turn, Int>>()
+        shot("speakers-change", false, act = changeSpeaker("Hoorang")) {
+            CompositionLocalProvider(LocalTextContextMenuToolbarProvider provides toolbar) {
+                talk(move = { u, to, _ -> moved.add(u to to) })
+            }
+        }
+        // the third sentence alone, of Speaker 2's turn of two, given to Speaker 1
+        compose.onNodeWithText("Speaker 1").performClick()
+        val (u, to) = moved.single()
+        assertEquals(listOf(2, 2, 2, 1), listOf(u.from, u.to, u.speaker, to))
+    }
+
+    // the menu has it only where the speakers show and can be changed
+    @Test
+    @Config(shadows = [NoMagnifier::class])
+    fun speakersChangeOff() {
+        shot(
+            "speakers-change-off",
+            false,
+            act = {
+                compose
+                    .onNodeWithText("Hoorang", substring = true, useUnmergedTree = true)
+                    .performTouchInput { longClick() }
+                compose.waitForIdle()
+                compose.onRoot()
+            },
+        ) {
+            CompositionLocalProvider(LocalTextContextMenuToolbarProvider provides toolbar) {
+                talk(on = false)
+            }
+        }
+        assertTrue(held.isNotEmpty())
+        assertTrue(held.none { it is TextContextMenuItem && it.label == "Change speaker" })
     }
 
     @Test fun speakers() = shot("speakers", false) { talk() }

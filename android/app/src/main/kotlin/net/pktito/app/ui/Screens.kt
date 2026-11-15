@@ -38,6 +38,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.text.contextmenu.builder.item
+import androidx.compose.foundation.text.contextmenu.modifier.appendTextContextMenuComponents
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.selection.SelectionState
 import androidx.compose.foundation.text.selection.rememberSelectionState
@@ -519,6 +521,9 @@ private val figures = Type.stamp.copy(fontFeatureSettings = "tnum")
  * text takes what the times leave of the row (Peter, 2026-11-15).
  */
 private val GUTTER = 46.dp
+
+/** Change speaker's key among the selection menu's items (Rows). */
+private val CHANGE_SPEAKER = Any()
 
 /**
  * onForget: true from the keyboard, which then goes on to the next row. The transcript open beside
@@ -1285,7 +1290,31 @@ private fun Rows(
         val at = joined?.let { j -> rows.indexOfFirst { it === j.seg } } ?: -1
         if (at >= 0 && at < follow.list.firstVisibleItemIndex) follow.list.requestScrollToItem(at)
     }
-    BoxWithConstraints(modifier.fillMaxWidth().padding(top = 16.dp).scrollbar(bar)) {
+    // Change speaker in the menu a press-and-hold's selection brings, beside
+    // Copy: Android's and iOS's way in to a sentence, where the desktop has
+    // its button on the line, as the transcript's text is there to be
+    // selected and copied (the write-up's pick, which Peter took,
+    // 2026-11-15). Of the sentence the finger last came down on, where the
+    // hold began the selection; Who's speaking for it alone, as a dialog.
+    val pressed = remember { intArrayOf(-1) }
+    var alone by remember { mutableStateOf<Speakers.Turn?>(null) }
+    val change = stringResource(R.string.speakers_change)
+    val menu =
+        if (review && !captions && spk.shown && spk.editable)
+            Modifier.appendTextContextMenuComponents {
+                val r = pressed[0]
+                val s = rows.getOrNull(r)
+                val n = s?.speaker
+                if (s != null && n != null)
+                    item(CHANGE_SPEAKER, change) {
+                        close()
+                        selection.clear()
+                        alone = Speakers.Turn(r, r, n, s.start, s.end)
+                    }
+            }
+        else Modifier
+    alone?.let { u -> WhoPicker(true, true, { alone = null }, u, spk) }
+    BoxWithConstraints(modifier.fillMaxWidth().padding(top = 16.dp).scrollbar(bar).then(menu)) {
         // a column from 620 dp with an hour's times at the default text size,
         // the desktop's (app.css, max-width: 619px), where the text keeps 416
         // beside them: the list's 24 dp and the row's 16 either side, and the
@@ -1319,7 +1348,20 @@ private fun Rows(
                             }
                     // the rows after a sentence made one again sliding up into its
                     // place over 150 ms, the desktop's (app.js, closeUp)
-                    Box(Modifier.animateItem(null, tween(150, easing = EaseOut), null)) {
+                    Box(
+                        Modifier.animateItem(null, tween(150, easing = EaseOut), null).pointerInput(
+                            i
+                        ) {
+                            // the row a finger comes down on, for Change speaker
+                            awaitEachGesture {
+                                awaitFirstDown(
+                                    requireUnconsumed = false,
+                                    pass = PointerEventPass.Initial,
+                                )
+                                pressed[0] = i
+                            }
+                        }
+                    ) {
                         SegRow(
                             s,
                             now,

@@ -2341,6 +2341,18 @@
         }
       }
     },
+    "speakers_change": {
+      "extractionState": "manual",
+      "comment": "in the menu a press-and-hold's text selection brings, beside Copy: gives the sentence held to another speaker",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change speaker"
+          }
+        }
+      }
+    },
     "speakers_chip_label": {
       "extractionState": "manual",
       "localizations": {

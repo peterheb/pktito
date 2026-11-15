@@ -281,6 +281,8 @@
     <string name="speakers_name_label">%1$s: who’s speaking</string>
     <string name="speakers_chip_label">%1$s: rename</string>
     <string name="speakers_who">Who’s speaking</string>
+    <!-- in the menu a press-and-hold's text selection brings, beside Copy: gives the sentence held to another speaker -->
+    <string name="speakers_change">Change speaker</string>
     <string name="speakers_rename">Rename %1$s…</string>
     <string name="speakers_rename_title">Rename %1$s</string>
     <!-- the rename's button: a phone's keyboard has no Enter for it, as the desktop's field has -->
