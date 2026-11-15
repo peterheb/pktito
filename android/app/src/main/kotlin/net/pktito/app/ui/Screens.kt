@@ -1,6 +1,10 @@
 package net.pktito.app.ui
 
+import android.os.SystemClock
 import android.text.format.DateFormat
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseOut
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -43,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -55,6 +60,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
@@ -1249,6 +1255,30 @@ private fun Rows(
         }
     // the list's bar, its thumb to drag on a long transcript (Scrollbar.kt)
     val bar = rememberBar(follow.list)
+    // each row's key its time (the desktop's data-t), so that the list keeps
+    // the rows in sight where they are as sentences above them are made one
+    // again (Speakers.rejoin), and those after one slide up into its place
+    // (animateItem); a second row at one time, which pktito-c's sentences
+    // never have, keyed apart, for a key used twice stops the list
+    val keys by
+        remember(rows) {
+            derivedStateOf {
+                val seen = HashMap<Double, Int>()
+                rows.map { r ->
+                    val n = (seen[r.start] ?: 0) + 1
+                    seen[r.start] = n
+                    if (n == 1) r.start else "${r.start}/$n"
+                }
+            }
+        }
+    // a sentence made one again above the first row in sight, the row moved
+    // having been that first, its key gone with it: the sentence in sight,
+    // where the row was, not the one after it
+    val joined = Speakers.joined
+    LaunchedEffect(joined) {
+        val at = joined?.let { j -> rows.indexOfFirst { it === j.seg } } ?: -1
+        if (at >= 0 && at < follow.list.firstVisibleItemIndex) follow.list.requestScrollToItem(at)
+    }
     BoxWithConstraints(modifier.fillMaxWidth().padding(top = 16.dp).scrollbar(bar)) {
         // a column from 620 dp at the default text size, the desktop's
         // (app.css, max-width: 619px), where the text keeps 416 beside 112:
@@ -1261,7 +1291,7 @@ private fun Rows(
                 state = follow.list,
                 contentPadding = PaddingValues(start = edge, end = edge, bottom = 16.dp),
             ) {
-                itemsIndexed(rows) { i, s ->
+                itemsIndexed(rows, key = { i, _ -> keys[i] }) { i, s ->
                     val now = i == current
                     val word = if (now) s.words.indexOfLast { it.start <= position + 1e-3 } else -1
                     // with the names shown, a turn's opens its first sentence; a
@@ -1270,24 +1300,28 @@ private fun Rows(
                         if (spk.shown && !captions && Speakers.turnStarts(rows, i))
                             Speakers.turnAt(rows, i)
                         else null
-                    SegRow(
-                        s,
-                        now,
-                        word,
-                        marks[i],
-                        at,
-                        shown,
-                        column,
-                        captions,
-                        review,
-                        base,
-                        selection,
-                        turn,
-                        spk,
-                        compact,
-                        i == 0,
-                    ) {
-                        a.seek(s.start, true)
+                    // the rows after a sentence made one again sliding up into its
+                    // place over 150 ms, the desktop's (app.js, closeUp)
+                    Box(Modifier.animateItem(null, tween(150, easing = EaseOut), null)) {
+                        SegRow(
+                            s,
+                            now,
+                            word,
+                            marks[i],
+                            at,
+                            shown,
+                            column,
+                            captions,
+                            review,
+                            base,
+                            selection,
+                            turn,
+                            spk,
+                            compact,
+                            i == 0,
+                        ) {
+                            a.seek(s.start, true)
+                        }
                     }
                 }
                 if (stats != null)
@@ -1497,6 +1531,20 @@ private fun Sentence(
             t to lead
         }
     val hl = mix(p.ground, p.plume, 0.45f)
+    // a sentence a move made one again: the words joined to it lit in their
+    // speaker's colour, 30% of it fading out over 1.6 s (app.css,
+    // .pk-joined), from where it has got to if the row comes back into sight
+    // meanwhile; not at all where animations are off
+    val joined = Speakers.joined?.takeIf { it.seg === s }
+    val lit = remember(joined) { Animatable(0f) }
+    LaunchedEffect(joined) {
+        val j = joined ?: return@LaunchedEffect
+        if (coroutineContext[MotionDurationScale]?.scaleFactor == 0f) return@LaunchedEffect
+        val left = 1f - (SystemClock.uptimeMillis() - j.at) / 1600f
+        if (left <= 0f) return@LaunchedEffect
+        lit.snapTo(left)
+        lit.animateTo(0f, tween((1600 * left).toInt(), easing = EaseOut))
+    }
     val sight = remember { BringIntoViewRequester() }
     val pad = with(LocalDensity.current) { 8.dp.toPx() }
     // what was shown before this row came onto the list is not this row's to show
@@ -1519,6 +1567,12 @@ private fun Sentence(
             modifier =
                 Modifier.bringIntoViewRequester(sight).drawBehind {
                     val l = layout ?: return@drawBehind
+                    val v = lit.value
+                    if (joined != null && v > 0f)
+                        wordSpan(s, joined.words)?.let { (a, _) ->
+                            val fill = p.speaker(joined.speaker).copy(alpha = 0.3f * v)
+                            mark(l, lead + a, lead + s.text.length, fill, null)
+                        }
                     for (m in marks.orEmpty()) {
                         val current = m.index == at
                         mark(

@@ -70,6 +70,7 @@ import net.pktito.app.ui.WorkActions
 import net.pktito.app.ui.findIn
 import net.pktito.app.ui.pk
 import org.json.JSONObject
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -1231,6 +1232,8 @@ class Shots {
         rows: List<Seg> = talkRows,
         bar: List<Stretch> = talkBar,
         heard: Double? = null,
+        /** the row at the list's top */
+        first: Int = 0,
     ) {
         val res = LocalContext.current.resources
         val present = Speakers.present(rows)
@@ -1252,7 +1255,7 @@ class Shots {
             playable = true,
             playing = false,
             position = 0.0,
-            follow = Follow(rememberLazyListState()),
+            follow = Follow(rememberLazyListState(first)),
             sound = Sound(1.0, Player.SPEEDS, 1.0, false, {}, { _, _ -> }, {}),
             chosen = Timebase(),
             find = Finder(),
@@ -1331,6 +1334,60 @@ class Shots {
         shot("speakers-finding-start", false) {
             talk(busy = true, rows = talkRows.map { it.by(null) }, bar = emptyList(), heard = 0.0)
         }
+
+    // conv2's tenth sentence cut in three by a stray word, "falling" heard as Speaker 1's (a
+    // change of speaker ends a sentence), the bar drawn from the rows' turns as MainActivity draws
+    // it
+    private val strayRows: List<Seg> =
+        talkRows.toMutableList().also { rows ->
+            val w = rows[10].words
+            fun part(a: Int, b: Int, speaker: Int) =
+                w.subList(a, b).let { ws ->
+                    Seg(
+                        ws.first().start,
+                        ws.last().end,
+                        ws.joinToString(" ") { it.text.trim() },
+                        ws,
+                        speaker,
+                    )
+                }
+            rows.removeAt(10)
+            rows.addAll(10, listOf(part(0, 5, 2), part(5, 6, 1), part(6, w.size, 2)))
+        }
+
+    private fun turns(rows: List<Seg>) = rows.mapNotNull { s ->
+        s.speaker?.let { Stretch(s.start, s.end, it) }
+    }
+
+    @Test
+    fun speakersStray() =
+        shot("speakers-stray", false) { talk(rows = strayRows, bar = turns(strayRows), first = 8) }
+
+    // the stray moved back to Speaker 2 (Speakers.move): the sentence one again, the words joined
+    // to it lit in Speaker 2's colour, 100 ms into the light's 1.6 s
+    @Test
+    fun speakersRejoined() {
+        val t = Transcriber
+        val app = RuntimeEnvironment.getApplication()
+        t.segments.clear()
+        t.segments.addAll(strayRows)
+        val before = Speakers.move(app, Speakers.turnAt(t.segments, 11), 2, false)!!
+        assertEquals(talkRows.size, t.segments.size)
+        assertEquals(talkRows[10].text, t.segments[10].text)
+        compose.mainClock.autoAdvance = false
+        shot(
+            "speakers-rejoined",
+            false,
+            act = {
+                compose.mainClock.advanceTimeBy(100)
+                compose.onRoot()
+            },
+        ) {
+            talk(rows = t.segments, bar = turns(t.segments), first = 8)
+        }
+        Speakers.undo(app, before)
+        t.segments.clear()
+    }
 
     // all 8 of the diarizer's speakers in use, conv2's rows dealt among them: the (i) after the
     // names, and what it says

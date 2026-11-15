@@ -5,6 +5,7 @@ import android.content.res.Resources
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
+import android.os.SystemClock
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
@@ -50,8 +51,18 @@ object Speakers {
     /** What an edit changed, for its toast's Undo to put back. */
     class Before(val segments: List<Seg>, val names: List<String>, val stretches: List<Stretch>)
 
+    /**
+     * A sentence a move made one again (rejoin): the sentence, its words from words on the ones
+     * joined to it, their speaker, and when, for its row to light them a moment (Sentence).
+     */
+    class Joined(val seg: Seg, val words: Int, val speaker: Int, val at: Long)
+
     /** The switch, kept for the next file. */
     var on by mutableStateOf(false)
+        private set
+
+    /** The last move's sentence made one again, its row lit a moment; null after an Undo. */
+    var joined by mutableStateOf<Joined?>(null)
         private set
 
     /** The diarizer this build offers, null where none. */
@@ -198,6 +209,10 @@ object Speakers {
             if (fresh) names = named(names, to, "")
             for (k in u.from..u.to) segments[k] = segments[k].by(to)
             stretches = moved(stretches, u.speaker, to, u.start, u.end)
+            joined =
+                rejoin(segments, u.from, u.to)?.let { (at, words) ->
+                    Joined(segments[at], words, to, SystemClock.uptimeMillis())
+                }
         }
     }
 
@@ -215,16 +230,19 @@ object Speakers {
                 ?: return null to edit(context) { names = named(names, s, name) }
         return other to
             edit(context) {
-                for (k in segments.indices) if (segments[k].speaker == s)
-                    segments[k] = segments[k].by(other)
+                val changed = segments.indices.filter { segments[it].speaker == s }
+                for (k in changed) segments[k] = segments[k].by(other)
                 stretches = stretches.map {
                     if (it.speaker == s) Stretch(it.start, it.end, other) else it
                 }
+                // no row of the reader's to light: the whole transcript's turns
+                if (changed.isNotEmpty()) rejoin(segments, changed.first(), changed.last())
             }
     }
 
     fun undo(context: Context, b: Before) {
         val t = Transcriber
+        joined = null
         t.segments.clear()
         t.segments.addAll(b.segments)
         t.names = b.names
@@ -300,6 +318,41 @@ object Speakers {
                     }
             }
         }
+    }
+
+    /** A sentence's end: its stop, and the quotes and brackets closing after it (app.js, ENDS). */
+    private val ENDS = Regex("[.?!…][\"”’')\\]]*$")
+
+    /** The longest a sentence made one again runs: pk_sentences' 30 s, a caption's most. */
+    private const val LONGEST = 30.0
+
+    /**
+     * The sentences from from - 1 through to + 1 that a change left one speaker's in a row made one
+     * again, where the first has no end of its own, up to 30 s (app.js, rejoin): a word given to
+     * another speaker cut its sentence in two (a change of speaker ends one), and put back with the
+     * speaker around it, the sentence is whole again. The last sentence that grew and how many
+     * words it had before, for its row to light those after them; null where none did.
+     */
+    fun rejoin(segs: MutableList<Seg>, from: Int, to: Int): Pair<Int, Int>? {
+        var joined: Pair<Int, Int>? = null
+        var k = maxOf(0, from - 1)
+        var last = minOf(segs.size - 1, to + 1)
+        while (k < last) {
+            val a = segs[k]
+            val b = segs[k + 1]
+            if (
+                a.speaker != null &&
+                    a.speaker == b.speaker &&
+                    !ENDS.containsMatchIn(a.text.trim()) &&
+                    b.end - a.start <= LONGEST
+            ) {
+                if (joined?.first != k) joined = k to a.words.size
+                segs[k] = Seg(a.start, b.end, "${a.text} ${b.text}", a.words + b.words, a.speaker)
+                segs.removeAt(k + 1)
+                last--
+            } else k++
+        }
+        return joined
     }
 
     /** A change made to the transcript's speakers, then drawn and kept: what it was before. */
