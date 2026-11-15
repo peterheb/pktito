@@ -79,6 +79,10 @@ pub struct Transcript {
     pub names: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub stretches: Vec<Stretch>,
+    /// The diarizer that found the speakers, its model's name, which the
+    /// JSON names; left out without speakers.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub diarizer: String,
 }
 
 fn dir(data: &Path) -> PathBuf {
@@ -286,6 +290,7 @@ mod tests {
             segments: Vec::new(),
             names: Vec::new(),
             stretches: Vec::new(),
+            diarizer: String::new(),
         };
         add(&data, &t).unwrap();
         relink(&data, "17", Path::new("content://b/2"), 1234, 99).unwrap();
@@ -340,6 +345,7 @@ mod tests {
             segments: cut.clone(),
             names: Vec::new(),
             stretches: Vec::new(),
+            diarizer: String::new(),
         };
         add(&data, &t).unwrap();
         let mut one = cut[0].clone();

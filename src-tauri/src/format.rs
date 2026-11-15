@@ -1,8 +1,9 @@
 //! A transcript in the formats Save writes, for the window and pktito-cli
 //! alike, so that the two write the same bytes: text and Markdown of its
 //! sentences, each with its time if asked; SRT and WebVTT of its subtitle
-//! track, the engine's cues (pk_captions); and JSON with every word's time
-//! and the cues as their lines.
+//! track, the engine's cues (pk_captions); and JSON, pktito/1, the
+//! document pktito-c's --json writes too: the sentences with every word's
+//! time, the cues as their lines, and in pktito-cli's the chunks.
 
 use crate::model;
 use crate::pktito;
@@ -44,20 +45,39 @@ pub fn stem_of(original: &Path) -> String {
 /// length in seconds, the model that made it, and its segments; and where
 /// it shows its speakers (the window's switch, pktito-cli's --speakers),
 /// their names, the name of speaker n at n - 1, "Speaker n" for one not
-/// there or empty. Without names a file has no speakers, whatever its
-/// segments know of them.
+/// there or empty, and the diarizer that found them, where it is known.
+/// Without names a file has no speakers, whatever its segments know of
+/// them. A lone voice is named in the text only with name_lone, as
+/// pktito-cli names it (pktito-c does too): the apps show one voice as they
+/// show none (Peter, 11-15), and their JSON keeps its speaker all the same.
+#[derive(Clone, Copy)]
 pub struct Transcript<'a> {
     pub name: &'a str,
     pub duration: f64,
     pub model: Option<&'a str>,
     pub segments: &'a [Segment],
     pub names: Option<&'a [String]>,
+    pub diarizer: Option<&'a str>,
+    pub name_lone: bool,
 }
 
 impl Transcript<'_> {
     /// The speaker of a segment, where the file shows speakers.
     fn speaker(&self, s: &Segment) -> Option<u32> {
         self.names.and(s.speaker)
+    }
+
+    /// The transcript as its text and cues name its speakers: none for a
+    /// lone voice, unless name_lone.
+    fn shown(&self) -> Self {
+        let lone = || {
+            let mut who = self.segments.iter().filter_map(|s| s.speaker);
+            who.next().is_none_or(|a| who.all(|b| b == a))
+        };
+        Transcript {
+            names: self.names.filter(|_| self.name_lone || !lone()),
+            ..*self
+        }
     }
 
     /// Speaker n's name: the one given, else "Speaker n", as pktito-c writes
@@ -84,6 +104,9 @@ pub fn text_windows(
     times: bool,
     windows: &[Window],
 ) -> Result<String, String> {
+    // the JSON's speakers are the transcript's own, a lone voice's too
+    let all = t;
+    let t = &t.shown();
     let segs = t.segments;
     // the name that starts each segment beginning a turn, where the file shows
     // speakers: a turn is a speaker's segments in a row
@@ -172,7 +195,7 @@ pub fn text_windows(
                 .collect();
             format!("WEBVTT\n\n{body}")
         }
-        "json" => json(t, &cues(t)?, windows),
+        "json" => json(all, &cues(all)?, windows),
         _ => return Err(format!("No such format: {ext}")),
     })
 }
@@ -237,12 +260,25 @@ pub fn raw_cues(t: &Transcript) -> Result<Vec<pktito::Cue>, String> {
     Ok(captioned(t)?.2)
 }
 
+/// The words' own language, before any name goes in: English for a model
+/// of English alone, else the engine's guess from all of them
+/// (pk_language), as pktito-c's file_language has it.
+fn language(t: &Transcript, timed: &[(String, i64, i64)]) -> Option<String> {
+    let english = match t.model.and_then(model::entry) {
+        Some(e) if e.languages == ["en"] => 1,
+        _ => -1,
+    };
+    pktito::captions_lang(timed, english)
+}
+
 /// t's words as pk_captions is given them, a turn's first with its name in
-/// front where t shows speakers; each word's speaker; and the cues.
+/// front where t shows speakers (shown: not a lone voice's, unless asked);
+/// each word's speaker; and the cues.
 #[allow(clippy::type_complexity)]
 fn captioned(
     t: &Transcript,
 ) -> Result<(Vec<(String, i64, i64)>, Vec<Option<u32>>, Vec<pktito::Cue>), String> {
+    let t = &t.shown();
     let ms = |s: f64| (s * 1000.0).round() as i64;
     let words: Vec<(&crate::transcribe::Word, Option<u32>)> = t
         .segments
@@ -253,12 +289,7 @@ fn captioned(
         .iter()
         .map(|(w, _)| (w.text.clone(), ms(w.start), ms(w.end)))
         .collect();
-    let english = match t.model.and_then(model::entry) {
-        Some(e) if e.languages == ["en"] => 1,
-        _ => -1,
-    };
-    // the words' own language, before any name goes in
-    let lang = pktito::captions_lang(&timed, english);
+    let lang = language(t, &timed);
     let speaker: Option<Vec<i32>> = words
         .iter()
         .any(|(_, s)| s.is_some())
@@ -274,7 +305,15 @@ fn captioned(
     Ok((timed, words.iter().map(|(_, s)| *s).collect(), raw))
 }
 
-/// A segment to a few lines, a word to a line, the cues as their lines
+/// The document pktito-c's --json writes too, pktito/1, byte for byte but
+/// for what only pktito-c adds (--fast's "fast", each chunk's tokens and
+/// -v's "run"): the file, its length, the model and the words' language;
+/// with speakers, the diarizer where it is known and each speaker present,
+/// by id, a lone voice's too; the segments, each with its words; the cues,
+/// each with its speaker and its lines, the SRT's; and with windows the
+/// chunks pktito transcribed (pktito-cli, for measuring the cuts), each
+/// with its words as the first of the transcript's and how many. A segment
+/// to a few lines, a word to a line, a cue to a line.
 fn json(t: &Transcript, cues: &[Cue], windows: &[Window]) -> String {
     let j = |s: &str| serde_json::to_string(s).unwrap();
     let seg = |s: &Segment| {
@@ -283,10 +322,10 @@ fn json(t: &Transcript, cues: &[Cue], windows: &[Window]) -> String {
             .iter()
             .map(|w| {
                 format!(
-                    "      {{\"start\": {}, \"end\": {}, \"text\": {}}}",
+                    "      {{\"word\": {}, \"start\": {}, \"end\": {}}}",
+                    j(&w.text),
                     r3(w.start),
-                    r3(w.end),
-                    j(&w.text)
+                    r3(w.end)
                 )
             })
             .collect();
@@ -294,41 +333,72 @@ fn json(t: &Transcript, cues: &[Cue], windows: &[Window]) -> String {
             .speaker(s)
             .map_or(String::new(), |n| format!(", \"speaker\": {n}"));
         format!(
-            "    {{\"start\": {}, \"end\": {}, \"text\": {}{who}, \"words\": [\n{}\n    ]}}",
+            "    {{\"start\": {}, \"end\": {}{who}, \"text\": {}, \"words\": [\n{}\n    ]}}",
             r3(s.start),
             r3(s.end),
             j(&s.text),
             words.join(",\n")
         )
     };
-    // the speakers' names, speaker n's at n - 1, where the file shows them
-    let heard = t.segments.iter().filter_map(|s| t.speaker(s)).max();
-    let speakers = heard.map_or(String::new(), |most| {
-        let names: Vec<String> = (1..=most).map(|n| j(&t.name_of(n))).collect();
-        format!("\n  \"speakers\": [{}],", names.join(", "))
-    });
+    let present: std::collections::BTreeSet<u32> =
+        t.segments.iter().filter_map(|s| t.speaker(s)).collect();
+    let speakers = if present.is_empty() {
+        String::new()
+    } else {
+        let list: Vec<String> = present
+            .iter()
+            .map(|&n| format!("    {{\"id\": {n}, \"name\": {}}}", j(&t.name_of(n))))
+            .collect();
+        let diarizer = t
+            .diarizer
+            .map_or(String::new(), |d| format!(",\n  \"diarizer\": {}", j(d)));
+        format!("{diarizer},\n  \"speakers\": [\n{}\n  ]", list.join(",\n"))
+    };
+    // each word's speaker, for its cue's: a lone voice's too, which the
+    // cue's lines leave unnamed
+    let spoken: Vec<Option<u32>> = t
+        .segments
+        .iter()
+        .flat_map(|s| s.words.iter().map(move |_| t.speaker(s)))
+        .collect();
     let cue = |c: &Cue| {
-        let lines: Vec<&str> = c.text.split('\n').collect();
+        let who = spoken
+            .get(c.first)
+            .copied()
+            .flatten()
+            .map_or(String::new(), |n| format!(", \"speaker\": {n}"));
+        let lines: Vec<String> = c.text.split('\n').map(j).collect();
         format!(
-            "    {{\"start\": {}, \"end\": {}, \"lines\": {}}}",
+            "    {{\"start\": {}, \"end\": {}{who}, \"lines\": [{}]}}",
             r3(c.start as f64 / 1000.0),
             r3(c.end as f64 / 1000.0),
-            serde_json::to_string(&lines).unwrap()
+            lines.join(", ")
         )
     };
+    let timed: Vec<(String, i64, i64)> = t
+        .segments
+        .iter()
+        .flat_map(|s| s.words.iter().map(|w| (w.text.clone(), 0, 0)))
+        .collect();
+    let lang = language(t, &timed).map_or_else(|| "null".into(), |l| j(&l));
     let segs: Vec<String> = t.segments.iter().map(seg).collect();
     let cues: Vec<String> = cues.iter().map(cue).collect();
-    // each chunk: its stretch, the silence to the next, and its words as
-    // the first of the transcript's words (counted across the segments) and
-    // how many; a sentence carried across a cut has words in two
+    // each chunk: its stretch, the silence to the next, its words as the
+    // first of the transcript's words (counted across the segments) and
+    // how many (a sentence carried across a cut has words in two), and the
+    // stretches of it heard again
     let mut first = 0;
-    let windows: Vec<String> = windows
+    let chunks: Vec<String> = windows
         .iter()
         .enumerate()
         .map(|(i, w)| {
-            let gap = windows.get(i + 1).map_or("null".into(), |n| r3(n.start - w.end).to_string());
+            let gap = windows.get(i + 1).map_or("null".into(), |n| r3(n.start - w.end));
+            let retried = match w.retried {
+                0 => String::new(),
+                n => format!(", \"retried\": {n}"),
+            };
             let line = format!(
-                "    {{\"start\": {}, \"end\": {}, \"gap\": {}, \"first_word\": {}, \"words\": {}}}",
+                "    {{\"start\": {}, \"end\": {}, \"gap\": {}, \"first_word\": {}, \"words\": {}{retried}}}",
                 r3(w.start),
                 r3(w.end),
                 gap,
@@ -339,19 +409,18 @@ fn json(t: &Transcript, cues: &[Cue], windows: &[Window]) -> String {
             line
         })
         .collect();
-    let windows = if windows.is_empty() {
+    let chunks = if chunks.is_empty() {
         String::new()
     } else {
-        format!(",\n  \"windows\": [\n{}\n  ]", windows.join(",\n"))
+        format!(",\n  \"chunks\": [\n{}\n  ]", chunks.join(",\n"))
     };
     format!(
-        "{{\n  \"file\": {},\n  \"duration\": {},\n  \"model\": {},{speakers}\n  \"segments\": [\n{}\n  ],\n  \"captions\": [\n{}\n  ]{}\n}}\n",
+        "{{\n  \"format\": \"pktito/1\",\n  \"file\": {},\n  \"duration\": {},\n  \"model\": {},\n  \"language\": {lang}{speakers},\n  \"segments\": [\n{}\n  ],\n  \"captions\": [\n{}\n  ]{chunks}\n}}\n",
         j(t.name),
         r3(t.duration),
         t.model.filter(|m| !m.is_empty()).map(j).unwrap_or_else(|| "null".into()),
         segs.join(",\n"),
         cues.join(",\n"),
-        windows
     )
 }
 
@@ -462,6 +531,8 @@ mod tests {
             model: Some("parakeet-tdt-0.6b-v2"),
             segments: &segs,
             names: Some(&names),
+            diarizer: Some("Nemotron-3-Diarization"),
+            name_lone: false,
         };
         assert_eq!(
             text(&t, "txt", false).unwrap(),
@@ -504,11 +575,17 @@ mod tests {
         );
         let json = text(&t, "json", false).unwrap();
         assert!(
-            json.contains("\"speakers\": [\"Ada <A>\", \"Speaker 2\"],"),
+            json.contains(
+                "\n  \"diarizer\": \"Nemotron-3-Diarization\",\n  \"speakers\": [\n    {\"id\": 1, \"name\": \"Ada <A>\"},\n    {\"id\": 2, \"name\": \"Speaker 2\"}\n  ],\n"
+            ),
             "{json}"
         );
         assert!(
-            json.contains("\"text\": \"Yes.\", \"speaker\": 2, \"words\""),
+            json.contains("{\"start\": 2.6, \"end\": 3, \"speaker\": 2, \"text\": \"Yes.\", \"words\": [\n"),
+            "{json}"
+        );
+        assert!(
+            json.contains("\"speaker\": 2, \"lines\": [\"Speaker 2: Yes.\"]}"),
             "{json}"
         );
         // no names: no speakers anywhere
@@ -525,6 +602,106 @@ mod tests {
             );
         }
     }
+
+    /// One voice: the apps' text and cues name no one, as with speakers off,
+    /// and the JSON keeps the speaker; pktito-cli's (name_lone) name it, as
+    /// pktito-c's do.
+    #[test]
+    fn a_lone_voice() {
+        let segs = vec![
+            said(1, vec![word("Good", 0.5, 0.8), word("morning.", 0.8, 1.3)]),
+            said(1, vec![word("Shall", 1.6, 1.9), word("we?", 1.9, 2.3)]),
+        ];
+        let t = Transcript {
+            name: "talk.wav",
+            duration: 3.0,
+            model: Some("parakeet-tdt-0.6b-v2"),
+            segments: &segs,
+            names: Some(&[]),
+            diarizer: Some("Nemotron-3-Diarization"),
+            name_lone: false,
+        };
+        assert_eq!(text(&t, "txt", false).unwrap(), "Good morning.\nShall we?\n");
+        assert!(!text(&t, "srt", false).unwrap().contains("Speaker"));
+        let json = text(&t, "json", false).unwrap();
+        assert!(
+            json.contains("\"speakers\": [\n    {\"id\": 1, \"name\": \"Speaker 1\"}\n  ],"),
+            "{json}"
+        );
+        assert!(json.contains("\"speaker\": 1, \"text\": \"Good morning.\""), "{json}");
+        assert!(json.contains("\"speaker\": 1, \"lines\": [\"Good morning.\"]"), "{json}");
+        let named = Transcript {
+            name_lone: true,
+            ..t
+        };
+        assert_eq!(
+            text(&named, "txt", false).unwrap(),
+            "Speaker 1: Good morning.\nShall we?\n"
+        );
+        assert!(
+            text(&named, "json", false)
+                .unwrap()
+                .contains("\"lines\": [\"Speaker 1: Good morning."),
+        );
+    }
+
+    /// The whole document, pktito/1, as pktito-c's --json writes it too
+    /// (its tokens aside): with pktito-cli's chunks, one heard again.
+    #[test]
+    fn the_json_document() {
+        let segs = vec![
+            said(1, vec![word("Good", 0.5, 0.8), word("morning.", 0.8, 1.3)]),
+            said(2, vec![word("Yes.", 2.6, 3.0)]),
+        ];
+        let t = Transcript {
+            name: "talk.wav",
+            duration: 4.0,
+            model: Some("parakeet-tdt-0.6b-v2"),
+            segments: &segs,
+            names: Some(&[]),
+            diarizer: Some("Nemotron-3-Diarization"),
+            name_lone: true,
+        };
+        let windows = [
+            Window { start: 0.25, end: 2.4, words: 2, retried: 0 },
+            Window { start: 2.4, end: 4.0, words: 1, retried: 1 },
+        ];
+        assert_eq!(
+            text_windows(&t, "json", false, &windows).unwrap(),
+            DOCUMENT
+        );
+    }
+
+    const DOCUMENT: &str = r#"{
+  "format": "pktito/1",
+  "file": "talk.wav",
+  "duration": 4,
+  "model": "parakeet-tdt-0.6b-v2",
+  "language": "en",
+  "diarizer": "Nemotron-3-Diarization",
+  "speakers": [
+    {"id": 1, "name": "Speaker 1"},
+    {"id": 2, "name": "Speaker 2"}
+  ],
+  "segments": [
+    {"start": 0.5, "end": 1.3, "speaker": 1, "text": "Good morning.", "words": [
+      {"word": "Good", "start": 0.5, "end": 0.8},
+      {"word": "morning.", "start": 0.8, "end": 1.3}
+    ]},
+    {"start": 2.6, "end": 3, "speaker": 2, "text": "Yes.", "words": [
+      {"word": "Yes.", "start": 2.6, "end": 3}
+    ]}
+  ],
+  "captions": [
+    {"start": 0.5, "end": 1.8, "speaker": 1, "lines": ["Speaker 1: Good morning."]},
+    {"start": 2.6, "end": 3.6, "speaker": 2, "lines": ["Speaker 2: Yes."]}
+  ],
+  "chunks": [
+    {"start": 0.25, "end": 2.4, "gap": 0, "first_word": 0, "words": 2},
+    {"start": 2.4, "end": 4, "gap": null, "first_word": 2, "words": 1, "retried": 1}
+  ]
+}
+"#;
 
     #[test]
     fn times_as_the_window_writes_them() {
@@ -563,6 +740,8 @@ mod tests {
             model: Some("parakeet-tdt-0.6b-v2"),
             segments: &segs,
             names: None,
+            diarizer: None,
+            name_lone: false,
         };
         assert_eq!(text(&t, "txt", false).unwrap(), "Hello there.\n# Two\n");
         assert_eq!(

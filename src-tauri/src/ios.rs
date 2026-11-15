@@ -398,6 +398,8 @@ pub extern "C" fn pkapp_format(
                 model: Some(&t.model),
                 segments: &t.segments,
                 names: None,
+                diarizer: None,
+                name_lone: false,
             },
             &ext,
             times,
@@ -418,6 +420,8 @@ pub extern "C" fn pkapp_captions(transcript: *const c_char) -> *mut c_char {
             model: Some(&t.model),
             segments: &t.segments,
             names: None,
+            diarizer: None,
+            name_lone: false,
         })?;
         Ok(json!({ "cues": cues }))
     })
@@ -465,6 +469,7 @@ pub extern "C" fn pkapp_keep(
                 segments: t.segments,
                 names: Vec::new(),
                 stretches: Vec::new(),
+                diarizer: String::new(),
             },
         )?;
         Ok(listed(&data))

@@ -350,12 +350,14 @@ pub fn run(
 
 /// A chunk pktito transcribed, for measuring its cuts (pktito-cli's -f
 /// json): the stretch of the recording whose words are its own (pk_chunk_out.at),
-/// in seconds, and how many of the transcript's words are its, in order.
+/// in seconds, how many of the transcript's words are its, in order, and
+/// how many stretches of it were heard again (pk_asr_transcribe's retry).
 #[derive(Clone, Copy)]
 pub struct Window {
     pub start: f64,
     pub end: f64,
     pub words: usize,
+    pub retried: i32,
 }
 
 /// run(), and each chunk's window.
@@ -413,6 +415,7 @@ pub fn run_windows(
             start: c.start as f64 / rate,
             end: c.end as f64 / rate,
             words,
+            retried: c.retried,
         });
         done = c.done as f64 / c.total.max(1) as f64;
         progress(done, &segs);

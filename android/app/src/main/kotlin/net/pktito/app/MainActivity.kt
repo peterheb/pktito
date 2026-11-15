@@ -977,9 +977,10 @@ class MainActivity : ComponentActivity() {
     /** The transcript in a format, the desktop's bytes for it. */
     private fun text(ext: String, times: Boolean): String? {
         val tr = Transcriber.transcript ?: return null
-        // the names with a second voice, as the screen shows them
-        val turns = Speakers.on && Speakers.present(Transcriber.segments).size > 1
-        return Engine.format(tr, ext, Transcriber.name, times, turns)
+        // the names with any voice: format.rs leaves a lone one out of the text, as the screen
+        // does, and the JSON keeps it
+        val spoken = Speakers.on && Speakers.present(Transcriber.segments).isNotEmpty()
+        return Engine.format(tr, ext, Transcriber.name, times, spoken)
     }
 
     /**

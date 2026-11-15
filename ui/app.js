@@ -1236,6 +1236,7 @@ async function openRecent(id) {
       segments: t.segments,
       names: t.names || [],
       stretches: t.stretches || [],
+      diarizer: t.diarizer || "",
       took: t.took,
       transcribed: t.transcribed || 0,
       model: t.model,
@@ -1455,6 +1456,7 @@ function newFile(path) {
     cues: null,
     names: [],
     stretches: [],
+    diarizer: "",
     undo: null,
     fps: 0,
     took: 0,
@@ -1572,6 +1574,7 @@ listen("job", (e) => {
       model: j.model,
       recentId: j.recent,
       stretches: j.stretches || [],
+      diarizer: j.diarizer || "",
     });
     finished(f);
     // turned on while it ran: its speakers from its recording, once the
@@ -1709,6 +1712,7 @@ function again(f) {
     cues: null,
     names: [],
     stretches: [],
+    diarizer: "",
     undo: null,
     took: 0,
     transcribed: 0,
@@ -3262,6 +3266,9 @@ const nameOf = (f, n) =>
   ((f.names && f.names[n - 1]) || "").trim() || t("speakers.default", { n });
 /* the names f is written with, where the view shows speakers; else none */
 const namesFor = (f) => (turnsShown(f) ? f.names || [] : null);
+/* the names a file is saved with: a lone voice's too, which format.rs
+   leaves out of the text but keeps in the JSON */
+const namesSaved = (f) => (spkShown(f) ? f.names || [] : null);
 const turnStarts = (segs, i) =>
   segs[i].speaker != null &&
   (i === 0 || segs[i - 1].speaker !== segs[i].speaker);
@@ -3597,6 +3604,7 @@ async function findSpeakers(f) {
     Object.assign(f, {
       segments: r.segments,
       stretches: r.stretches,
+      diarizer: r.diarizer || "",
       names: [],
       cues: null,
     });
@@ -4200,7 +4208,8 @@ const textOf = (f, ext, times = !!prefs.times) =>
     model: f.model || null,
     segments: f.segments,
     times,
-    names: namesFor(f),
+    names: namesSaved(f),
+    diarizer: f.diarizer || null,
   });
 
 /* What the view shows: a finished transcript's captions as an .srt's text,

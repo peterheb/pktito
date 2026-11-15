@@ -612,6 +612,7 @@ fn download_diarizer(app: AppHandle, state: State<'_, AppState>) -> Result<(), P
 struct Found {
     segments: Vec<transcribe::Segment>,
     stretches: Vec<transcribe::Stretch>,
+    diarizer: String,
 }
 
 /// How far find_speakers is through the recording of the transcript at
@@ -646,6 +647,7 @@ fn speakers_of(app: &AppHandle, id: &str) -> Result<Found, Problem> {
         decode::decode(if wav.is_file() { &wav } else { &t.item.path }).map_err(|e| e.problem())?;
     let mut slot = state.diarizer.lock().unwrap();
     let d = ensure_diarizer(&mut slot, &path).map_err(Problem::from)?;
+    let heard_by = d.model.name();
     // a whole percent at a time: a 3-hour recording is fed in hundredths;
     // the stretches ended since the last one sent with each
     let (mut shown, mut sent) = (0, 0);
@@ -673,6 +675,10 @@ fn speakers_of(app: &AppHandle, id: &str) -> Result<Found, Problem> {
         tell,
     )?;
     drop(slot);
+    t.diarizer = match segments.iter().any(|s| s.speaker.is_some()) {
+        true => heard_by,
+        false => String::new(),
+    };
     t.segments = segments;
     t.stretches = stretches;
     t.names = Vec::new();
@@ -680,6 +686,7 @@ fn speakers_of(app: &AppHandle, id: &str) -> Result<Found, Problem> {
     Ok(Found {
         segments: t.segments,
         stretches: t.stretches,
+        diarizer: t.diarizer,
     })
 }
 
@@ -945,6 +952,8 @@ struct JobEvent {
     /// With speakers, once it is done: each speaker's stretches of speech,
     /// for the speaker bar; the segments say whose each is as they come.
     stretches: Vec<transcribe::Stretch>,
+    /// And the diarizer that found them, its model's name, for the JSON.
+    diarizer: String,
     /// An error: what happened.
     problem: Option<Problem>,
 }
@@ -1040,12 +1049,17 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
         Ok(e) => e,
         Err(why) => return fail(trouble("transcribe.cant_load_model", why.to_string())),
     };
+    // the diarizer's model's name, which the JSON names
+    let mut heard_by = String::new();
     let mut speakers = match (&diarizer, dslot.as_mut()) {
         (Some(p), Some(d)) => match ensure_diarizer(d, p) {
-            Ok(Diarizer { diar, model, .. }) => Some(
-                transcribe::Speakers::new(model, diar)
-                    .off_when(|| state.quiet.load(Ordering::Relaxed) == id),
-            ),
+            Ok(Diarizer { diar, model, .. }) => {
+                heard_by = model.name();
+                Some(
+                    transcribe::Speakers::new(model, diar)
+                        .off_when(|| state.quiet.load(Ordering::Relaxed) == id),
+                )
+            }
             Err(why) => return fail(trouble("transcribe.cant_load_model", why)),
         },
         _ => None,
@@ -1102,6 +1116,12 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
     match r {
         Ok((segments, true)) => {
             let took = t0.elapsed().as_secs_f64();
+            // the diarizer, where it found speakers: not where the switch
+            // went off before the end
+            let heard_by = match segments.iter().any(|s| s.speaker.is_some()) {
+                true => heard_by,
+                false => String::new(),
+            };
             let (size, modified) = recent::stamp(path);
             let item = recent::Item {
                 id: key.clone(),
@@ -1127,6 +1147,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
                     segments,
                     names: Vec::new(),
                     stretches: stretches.clone(),
+                    diarizer: heard_by.clone(),
                 },
             );
             if let (Ok(gone), Ok(dir)) = (&kept, audio_dir(app)) {
@@ -1150,6 +1171,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
                 model: name,
                 recent: kept.ok().map(|_| key),
                 stretches,
+                diarizer: heard_by,
                 ..Default::default()
             });
         }
@@ -1454,6 +1476,8 @@ fn captions(
         model: model.as_deref(),
         segments: &segments,
         names: names.as_deref(),
+        diarizer: None,
+        name_lone: false,
     })?)
 }
 
@@ -1537,8 +1561,10 @@ fn link_cli() -> Result<String, Problem> {
 }
 
 /// A finished transcript in one of Save's formats (format.rs), the bytes
-/// pktito-cli writes for it too.
+/// pktito-cli writes for it too. Its arguments are the window's call's,
+/// one for each field of format::Transcript.
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 fn text_of(
     ext: String,
     name: String,
@@ -1547,6 +1573,7 @@ fn text_of(
     segments: Vec<transcribe::Segment>,
     times: bool,
     names: Option<Vec<String>>,
+    diarizer: Option<String>,
 ) -> Result<String, Problem> {
     Ok(format::text(
         &format::Transcript {
@@ -1555,6 +1582,8 @@ fn text_of(
             model: model.as_deref(),
             segments: &segments,
             names: names.as_deref(),
+            diarizer: diarizer.as_deref().filter(|d| !d.is_empty()),
+            name_lone: false,
         },
         &ext,
         times,

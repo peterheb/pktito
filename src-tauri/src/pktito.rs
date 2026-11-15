@@ -53,14 +53,16 @@ struct ChunkOut {
 }
 
 /// A chunk of a recording, transcribed: its samples in the recording, its
-/// tokens (frames from its start, a retried stretch's among them), whether
-/// it is the last, the samples of the chunks done so far, of all of them,
-/// and its start in encoder frames, rounded (pk_chunk_out.at_frame), which
-/// counts its tokens' frames from the recording's start for pk_sentences.
+/// tokens (frames from its start, a retried stretch's among them), how many
+/// stretches of it were heard again, whether it is the last, the samples of
+/// the chunks done so far, of all of them, and its start in encoder
+/// frames, rounded (pk_chunk_out.at_frame), which counts its tokens' frames
+/// from the recording's start for pk_sentences.
 pub struct Done<'a> {
     pub start: i64,
     pub end: i64,
     pub toks: &'a [Tok],
+    pub retried: i32,
     pub last: bool,
     pub done: i64,
     pub total: i64,
@@ -524,6 +526,7 @@ impl Asr {
                 start: c.at.start,
                 end: c.at.end,
                 toks,
+                retried: c.retried,
                 last: c.i + 1 == c.n,
                 done: c.done,
                 total: c.total,

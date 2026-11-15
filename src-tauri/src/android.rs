@@ -53,6 +53,9 @@ struct Transcript {
     names: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     stretches: Vec<transcribe::Stretch>,
+    /// And the diarizer that found them, its model's name, for the JSON.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    diarizer: String,
 }
 
 impl Transcript {
@@ -65,6 +68,8 @@ impl Transcript {
             model: Some(&self.model),
             segments: &self.segments,
             names: speakers.then_some(&self.names[..]),
+            diarizer: Some(self.diarizer.as_str()).filter(|d| !d.is_empty()),
+            name_lone: false,
         }
     }
 }
@@ -249,6 +254,8 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
         .with_env(|env| -> jni::errors::Result<JObject<'a>> {
             let l = unsafe { &mut *(handle as *mut Loaded) };
             let mut d = (diar != 0).then(|| unsafe { &mut *(diar as *mut DiarLoaded) });
+            // the diarizer's model's name, which the JSON names
+            let heard_by = d.as_ref().map(|d| d.model.name()).unwrap_or_default();
             let mut speakers = d
                 .as_mut()
                 .map(|d| transcribe::Speakers::new(&d.model, &mut d.diar));
@@ -321,6 +328,12 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
                 }
                 Err(why) => return throw(env, &why).map(|_| JObject::null()),
             };
+            // the diarizer, where it found speakers: not where the switch
+            // went off before the end
+            let diarizer = match segments.iter().any(|s| s.speaker.is_some()) {
+                true => heard_by,
+                false => String::new(),
+            };
             let t = Transcript {
                 duration,
                 complete,
@@ -328,6 +341,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
                 segments,
                 names: Vec::new(),
                 stretches: speakers.map(|s| s.stretches).unwrap_or_default(),
+                diarizer,
             };
             let json = serde_json::to_string(&t).unwrap_or_default();
             Ok(env.new_string(json)?.into())
@@ -520,6 +534,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_findSpeakers<'a>(
     unowned
         .with_env(|env| -> jni::errors::Result<JObject<'a>> {
             let d = unsafe { &mut *(diar as *mut DiarLoaded) };
+            let heard_by = d.model.name();
             let name = name.try_to_string(env)?;
             let json = transcript.try_to_string(env)?;
             let mut t: Transcript = match serde_json::from_str(&json) {
@@ -569,6 +584,10 @@ pub extern "system" fn Java_net_pktito_app_Engine_findSpeakers<'a>(
             }
             match found {
                 Ok((segments, stretches)) => {
+                    t.diarizer = match segments.iter().any(|s| s.speaker.is_some()) {
+                        true => heard_by,
+                        false => String::new(),
+                    };
                     t.segments = segments;
                     t.stretches = stretches;
                     t.names = Vec::new();
@@ -606,6 +625,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_keepSpeakers<'a>(
                 k.segments = t.segments;
                 k.names = t.names;
                 k.stretches = t.stretches;
+                k.diarizer = t.diarizer;
                 recent::replace(&data, &k)
             });
             match kept {
@@ -677,6 +697,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_keep<'a>(
                 segments: t.segments,
                 names: t.names,
                 stretches: t.stretches,
+                diarizer: t.diarizer,
             };
             if let Err(why) = recent::add(&data, &t) {
                 return throw(env, &why).map(|_| JObject::null());

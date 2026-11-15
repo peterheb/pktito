@@ -176,6 +176,8 @@ fn transcribe_all(o: &Opts) -> Result<i32, String> {
         false => None,
     };
     let mut diarizer = diarizer;
+    // its model's name, which the JSON names
+    let heard_by = diarizer.as_ref().map(|(d, _)| d.name());
     let show = !o.quiet && std::io::stderr().is_terminal();
     let mut failed = 0;
     for f in &o.files {
@@ -209,8 +211,11 @@ fn transcribe_all(o: &Opts) -> Result<i32, String> {
                 duration: x.len() as f64 / decode::RATE as f64,
                 model: Some(name.as_str()),
                 segments: &segs,
-                // the default names, "Speaker 1" and on
+                // the default names, "Speaker 1" and on, a lone voice's
+                // too, as pktito-c names them
                 names: speakers.as_ref().map(|_| &[][..]),
+                diarizer: heard_by.as_deref(),
+                name_lone: true,
             };
             // json with pktito's chunks, for measuring its cuts
             let text = format::text_windows(&t, &o.ext, o.times, &windows)?;
