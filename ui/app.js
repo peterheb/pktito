@@ -2029,10 +2029,11 @@ function updateRunning(f) {
 /* A segment, or a cue; its time plays from there once the transcript is
    finished. A cue shows its end too, its lines as they will read, and a
    mark if it asks more than 20 characters a second of its reader. */
-function segHtml(s, i, filling, turn = -1) {
+function segHtml(s, i, filling, turn = -1, dot = false) {
   const cue = s.endMs !== undefined;
-  // a turn's name opens its text (app.css, .pk-speaker)
-  const f = turn >= 0 ? current() : null;
+  // a turn's name opens its text (app.css, .pk-speaker), and with speakers
+  // each sentence's mark ends its times (dotBtn)
+  const f = turn >= 0 || dot ? current() : null;
   const fast =
     cue && s.flags & 1
       ? `<span class="pk-fast" title="${esc(t("seg.fast", { rate: num(s.chars / (s.end - s.start), 1) }))}">${ICON.zap}</span>`
@@ -2042,7 +2043,8 @@ function segHtml(s, i, filling, turn = -1) {
     `<div class="pk-seg${cue ? " pk-cue" : ""}${turn >= 0 && i > 0 ? " pk-turn" : ""}" data-i="${i}"><div class="pk-seg-times"><button class="pk-seg-t" type="button" tabindex="-1" ` +
     `aria-label="${esc(t("seg.play_from", { time: start }))}"${filling ? "" : ` title="${esc(t("seg.play_here"))}"`}>${start}</button>` +
     (cue ? `<span class="pk-seg-end">${tc(s.end)}${fast}</span>` : "") +
-    `</div><p>${f ? nameBtn(f, turn) : ""}${bodyHtml(s, i)}</p></div>`
+    (dot ? dotBtn(f, i) : "") +
+    `</div><p>${turn >= 0 ? nameBtn(f, turn, cue) : ""}${bodyHtml(s, i)}</p></div>`
   );
 }
 
@@ -2226,7 +2228,7 @@ $("transcript").addEventListener("click", (e) => {
   const touch = e.pointerType === "touch",
     t = e.target.closest(touch ? ".pk-seg" : ".pk-seg-t"),
     f = current();
-  const nb = e.target.closest(".pk-speaker");
+  const nb = e.target.closest(".pk-speaker, .pk-sdot");
   if (nb) return openWho(nb);
   if (!t || !f || modeOf(f) !== "review") return;
   if (touch && tapClears) return getSelection().removeAllRanges();
@@ -3074,7 +3076,10 @@ function present(f) {
     if (s.speaker != null && !seen.includes(s.speaker)) seen.push(s.speaker);
   return seen;
 }
-const spkShown = (f) => !!prefs.speakers && !!f && present(f).length > 1;
+/* shown with the switch on, one speaker as much as eight: the model may
+   have heard two voices as one, which New speaker puts right (Peter,
+   2026-11-14: the solo episode showed nothing, as if none were found) */
+const spkShown = (f) => !!prefs.speakers && !!f && present(f).length > 0;
 const nameOf = (f, n) =>
   ((f.names && f.names[n - 1]) || "").trim() || t("speakers.default", { n });
 /* the names f is written with, where the view shows speakers; else none */
@@ -3082,11 +3087,13 @@ const namesFor = (f) => (spkShown(f) ? f.names || [] : null);
 const turnStarts = (segs, i) =>
   segs[i].speaker != null &&
   (i === 0 || segs[i - 1].speaker !== segs[i].speaker);
-/* the turn starting at segment i: its segments, its speaker and its times */
-function turnAt(f, i) {
+/* the turn starting at segment i: its segments, its speaker and its
+   times; alone, segment i by itself */
+function turnAt(f, i, alone = false) {
   const s = f.segments[i].speaker;
   let j = i;
-  while (j + 1 < f.segments.length && f.segments[j + 1].speaker === s) j++;
+  while (!alone && j + 1 < f.segments.length && f.segments[j + 1].speaker === s)
+    j++;
   return {
     from: i,
     to: j,
@@ -3095,13 +3102,24 @@ function turnAt(f, i) {
     end: f.segments[j].end,
   };
 }
-const nameBtn = (f, i) => {
+const nameBtn = (f, i, mark) => {
   const n = f.segments[i].speaker,
     name = nameOf(f, n);
   return (
     `<button class="pk-speaker" type="button" data-turn="${i}" aria-haspopup="menu" aria-expanded="false" ` +
-    `aria-label="${esc(t("speakers.name_label", { name }))}">${markHtml(n)}<span>${esc(name)}:</span></button>`
+    `aria-label="${esc(t("speakers.name_label", { name }))}">${mark ? markHtml(n) : ""}<span>${esc(name)}:</span></button>`
   );
+};
+/* A sentence's speaker, its mark at the right of the times' column: a
+   click gives that sentence alone to another speaker, where the name
+   gives its whole turn (Peter, 2026-11-14: a sentence inside a turn had
+   nothing to click). Out of the tab order, as the times are: a turn's
+   name is the keys'. Captions have none: a cue can hold words of two
+   sentences, as 150 of 691 did in a 37-minute podcast. */
+const dotBtn = (f, i) => {
+  const n = f.segments[i].speaker,
+    label = esc(t("speakers.name_label", { name: nameOf(f, n) }));
+  return `<button class="pk-sdot" type="button" tabindex="-1" data-seg="${i}" aria-haspopup="menu" aria-expanded="false" aria-label="${label}" title="${label}">${markHtml(n)}</button>`;
 };
 /* row i of the transcript */
 const rowEl = (i) => $("transcript").getElementsByClassName("pk-seg")[i];
@@ -3116,7 +3134,7 @@ function rowsHtml(f, rows, base, filling) {
     const i = base + k;
     let turn = -1;
     if (on) turn = cues ? s.turnSeg : turnStarts(f.segments, i) ? i : -1;
-    out += segHtml(s, i, filling, turn);
+    out += segHtml(s, i, filling, turn, on && !cues && s.speaker != null);
   });
   return out;
 }
@@ -3138,13 +3156,7 @@ function updateSpeakers(f, review) {
   b.setAttribute("aria-pressed", String(pressed));
   b.setAttribute("aria-busy", String(!!spkBusy));
   b.innerHTML = `${ICON.check}<span>${esc(t("speakers.switch"))}</span>`;
-  b.title = !pressed
-    ? t("speakers.show")
-    : n > 1
-      ? t("speakers.hide")
-      : n === 1
-        ? t("speakers.one")
-        : t("speakers.show");
+  b.title = pressed && n > 0 ? t("speakers.hide") : t("speakers.show");
   const on = offer && spkShown(f);
   $("chips").hidden = !on;
   const chip = (x) =>
@@ -3381,14 +3393,18 @@ function moveStretches(list, from, to, a, b) {
   return out;
 }
 
-/* Who's speaking, for the turn whose name was clicked: the speakers as
-   radio buttons, then Rename and New speaker. New speaker is for a voice
+/* Who's speaking, for the turn whose name was clicked, or the sentence
+   whose mark was (dotBtn): the speakers as radio buttons, then Rename and
+   New speaker. New speaker is for a voice
    the model merged into someone else's: the lowest number not in use, so
    that no two share a color, and none past eight. */
 function openWho(btn) {
   const f = current();
   if (!f || modeOf(f) !== "review") return;
-  const u = turnAt(f, Number(btn.dataset.turn)),
+  const u =
+      btn.dataset.seg !== undefined
+        ? turnAt(f, Number(btn.dataset.seg), true)
+        : turnAt(f, Number(btn.dataset.turn)),
     all = present(f);
   const html =
     `<div class="pk-pop-head">${esc(t("speakers.who"))}</div><div class="pk-pop-sub">${esc(tc(u.start))}–${esc(tc(u.end))}</div>` +

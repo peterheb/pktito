@@ -1110,8 +1110,7 @@ private fun Views(
         stringResource(
             when {
                 !pressed -> R.string.speakers_show
-                spk.present.size > 1 -> R.string.speakers_hide
-                spk.present.size == 1 -> R.string.speakers_one
+                spk.present.isNotEmpty() -> R.string.speakers_hide
                 else -> R.string.speakers_show
             }
         )

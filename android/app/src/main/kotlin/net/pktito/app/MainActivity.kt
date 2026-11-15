@@ -311,9 +311,11 @@ class MainActivity : ComponentActivity() {
         val review = t.step == "done" || t.step == "stopped"
         val rows = if (captions && review) t.cues ?: emptyList() else t.segments
         // who said what (Speakers): those of the transcript in the order they
-        // first speak, shown with the switch on where there are two or more
+        // first speak, shown with the switch on, one as much as eight: the
+        // model may have heard two voices as one, which New speaker puts
+        // right (Peter, 2026-11-14)
         val present by remember { derivedStateOf { Speakers.present(t.segments) } }
-        val spoken = Speakers.on && present.size > 1
+        val spoken = Speakers.on && present.isNotEmpty()
         // the bar's stretches, the diarizer's, or while a file is transcribing
         // its turns so far (app.js, drawBar)
         val bar by remember {
@@ -962,7 +964,7 @@ class MainActivity : ComponentActivity() {
     /** The transcript in a format, the desktop's bytes for it. */
     private fun text(ext: String, times: Boolean): String? {
         val tr = Transcriber.transcript ?: return null
-        val spoken = Speakers.on && Speakers.present(Transcriber.segments).size > 1
+        val spoken = Speakers.on && Speakers.present(Transcriber.segments).isNotEmpty()
         return Engine.format(tr, ext, Transcriber.name, times, spoken)
     }
 

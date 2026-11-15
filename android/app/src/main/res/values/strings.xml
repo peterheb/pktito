@@ -276,7 +276,6 @@
     <string name="speakers_switch">Speakers</string>
     <string name="speakers_show">Show who said what</string>
     <string name="speakers_hide">Hide speakers</string>
-    <string name="speakers_one">One speaker</string>
     <string name="speakers_default">Speaker %1$d</string>
     <string name="speakers_bar">Who talks when</string>
     <string name="speakers_name_label">%1$s: who’s speaking</string>

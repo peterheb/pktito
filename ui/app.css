@@ -2107,16 +2107,9 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   color: var(--ink-muted);
   background-image: none;
 }
-/* the row playing: its time as every other's, and the beak's square after
-   it on the line, as after the wordmark; in ink, and before it, the time
-   looked larger and moved over (Peter's screenshot, 2026-10-22) */
-.pk-seg.is-current .pk-seg-t::after {
-  content: "";
-  width: 7px;
-  height: 7px;
-  background: var(--beak);
-  flex: none;
-}
+/* the row playing: its time as every other's, the row's ground its mark.
+   The beak's square after the time, as after the wordmark, went: beside
+   the speakers' marks it read as one of them (Peter, 2026-11-14). */
 .pk-seg p {
   font: 400 17px/1.6 var(--font-sans);
   color: var(--ink);
@@ -2193,9 +2186,7 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   }
   /* a cue's start and end side by side above its lines, as a range,
      00:02.88 – 00:05.60, spaced as the mono type spaces it (0.6 em, a
-     space's width), and the beak after the range: a start with the beak
-     after it and the end beside that read as two times of their own
-     (Peter, the Android app on the S25, 2026-10-26) */
+     space's width) */
   .pk-seg-times {
     flex-direction: row;
     align-items: baseline;
@@ -2208,17 +2199,6 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   .pk-cue .pk-seg-end::before {
     content: "\2013";
     padding: 0 0.6em;
-  }
-  .pk-cue.is-current .pk-seg-t::after {
-    content: none;
-  }
-  .pk-cue.is-current .pk-seg-end::after {
-    content: "";
-    width: 7px;
-    height: 7px;
-    margin-left: 3px;
-    background: var(--beak);
-    flex: none;
   }
   .pk-cue .pk-fast {
     order: 1;
@@ -2670,6 +2650,46 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   vertical-align: middle;
   margin-right: 7px;
 }
+/* a sentence's speaker (app.js, dotBtn): its mark at the right of the
+   times' column, 12 px from the text, in a 24 px circle to click */
+.pk-seg-times {
+  position: relative;
+}
+.pk-sdot {
+  position: absolute;
+  top: -2px;
+  right: -7px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+.pk-sdot:hover {
+  background: var(--tint);
+}
+.pk-sdot:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.is-live .pk-sdot {
+  cursor: default;
+}
+.is-live .pk-sdot:hover {
+  background: none;
+}
+/* with the time above the text, the mark after the time on its line */
+@container (max-width: 619px) {
+  .pk-sdot {
+    position: static;
+    align-self: center;
+    margin: -2px 0 -2px 6px;
+  }
+}
 .pk-seg.pk-turn {
   margin-top: 12px;
 }
@@ -2698,6 +2718,20 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 }
 .pk-spkbar b.is-second {
   top: 0;
+}
+/* a click on the bar, or between it and the waveform, puts the playhead
+   there as one on the waveform does: the waveform's button reaches up over
+   them, 18 px with ticks or without (Peter, 2026-11-14) */
+#strip.spk .pk-wavebtn {
+  position: relative;
+}
+#strip.spk .pk-wavebtn::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 18px;
 }
 #strip.spk .pk-transport {
   padding-top: 30px;
