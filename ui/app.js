@@ -128,6 +128,12 @@ const ICON = {
   back: svg(
     '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
   ),
+  // who's speaking, changed: Feather's user, to the left, and its edit-2's
+  // pencil at half size over where its right shoulder was
+  who: svg(
+    '<circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4"/>' +
+      '<path d="M19.5 12.5a1.77 1.77 0 1 1 2.5 2.5L15.5 21.5 12 22.5l1-3.5z"/>',
+  ),
   play: svg(
     '<polygon points="6 3 20 12 6 21 6 3"/>',
     "pk-ico pk-ico-20 pk-ico-fill",
@@ -2033,18 +2039,29 @@ function updateRunning(f) {
 /* A segment, or a cue; its time plays from there once the transcript is
    finished. A cue shows its end too, its lines as they will read, and a
    mark if it asks more than 20 characters a second of its reader. */
-function segHtml(s, i, filling, turn = -1, dot = false) {
+function segHtml(s, i, filling, turn = -1, dot = false, spk = false) {
   const cue = s.endMs !== undefined;
   // a turn's name opens its text (app.css, .pk-speaker), and with speakers
   // each sentence's mark ends its times (dotBtn)
-  const f = turn >= 0 || dot ? current() : null;
+  const f = turn >= 0 || dot || spk ? current() : null;
   const fast =
     cue && s.flags & 1
       ? `<span class="pk-fast" title="${esc(t("seg.fast", { rate: num(s.chars / (s.end - s.start), 1) }))}">${ICON.zap}</span>`
       : "";
   const start = tc(s.start);
+  // the turn's line beside the text, in its speaker's colour: where the
+  // turn starts and ends it stops short of the row's edge (app.css, .pk-seg[data-spk])
+  let line = "";
+  if (spk && s.speaker != null) {
+    const rows = cue ? f.cues : f.segments,
+      next = rows[i + 1];
+    line =
+      ` data-spk="${s.speaker}" style="--spk:var(--speaker-${slotOf(s.speaker)})"` +
+      (turn >= 0 || i === 0 ? " data-first" : "") +
+      (!next || next.speaker !== s.speaker ? " data-last" : "");
+  }
   return (
-    `<div class="pk-seg${cue ? " pk-cue" : ""}${turn >= 0 && i > 0 ? " pk-turn" : ""}" data-i="${i}" data-t="${s.start}"><div class="pk-seg-times"><button class="pk-seg-t" type="button" tabindex="-1" ` +
+    `<div class="pk-seg${cue ? " pk-cue" : ""}${turn >= 0 && i > 0 ? " pk-turn" : ""}" data-i="${i}" data-t="${s.start}"${line}><div class="pk-seg-times"><button class="pk-seg-t" type="button" tabindex="-1" ` +
     `aria-label="${esc(t("seg.play_from", { time: start }))}"${filling ? "" : ` title="${esc(t("seg.play_here"))}"`}>${start}</button>` +
     (cue ? `<span class="pk-seg-end">${tc(s.end)}${fast}</span>` : "") +
     (dot ? dotBtn(f, i) : "") +
@@ -3142,7 +3159,7 @@ const nameBtn = (f, i, mark) => {
     name = nameOf(f, n);
   return (
     `<button class="pk-speaker" type="button" data-turn="${i}" aria-haspopup="menu" aria-expanded="false" ` +
-    `aria-label="${esc(t("speakers.name_label", { name }))}">${mark ? markHtml(n) : ""}<span>${esc(name)}:</span></button>`
+    `aria-label="${esc(t("speakers.name_label", { name }))}"><span>${esc(name)}:</span></button>`
   );
 };
 /* A sentence's speaker, its mark at the right of the times' column: a
@@ -3154,7 +3171,7 @@ const nameBtn = (f, i, mark) => {
 const dotBtn = (f, i) => {
   const n = f.segments[i].speaker,
     label = esc(t("speakers.name_label", { name: nameOf(f, n) }));
-  return `<button class="pk-sdot" type="button" tabindex="-1" data-seg="${i}" aria-haspopup="menu" aria-expanded="false" aria-label="${label}" title="${label}">${markHtml(n)}</button>`;
+  return `<button class="pk-sdot" type="button" tabindex="-1" data-seg="${i}" aria-haspopup="menu" aria-expanded="false" aria-label="${label}" title="${label}">${ICON.who}</button>`;
 };
 /* row i of the transcript */
 const rowEl = (i) => $("transcript").getElementsByClassName("pk-seg")[i];
@@ -3169,7 +3186,7 @@ function rowsHtml(f, rows, base, filling) {
     const i = base + k;
     let turn = -1;
     if (on) turn = cues ? s.turnSeg : turnStarts(f.segments, i) ? i : -1;
-    out += segHtml(s, i, filling, turn, on && !cues && s.speaker != null);
+    out += segHtml(s, i, filling, turn, on && !cues && s.speaker != null, on);
   });
   return out;
 }
@@ -3867,6 +3884,8 @@ async function cuesOf(f) {
         turnStarts(f.segments, seg)
           ? seg
           : -1,
+      // its speaker's line (segHtml): a change of speaker ends a cue
+      speaker: names && seg != null ? f.segments[seg].speaker : null,
       start: c.start / 1000,
       end: c.end / 1000,
       startMs: c.start,

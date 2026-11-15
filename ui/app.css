@@ -2682,15 +2682,42 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   vertical-align: middle;
   margin-right: 7px;
 }
-/* a sentence's speaker (app.js, dotBtn): its mark at the right of the
-   times' column, 12 px from the text, in a 24 px circle to click */
-.pk-seg-times {
+/* A turn's line (the prototype of Peter's 2026-11-15 question): each row
+   of a speaker's turn carries a 3 px line in the speaker's colour in the
+   gap before its text, 6 px from it, so that a turn reads as a paragraph
+   of its own and its name, at its top, says whose; it starts and ends 10
+   px inside the turn's first and last rows, and turns stand 12 px apart
+   (.pk-turn). With the time above the text, at the row's left edge. */
+.pk-seg[data-spk] {
   position: relative;
 }
+.pk-seg[data-spk]::before {
+  content: "";
+  position: absolute;
+  left: calc(16px + 112px + 5px);
+  width: 3px;
+  top: 0;
+  bottom: 0;
+  background: var(--spk);
+}
+.pk-seg[data-first]::before {
+  top: 10px;
+  border-radius: 1.5px 1.5px 0 0;
+}
+.pk-seg[data-last]::before {
+  bottom: 10px;
+  border-bottom-left-radius: 1.5px;
+  border-bottom-right-radius: 1.5px;
+}
+/* a sentence's speaker (app.js, dotBtn): a button just before its line,
+   at its first line of text, in the times' column's room after the time,
+   shown while the pointer is on the row, that gives that sentence alone to
+   another speaker; a person with a pencil, in a ring of the speaker's
+   colour. With the time above the text, after the time on its line. */
 .pk-sdot {
   position: absolute;
-  top: -2px;
-  right: -7px;
+  top: 9.6px;
+  left: calc(16px + 112px + 5px - 2px - 24px);
   width: 24px;
   height: 24px;
   display: grid;
@@ -2698,28 +2725,48 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   border: 0;
   padding: 0;
   border-radius: 50%;
-  background: none;
+  background: var(--ground);
+  box-shadow: inset 0 0 0 2px var(--spk);
+  color: var(--ink-muted);
   cursor: pointer;
 }
+.pk-seg.is-current .pk-sdot {
+  background: var(--surface);
+}
+.pk-sdot .pk-ico {
+  width: 14px;
+  height: 14px;
+}
 .pk-sdot:hover {
-  background: var(--tint);
+  background: linear-gradient(var(--tint), var(--tint)), var(--ground);
+  color: var(--ink);
 }
 .pk-sdot:focus-visible {
   outline: 2px solid var(--focus);
-  outline-offset: -2px;
+  outline-offset: 0;
+}
+@media (hover: hover) {
+  .pk-sdot {
+    opacity: 0;
+    transition: opacity 0.1s ease;
+  }
+  .pk-seg:hover .pk-sdot,
+  .pk-sdot:focus-visible,
+  .pk-sdot[aria-expanded="true"] {
+    opacity: 1;
+  }
 }
 .is-live .pk-sdot {
-  cursor: default;
+  display: none;
 }
-.is-live .pk-sdot:hover {
-  background: none;
-}
-/* with the time above the text, the mark after the time on its line */
 @container (max-width: 619px) {
+  .pk-seg[data-spk]::before {
+    left: 5px;
+  }
   .pk-sdot {
     position: static;
     align-self: center;
-    margin: -2px 0 -2px 6px;
+    margin: -2px 0 -2px 8px;
   }
 }
 .pk-seg.pk-turn {
@@ -2911,4 +2958,14 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 }
 .pk-toast .pk-undo:hover {
   background: var(--tint-term-press);
+}
+
+/* every speaker's mark, the names over the transcript's (.pk-chip) and
+   Who's speaking's: a short line, the transcript's, not a dot (the line
+   prototype) */
+.pk-mark,
+.pk-mark.is-sq {
+  width: 3px;
+  height: 14px;
+  border-radius: 1.5px;
 }
