@@ -2,4 +2,7 @@ pktito diar 149c726 merged with main 59ecd94, copied 2026-11-14: a merge made
 here for the app's speakers branch, not libpktito's own (two conflicts, both
 additions side by side: pktito.h's pk_model_speakers before main's pk_audio;
 asr.c's pk_audio functions without pk_prof, which diar moved to passes.c).
+Then libpktito afe997e (branch diar-nofloor, local, on diar 149c726) applied
+on 2026-11-15: pk_speakers without NeMo's 0.01 floor, core/speakers.c and
+its comment in core/pktito.h.
 Vendor again from libpktito once diar is on its main.
