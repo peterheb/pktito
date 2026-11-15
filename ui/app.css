@@ -2049,18 +2049,38 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 }
 
 /* ------------------------------------------------------------- transcript -- */
-/* A row: its time in a 112 px column, which a fast cue's end time and its
-   mark fill to 102 px, then its text, at most --column-narrow wide (560 px,
-   about 72 characters a line): rows of 760 px ran to 79 (the window study,
-   2026-10-23). 140 px is the row's padding, the times and their gap. A
-   batch's file rows are as wide. */
+/* A row: its time, a gutter, then its text. The times' column is as wide
+   as the file's times (app.js, timeChars): 8 characters under an hour, 10
+   with hours, 11 from 10 hours or with frames counted, 7.8 px each (Commit
+   Mono's 0.6 em at 13 px), and in Captions 16 px more, for a fast cue's
+   mark after its end time. The gutter is 46 px beside every file's times,
+   so that a speaker's line, centred in it, stands as far from the times in
+   each, and the text takes what the times leave of the row (Peter,
+   2026-11-15). With one 112 px column for all, a short file's times ended
+   36 px from the line and frame-counted times 12, the line's button 1.7 px
+   from them (measured in WebKit, in the UI harness). A row is at most 716
+   px, its padding, an hour's times and the gutter, and 560 px of text with
+   them (--column-narrow, about 72 characters a line): rows of 760 px ran
+   to 79 (the window study, 2026-10-23). A batch's file rows are as wide. */
 :root {
-  --row: calc(140px + var(--column-narrow) + 16px);
+  --time-chars: 10;
+  --time-mark: 0px;
+  --gutter: 46px;
+  --row: calc(16px + 78px + var(--gutter) + var(--column-narrow) + 16px);
+}
+/* worked out where it is used, so that the transcript's own --time-chars
+   is the one it reads */
+.pk-seg,
+.pk-stats {
+  --times-w: calc(var(--time-chars) * 7.8px + var(--time-mark));
+}
+.has-cues {
+  --time-mark: 16px;
 }
 .pk-seg {
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
-  column-gap: 12px;
+  grid-template-columns: var(--times-w) minmax(0, 1fr);
+  column-gap: var(--gutter);
   align-items: baseline;
   padding: 8px 16px;
   border-radius: var(--radius-ui);
@@ -2072,7 +2092,7 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 /* what the transcript cost, after its last row: quiet, under the text column */
 .pk-stats {
   margin: var(--space-3) 0 0;
-  padding: 0 16px 0 140px;
+  padding: 0 16px 0 calc(16px + var(--times-w) + var(--gutter));
   max-width: var(--row);
   font: 400 12px/1.5 var(--font-sans);
   font-variant-numeric: tabular-nums;
@@ -2691,19 +2711,22 @@ html:not([data-chrome="win"]) .pk-head > #stop {
    speaker's turn carries a 3 px line in the speaker's colour between the
    times and the text, so that a turn reads as a paragraph of its own and
    its name, at its top, says whose; it starts and ends 10 px inside the
-   turn's first and last rows, and turns stand 12 px apart (.pk-turn). 114
-   px in, 23 px before the text: 4 px from it, the line and its button sat
-   crowded against the text beside the times' wide gutter (Peter,
-   2026-11-15). With the time above the text, at the row's left edge. */
+   turn's first and last rows, and turns stand 12 px apart (.pk-turn). In
+   the middle of the gutter, 21.5 px from the times and from the text: 4 px
+   from the text, the line and its button sat crowded against it beside the
+   times' wide gutter, and in the middle it stands as far from every file's
+   times (Peter, 2026-11-15). With the time above the text, at the row's
+   left edge. */
 .pk-seg[data-spk],
 .pk-seg[data-dot] {
   position: relative;
-  --line-x: 114px;
+  /* the row's 16 px padding, the times, half the gutter */
+  --line-mid: calc(16px + var(--times-w) + var(--gutter) / 2);
 }
 .pk-seg[data-spk]::before {
   content: "";
   position: absolute;
-  left: var(--line-x);
+  left: calc(var(--line-mid) - 1.5px);
   width: 3px;
   top: 0;
   bottom: 0;
@@ -2721,14 +2744,14 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 /* a sentence's speaker (app.js, dotBtn): a button on its line, centred
    on it at the sentence's first line of text, shown while the pointer is
    on the row, that gives that sentence alone to another speaker; a person
-   with a pencil, in a ring of the speaker's colour. On the line it is 12
-   px from the text and 9.5 from an hour's time (1:02:03.45 ends 94 px in,
-   measured in WebKit): beside the line there was no room for both. With
-   the time above the text, after the time on its line. */
+   with a pencil, in a ring of the speaker's colour. On the line, 11 px
+   from the times and from the text (half of the gutter's 46 less its 24):
+   beside the line there was no room for both. With the time above the text,
+   after the time on its line. */
 .pk-sdot {
   position: absolute;
   top: 9.6px;
-  left: calc(var(--line-x) + 1.5px - 12px);
+  left: calc(var(--line-mid) - 12px);
   width: 24px;
   height: 24px;
   display: grid;

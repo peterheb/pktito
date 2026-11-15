@@ -277,6 +277,11 @@ const rateOf = (f) => (ownRate(f) ? f.fps : prefs.fps > 0 ? prefs.fps : 24);
    always hh:mm:ss:ff, as an editor's is */
 const tc = (t, f = current()) =>
   prefs.frames ? timecode(t, rateOf(f)) : stamp(t, (f && f.duration) || 0);
+/* how many characters f's times have: all as many as its length's, as
+   stamp gives every time the hours of the file's length, and a frame
+   count's always 11. The transcript's times' column is as wide (app.css,
+   .pk-seg). */
+const timeChars = (f) => tc(f.duration || 0, f).length;
 /* a file's length as the strip shows it */
 const lengthOf = (f) =>
   prefs.frames ? timecode(f.duration, rateOf(f)) : lengthHms(f.duration);
@@ -2223,6 +2228,10 @@ function renderTranscript(f, mode) {
   const tr = $("transcript");
   tr.classList.toggle("is-live", mode === "running");
   tr._spk = turnsShown(f);
+  // the times' column as wide as the file's times, and in Captions with
+  // room for a fast cue's mark (app.css, .pk-seg)
+  tr.style.setProperty("--time-chars", timeChars(f));
+  tr.classList.toggle("has-cues", !!f.cues && rowsOf(f) === f.cues);
   tr.innerHTML =
     rowsHtml(f, rowsOf(f), 0, mode === "running") +
     (mode === "review" ? statsHtml(f) : "");
@@ -2287,6 +2296,8 @@ function appendSegs(f, segs) {
   const tr = $("transcript");
   const atEnd = tr.scrollHeight - tr.scrollTop - tr.clientHeight < 48;
   const base = f.segments.length - segs.length;
+  // a length heard only now can give the times their hours
+  tr.style.setProperty("--time-chars", timeChars(f));
   // a second speaker just came: the names go on the turns before too
   if (tr._spk !== turnsShown(f)) renderTranscript(f, "running");
   else tr.insertAdjacentHTML("beforeend", rowsHtml(f, segs, base, true));
