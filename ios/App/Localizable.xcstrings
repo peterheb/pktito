@@ -2359,7 +2359,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@: rename"
+            "value": "%1$@: find where they speak"
           }
         }
       }
@@ -2393,6 +2393,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Downloading the speaker model, %1$lld%%"
+          }
+        }
+      }
+    },
+    "speakers_find": {
+      "extractionState": "manual",
+      "comment": "in Who's speaking: their turns as a search's matches, to step through and hear",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find where %1$@ speaks"
           }
         }
       }

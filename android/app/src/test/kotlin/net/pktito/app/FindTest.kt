@@ -3,7 +3,10 @@ package net.pktito.app
 import net.pktito.app.ui.Finder
 import net.pktito.app.ui.Hit
 import net.pktito.app.ui.findIn
+import net.pktito.app.ui.turnsOf
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -24,6 +27,34 @@ class FindTest {
     private fun Finder.seek(hits: List<Hit>, seeks: MutableList<Double>) = { s: Double ->
         seeks += s
         follow(hits, s, jump = true)
+    }
+
+    /** A speaker's turns (turnsOf): each run of their rows, at its first row's start. */
+    @Test
+    fun aSpeakersTurns() {
+        fun seg(t: Double, n: Int?) = Seg(t, t + 1, "w", emptyList(), n)
+        val rows =
+            listOf(seg(0.0, 1), seg(1.0, 2), seg(2.0, 2), seg(3.0, 1), seg(4.0, null), seg(5.0, 1))
+        assertEquals(listOf(0, 3, 5), turnsOf(rows, 1).map { it.row })
+        assertEquals(listOf(1), turnsOf(rows, 2).map { it.row })
+        assertEquals(listOf(1.0), turnsOf(rows, 2).map { it.time })
+        assertEquals(-1, turnsOf(rows, 2)[0].start)
+        assertEquals(emptyList<Hit>(), turnsOf(rows, 3))
+    }
+
+    /** Found again, a speaker is let go; words typed replace them (FindField), as Esc does all. */
+    @Test
+    fun aSpeakerFound() {
+        val f = Finder()
+        f.findWho(4)
+        assertEquals(4, f.who)
+        assertTrue(f.open && f.searching)
+        f.findWho(4)
+        assertEquals(0, f.who)
+        assertFalse(f.searching)
+        f.findWho(2)
+        f.clear()
+        assertEquals(0, f.who)
     }
 
     @Test

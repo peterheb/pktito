@@ -992,7 +992,8 @@ fun Work(
                 Chips(
                     spk.present,
                     spk.nameOf,
-                    spk.rename,
+                    find::findWho,
+                    find.who,
                     Modifier.padding(start = edge, end = edge, top = 8.dp),
                 )
             val msg =
@@ -1141,7 +1142,15 @@ private fun Views(
         )
     val label = stringResource(R.string.find_label)
     val opened = find.open || find.query.isNotBlank()
-    val width = (if (find.query.isNotBlank()) 280.dp else 200.dp).withText()
+    // wider with a search, for its count and arrows, and with a speaker
+    // found for their name as well (FindField)
+    val width =
+        (when {
+                find.who != 0 -> 380.dp
+                find.query.isNotBlank() -> 280.dp
+                else -> 200.dp
+            })
+            .withText()
     SubcomposeLayout(modifier.fillMaxWidth()) { c ->
         val gap = 12.dp.roundToPx()
         val loose = c.copy(minWidth = 0, minHeight = 0)
@@ -1165,7 +1174,9 @@ private fun Views(
         val f =
             if (beside || opened || alone) {
                 val w = if (beside) field else c.maxWidth
-                subcompose("field") { FindField(find, hits, seek, find::clear) }
+                subcompose("field") {
+                        FindField(find, hits, seek, find::clear, nameOf = spk.nameOf)
+                    }
                     .first()
                     .measure(loose.copy(minWidth = w, maxWidth = w))
             } else
@@ -1580,7 +1591,10 @@ private fun Sentence(
             val t = buildAnnotatedString {
                 if (name != null) lead = speakerName(name, links) { if (editable) who = true }
                 append(s.text)
-                if (on != null && on.end <= s.text.length)
+                // a turn of a speaker found: its name, the colon with it
+                if (on != null && on.start < 0 && lead > 1)
+                    addStyle(SpanStyle(color = p.onPlume), 0, lead - 1)
+                else if (on != null && on.start >= 0 && on.end <= s.text.length)
                     addStyle(SpanStyle(color = p.onPlume), lead + on.start, lead + on.end)
             }
             t to lead
@@ -1607,8 +1621,11 @@ private fun Sentence(
     LaunchedEffect(shown) {
         if (shown == first || on == null || on.end > s.text.length) return@LaunchedEffect
         val l = snapshotFlow { layout }.filterNotNull().first()
-        val top = l.getLineTop(l.getLineForOffset(lead + on.start))
-        val bottom = l.getLineBottom(l.getLineForOffset(lead + maxOf(on.start, on.end - 1)))
+        // a turn's name opens the text
+        val a = if (on.start < 0) 0 else lead + on.start
+        val b = if (on.start < 0) maxOf(0, lead - 2) else lead + maxOf(on.start, on.end - 1)
+        val top = l.getLineTop(l.getLineForOffset(a))
+        val bottom = l.getLineBottom(l.getLineForOffset(b))
         sight.bringIntoView(Rect(0f, top - pad, l.size.width.toFloat(), bottom + pad))
     }
     Box(modifier) {
@@ -1628,10 +1645,12 @@ private fun Sentence(
                         }
                     for (m in marks.orEmpty()) {
                         val current = m.index == at
+                        // a turn of a speaker found (turnsOf): its name and colon
+                        val name = m.value.start < 0
                         mark(
                             l,
-                            lead + m.value.start,
-                            lead + m.value.end,
+                            if (name) 0 else lead + m.value.start,
+                            if (name) lead - 1 else lead + m.value.end,
                             if (current) p.plume else hl,
                             if (current) p.ink else null,
                         )

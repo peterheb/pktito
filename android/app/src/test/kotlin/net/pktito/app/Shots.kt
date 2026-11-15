@@ -57,6 +57,7 @@ import net.pktito.app.ui.About
 import net.pktito.app.ui.Confirm
 import net.pktito.app.ui.Finder
 import net.pktito.app.ui.Follow
+import net.pktito.app.ui.Hit
 import net.pktito.app.ui.Manage
 import net.pktito.app.ui.ManageActions
 import net.pktito.app.ui.ModelButton
@@ -76,6 +77,7 @@ import net.pktito.app.ui.Work
 import net.pktito.app.ui.WorkActions
 import net.pktito.app.ui.findIn
 import net.pktito.app.ui.pk
+import net.pktito.app.ui.turnsOf
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -1243,6 +1245,9 @@ class Shots {
         /** the row at the list's top */
         first: Int = 0,
         move: (Speakers.Turn, Int, Boolean) -> Unit = { _, _, _ -> },
+        find: Finder = Finder(),
+        hits: List<Hit> = emptyList(),
+        onFind: (Int) -> Unit = {},
     ) {
         val res = LocalContext.current.resources
         val present = Speakers.present(rows)
@@ -1267,8 +1272,8 @@ class Shots {
             follow = Follow(rememberLazyListState(first)),
             sound = Sound(1.0, Player.SPEEDS, 1.0, false, {}, { _, _ -> }, {}),
             chosen = Timebase(),
-            find = Finder(),
-            hits = emptyList(),
+            find = find,
+            hits = hits,
             a = actions,
             spk =
                 SpeakersView(
@@ -1288,8 +1293,47 @@ class Shots {
                     move = move,
                     rename = {},
                     times = { u -> "${tb.at(u.start)}–${tb.at(u.end)}" },
+                    find = onFind,
                 ),
         )
+    }
+
+    // a speaker found (Finder.findWho): Speaker 2's turns are the matches, the field with their
+    // name, the first turn's name marked; wider, their name over the transcript pressed
+    private fun found(n: Int, k: Int = 0) =
+        turnsOf(talkRows, n).let { h ->
+            Finder().apply {
+                findWho(n)
+                settle(h, 0.0)
+                if (k > 0) go(h, k)
+            } to h
+        }
+
+    @Test
+    fun speakersFind() {
+        val (f, h) = found(2)
+        shot("speakers-find", false) { talk(find = f, hits = h) }
+    }
+
+    @Test
+    fun speakersFindDark() {
+        val (f, h) = found(2, 1)
+        shot("speakers-find", true) { talk(find = f, hits = h) }
+    }
+
+    @Test
+    fun speakersFindWide() {
+        val (f, h) = found(2)
+        shot("speakers-find", false, wide = true) { talk(find = f, hits = h) }
+    }
+
+    // a phone has no names over the transcript: Who's speaking finds them
+    @Test
+    fun speakersFindWho() {
+        val asked = ArrayList<Int>()
+        shot("speakers-find-who", false, act = whoDialog) { talk(onFind = { asked += it }) }
+        compose.onNodeWithText("Find where Speaker 2 speaks").performClick()
+        assertEquals(listOf(2), asked)
     }
 
     // Change speaker in the menu a held word's selection brings (Rows): Robolectric draws no

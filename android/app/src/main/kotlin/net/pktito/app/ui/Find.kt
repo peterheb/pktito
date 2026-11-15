@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -44,6 +45,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.abs
@@ -64,6 +66,15 @@ fun mix(a: Color, b: Color, t: Float) =
 
 /** A match: its row, where it is in the row's text, and the time of the word it starts in. */
 class Hit(val row: Int, val start: Int, val end: Int, val time: Double)
+
+/**
+ * Speaker n's turns in rows, as the desktop finds a speaker (app.js, runFind with who): a match a
+ * turn, at its first row's start, its name marked (start -1: Sentence marks the name, not words).
+ */
+fun turnsOf(rows: List<Seg>, n: Int): List<Hit> =
+    rows.indices
+        .filter { i -> rows[i].speaker == n && (i == 0 || rows[i - 1].speaker != n) }
+        .map { Hit(it, -1, -1, rows[it].start) }
 
 /**
  * Each match of query in rows, sentences or cues, as the desktop finds them (app.js, bodyHtml and
@@ -151,6 +162,11 @@ enum class Keys {
  */
 class Finder {
     var query by mutableStateOf("")
+    /**
+     * The speaker found (findWho), whose turns are the matches (turnsOf); 0 for words, as a search
+     * finds them.
+     */
+    var who by mutableIntStateOf(0)
     var open by mutableStateOf(false)
     var at by mutableIntStateOf(-1)
         private set
@@ -186,7 +202,7 @@ class Finder {
     private var settled = ""
 
     val searching: Boolean
-        get() = open || query.isNotEmpty()
+        get() = open || query.isNotEmpty() || who != 0
 
     /**
      * The search kept through a turn of the screen, the field open with it: not one typed, so the
@@ -207,8 +223,10 @@ class Finder {
      * the other view's, leave the playhead where it is. The seek first, as a step's.
      */
     fun settle(hits: List<Hit>, position: Double, seek: ((Double) -> Unit)? = null) {
-        val typed = query != settled
-        settled = query
+        // a speaker found is sought as words typed are
+        val sought = if (who != 0) "\u0000$who" else query
+        val typed = sought != settled
+        settled = sought
         passed = passedAt(hits, position)
         if (hits.isEmpty()) {
             at = -1
@@ -264,6 +282,19 @@ class Finder {
         go(hits, k)
     }
 
+    /**
+     * Speaker n found, as a search finds a word (app.js, findWho; Peter, 2026-11-15, naming his
+     * speakers: "who is this Speaker 4", needing "to hear their words and read the context"): their
+     * turns the matches, the field open with their name in it, without the keyboard, which would
+     * cover the turns; the arrows step from turn to turn with the playhead. Found again, let go.
+     */
+    fun findWho(n: Int) {
+        if (who == n) return clear()
+        query = ""
+        who = n
+        open = true
+    }
+
     /** The field, with its keys. */
     fun focus() {
         open = true
@@ -273,6 +304,7 @@ class Finder {
     /** The search let go, and the keys with it: Esc, Back, the field's ×, another transcript. */
     fun clear() {
         query = ""
+        who = 0
         open = false
         at = -1
         time = -1.0
@@ -297,11 +329,13 @@ fun FindField(
     seek: (Double) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    /** a speaker's name, for the one found (Finder.who) */
+    nameOf: (Int) -> String = { "" },
 ) {
     val p = pk
     val focus = remember { FocusRequester() }
     val manager = LocalFocusManager.current
-    val has = f.query.isNotBlank()
+    val has = f.query.isNotBlank() || f.who != 0
     // let go, the field lets go of the keyboard too; on a phone it is gone with the search
     LaunchedEffect(f.keys) {
         when (f.keys) {
@@ -328,10 +362,33 @@ fun FindField(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Icon(Icons.search, null, tint = p.inkMuted, modifier = Modifier.size(16.dp))
+        // the speaker found, their mark and name where a search's words would
+        // be (app.css, .pk-find-who); words typed search for words instead
+        if (f.who != 0)
+            Row(
+                Modifier.widthIn(max = 180.dp)
+                    .height(28.dp)
+                    .background(p.ground, CornerSm)
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Mark(f.who)
+                Text(
+                    nameOf(f.who),
+                    style = Type.ui.copy(fontSize = 13.sp, lineHeight = 16.sp),
+                    color = p.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         val label = stringResource(R.string.find_label)
         BasicTextField(
             value = f.query,
-            onValueChange = { f.query = it },
+            onValueChange = {
+                f.who = 0
+                f.query = it
+            },
             singleLine = true,
             textStyle = Type.ui.copy(fontWeight = FontWeight.W400, color = p.ink),
             cursorBrush = SolidColor(p.ink),
@@ -346,12 +403,15 @@ fun FindField(
                         val enter = e.key == Key.Enter || e.key == Key.NumPadEnter
                         if (enter && e.type == KeyEventType.KeyDown)
                             f.step(hits, if (e.isShiftPressed) -1 else 1, seek)
-                        enter
+                        // the speaker before an empty field taken back, as a word's last letter is
+                        val back = e.key == Key.Backspace && f.who != 0 && f.query.isEmpty()
+                        if (back && e.type == KeyEventType.KeyDown) f.clear()
+                        enter || back
                     }
                     .semantics { contentDescription = label },
             decorationBox = { field ->
                 Box(contentAlignment = Alignment.CenterStart) {
-                    if (f.query.isEmpty())
+                    if (f.query.isEmpty() && f.who == 0)
                         Text(
                             stringResource(R.string.find_placeholder),
                             style = Type.ui.copy(fontWeight = FontWeight.W400),

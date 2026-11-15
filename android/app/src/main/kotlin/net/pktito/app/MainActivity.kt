@@ -90,6 +90,7 @@ import net.pktito.app.ui.clock
 import net.pktito.app.ui.findIn
 import net.pktito.app.ui.pk
 import net.pktito.app.ui.stepped
+import net.pktito.app.ui.turnsOf
 
 /**
  * The screen, the desktop window's: choose a speech model and download it, open a recording, watch
@@ -325,10 +326,16 @@ class MainActivity : ComponentActivity() {
                 t.segments.mapNotNull { s -> s.speaker?.let { Stretch(s.start, s.end, it) } }
             }
         }
-        // a search's matches in the rows shown, a finished transcript's only
+        // a search's matches in the rows shown, a finished transcript's only;
+        // a speaker found, their turns (Finder.findWho), while their name
+        // shows: switched off, or joined to another by a rename, the search
+        // is let go
+        val who = finder.who.takeIf { spoken && it in present } ?: 0
+        SideEffect { if (finder.who != 0 && who == 0) finder.clear() }
         val hits =
-            remember(rows, finder.query, review, t.segments.size) {
-                if (review) findIn(rows, finder.query) else emptyList()
+            remember(rows, finder.query, who, review, t.segments.size, bar) {
+                if (!review) emptyList()
+                else if (who != 0) turnsOf(rows, who) else findIn(rows, finder.query)
             }
 
         // the finished transcript's recording, ready to play, its views'
@@ -386,7 +393,7 @@ class MainActivity : ComponentActivity() {
         // (Finder.settle). Keyed on the search too: two searches that find
         // nothing have the same matches, none, and without a settle between
         // them the other view's, found next, would count as typed
-        LaunchedEffect(hits, finder.query) {
+        LaunchedEffect(hits, finder.query, finder.who) {
             finder.settle(
                 hits,
                 Player.position,
@@ -626,6 +633,7 @@ class MainActivity : ComponentActivity() {
                             toggle = ::toggleSpeakers,
                             move = ::moveSpeaker,
                             rename = { renaming = it },
+                            find = finder::findWho,
                             times = { u ->
                                 val tb = base.copy(video = t.fps, duration = t.duration)
                                 "${tb.at(u.start)}–${tb.at(u.end)}"

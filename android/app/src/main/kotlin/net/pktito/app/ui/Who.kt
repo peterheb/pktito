@@ -124,6 +124,8 @@ class SpeakersView(
     val rename: (speaker: Int) -> Unit,
     /** the times a turn is shown with in Who's speaking */
     val times: (Speakers.Turn) -> String,
+    /** a speaker found, as a search finds a word (Finder.findWho) */
+    val find: (speaker: Int) -> Unit = {},
 ) {
     companion object {
         val NONE =
@@ -241,7 +243,10 @@ fun SpeakersSwitch(on: Boolean, busy: Boolean, state: String, onClick: () -> Uni
 fun Chips(
     present: List<Int>,
     nameOf: (Int) -> String,
-    onRename: (Int) -> Unit,
+    /** a name finds its speaker (Finder.findWho), the desktop's (app.js, findWho) */
+    onFind: (Int) -> Unit,
+    /** the speaker found, whose name is pressed; 0 for none */
+    found: Int,
     modifier: Modifier,
 ) {
     val p = pk
@@ -254,13 +259,19 @@ fun Chips(
         @Composable
         fun chip(n: Int) {
             val name = nameOf(n)
+            val on = n == found
             Row(
-                Modifier.control(
+                // the name found ringed, as the switch is while on (app.css,
+                // .pk-chip[aria-pressed])
+                Modifier.then(if (on) Modifier.border(1.dp, p.inkMuted, CornerSm) else Modifier)
+                    .control(
                         CornerSm,
+                        if (on) p.tint else Color.Transparent,
                         label = stringResource(R.string.speakers_chip_label, name),
                     ) {
-                        onRename(n)
+                        onFind(n)
                     }
+                    .semantics { selected = on }
                     .heightIn(min = tall)
                     .padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -432,6 +443,12 @@ private fun Who(turn: Speakers.Turn, spk: SpeakersView, close: () -> Unit) {
     Item(stringResource(R.string.speakers_rename, spk.nameOf(turn.speaker)), null) {
         close()
         spk.rename(turn.speaker)
+    }
+    // where they speak, turn by turn, to hear who they are: a phone has no
+    // names over the transcript to find them by (Chips)
+    Item(stringResource(R.string.speakers_find, spk.nameOf(turn.speaker)), null) {
+        close()
+        spk.find(turn.speaker)
     }
     val fresh = Speakers.fresh(spk.present)
     Item(stringResource(R.string.speakers_new), null, enabled = fresh != null) {
