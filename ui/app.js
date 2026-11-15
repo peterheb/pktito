@@ -2050,15 +2050,20 @@ function segHtml(s, i, filling, turn = -1, dot = false, spk = false) {
       : "";
   const start = tc(s.start);
   // the turn's line beside the text, in its speaker's colour: where the
-  // turn starts and ends it stops short of the row's edge (app.css, .pk-seg[data-spk])
+  // turn starts and ends it stops short of the row's edge (app.css,
+  // .pk-seg[data-spk]); with one voice no line, but the sentence's button
+  // in its colour (data-dot)
   let line = "";
-  if (spk && s.speaker != null) {
-    const rows = cue ? f.cues : f.segments,
-      next = rows[i + 1];
-    line =
-      ` data-spk="${s.speaker}" style="--spk:var(--speaker-${slotOf(s.speaker)})"` +
-      (turn >= 0 || i === 0 ? " data-first" : "") +
-      (!next || next.speaker !== s.speaker ? " data-last" : "");
+  if ((spk || dot) && s.speaker != null) {
+    line = ` style="--spk:var(--speaker-${slotOf(s.speaker)})"`;
+    if (spk) {
+      const rows = cue ? f.cues : f.segments,
+        next = rows[i + 1];
+      line +=
+        ` data-spk="${s.speaker}"` +
+        (turn >= 0 || i === 0 ? " data-first" : "") +
+        (!next || next.speaker !== s.speaker ? " data-last" : "");
+    } else line += " data-dot";
   }
   return (
     `<div class="pk-seg${cue ? " pk-cue" : ""}${turn >= 0 && i > 0 ? " pk-turn" : ""}" data-i="${i}" data-t="${s.start}"${line}><div class="pk-seg-times"><button class="pk-seg-t" type="button" tabindex="-1" ` +
@@ -2164,7 +2169,7 @@ function bodyHtml(s, i) {
 function renderTranscript(f, mode) {
   const tr = $("transcript");
   tr.classList.toggle("is-live", mode === "running");
-  tr._spk = spkShown(f);
+  tr._spk = turnsShown(f);
   tr.innerHTML =
     rowsHtml(f, rowsOf(f), 0, mode === "running") +
     (mode === "review" ? statsHtml(f) : "");
@@ -2230,7 +2235,7 @@ function appendSegs(f, segs) {
   const atEnd = tr.scrollHeight - tr.scrollTop - tr.clientHeight < 48;
   const base = f.segments.length - segs.length;
   // a second speaker just came: the names go on the turns before too
-  if (tr._spk !== spkShown(f)) renderTranscript(f, "running");
+  if (tr._spk !== turnsShown(f)) renderTranscript(f, "running");
   else tr.insertAdjacentHTML("beforeend", rowsHtml(f, segs, base, true));
   markLive();
   if (atEnd) tr.scrollTop = tr.scrollHeight;
@@ -3132,10 +3137,16 @@ function present(f) {
    have heard two voices as one, which New speaker puts right (Peter,
    2026-11-14: the solo episode showed nothing, as if none were found) */
 const spkShown = (f) => !!prefs.speakers && !!f && present(f).length > 0;
+/* the turns shown, with a second voice: one voice's transcript, bar and
+   saved files look as with the switch off, no "Speaker 1:" and no line
+   (Peter, 2026-11-15, with speakers on by default). The name beside the
+   switch still says one was found, and each sentence's button still has
+   New speaker, for two voices heard as one. */
+const turnsShown = (f) => spkShown(f) && present(f).length > 1;
 const nameOf = (f, n) =>
   ((f.names && f.names[n - 1]) || "").trim() || t("speakers.default", { n });
 /* the names f is written with, where the view shows speakers; else none */
-const namesFor = (f) => (spkShown(f) ? f.names || [] : null);
+const namesFor = (f) => (turnsShown(f) ? f.names || [] : null);
 const turnStarts = (segs, i) =>
   segs[i].speaker != null &&
   (i === 0 || segs[i - 1].speaker !== segs[i].speaker);
@@ -3180,13 +3191,14 @@ const rowEl = (i) => $("transcript").getElementsByClassName("pk-seg")[i];
    its first */
 function rowsHtml(f, rows, base, filling) {
   const on = spkShown(f),
+    many = turnsShown(f),
     cues = !!f.cues && rows === f.cues;
   let out = "";
   rows.forEach((s, k) => {
     const i = base + k;
     let turn = -1;
-    if (on) turn = cues ? s.turnSeg : turnStarts(f.segments, i) ? i : -1;
-    out += segHtml(s, i, filling, turn, on && !cues && s.speaker != null, on);
+    if (many) turn = cues ? s.turnSeg : turnStarts(f.segments, i) ? i : -1;
+    out += segHtml(s, i, filling, turn, on && !cues && s.speaker != null, many);
   });
   return out;
 }
@@ -3709,7 +3721,7 @@ $("chips").onclick = (e) => {
    the waveform has the bar's place (app.css, #strip.spk). */
 function barShown(f) {
   const mode = modeOf(f);
-  if (mode === "review") return spkShown(f) || !!f.finding;
+  if (mode === "review") return turnsShown(f) || !!f.finding;
   return mode === "running" && !!f.diarizing;
 }
 

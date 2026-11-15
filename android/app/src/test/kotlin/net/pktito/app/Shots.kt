@@ -1268,7 +1268,8 @@ class Shots {
                     busy = busy,
                     heard = heard,
                     shown = on && present.isNotEmpty(),
-                    place = (on && present.isNotEmpty()) || heard != null,
+                    turns = on && present.size > 1,
+                    place = (on && present.size > 1) || heard != null,
                     editable = true,
                     present = present,
                     nameOf = { Speakers.nameOf(res, names, it) },
@@ -1296,6 +1297,16 @@ class Shots {
     @Test fun speakersWideDark() = shot("speakers", true, wide = true) { talk(listOf("Ada")) }
 
     @Test fun speakersOff() = shot("speakers-off", false) { talk(on = false) }
+
+    // one voice: no names on the turns and no bar, its name beside the switch
+    @Test
+    fun speakersOne() =
+        shot("speakers-one", false, wide = true) {
+            talk(
+                rows = talkRows.map { it.by(1) },
+                bar = talkBar.map { Stretch(it.start, it.end, 1) },
+            )
+        }
 
     // twice the text size, as the system's setting gives it: Compose's sp
     // follow LocalDensity's fontScale (the configuration's alone moves none)

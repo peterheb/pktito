@@ -97,6 +97,12 @@ class SpeakersView(
     /** the names show: the switch on and a speaker or more */
     val shown: Boolean,
     /**
+     * the turns show, a second voice heard: one voice's transcript, bar and formats look as with
+     * the switch off, no "Speaker 1:" (Peter, 2026-11-15, with speakers on by default), while its
+     * name beside the switch says one was found (app.js, turnsShown)
+     */
+    val turns: Boolean,
+    /**
      * the strip keeps the speaker bar's place: the names shown, the speakers being found, or a
      * transcription finding them as it goes, so that the bar fills in as they are heard (app.js,
      * barShown)
@@ -127,6 +133,7 @@ class SpeakersView(
                 busy = false,
                 heard = null,
                 shown = false,
+                turns = false,
                 place = false,
                 editable = false,
                 present = emptyList(),

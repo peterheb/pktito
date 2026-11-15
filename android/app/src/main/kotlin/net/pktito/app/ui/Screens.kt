@@ -1294,10 +1294,10 @@ private fun Rows(
                 itemsIndexed(rows, key = { i, _ -> keys[i] }) { i, s ->
                     val now = i == current
                     val word = if (now) s.words.indexOfLast { it.start <= position + 1e-3 } else -1
-                    // with the names shown, a turn's opens its first sentence; a
+                    // with the turns shown, a turn's name opens its first sentence; a
                     // cue's are in its words, as the saved captions have them
                     val turn =
-                        if (spk.shown && !captions && Speakers.turnStarts(rows, i))
+                        if (spk.turns && !captions && Speakers.turnStarts(rows, i))
                             Speakers.turnAt(rows, i)
                         else null
                     // the rows after a sentence made one again sliding up into its

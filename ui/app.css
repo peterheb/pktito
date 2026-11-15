@@ -2695,7 +2695,8 @@ html:not([data-chrome="win"]) .pk-head > #stop {
    px in, 23 px before the text: 4 px from it, the line and its button sat
    crowded against the text beside the times' wide gutter (Peter,
    2026-11-15). With the time above the text, at the row's left edge. */
-.pk-seg[data-spk] {
+.pk-seg[data-spk],
+.pk-seg[data-dot] {
   position: relative;
   --line-x: 114px;
 }

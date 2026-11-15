@@ -311,11 +311,13 @@ class MainActivity : ComponentActivity() {
         val review = t.step == "done" || t.step == "stopped"
         val rows = if (captions && review) t.cues ?: emptyList() else t.segments
         // who said what (Speakers): those of the transcript in the order they
-        // first speak, shown with the switch on, one as much as eight: the
-        // model may have heard two voices as one, which New speaker puts
-        // right (Peter, 2026-11-14)
+        // first speak, their names shown with the switch on, one as much as
+        // eight: the model may have heard two voices as one, which New
+        // speaker puts right (Peter, 2026-11-14). The turns, the bar and the
+        // formats with a second voice only (app.js, turnsShown)
         val present by remember { derivedStateOf { Speakers.present(t.segments) } }
         val spoken = Speakers.on && present.isNotEmpty()
+        val turns = spoken && present.size > 1
         // the bar: the transcript's turns, the speakers its text shows, a
         // change included (app.js, drawBar)
         val bar by remember {
@@ -396,13 +398,13 @@ class MainActivity : ComponentActivity() {
             snapshotFlow { Player.position }.collect { finder.follow(hits, it, false) }
         }
         // the cues, the first time the transcript is shown as captions
-        LaunchedEffect(captions, t.transcript, spoken) {
+        LaunchedEffect(captions, t.transcript, turns) {
             val tr = t.transcript
             if (captions && tr != null && t.cues == null)
                 t.cues =
                     runCatching {
                             Transcriber.parseCues(
-                                Engine.captions(tr, spoken),
+                                Engine.captions(tr, turns),
                                 t.segments.flatMap { it.words },
                             )
                         }
@@ -612,8 +614,9 @@ class MainActivity : ComponentActivity() {
                                     (Downloads.speakers && Downloads.state?.step != "failed"),
                             heard = if (Speakers.finding) Speakers.heard else null,
                             shown = spoken,
+                            turns = turns,
                             place =
-                                (review && (spoken || Speakers.finding)) ||
+                                (review && (turns || Speakers.finding)) ||
                                     (t.running && t.diarizing),
                             editable = review,
                             present = present,
@@ -966,8 +969,9 @@ class MainActivity : ComponentActivity() {
     /** The transcript in a format, the desktop's bytes for it. */
     private fun text(ext: String, times: Boolean): String? {
         val tr = Transcriber.transcript ?: return null
-        val spoken = Speakers.on && Speakers.present(Transcriber.segments).isNotEmpty()
-        return Engine.format(tr, ext, Transcriber.name, times, spoken)
+        // the names with a second voice, as the screen shows them
+        val turns = Speakers.on && Speakers.present(Transcriber.segments).size > 1
+        return Engine.format(tr, ext, Transcriber.name, times, turns)
     }
 
     /**
