@@ -1927,6 +1927,7 @@ function buildMain(f, mode, key) {
   $("title").title = fileTip(f);
   $("find").value = "";
   query = "";
+  who = 0;
   hits = [];
   hitTimes = [];
   findCount();
@@ -2878,7 +2879,7 @@ function retime() {
   renderTranscript(f, "review");
   tr.scrollTop = top;
   showTime(f.pos);
-  if (query) {
+  if (query || who) {
     runFind();
     if (on >= 0 && on < hits.length) goHit(on);
     tr.scrollTop = top;
@@ -2912,6 +2913,8 @@ $("wavebtn").addEventListener("keydown", (e) => {
 /* ---------------------------------------------------------------- find -- */
 
 let query = "",
+  // the speaker found (findWho), whose turns are the matches; 0 for words
+  who = 0,
   hits = [],
   hitTimes = [],
   hitAt = -1,
@@ -3005,10 +3008,13 @@ function runFind(sought) {
   if (!f || modeOf(f) !== "review") return;
   // the time of the match the reader is on, before the search changes
   const was = hitTimes[hitAt];
-  query = $("find").value.trim();
+  // the speaker found while their name shows, else the words in the field
+  if (who && !(spkShown(f) && present(f).includes(who))) who = 0;
+  query = who ? "" : $("find").value.trim();
   const rows = rowsOf(f);
   // each match, by its row and its number in the row, at its word's time,
-  // for its tick under the waveform
+  // for its tick under the waveform; the speaker found's, each of their
+  // turns, by its first row (hi -1: its name, not its words), at its start
   hits = [];
   hitTimes = [];
   rows.forEach((s, i) => {
@@ -3018,10 +3024,15 @@ function runFind(sought) {
       const k = wordAt(s, a);
       hitTimes.push(k >= 0 ? s.words[k].start : s.start);
     });
+    if (who && s.speaker === who && (i === 0 || rows[i - 1].speaker !== who)) {
+      hits.push({ i, hi: -1 });
+      hitTimes.push(s.start);
+    }
     if (found.length || marked[i]) stale.add(i);
   });
   hitAt = -1;
   for (const i of inView) markRow(i);
+  markNames();
   // the match the reader was on while it is still one, so that a search
   // typed on keeps its place, as Android's does; otherwise the match the
   // playhead last passed, so that a search typed as it plays or rests
@@ -3067,11 +3078,23 @@ function stepHit(d) {
   goHit(k);
 }
 
-/* every piece of match k, its row drawn for the search first */
+/* every piece of match k, its row drawn for the search first; a turn of
+   the speaker found, its name (markNames) */
 function hitPieces(k) {
   const { i, hi } = hits[k];
+  if (hi < 0) return rowEl(i)?.querySelectorAll(".pk-speaker > .pk-hit") || [];
   markRow(i);
   return rowEl(i).querySelectorAll(`[data-hit="${i}.${hi}"]`);
+}
+
+/* the names of the speaker found's turns marked as a search's matches are
+   (app.css, .pk-hit), and no others */
+function markNames() {
+  for (const el of $("transcript").querySelectorAll(".pk-speaker > .pk-hit"))
+    el.classList.remove("pk-hit", "is-on");
+  for (const { i, hi } of hits)
+    if (hi < 0)
+      rowEl(i)?.querySelector(".pk-speaker > span")?.classList.add("pk-hit");
 }
 
 function goHit(k, scroll = true) {
@@ -3079,7 +3102,11 @@ function goHit(k, scroll = true) {
     for (const el of hitPieces(hitAt)) el.classList.remove("is-on");
   hitAt = k;
   for (const el of hitPieces(hitAt)) el.classList.add("is-on");
-  if (scroll) hitPieces(hitAt)[0]?.scrollIntoView({ block: "center" });
+  // one voice's turn, with no name to mark, by its row
+  if (scroll)
+    (hitPieces(hitAt)[0] || rowEl(hits[hitAt].i))?.scrollIntoView({
+      block: "center",
+    });
   findCount();
 }
 
@@ -3092,10 +3119,12 @@ new ResizeObserver(([e]) => {
 
 /* the count, previous and next, and the ticks */
 function findCount() {
-  $("find-n").textContent = query
+  const finding = !!query || !!who;
+  $("find-n").textContent = finding
     ? `${hits.length ? hitAt + 1 : 0}/${hits.length}`
     : "";
-  $("find-box").classList.toggle("has-query", !!query);
+  $("find-box").classList.toggle("has-query", finding);
+  showWho();
   $("find-prev").disabled = $("find-next").disabled = hits.length < 2;
   const f = current(),
     dur = f && f.duration;
@@ -3119,7 +3148,21 @@ function findCount() {
   $("strip").classList.toggle("has-ticks", !!dur && hits.length > 0);
 }
 
+/* the speaker found before the field, and their name over the transcript
+   pressed */
+function showWho() {
+  const f = current(),
+    el = $("find-who");
+  el.hidden = !who;
+  el.innerHTML =
+    who && f ? `${markHtml(who)}<span>${esc(nameOf(f, who))}</span>` : "";
+  $("find-box").classList.toggle("has-who", !!who);
+  for (const c of $("chips").querySelectorAll(".pk-chip"))
+    c.setAttribute("aria-pressed", String(Number(c.dataset.s) === who));
+}
+
 function clearFind() {
+  who = 0;
   $("find").value = "";
   runFind();
 }
@@ -3131,7 +3174,11 @@ function openFind() {
   $("find").select();
 }
 
-$("find").addEventListener("input", () => runFind(true));
+// words typed search for words: the speaker found gives way to them
+$("find").addEventListener("input", () => {
+  who = 0;
+  runFind(true);
+});
 $("find-prev").onclick = (e) => {
   e.preventDefault();
   stepHit(-1);
@@ -3172,6 +3219,10 @@ $("find").addEventListener("keydown", (e) => {
     e.stopPropagation();
     clearFind();
     $("find").blur();
+  } else if (e.key === "Backspace" && who && !$("find").value) {
+    // the speaker before the field taken back, as a word's last letter is
+    e.preventDefault();
+    clearFind();
   }
 });
 
@@ -3229,15 +3280,17 @@ function turnAt(f, i, alone = false) {
     end: f.segments[j].end,
   };
 }
+/* a turn's name, its words a whole match (data-at, data-end: app.css,
+   .pk-hit) while its speaker is found (markNames) */
 const nameBtn = (f, i, mark) => {
   const n = f.segments[i].speaker,
     name = nameOf(f, n);
   return (
     `<button class="pk-speaker" type="button" data-turn="${i}" aria-haspopup="menu" aria-expanded="false" ` +
-    `aria-label="${esc(t("speakers.name_label", { name }))}"><span>${esc(name)}:</span></button>`
+    `aria-label="${esc(t("speakers.name_label", { name }))}"><span data-at data-end>${esc(name)}:</span></button>`
   );
 };
-/* A sentence's speaker, its mark at the right of the times' column: a
+/* A sentence's speaker, its mark on its turn's line: a
    click gives that sentence alone to another speaker, where the name
    gives its whole turn (Peter, 2026-11-14: a sentence inside a turn had
    nothing to click). Out of the tab order, as the times are: a turn's
@@ -3272,7 +3325,7 @@ let spkBusy = "";
 
 /* The switch beside the views, where the build offers a diarizer
    (main.rs, DiarizerOffer), and with speakers shown each one's name,
-   which renames them */
+   which finds their turns (findWho) */
 function updateSpeakers(f, review) {
   // and while a transcription runs, where turned off it stops that file's
   // speaker search at once (spkWhileRunning)
@@ -3300,7 +3353,7 @@ function updateSpeakers(f, review) {
   const on = offer && !running && spkShown(f);
   $("chips").hidden = !on;
   const chip = (x) =>
-    `<button class="pk-chip" type="button" data-s="${x}" aria-label="${esc(t("speakers.chip_label", { name: nameOf(f, x) }))}">${markHtml(x)}${esc(nameOf(f, x))}</button>`;
+    `<button class="pk-chip" type="button" data-s="${x}" aria-pressed="${x === who}" title="${esc(t("speakers.chip_tip"))}" aria-label="${esc(t("speakers.chip_label", { name: nameOf(f, x) }))}">${markHtml(x)}${esc(nameOf(f, x))}</button>`;
   // the (i) wraps with the last name, never on a line of its own
   $("chips").innerHTML = on
     ? present(f)
@@ -3339,7 +3392,7 @@ function spkRefresh(f, row, joined) {
   drawBar(f);
   renderTranscript(f, "review");
   showTime(f.pos);
-  if (query) {
+  if (query || who) {
     runFind();
     if (on >= 0 && on < hits.length) goHit(on, false);
   }
@@ -3850,8 +3903,26 @@ $("chips").onclick = (e) => {
     );
   }
   if (!c || !f) return;
-  openMenu(c, true, "", "down who", (m) => renameIn(m, f, Number(c.dataset.s)));
+  findWho(f, Number(c.dataset.s));
 };
+
+/* A name over the transcript finds that speaker, as Find finds a word
+   (Peter, 2026-11-15, naming his speakers: "who is this Speaker 4", and
+   "I need to hear their words and read the context to find their name"):
+   their turns are the matches, each one's name marked, the count beside
+   the field and a tick on the strip at each; Enter and the arrows step
+   from turn to turn and take the playhead along, so that Play plays their
+   words, and each comes to the middle of the transcript with what was said
+   before it, where a name is often said. The others' words stay: they are
+   the context. The name again, Esc, or words typed end it, and a turn's
+   name has Rename (Who's speaking). Before, a name over the transcript
+   renamed its speaker. */
+function findWho(f, n) {
+  $("find").value = "";
+  who = who === n ? 0 : n;
+  runFind(true);
+  if (who) $("find").focus({ preventScroll: true });
+}
 
 /* Whether f's strip has the speaker bar: with its speakers shown, while
    they are found, and while a transcription finds them as it goes (the
@@ -4082,7 +4153,7 @@ function rebuild() {
   const on = hitAt;
   renderTranscript(f, "review");
   showTime(f.pos);
-  if (query) {
+  if (query || who) {
     runFind();
     if (on >= 0 && on < hits.length) goHit(on);
   }
@@ -4730,7 +4801,7 @@ document.addEventListener("keydown", (e) => {
       closeAbout()
     )
       return;
-    if (query && viewName() === "work") clearFind();
+    if ((query || who) && viewName() === "work") clearFind();
     else back();
     return;
   }

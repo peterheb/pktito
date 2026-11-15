@@ -2369,6 +2369,29 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   flex-basis: 280px;
   min-width: 190px;
 }
+/* a speaker found (app.js, findWho): their mark and name before the field,
+   where a search's words would be; words typed search for words instead */
+.pk-find-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  max-width: 60%;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  background: var(--ground);
+  color: var(--ink);
+  font: 500 13px/16px var(--font-sans);
+  white-space: nowrap;
+}
+.pk-find-who > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pk-find.has-who input::placeholder {
+  color: transparent;
+}
 /* a field that says "Find" wherever it is: the header keeps it only with
    room for the field and 160 of the name (app.js, placeFind), else it goes
    beside the views. Folded to its icon under 860 px of the work, it was an
@@ -2655,6 +2678,12 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 .pk-speaker:hover,
 .pk-radio:hover {
   background: var(--tint);
+}
+/* the name whose turns Find has (app.js, findWho), ringed as the switch
+   is while it is on */
+.pk-chip[aria-pressed="true"] {
+  background: var(--tint);
+  box-shadow: inset 0 0 0 1px var(--ink-muted);
 }
 .pk-chip:focus-visible,
 .pk-limit:focus-visible,
