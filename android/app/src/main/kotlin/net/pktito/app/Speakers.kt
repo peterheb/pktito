@@ -115,6 +115,26 @@ object Speakers {
         offer?.takeIf { it.have }?.let { File(Models.dir(context), it.file) }
 
     /**
+     * The speaker model deleted for Manage models, or with part what a download of it that stopped
+     * kept, and what it said, if anything: that a transcription or a find has it (working), whose
+     * Delete is dimmed then, or that it failed. The names found already stay with their
+     * transcripts; turning the switch on asks for the model again.
+     */
+    fun delete(context: Context, part: Boolean): String? {
+        if (!working.tryLock()) return context.getString(R.string.manage_speakers_busy)
+        val failed =
+            try {
+                runCatching { Engine.deleteDiarizer(Models.dir(context).path, part) }
+                    .onFailure { Log.w(TAG, "deleting the speaker model", it) }
+                    .isFailure
+            } finally {
+                working.unlock()
+            }
+        refresh(context)
+        return if (failed) context.getString(R.string.manage_cant_delete) else null
+    }
+
+    /**
      * block with a diarizer for the model at path, loaded for it and let go after, one at a time:
      * loading its 100 MB takes a moment beside a transcription's seconds, and the phone keeps none
      * of it between them.

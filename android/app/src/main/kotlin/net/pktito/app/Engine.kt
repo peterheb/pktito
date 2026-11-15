@@ -134,6 +134,13 @@ object Engine {
     @JvmStatic external fun freeDiarizer(handle: Long)
 
     /**
+     * The speaker model's files in dir, the models folder, deleted for Manage models: the model and
+     * what a download of it kept, or with part what the download kept alone. Nothing may have it
+     * loaded (Speakers.delete). An IOException with why it couldn't.
+     */
+    @JvmStatic external fun deleteDiarizer(dir: String, part: Boolean)
+
+    /**
      * Who said what in a finished transcript, from its recording open at fd, without transcribing
      * it again: the transcript with each segment one speaker's, the speakers' stretches, and no
      * names; heard told how far it has got. One that can't be read throws its problem, as

@@ -741,7 +741,7 @@ class MainActivity : ComponentActivity() {
             if (managing) {
                 // the room left, again after each delete, not each frame of a transcript playing
                 val free =
-                    remember(Models.offers, Models.own, Downloads.state?.step) {
+                    remember(Models.offers, Models.own, Downloads.state?.step, Speakers.offer) {
                         Models.free(this@MainActivity)
                     }
                 Manage(
@@ -751,6 +751,10 @@ class MainActivity : ComponentActivity() {
                     Downloads.state,
                     t.running,
                     Transcriber.loadedPath,
+                    Speakers.offer,
+                    // a transcription with speakers, or a find, has the speaker
+                    // model (Speakers.with)
+                    Speakers.finding || (t.running && Speakers.on),
                     free,
                     toast,
                     // a phone's sheet under Material's compact width, decided by
@@ -763,6 +767,7 @@ class MainActivity : ComponentActivity() {
                         delete = { deleted(Models.delete(this@MainActivity, it)) },
                         deletePart = { deleted(Models.deletePart(this@MainActivity, it)) },
                         deleteOwn = { deleted(Models.deleteOwn(this@MainActivity)) },
+                        deleteSpeakers = { deleted(Speakers.delete(this@MainActivity, it)) },
                         stop = {
                             Downloads.cancel(this@MainActivity)
                             deleted(null)

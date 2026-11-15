@@ -116,6 +116,30 @@ pub fn diarizer_file(data: &Path) -> Option<PathBuf> {
     p.is_file().then_some(p)
 }
 
+/// The diarizer's files in dir, the models folder, deleted to free their
+/// room, as Manage models deletes a model's: its model and what a download
+/// of it kept, or with part what the download kept alone, each with its
+/// record that it checked (mark). Nothing may have the model loaded: on
+/// Windows a file that is mapped can't be deleted.
+pub fn delete_diarizer(dir: &Path, d: &Diarizer, part: bool) -> Result<(), String> {
+    let w = Wanted::diarizer(dir, d);
+    let files = if part {
+        vec![w.part]
+    } else {
+        vec![w.part, w.dst]
+    };
+    for f in &files {
+        match fs::remove_file(f) {
+            Err(err) if err.kind() != io::ErrorKind::NotFound => {
+                return Err(format!("{err}\n{}", f.display()))
+            }
+            _ => {}
+        }
+        unmark(f);
+    }
+    Ok(())
+}
+
 /// A file models.pktito.net serves, under the first twelve digits of its
 /// SHA-256 (part_url): file is its name with its extension.
 #[derive(Clone, Copy, Debug, Serialize)]

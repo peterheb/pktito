@@ -138,6 +138,11 @@
     <string name="manage_ask_part_title">[Ďęłęțę țhę pąűșęď ďőwńłőąď? ····· ··]</string>
     <string name="manage_ask_part_text">[Țhįș fřęęș %1$s&#160;MB. Ďőwńłőąďįńg țhę %2$s mőďęł ągąįń șțąřțș ővęř. ····· ····· ··]</string>
     <string name="manage_cant_delete">[Čőűłďń\'ț ďęłęțę țhę mőďęł ····· ·]</string>
+    <string name="manage_speakers">[Șpęąkęř mőďęł ·····]</string>
+    <string name="manage_ask_speakers_title">[Ďęłęțę țhę șpęąkęř mőďęł? ····· ·]</string>
+    <string name="manage_ask_speakers_text">[Țhįș fřęęș %1$s&#160;MB. Șpęąkęřș ąłřęąďý főűńď șțąý, ąńď ýőű čąń ďőwńłőąď įț ągąįń. ····· ····· ····· ··]</string>
+    <string name="manage_ask_speakers_part_text">[Țhįș fřęęș %1$s&#160;MB. Ďőwńłőąďįńg țhę șpęąkęř mőďęł ągąįń șțąřțș ővęř. ····· ····· ····]</string>
+    <string name="manage_speakers_busy">[pkțįțő įș űșįńg țhę șpęąkęř mőďęł. Țřý ągąįń whęń įț\'ș ďőńę. ····· ····· ···]</string>
     <string name="manage_faster_phone">[Fąșțęř őń țhįș phőńę ····· ···]</string>
     <string name="manage_faster_tablet">[Fąșțęř őń țhįș țąbłęț ······]</string>
     <string name="manage_faster_computer">[Fąșțęř őń țhįș čőmpűțęř ····· ·]</string>

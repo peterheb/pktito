@@ -549,7 +549,10 @@ function modelMenu(anchor, keys) {
    download under way has the window to itself (setup), so none is listed
    here. Delete asks first, saying what it frees and what follows: the
    model in use gives way to another downloaded one, which the toast names,
-   or, the last, to choosing one again (main.rs, delete_model). */
+   or, the last, to choosing one again (main.rs, delete_model). The speaker
+   model is listed with them and counts in the total; its Delete waits
+   while a find or a transcription with speakers has it (heldOf), and the
+   names found already stay with their transcripts. */
 let manageFrom = null; // the model menu's button, which gets the keyboard back
 
 function openManage(from) {
@@ -579,11 +582,11 @@ const focusManage = () =>
 function renderManage() {
   const rows = [];
   let used = 0;
-  const row = (m, sub, part) => {
-    const id = `kept-${m.key}${part ? "-part" : ""}`;
+  const row = (key, label, name, sub, part) => {
+    const id = `kept-${key}${part ? "-part" : ""}`;
     return (
-      `<li><div class="pk-kept-text"><span class="pk-ui" id="${id}">${esc(labelOf(m))}</span><small class="pk-small">${sub}</small></div>` +
-      `<button class="pk-btn pk-btn-del" type="button" data-delete="${m.name}"${part ? ' data-part="1"' : ""} aria-describedby="${id}"${!part && held(m) ? " disabled" : ""}>` +
+      `<li><div class="pk-kept-text"><span class="pk-ui" id="${id}">${esc(label)}</span><small class="pk-small">${sub}</small></div>` +
+      `<button class="pk-btn pk-btn-del" type="button" data-delete="${name}"${part ? ' data-part="1"' : ""} aria-describedby="${id}"${!part && heldOf(name) ? " disabled" : ""}>` +
       `${esc(t("manage.delete"))}</button></li>`
     );
   };
@@ -595,12 +598,21 @@ function renderManage() {
       const tag = on
         ? ` · <span class="pk-have">${esc(t("manage.in_use"))}</span>`
         : "";
-      rows.push(row(m, `${esc(`${m.name}${DOT}${size}`)}${tag}`, false));
+      rows.push(
+        row(
+          m.key,
+          labelOf(m),
+          m.name,
+          `${esc(`${m.name}${DOT}${size}`)}${tag}`,
+        ),
+      );
     }
     if (m.partial) {
       used += m.partial;
       const got = { got: num(mb(m.partial)), total: num(mb(m.bytes)) };
-      rows.push(row(m, esc(t("manage.paused", got)), true));
+      rows.push(
+        row(m.key, labelOf(m), m.name, esc(t("manage.paused", got)), true),
+      );
     }
     // what Manage models offers under a model that runs here
     // (editions::offer, docs/EDITIONS.md): Faster, the NPU's edition where
@@ -608,6 +620,35 @@ function renderManage() {
     // the PC's NPU's, as Android offers its NPU's; Update, the catalog's
     // newer files for the edition that runs. Each only when asked for.
     if (m.faster || m.update) rows.push(offerRow(m));
+  }
+  // the speaker model, in the same folder and the same total (Peter,
+  // 2026-11-14), and what a download of it that stopped kept; one under way
+  // is the switch's to show
+  const d = st.diarizer;
+  if (d && d.have) {
+    used += d.bytes;
+    const size = t("manage.size", { mb: num(mb(d.bytes)) });
+    rows.push(
+      row(
+        "speakers",
+        t("manage.speakers"),
+        d.name,
+        esc(`${d.name}${DOT}${size}`),
+      ),
+    );
+  }
+  if (d && d.kept && spkBusy !== "downloading") {
+    used += d.kept;
+    const got = { got: num(mb(d.kept)), total: num(mb(d.bytes)) };
+    rows.push(
+      row(
+        "speakers",
+        t("manage.speakers"),
+        d.name,
+        esc(t("manage.paused", got)),
+        true,
+      ),
+    );
   }
   const total =
     used >= 1e9
@@ -674,6 +715,14 @@ async function getEncoder(name) {
 const held = (m) =>
   running &&
   (m.name === runningModel || (!st.model_file && m.name === st.model));
+/* the same by a Delete's name, the speaker model's while a find or a
+   transcription with speakers has it (main.rs, delete_diarizer) */
+function heldOf(name) {
+  if (st.diarizer && name === st.diarizer.name)
+    return spkBusy === "finding" || (running && !!prefs.speakers);
+  const m = st.catalog.find((x) => x.name === name);
+  return !!m && held(m);
+}
 
 function manageRunning() {
   if ($("manage").hidden) return;
@@ -681,12 +730,14 @@ function manageRunning() {
     "[data-delete]:not([data-part])",
   )) {
     const had = document.activeElement === b;
-    b.disabled = held(st.catalog.find((m) => m.name === b.dataset.delete));
+    b.disabled = heldOf(b.dataset.delete);
     if (had && b.disabled) $("manage-close").focus({ preventScroll: true });
   }
 }
 
 async function deleteKept(b) {
+  if (st.diarizer && b.dataset.delete === st.diarizer.name)
+    return deleteSpeakerModel(b);
   const m = st.catalog.find((x) => x.name === b.dataset.delete);
   if (!m) return;
   const part = !!b.dataset.part;
@@ -725,6 +776,34 @@ async function deleteKept(b) {
     focusManage();
     const next = now && st.catalog.find((x) => x.name === now);
     if (next) toast(t("models.using", { label: labelOf(next) }));
+  } catch (e) {
+    toastErr(e);
+  }
+}
+
+/* The speaker model's Delete: the names already found are the
+   transcripts' own and stay; Speakers asks for the model again when it
+   next needs it */
+async function deleteSpeakerModel(b) {
+  const d = st.diarizer,
+    part = !!b.dataset.part;
+  const frees = num(mb(part ? d.kept : d.bytes));
+  const yes = await ask(
+    t(part ? "manage.ask_part_title" : "manage.ask_speakers_title"),
+    t(part ? "manage.ask_speakers_part_text" : "manage.ask_speakers_text", {
+      mb: frees,
+    }),
+    t("manage.delete"),
+    b,
+  );
+  if (!yes) return;
+  try {
+    await invoke("delete_model", { name: d.name, part });
+    await refresh();
+    renderManage();
+    focusManage();
+    const f = current();
+    if (f && viewName() === "work") updateSpeakers(f, modeOf(f) === "review");
   } catch (e) {
     toastErr(e);
   }
@@ -3139,6 +3218,7 @@ async function diarizerDownload(s) {
   if (s.step === "done") {
     spkBusy = "";
     await refresh().catch(toastErr);
+    if (!$("manage").hidden) renderManage();
     toast(t("speakers.ready"));
     if (f && prefs.speakers && modeOf(f) === "review" && !present(f).length)
       return findSpeakers(f);
@@ -3146,6 +3226,9 @@ async function diarizerDownload(s) {
   }
   if (s.step === "cancelled" || s.problem) {
     spkBusy = "";
+    // what it kept, for Manage models
+    await refresh().catch(toastErr);
+    if (!$("manage").hidden) renderManage();
     if (s.problem) toastErr(s.problem);
     return spkRefresh(f);
   }
@@ -3161,6 +3244,7 @@ async function diarizerDownload(s) {
 async function findSpeakers(f) {
   if (!f.recentId || spkBusy) return spkRefresh(f);
   spkBusy = "finding";
+  manageRunning();
   if (playId === f.id) pausePlayback();
   f.finding = { done: 0 };
   updateSpeakers(f, true);
@@ -3178,6 +3262,7 @@ async function findSpeakers(f) {
   }
   f.finding = null;
   spkBusy = "";
+  manageRunning();
   showFinding(f);
   if (prefs.captions) await cuesOf(f).catch(toastErr);
   spkRefresh(f);

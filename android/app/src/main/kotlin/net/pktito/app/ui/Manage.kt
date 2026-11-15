@@ -47,6 +47,7 @@ import net.pktito.app.Editions
 import net.pktito.app.Models
 import net.pktito.app.Offer
 import net.pktito.app.R
+import net.pktito.app.Speakers
 import net.pktito.app.mb
 import net.pktito.app.words
 
@@ -55,6 +56,8 @@ class ManageActions(
     val delete: (Offer) -> Unit,
     val deletePart: (Offer) -> Unit,
     val deleteOwn: () -> Unit,
+    /** The speaker model deleted, or with part what a download of it kept (Speakers.delete). */
+    val deleteSpeakers: (part: Boolean) -> Unit,
     /**
      * The download under way stopped and what it had deleted (Downloads.cancel), as the setup
      * screen's Cancel does.
@@ -97,8 +100,10 @@ private class Kept(
  * dp wide grown with the text (withText) to the window's margins: at twice the text size on a
  * tablet, 440 put Delete and Close under their words (2026-10-31). While a transcription runs, the
  * model in use and the one it loaded, if another was chosen since, keep their Delete dimmed: the
- * second is mapped under the transcription (Models.delete), the first will be the next one's. The
- * toast is shown here while this is up, over the screen's.
+ * second is mapped under the transcription (Models.delete), the first will be the next one's. Last,
+ * the speaker model, counted in the total with them (Peter, 2026-11-14): downloaded, coming, or
+ * what a download of it kept, its Delete dimmed while a transcription with speakers or a find has
+ * it (speakersHeld). The toast is shown here while this is up, over the screen's.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,6 +114,8 @@ fun Manage(
     download: Download?,
     running: Boolean,
     loaded: String?,
+    speakers: Speakers.Offer?,
+    speakersHeld: Boolean,
     free: Long,
     toast: String?,
     compact: Boolean,
@@ -241,6 +248,66 @@ fun Manage(
                     a.deleteOwn,
                 )
             )
+        }
+        speakers?.let { s ->
+            val title = res.getString(R.string.manage_speakers)
+            val d = download?.takeIf { it.name == s.name }
+            when {
+                s.have ->
+                    add(
+                        Kept(
+                            "have:${s.name}",
+                            title,
+                            note(
+                                res,
+                                "${s.name}$DOT${res.getString(R.string.manage_size, mb(s.bytes))}",
+                                false,
+                                p.ok,
+                            ),
+                            s.bytes,
+                            delete,
+                            !speakersHeld,
+                            res.getString(R.string.manage_ask_speakers_title) to
+                                res.getString(R.string.manage_ask_speakers_text, mb(s.bytes)),
+                        ) {
+                            a.deleteSpeakers(false)
+                        }
+                    )
+                d != null && d.going ->
+                    add(
+                        Kept(
+                            "part:${s.name}",
+                            title,
+                            AnnotatedString(
+                                res.getString(R.string.manage_downloading, mb(d.got), mb(d.total))
+                            ),
+                            d.got,
+                            res.getString(R.string.stop),
+                            true,
+                            null,
+                            a.stop,
+                        )
+                    )
+                d != null || s.kept > 0 -> {
+                    val got = d?.got ?: s.kept
+                    add(
+                        Kept(
+                            "part:${s.name}",
+                            title,
+                            AnnotatedString(
+                                res.getString(R.string.manage_paused, mb(got), mb(s.bytes))
+                            ),
+                            got,
+                            delete,
+                            true,
+                            res.getString(R.string.manage_ask_part_title) to
+                                res.getString(R.string.manage_ask_speakers_part_text, mb(got)),
+                        ) {
+                            if (d != null) a.stop() else a.deleteSpeakers(true)
+                        }
+                    )
+                }
+            }
         }
     }
     // with keys, the first Delete that can be pressed has them, or Close,

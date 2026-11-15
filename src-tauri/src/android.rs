@@ -437,6 +437,32 @@ pub extern "system" fn Java_net_pktito_app_Engine_diarizer<'a>(
         .resolve::<ThrowRuntimeExAndDefault>()
 }
 
+/// Engine.deleteDiarizer(dir, part): the speaker model's files in dir, the
+/// models folder, deleted for Manage models (model::delete_diarizer): the
+/// model and what a download of it kept, or with part what the download
+/// kept alone. Nothing may have it loaded (Speakers.delete). Throws why it
+/// couldn't.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_deleteDiarizer<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    dir: JString<'a>,
+    part: jboolean,
+) {
+    unowned
+        .with_env(|env| -> jni::errors::Result<()> {
+            let dir = PathBuf::from(dir.try_to_string(env)?);
+            let Some(d) = model::DIARIZER else {
+                return Ok(());
+            };
+            match model::delete_diarizer(&dir, &d, part) {
+                Ok(()) => Ok(()),
+                Err(why) => throw(env, &why),
+            }
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
 /// Engine.loadDiarizer(path): the diarizer's model at path and a diarizer
 /// for it, on the transcriber's threads: a handle for transcribe() and
 /// findSpeakers(), let go with freeDiarizer().

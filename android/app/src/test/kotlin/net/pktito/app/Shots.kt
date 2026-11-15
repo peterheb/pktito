@@ -506,6 +506,7 @@ class Shots {
         toast: String? = null,
         compact: Boolean = true,
         faster: Boolean = false,
+        spk: Speakers.Offer? = null,
     ) =
         Manage(
             offers(
@@ -519,10 +520,12 @@ class Shots {
             d,
             running,
             null,
+            spk,
+            false,
             18_400_000_000,
             toast,
             compact,
-            ManageActions({}, {}, {}, {}, {}, {}),
+            ManageActions({}, {}, {}, {}, {}, {}, {}),
         )
 
     private val manageUp = { compose.onAllNodes(isDialog()).onFirst() }
@@ -532,6 +535,45 @@ class Shots {
     }
 
     @Test fun manage() = shot("manage", false, act = manageUp) { manageModels() }
+
+    // the speaker model with them, downloaded, on a phone and on the tablet on
+    // its side; what a download of it kept; and its Delete's question
+    private fun speakerModel(have: Boolean, kept: Long = 0) =
+        Speakers.Offer(
+            "nemotron-3-diarization",
+            "OpenMDW-1.1",
+            "nemotron-3-diarization.pkf",
+            100_498_048,
+            kept,
+            have,
+        )
+
+    private val askLast = {
+        compose.onAllNodesWithText("Delete").onLast().performClick()
+        compose.onAllNodes(isDialog()).onLast()
+    }
+
+    @Test
+    fun manageSpeakers() =
+        shot("manage-speakers", false, act = manageUp) { manageModels(spk = speakerModel(true)) }
+
+    @Test
+    fun manageSpeakersTab() =
+        shot("manage-speakers", false, tab = 1, act = manageUp) {
+            manageModels(both = true, compact = false, spk = speakerModel(true))
+        }
+
+    @Test
+    fun manageSpeakersPartDark() =
+        shot("manage-speakers-part", true, act = manageUp) {
+            manageModels(both = true, spk = speakerModel(false, kept = 31_457_280))
+        }
+
+    @Test
+    fun manageSpeakersAsk() =
+        shot("manage-speakers-ask", false, tab = 1, act = askLast) {
+            manageModels(both = true, compact = false, spk = speakerModel(true))
+        }
 
     @Test fun manageDark() = shot("manage", true, act = manageUp) { manageModels() }
 

@@ -226,6 +226,9 @@ struct DiarizerOffer {
     name: &'static str,
     license: &'static str,
     bytes: u64,
+    /// What a download of it that stopped kept, for Manage models' list and
+    /// its total.
+    kept: u64,
     have: bool,
 }
 
@@ -464,6 +467,7 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, Problem>
             name: d.name,
             license: d.license,
             bytes: d.model.bytes,
+            kept: model::Wanted::diarizer(&data.join("models"), &d).partial(),
             have: model::diarizer_file(&data).is_some(),
         }),
     })
@@ -699,6 +703,9 @@ fn delete_model(
     name: String,
     part: bool,
 ) -> Result<Option<String>, Problem> {
+    if let Some(d) = model::DIARIZER.filter(|d| d.name == name) {
+        return delete_diarizer(&app, &state, d, part).map(|_| None);
+    }
     let e = model::entry(&name).ok_or("no such model")?;
     let data = data_dir(&app)?;
     let cant = |why: String| Problem::new("manage.cant_delete").detail(why);
@@ -731,6 +738,38 @@ fn delete_model(
     let now = model::delete(&data, e).map_err(cant)?;
     drop(engine);
     Ok(now.map(|x| x.name.to_string()))
+}
+
+/// Manage models' Delete of the speaker model: what a download of it kept,
+/// or the model itself once nothing has it. A find or a transcription with
+/// speakers holds the diarizer, which maps the file, and the Delete waits
+/// for neither: it says so (manage.speakers_busy), as a model's Delete
+/// does while it transcribes. The names already found are the transcripts'
+/// own and stay.
+fn delete_diarizer(
+    app: &AppHandle,
+    state: &AppState,
+    d: model::Diarizer,
+    part: bool,
+) -> Result<(), Problem> {
+    let dir = data_dir(app)?.join("models");
+    let cant = |why: String| Problem::new("manage.cant_delete").detail(why);
+    if part {
+        if let Some(j) = state.download.lock().unwrap().as_ref() {
+            if j.name() == d.name && j.alive() {
+                // its thread deletes what it had, and says so
+                j.ctl.cancel.store(true, Ordering::Relaxed);
+                return Ok(());
+            }
+        }
+        return model::delete_diarizer(&dir, &d, true).map_err(cant);
+    }
+    // held until the file is gone, so that nothing loads it meanwhile
+    let Ok(mut slot) = state.diarizer.try_lock() else {
+        return Err(Problem::new("manage.speakers_busy"));
+    };
+    *slot = None;
+    model::delete_diarizer(&dir, &d, false).map_err(cant)
 }
 
 /// A .pkf already on this computer, checked by loading it.
@@ -947,9 +986,13 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
     };
     let _using = Using::new(&state.transcribing, &model_path);
     let mut slot = state.engine.lock().unwrap();
-    let mut dslot = state.diarizer.lock().unwrap();
+    // the diarizer only with speakers: a transcription without them leaves
+    // it to a find, and to Manage models' Delete of its model
+    let mut dslot = diarizer.as_ref().map(|_| state.diarizer.lock().unwrap());
     let loading = slot.as_ref().map(|e| e.path != model_path).unwrap_or(true)
-        || (diarizer.is_some() && dslot.as_ref().map(|d| d.path.as_path()) != diarizer.as_deref());
+        || dslot
+            .as_ref()
+            .is_some_and(|d| d.as_ref().map(|d| d.path.as_path()) != diarizer.as_deref());
     send(JobEvent {
         step: if loading { "loading" } else { "transcribing" },
         eta: -1.0,
@@ -965,12 +1008,12 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
         Ok(e) => e,
         Err(why) => return fail(trouble("transcribe.cant_load_model", why.to_string())),
     };
-    let mut speakers = match &diarizer {
-        Some(p) => match ensure_diarizer(&mut dslot, p) {
+    let mut speakers = match (&diarizer, dslot.as_mut()) {
+        (Some(p), Some(d)) => match ensure_diarizer(d, p) {
             Ok(Diarizer { diar, model, .. }) => Some(transcribe::Speakers::new(model, diar)),
             Err(why) => return fail(trouble("transcribe.cant_load_model", why)),
         },
-        None => None,
+        _ => None,
     };
     if loading {
         send(JobEvent {

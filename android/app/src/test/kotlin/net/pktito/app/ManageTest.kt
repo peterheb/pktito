@@ -63,6 +63,8 @@ class ManageTest {
         running: Boolean = false,
         download: Download? = null,
         own: File? = null,
+        speakers: Speakers.Offer? = null,
+        held: Boolean = false,
     ) {
         transcribing = running
         compose.setContent {
@@ -80,10 +82,12 @@ class ManageTest {
                         download,
                         transcribing,
                         null,
+                        speakers,
+                        held,
                         0,
                         null,
                         compact = false,
-                        ManageActions({}, {}, {}, {}, {}, {}),
+                        ManageActions({}, {}, {}, {}, {}, {}, {}),
                     )
                 }
             }
@@ -143,6 +147,38 @@ class ManageTest {
         compose.onNodeWithText("Cancel").performClick()
         compose.waitForIdle()
         compose.onAllNodesWithText("Delete")[1].assertIsFocused()
+    }
+
+    private fun speakerModel(have: Boolean, kept: Long = 0) =
+        Speakers.Offer(
+            "nemotron-3-diarization",
+            "OpenMDW-1.1",
+            "nemotron-3-diarization.pkf",
+            100_498_048,
+            kept,
+            have,
+        )
+
+    @Test
+    fun theSpeakerModelCountsInTheTotal() {
+        show(both, speakers = speakerModel(true))
+        compose.onNodeWithText("Speaker model").assertExists()
+        // the two models' 1,248,960,392 bytes and the speaker model's 100,498,048
+        compose.onNodeWithText("1.35\u00a0GB", substring = true).assertExists()
+    }
+
+    @Test
+    fun whatADownloadOfTheSpeakerModelKeptCountsToo() {
+        show(both, speakers = speakerModel(false, kept = 31_457_280))
+        compose.onNodeWithText("Paused download\u00a0· 31 of 100\u00a0MB").assertExists()
+        compose.onNodeWithText("1.28\u00a0GB", substring = true).assertExists()
+    }
+
+    @Test
+    fun whileTheSpeakerModelIsInUseItsDeleteWaits() {
+        show(both, speakers = speakerModel(true), held = true)
+        compose.onAllNodesWithText("Delete")[2].assertIsNotEnabled()
+        compose.onAllNodesWithText("Delete")[0].assertIsFocused()
     }
 
     @Test
