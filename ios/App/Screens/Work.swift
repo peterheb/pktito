@@ -61,10 +61,15 @@ struct Work: View {
         let present = Speakers.present(rows)
         let spoken = spk.on && !present.isEmpty
         let turns = spoken && present.count > 1
-        // a speaker found, their turns (Finder.findWho), while their name
-        // shows: switched off, or joined to another by a rename, the search
-        // is let go
+        // a speaker found, their turns (Finder.findWho), or with words typed
+        // the words' in their sentences alone, while their name shows:
+        // switched off, or joined to another by a rename, the search is let go
         let who = spoken && present.contains(s.finder.who) ? s.finder.who : 0
+        // Only matches (Finder.only): the rows the list shows, while
+        // something is sought; off again once nothing is
+        let sought =
+            review && (!s.finder.query.trimmingCharacters(in: .whitespaces).isEmpty || who != 0)
+        let view = s.finder.only && sought ? shownRows(rows, hits, s.finder.query, who: who) : nil
         // the strip keeps the bar's place: the turns shown, the speakers being
         // found, or a transcription finding them as it goes (app.js, barShown)
         let place = (review && (turns || spk.finding)) || (t.running && t.diarizing)
@@ -104,6 +109,11 @@ struct Work: View {
                     FindLine(
                         hits: hits, seek: { seek($0) }, alone: room,
                         speakers: switchOf(present: present),
+                        only: sought
+                            ? FindLine.Switch(
+                                on: s.finder.only, busy: false,
+                                hint: L(s.finder.only ? "find_only_all" : "find_only_show"),
+                                toggle: { s.finder.only.toggle() }) : nil,
                         nameOf: { Speakers.nameOf(t.names, $0) }
                     )
                     .padding(.horizontal, edge)
@@ -147,8 +157,8 @@ struct Work: View {
                 if !room { above = $0 }
             }
             Rows(
-                rows: rows, review: review, marks: marks, hits: hits, stats: stats(review),
-                edge: edge, jump: jumped,
+                rows: rows, review: review, marks: marks, hits: hits, view: view,
+                stats: stats(review), edge: edge, jump: jumped,
                 speakers: Rows.Voices(
                     turns: turns, editable: review && spoken, present: present, names: t.names,
                     joined: spk.joined)
@@ -179,13 +189,18 @@ struct Work: View {
         .onChange(of: s.finder.who != 0 && who == 0) { _, gone in
             if gone { s.finder.clear() }
         }
+        .onChange(of: sought) { _, now in if !now { s.finder.only = false } }
         .onChange(
             of: Sought(
                 query: s.finder.query, who: who, review: review, id: t.id, count: rows.count,
                 speakers: rows.map(\.speaker)),
             initial: true
         ) { was, now in
-            hits = !review ? [] : who != 0 ? turnsOf(rows, who) : findIn(rows, s.finder.query)
+            let words = !s.finder.query.trimmingCharacters(in: .whitespaces).isEmpty
+            hits =
+                !review
+                ? []
+                : who != 0 && !words ? turnsOf(rows, who) : findIn(rows, s.finder.query, who: who)
             marks = Dictionary(
                 grouping: hits.indices.map { Marked(k: $0, hit: hits[$0]) }, by: \.hit.row)
             // a search typed at rest takes the playhead to its match, so that
@@ -445,10 +460,17 @@ struct FindLine: View {
     /// keyboard (Work)
     let alone: Bool
     var speakers: Switch?
+    /// Only matches, while something is found (Finder.only): after the
+    /// field where the line has room, as the desktop has it after the names
+    /// and Find (app.js, applyOnly), else on a line of its own 16 under it,
+    /// where a phone's field runs across the line. Not while the search is
+    /// alone on the line, whose rows it would take.
+    var only: Switch?
     var nameOf: (Int) -> String = { _ in "" }
-    /// the line's width, and the switch's
+    /// the line's width, and the switches'
     @State private var width: CGFloat = 0
     @State private var switchWidth: CGFloat = 0
+    @State private var onlyWidth: CGFloat = 0
     /// the field's 200, 280 and 380, scaled as its text is: Android's app at
     /// twice the text size left a search 53 of a fixed 280 (2026-10-31)
     @ScaledMetric(relativeTo: .subheadline) private var narrow: CGFloat = 200
@@ -462,32 +484,51 @@ struct FindLine: View {
         let before = speakers == nil ? 0 : switchWidth + 12
         let field: CGFloat? = !alone && width > 0 && before + wide <= width ? wide : nil
         let across = alone || (field == nil && (f.open || typed || f.who != 0))
-        HStack(spacing: 12) {
-            if let s = speakers, !across {
-                SpeakersSwitch(on: s.on, busy: s.busy, hint: s.hint, action: s.toggle)
-                    .fixedSize()
-            }
-            // one field, at its width or across the line, so that it keeps
-            // the keyboard from one to the other
-            if field != nil || across {
-                FindField(finder: f, hits: hits, seek: seek, opened: across, nameOf: nameOf)
-                    .frame(width: across ? nil : field)
-                    .frame(maxWidth: across ? .infinity : nil)
-            } else {
-                IconButton(icon: .search, label: L("find_label"), kind: .ghost) { f.open = true }
-            }
-        }
-        // the switch's width, while it is given its place too
-        .background(alignment: .leading) {
-            if let s = speakers {
-                SpeakersSwitch(on: s.on, busy: s.busy, hint: s.hint, action: {})
-                    .fixedSize()
-                    .hidden()
-                    .onGeometryChange(for: CGFloat.self) {
-                        $0.size.width
-                    } action: {
-                        switchWidth = $0
+        let o = alone ? nil : only
+        let inline = o != nil && field.map { before + $0 + 12 + onlyWidth <= width } == true
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 12) {
+                if let s = speakers, !across {
+                    SpeakersSwitch(on: s.on, busy: s.busy, hint: s.hint, action: s.toggle)
+                        .fixedSize()
+                }
+                // one field, at its width or across the line, so that it keeps
+                // the keyboard from one to the other
+                if field != nil || across {
+                    FindField(finder: f, hits: hits, seek: seek, opened: across, nameOf: nameOf)
+                        .frame(width: across ? nil : field)
+                        .frame(maxWidth: across ? .infinity : nil)
+                } else {
+                    IconButton(icon: .search, label: L("find_label"), kind: .ghost) {
+                        f.open = true
                     }
+                }
+                if let o, inline { onlySwitch(o) }
+            }
+            if let o, !inline { onlySwitch(o) }
+        }
+        // the switches' widths, while they are given their places too
+        .background(alignment: .leading) {
+            ZStack(alignment: .leading) {
+                if let s = speakers {
+                    SpeakersSwitch(on: s.on, busy: s.busy, hint: s.hint, action: {})
+                        .fixedSize()
+                        .hidden()
+                        .onGeometryChange(for: CGFloat.self) {
+                            $0.size.width
+                        } action: {
+                            switchWidth = $0
+                        }
+                }
+                if let o {
+                    onlySwitch(o)
+                        .hidden()
+                        .onGeometryChange(for: CGFloat.self) {
+                            $0.size.width
+                        } action: {
+                            onlyWidth = $0
+                        }
+                }
             }
         }
         // to the start by its frame, not a spacer after it: the line's 12
@@ -499,6 +540,13 @@ struct FindLine: View {
         } action: {
             width = $0
         }
+    }
+
+    private func onlySwitch(_ o: Switch) -> some View {
+        SpeakersSwitch(
+            on: o.on, busy: o.busy, hint: o.hint, action: o.toggle, label: L("find_only")
+        )
+        .fixedSize()
     }
 }
 
@@ -531,11 +579,19 @@ struct Marked: Equatable {
 /// 2026-11-01). Playback takes along only a reader whose row before is in
 /// sight, as the desktop's does (app.js, showTime); a reader who has
 /// scrolled away is left there, and the waveform's seeks bring their row.
+///
+/// With Only matches (Finder.only), the rows found alone (shownRows), each
+/// still playing from its time: a run of them stands apart as a turn does,
+/// its line ending inside its first and last, and a run from inside a turn
+/// has the turn's name (app.js, applyOnly). Turned, the reader stays on
+/// their sentence, where it was on the screen (keep).
 private struct Rows: View {
     let rows: [Segment]
     let review: Bool
     let marks: [Int: [Marked]]
     let hits: [Hit]
+    /// with Only matches, the rows shown, in order; nil for all
+    let view: [Int]?
     let stats: String?
     /// the screen's edge, 16 or 24 (Work)
     let edge: CGFloat
@@ -570,6 +626,18 @@ private struct Rows: View {
     @State private var revealing = false
     @State private var width: CGFloat = 0
     @Environment(\.dynamicTypeSize) private var type
+    /// where each row the list holds was last drawn, in the list's room,
+    /// and the room's height, for a turn of Only matches to keep the
+    /// reader's sentence where it was (keep); held aside, as nothing drawn
+    /// depends on it. What is in sight is reckoned from these, not from
+    /// seen, which kept rows Only matches had just taken away (the iPhone 17
+    /// Simulator, 2026-11-15).
+    @State private var drawn = Drawn()
+
+    private final class Drawn {
+        var frames: [Int: CGRect] = [:]
+        var height: CGFloat = 0
+    }
 
     var body: some View {
         let t = Transcriber.shared
@@ -589,24 +657,40 @@ private struct Rows: View {
             ]).width)
         let wide = width >= 496 + 46 + column
         let v = speakers
+        let shown = view ?? Array(rows.indices)
+        // with Only matches, which rows show, for where their runs start and end
+        let shows: [Bool]? = view.map { list in
+            var b = [Bool](repeating: false, count: rows.count)
+            for i in list { b[i] = true }
+            return b
+        }
         ScrollViewReader { list in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(rows.indices, id: \.self) { i in
+                    ForEach(shown, id: \.self) { i in
                         let now = i == current
                         let mine = marks[i] ?? []
                         let s = rows[i]
+                        // a run of the rows Only matches shows, from its first to its last
+                        let from = shows.map { i == 0 || !$0[i - 1] } ?? false
+                        let to = shows.map { i == rows.count - 1 || !$0[i + 1] } ?? false
                         // with the turns shown, a turn's name opens its first
                         // sentence, and each row has its turn's line, ending
-                        // inside its first and last
+                        // inside its first and last; a run from inside a turn
+                        // has the turn's name (a sentence no speaker was heard
+                        // in has none)
                         let starts = v.turns && Speakers.turnStarts(rows, i)
-                        let turn = starts ? Speakers.turnAt(rows, i) : nil
+                        let lent = v.turns && from && s.speaker != nil && !starts
+                        let turn =
+                            starts
+                            ? Speakers.turnAt(rows, i)
+                            : lent ? Speakers.turnAt(rows, turnStart(i)) : nil
                         let line =
                             v.turns
                             ? s.speaker.map { n in
                                 TurnLine(
-                                    speaker: n, first: starts,
-                                    last: i == rows.count - 1 || rows[i + 1].speaker != n)
+                                    speaker: n, first: starts || from,
+                                    last: i == rows.count - 1 || rows[i + 1].speaker != n || to)
                             } : nil
                         SegRow(
                             s: s, index: i, now: now,
@@ -618,11 +702,27 @@ private struct Rows: View {
                             name: turn.map { Speakers.nameOf(v.names, $0.speaker) },
                             turn: turn, line: line,
                             who: v.editable ? Who(present: v.present, names: v.names) : nil,
-                            lit: v.joined?.seg == s ? v.joined : nil, first: i == 0
+                            lit: v.joined?.seg == s ? v.joined : nil, first: i == shown.first,
+                            apart: from
                         ) { seek(s.start, true) }
                         .equatable()
+                        .onGeometryChange(for: CGRect.self) {
+                            $0.frame(in: .scrollView)
+                        } action: {
+                            drawn.frames[i] = $0
+                        }
+                        .onDisappear { drawn.frames[i] = nil }
                     }
-                    if let stats {
+                    // with Only matches and nothing found, where the sentences would be
+                    if view?.isEmpty == true {
+                        Text(L("find_only_none"))
+                            .font(PkType.ui.font(14))
+                            .foregroundStyle(Pk.inkMuted)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 6)
+                    }
+                    // what the whole transcript cost says nothing of the matches shown
+                    if let stats, view == nil {
                         Text(stats)
                             .font(PkType.small.font(12))
                             .monospacedDigit()
@@ -635,7 +735,18 @@ private struct Rows: View {
                 .padding(.horizontal, edge)
                 .padding(.bottom, 16)
             }
+            // a list anew for each set of rows Only matches shows: the rows
+            // shown fewer, from far down, the lazy list drew none at all,
+            // blank where they were (the iPhone 17 Simulator, 2026-11-15);
+            // a new one lays them out from its top, and keep or the match's
+            // reveal takes the reader to their sentence
+            .id(view)
             .onScrollTargetVisibilityChange(idType: Int.self) { seen = $0.sorted() }
+            .onScrollGeometryChange(for: CGFloat.self) {
+                $0.containerSize.height
+            } action: { _, h in
+                drawn.height = h
+            }
             .onScrollPhaseChange { _, now in
                 phase = now
                 if hands { chasing = nil }
@@ -651,14 +762,18 @@ private struct Rows: View {
             }
             // the row playing kept in sight, for a reader still with it: the
             // row before in sight, or playback just begun or followed to now
+            // (with only the matches shown, through those alone)
             .onChange(of: p.playing ? current : -1) { was, now in
-                guard now >= 0, !hands else { return }
+                guard now >= 0, !hands, view?.contains(now) ?? true else { return }
                 if was < 0 || chasing != nil || seen.contains(was) { bring(now, list) }
             }
             // a seek on the waveform: its row, wherever the reader is
             .onChange(of: jump) {
-                if current >= 0 && !hands { bring(current, list) }
+                if current >= 0 && !hands && view?.contains(current) ?? true {
+                    bring(current, list)
+                }
             }
+            .onChange(of: f.only) { keep(list) }
             // the transcript's end followed as it comes, for a reader who is there
             .onChange(of: t.segments.count) { _, n in
                 if t.running && n > 0 && (seen.last ?? 0) >= n - 4 && !hands {
@@ -691,6 +806,49 @@ private struct Rows: View {
     /// A finger on the list, or its fling: the reader moving it.
     private var hands: Bool {
         phase == .tracking || phase == .interacting || phase == .decelerating
+    }
+
+    /// The first row of row i's turn.
+    private func turnStart(_ i: Int) -> Int {
+        var a = i
+        while a > 0 && rows[a - 1].speaker == rows[i].speaker { a -= 1 }
+        return a
+    }
+
+    /// Only matches turned (Finder.only): the reader kept on their sentence,
+    /// where it was on the screen (app.js, placeOf and toPlace), as the rows
+    /// around it come and go: the match they are on, where it is in sight,
+    /// else the first row wholly in sight the list still shows. Called as
+    /// the turn is drawn, while the rows' places are still the last
+    /// drawing's; a row at fraction y of the list's room, less its own
+    /// height, is put there again by the anchor y. Nothing in sight stays:
+    /// the match a third of the way down, as a move to it brings it.
+    private func keep(_ list: ScrollViewProxy) {
+        let f = AppState.shared.finder
+        let hit = f.at >= 0 && f.at < hits.count ? hits[f.at].row : nil
+        let h = drawn.height
+        let frames = drawn.frames
+        let stays = { (i: Int) in view?.contains(i) ?? true }
+        let inSight = { (i: Int) in frames[i].map { $0.maxY > 0 && $0.minY < h } ?? false }
+        let row =
+            hit.flatMap { inSight($0) ? $0 : nil }
+            ?? frames.filter { $0.value.minY >= 0 && $0.value.minY < h && stays($0.key) }
+            .keys.min()
+        let to: (Int, UnitPoint)? =
+            if let row, let r = frames[row], h > r.height {
+                (row, UnitPoint(x: 0, y: min(max(r.minY / (h - r.height), 0), 1)))
+            } else if let hit {
+                (hit, UnitPoint(x: 0, y: 1.0 / 3))
+            } else {
+                view?.first.map { ($0, .top) }
+            }
+        guard let (row, anchor) = to else { return }
+        // now, which the list made anew (id) applies as it first lays out its
+        // rows, by their estimated heights; then once they are laid out, to
+        // their measured places (the iPhone 17 Simulator, 2026-11-15: the
+        // row first 13 points short of where it was, then on it)
+        list.scrollTo(row, anchor: anchor)
+        Task { @MainActor in list.scrollTo(row, anchor: anchor) }
     }
 
     /// Row at the list's top, where it isn't in sight above the list's last
@@ -781,6 +939,9 @@ private struct SegRow: View, Equatable {
     /// the sentence a move made one again, lit a moment
     let lit: Speakers.Joined?
     let first: Bool
+    /// with Only matches, the first of a run of the rows shown, which stands
+    /// apart as a turn does
+    let apart: Bool
     let onTime: () -> Void
 
     // the action aside, which is a new closure each frame and does the same
@@ -789,6 +950,7 @@ private struct SegRow: View, Equatable {
             && a.marks == b.marks && a.at == b.at && a.column == b.column
             && a.review == b.review && a.base == b.base && a.name == b.name && a.turn == b.turn
             && a.line == b.line && a.who == b.who && a.lit == b.lit && a.first == b.first
+            && a.apart == b.apart
     }
 
     var body: some View {
@@ -842,8 +1004,9 @@ private struct SegRow: View, Equatable {
         .accessibilityElement(children: .combine)
         .accessibilityAction(named: L("play_from", base.at(s.start))) { if review { onTime() } }
         // a turn 16 under the one before (app.css, .pk-seg.pk-turn): with the
-        // rows' 6, sentences 12 apart and turns 28
-        .padding(.top, turn != nil && !first ? 16 : 0)
+        // rows' 6, sentences 12 apart and turns 28; with Only matches, a run
+        // of the rows shown the same
+        .padding(.top, (turn != nil || apart) && !first ? 16 : 0)
     }
 
     private func times(_ t: Speakers.Turn) -> String { "\(base.at(t.start))–\(base.at(t.end))" }

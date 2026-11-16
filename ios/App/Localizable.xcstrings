@@ -754,6 +754,54 @@
         }
       }
     },
+    "find_only": {
+      "extractionState": "manual",
+      "comment": "the switch after Find that shows only what a search found: its sentences, or the speaker found's; the desktop's find.only",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only matches"
+          }
+        }
+      }
+    },
+    "find_only_all": {
+      "extractionState": "manual",
+      "comment": "the desktop's find.only_all",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show the whole transcript"
+          }
+        }
+      }
+    },
+    "find_only_none": {
+      "extractionState": "manual",
+      "comment": "the desktop's find.only_none",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No matches"
+          }
+        }
+      }
+    },
+    "find_only_show": {
+      "extractionState": "manual",
+      "comment": "the desktop's find.only_show",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show only the sentences found"
+          }
+        }
+      }
+    },
     "find_placeholder": {
       "extractionState": "manual",
       "comment": "the desktop's find.placeholder",

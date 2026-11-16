@@ -73,6 +73,8 @@ struct SpeakersSwitch: View {
     /// what a tap does, for VoiceOver: show who said what, or hide them
     let hint: String
     let action: () -> Void
+    /// what it says: Speakers, or Only matches (Finder.only)
+    var label: String? = nil
 
     var body: some View {
         Button {
@@ -80,7 +82,7 @@ struct SpeakersSwitch: View {
         } label: {
             HStack(spacing: 6) {
                 PkIcon.check.frame(width: 12, height: 12).opacity(on ? 1 : 0)
-                Text(L("speakers_switch"))
+                Text(label ?? L("speakers_switch"))
                     .font(PkType.ui.font(13))
                     .lineLimit(1)
                     .frame(minHeight: 16)

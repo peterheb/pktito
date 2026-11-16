@@ -192,7 +192,8 @@ struct Root: View {
         /// or simctl: -open NAME transcribes Application Support/bench/NAME,
         /// and -receive NAME a copy of it as iOS sends one (Open in);
         /// -recent opens the newest transcript of the list; -play SECONDS plays
-        /// it from there; -find WORDS searches it, and with -typing as typed,
+        /// it from there, and -seek SECONDS puts the playhead there, two
+        /// seconds on, at rest; -find WORDS searches it, and with -typing as typed,
         /// the keyboard up; -landscape turns a phone on its side; -show about
         /// or manage opens that, and with about, -sheet privacy or notices one
         /// of its sheets;
@@ -206,8 +207,9 @@ struct Root: View {
         /// those of the transcript opened; -who N finds speaker N; -moveRow I N
         /// gives sentence I to speaker N, as Change speaker does; -rename N
         /// asks to rename speaker N; -askSpeakers asks to download their
-        /// model. (A default's own -key value, as -times YES, sets it for the
-        /// run.)
+        /// model. -only turns Only matches on once the search is set, and
+        /// -flipOnly S turns it again S seconds on. (A default's own -key
+        /// value, as -times YES, sets it for the run.)
         private func debugArguments() {
             let args = CommandLine.arguments
             let s = AppState.shared
@@ -239,6 +241,13 @@ struct Root: View {
                 Task {
                     while !Player.shared.ready { try? await Task.sleep(for: .milliseconds(100)) }
                     Player.shared.seek(t, play: true)
+                }
+            }
+            if let t = value("-seek").flatMap(Double.init) {
+                Task {
+                    while !Player.shared.ready { try? await Task.sleep(for: .milliseconds(100)) }
+                    try? await Task.sleep(for: .seconds(2))
+                    Player.shared.seek(t, play: false)
                 }
             }
             if args.contains("-landscape"),
@@ -286,7 +295,10 @@ struct Root: View {
                 $0 + 2 < args.count ? Int(args[$0 + 2]) : nil
             }
             let rename = value("-rename").flatMap(Int.init)
-            if args.contains("-findSpeakers") || who != nil || move != nil || rename != nil {
+            let flip = value("-flipOnly").flatMap(Double.init)
+            if args.contains("-findSpeakers") || who != nil || move != nil || rename != nil
+                || args.contains("-only") || flip != nil
+            {
                 Task {
                     try? await Task.sleep(for: .seconds(1))
                     if args.contains("-findSpeakers") {
@@ -305,6 +317,11 @@ struct Root: View {
                             to: to, fresh: !Speakers.present(t.segments).contains(to))
                     }
                     if let rename { s.renaming = rename }
+                    if args.contains("-only") { s.finder.only = true }
+                    if let flip {
+                        try? await Task.sleep(for: .seconds(flip))
+                        s.finder.only.toggle()
+                    }
                 }
             }
             if args.contains("-askSpeakers") { s.askSpeakers = true }
