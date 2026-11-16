@@ -77,21 +77,20 @@ fun turnsOf(rows: List<Seg>, n: Int): List<Hit> =
         .map { Hit(it, -1, -1, rows[it].start) }
 
 /**
- * Each match of query in rows, sentences or cues, as the desktop finds them (app.js, bodyHtml and
- * runFind): its words trimmed, without regard to case, a cue's line break read as the space it
- * stands for, each match at a word's start (startsWord) and after the one before it.
+ * Each match of query in rows, the sentences, as the desktop finds them (app.js, bodyHtml and
+ * runFind): its words trimmed, without regard to case, each match at a word's start (startsWord)
+ * and after the one before it.
  */
 fun findIn(rows: List<Seg>, query: String): List<Hit> {
     val sought = query.trim()
     if (sought.isEmpty()) return emptyList()
     val hits = ArrayList<Hit>()
     for ((i, s) in rows.withIndex()) {
-        val flat = s.text.replace('\n', ' ')
-        var low = flat.lowercase()
+        var low = s.text.lowercase()
         var q = sought.lowercase()
         // a lowercase that changes the length would put the marks in the wrong places
-        if (low.length != flat.length) {
-            low = flat
+        if (low.length != s.text.length) {
+            low = s.text
             q = sought
         }
         var from = 0
@@ -156,9 +155,9 @@ enum class Keys {
 /**
  * The search of the transcript on the screen: what is sought, and the match the reader is on, by
  * its place among the matches and by its time, which keeps it where the matches change under it
- * (the other view's, or a longer word that still has it). On a phone the views line has room for
- * the views or the field, so the field opens over it (open). moved counts the reader's moves, for
- * the screen to bring each one into sight.
+ * (after a change of speaker, or a longer word that still has it). On a phone the line under the
+ * strip may have room for the speakers' switch or the field, so the field opens over it (open).
+ * moved counts the reader's moves, for the screen to bring each one into sight.
  */
 class Finder {
     var query by mutableStateOf("")
@@ -220,7 +219,7 @@ class Finder {
      * the listener is, the first where it has passed none (app.js, runFind). A search typed at rest
      * (seek, not null) takes the playhead to that match, as a step does: typing it says the
      * listener means to go where it is (Peter, 2026-11-01). The same search's matches marked anew,
-     * the other view's, leave the playhead where it is. The seek first, as a step's.
+     * after a change of speaker, leave the playhead where it is. The seek first, as a step's.
      */
     fun settle(hits: List<Hit>, position: Double, seek: ((Double) -> Unit)? = null) {
         // a speaker found is sought as words typed are
@@ -314,13 +313,13 @@ class Finder {
 }
 
 /**
- * The search's field on the views line (app.css, .pk-find), sunk, 40 dp tall for a finger to the
- * desktop's 32: the glass, what is sought, and while there is something, its count and the previous
- * and next match, dimmed with fewer than two, then the way to close it, where it closes something:
- * a search, or the field the glass opened (Views); one resting beside the views has none, as the
- * desktop's hasn't. Enter is the next match and Shift+Enter the one before, as is the keyboard's
- * search key; Esc closes it from the screen's keys (MainActivity), as Back does. A step takes the
- * playhead with it (seek: Finder.step).
+ * The search's field on the line under the strip (app.css, .pk-find), sunk, 40 dp tall for a finger
+ * to the desktop's 32: the glass, what is sought, and while there is something, its count and the
+ * previous and next match, dimmed with fewer than two, then the way to close it, where it closes
+ * something: a search, or the field the glass opened (SpeakersLine); one resting beside the switch
+ * has none, as the desktop's hasn't. Enter is the next match and Shift+Enter the one before, as is
+ * the keyboard's search key; Esc closes it from the screen's keys (MainActivity), as Back does. A
+ * step takes the playhead with it (seek: Finder.step).
  */
 @Composable
 fun FindField(

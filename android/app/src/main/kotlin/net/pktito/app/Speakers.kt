@@ -23,10 +23,10 @@ import org.json.JSONObject
  * Who said what (PKT-27; the speakers design, page version 7, every call Peter's of 2026-11-09), as
  * the desktop's window has it (ui/app.js, speakers). A segment says its speaker, numbered from 1 by
  * first word as pktito-c numbers them, eight at most, the diarizer's; a change of speaker ends a
- * sentence and a cue, so a turn is a speaker's segments in a row. The names are the file's own,
- * speaker n's at n - 1, "" for Speaker n: no voice is remembered between recordings. The switch
- * shows them, kept for the next file, and every format shared or copied has them while it does. The
- * transcript itself is Transcriber's; this changes its speakers and keeps them on the recent list
+ * sentence, so a turn is a speaker's segments in a row. The names are the file's own, speaker n's
+ * at n - 1, "" for Speaker n: no voice is remembered between recordings. The switch shows them,
+ * kept for the next file, and every format shared or copied has them while it does. The transcript
+ * itself is Transcriber's; this changes its speakers and keeps them on the recent list
  * (Engine.keepSpeakers).
  */
 object Speakers {
@@ -305,7 +305,6 @@ object Speakers {
                         t.names = emptyList()
                         t.stretches = Stretch.parse(o.optJSONArray("stretches"))
                         t.transcript = json
-                        t.cues = null
                         keep(app, id, json)
                     }
                     .onFailure { e ->
@@ -364,9 +363,7 @@ object Speakers {
         return before
     }
 
-    /**
-     * The transcript's JSON as its speakers are now, for the formats, the captions and the list.
-     */
+    /** The transcript's JSON as its speakers are now, for the formats and the list. */
     private fun changed(context: Context) {
         val t = Transcriber
         val tr = t.transcript ?: return
@@ -377,7 +374,6 @@ object Speakers {
                 .put("stretches", JSONArray(t.stretches.map { it.json() }))
                 .toString()
         t.transcript = json
-        t.cues = null
         keep(context.applicationContext, t.id, json)
     }
 

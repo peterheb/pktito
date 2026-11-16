@@ -34,10 +34,10 @@ struct Loaded {
     npu: bool,
 }
 
-/// A transcript as Kotlin gets it, in JSON, and gives back to format() and
-/// captions(): with the name of the model that made it, whose language its
-/// captions' rules follow (format::cues), as the desktop's window names a
-/// file's own model to its formats; the model loaded since may be another.
+/// A transcript as Kotlin gets it, in JSON, and gives back to format():
+/// with the name of the model that made it, whose language its captions'
+/// rules follow (format::cues), as the desktop's window names a file's own
+/// model to its formats; the model loaded since may be another.
 #[derive(Serialize, Deserialize)]
 struct Transcript {
     duration: f64,
@@ -384,37 +384,6 @@ pub extern "system" fn Java_net_pktito_app_Engine_format<'a>(
             let text = format::text(&t.formatted(&name, speakers), &ext, times);
             match text {
                 Ok(text) => Ok(env.new_string(text)?.into()),
-                Err(why) => throw(env, &why).map(|_| JObject::null()),
-            }
-        })
-        .resolve::<ThrowRuntimeExAndDefault>()
-}
-
-/// Engine.captions(transcript, speakers): a Transcript's subtitle track,
-/// the cues its .srt and .vtt have (format::cues), as JSON: each cue's
-/// start and end in milliseconds, its text, a line break where its second
-/// line begins, and its words, n of the transcript's from the first; with
-/// speakers, a turn's first cue opens with its name, as the window's do.
-/// The Captions view shows them.
-#[unsafe(no_mangle)]
-pub extern "system" fn Java_net_pktito_app_Engine_captions<'a>(
-    mut unowned: EnvUnowned<'a>,
-    _class: JClass<'a>,
-    transcript: JString<'a>,
-    speakers: jboolean,
-) -> JObject<'a> {
-    unowned
-        .with_env(|env| -> jni::errors::Result<JObject<'a>> {
-            let json = transcript.try_to_string(env)?;
-            let t: Transcript = match serde_json::from_str(&json) {
-                Ok(t) => t,
-                Err(e) => return throw(env, &e.to_string()).map(|_| JObject::null()),
-            };
-            let cues = format::cues(&t.formatted("", speakers));
-            match cues {
-                Ok(c) => Ok(env
-                    .new_string(serde_json::to_string(&c).unwrap_or_default())?
-                    .into()),
                 Err(why) => throw(env, &why).map(|_| JObject::null()),
             }
         })

@@ -117,13 +117,6 @@ object Engine {
     ): String
 
     /**
-     * A transcript's subtitle track, as its .srt has it: JSON, each cue's start and end in ms, its
-     * text, and its words, n of the transcript's from the first; with speakers, a turn's first cue
-     * opens with its name.
-     */
-    @JvmStatic external fun captions(transcript: String, speakers: Boolean): String
-
-    /**
      * The diarizer the app offers, as JSON: its name, licence, file and bytes, what a download that
      * stopped kept of it, and whether it is in dir, the models folder; "" where this build has
      * none.

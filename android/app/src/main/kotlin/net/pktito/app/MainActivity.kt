@@ -131,8 +131,6 @@ class MainActivity : ComponentActivity() {
     private val prefs by lazy { getSharedPreferences("pktito", MODE_PRIVATE) }
     /** Share's choice, and Ctrl+S's: each sentence's time before it in .txt and .md. */
     private var times by mutableStateOf(false)
-    /** The transcript as its subtitle track's cues, not its sentences. */
-    private var captions by mutableStateOf(false)
     /** The strip's choice of how times are written, the video's own rate aside. */
     private var base by mutableStateOf(Timebase())
     private var toast by mutableStateOf<String?>(null)
@@ -173,7 +171,6 @@ class MainActivity : ComponentActivity() {
         // or not, as a player's do: on a finger's screen they are its only one
         volumeControlStream = AudioManager.STREAM_MUSIC
         times = prefs.getBoolean("times", false)
-        captions = prefs.getBoolean("captions", false)
         base =
             Timebase(
                 frames = prefs.getBoolean("frames", false),
@@ -310,7 +307,6 @@ class MainActivity : ComponentActivity() {
         val finger = byFinger()
         SideEffect { Player.keysOnly = finger }
         val review = t.step == "done" || t.step == "stopped"
-        val rows = if (captions && review) t.cues ?: emptyList() else t.segments
         // who said what (Speakers): those of the transcript in the order they
         // first speak, their names shown with the switch on, one as much as
         // eight: the model may have heard two voices as one, which New
@@ -326,16 +322,16 @@ class MainActivity : ComponentActivity() {
                 t.segments.mapNotNull { s -> s.speaker?.let { Stretch(s.start, s.end, it) } }
             }
         }
-        // a search's matches in the rows shown, a finished transcript's only;
+        // a search's matches in the sentences, a finished transcript's only;
         // a speaker found, their turns (Finder.findWho), while their name
         // shows: switched off, or joined to another by a rename, the search
         // is let go
         val who = finder.who.takeIf { spoken && it in present } ?: 0
         SideEffect { if (finder.who != 0 && who == 0) finder.clear() }
         val hits =
-            remember(rows, finder.query, who, review, t.segments.size, bar) {
+            remember(t.segments, finder.query, who, review, t.segments.size, bar) {
                 if (!review) emptyList()
-                else if (who != 0) turnsOf(rows, who) else findIn(rows, finder.query)
+                else if (who != 0) turnsOf(t.segments, who) else findIn(t.segments, finder.query)
             }
 
         // the finished transcript's recording, ready to play, its views'
@@ -392,7 +388,8 @@ class MainActivity : ComponentActivity() {
         // playhead taken to it where the search was typed at rest
         // (Finder.settle). Keyed on the search too: two searches that find
         // nothing have the same matches, none, and without a settle between
-        // them the other view's, found next, would count as typed
+        // them matches found anew for another reason, a change of speaker,
+        // would count as typed
         LaunchedEffect(hits, finder.query, finder.who) {
             finder.settle(
                 hits,
@@ -403,20 +400,6 @@ class MainActivity : ComponentActivity() {
         // the match playback passes, the reader with it (Finder.follow)
         LaunchedEffect(hits) {
             snapshotFlow { Player.position }.collect { finder.follow(hits, it, false) }
-        }
-        // the cues, the first time the transcript is shown as captions
-        LaunchedEffect(captions, t.transcript, turns) {
-            val tr = t.transcript
-            if (captions && tr != null && t.cues == null)
-                t.cues =
-                    runCatching {
-                            Transcriber.parseCues(
-                                Engine.captions(tr, turns),
-                                t.segments.flatMap { it.words },
-                            )
-                        }
-                        .onFailure { Log.w(TAG, "captions", it) }
-                        .getOrDefault(emptyList())
         }
         // the transcript's end followed as it comes, for a reader who is there
         // and has no hand on the list (Follow); finished, it starts at its top
@@ -433,7 +416,8 @@ class MainActivity : ComponentActivity() {
         }
         // the row playing kept in sight, for a reader still with it (Follow.playing)
         val current =
-            if (Player.playing) rows.indexOfLast { it.start <= Player.position + 1e-3 } else -1
+            if (Player.playing) t.segments.indexOfLast { it.start <= Player.position + 1e-3 }
+            else -1
         LaunchedEffect(current) { follow.playing(current) }
         // each move to a match brought into sight, its row a third of the way
         // down (app.js, goHit). After the row playing's: a step or a tick
@@ -539,7 +523,7 @@ class MainActivity : ComponentActivity() {
                     done = t.done,
                     duration = t.duration,
                     peaks = t.peaks,
-                    rows = rows,
+                    rows = t.segments,
                     error = t.error,
                     why = t.why,
                     locate = if (t.locate) ({ locate.launch(MEDIA) }) else null,
@@ -555,7 +539,6 @@ class MainActivity : ComponentActivity() {
                         if (t.step == "transcribing" && t.done > 0 && t.transcribed > 0)
                             pace(t.done * t.duration, t.transcribed)
                         else null,
-                    captions = captions,
                     times = times,
                     playable = Player.ready,
                     playing = Player.playing,
@@ -591,15 +574,11 @@ class MainActivity : ComponentActivity() {
                                 times = it
                                 prefs.edit().putBoolean("times", it).apply()
                             },
-                            setCaptions = {
-                                captions = it
-                                prefs.edit().putBoolean("captions", it).apply()
-                            },
                             play = { if (!Speakers.finding) Player.toggle(this@MainActivity) },
                             seek = seek,
                             jump = { s ->
                                 seek(s, false)
-                                val row = rows.indexOfLast { it.start <= s + 1e-3 }
+                                val row = t.segments.indexOfLast { it.start <= s + 1e-3 }
                                 scope.launch { follow.bring(row) }
                             },
                             setBase = {
@@ -654,8 +633,8 @@ class MainActivity : ComponentActivity() {
         ) {
             // the side (Side) where a list and what it opens fit side by side:
             // Material's expanded width, 840 dp, which leaves the work 540,
-            // where its rows stack (Rows, under 620) and Find keeps the views
-            // line (Views, from 480); and 480 tall, which keeps a phone on its
+            // where its rows stack (Rows, under 620) and Find keeps its field
+            // beside the speakers' switch (SpeakersLine); and 480 tall, which keeps a phone on its
             // side one column (the emulator's Pixel 5, 851 by 393). The Tab S7
             // FE has it on its side, 1205 by 753 less its bars, and not
             // upright, 753 wide
@@ -1005,7 +984,6 @@ class MainActivity : ComponentActivity() {
             return
         }
         Speakers.set(this, on)
-        t.cues = null
         if (on && none) Speakers.find(this) { toast = it }
     }
 
@@ -1042,14 +1020,13 @@ class MainActivity : ComponentActivity() {
             )
     }
 
-    /** Its text, or as captions its subtitles, on the clipboard, as the desktop's Copy. */
+    /** Its text on the clipboard, as the desktop's Copy. */
     private fun copy() {
-        val text = text(if (captions) "srt" else "txt", false) ?: return
+        val text = text("txt", false) ?: return
         getSystemService(ClipboardManager::class.java)
             .setPrimaryClip(ClipData.newPlainText(Transcriber.name, text))
         // Android 13 and later say so themselves
-        if (Build.VERSION.SDK_INT < 33)
-            toast = getString(if (captions) R.string.copied_captions else R.string.copied)
+        if (Build.VERSION.SDK_INT < 33) toast = getString(R.string.copied)
     }
 
     /**

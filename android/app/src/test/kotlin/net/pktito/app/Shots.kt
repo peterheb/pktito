@@ -107,10 +107,8 @@ class Shots {
     private fun resource(name: String) = javaClass.getResourceAsStream("/$name")!!.readBytes()
 
     private val segments = Transcriber.parse(String(resource("alice-segments.json")))
-    private val cues =
-        Transcriber.parseCues(String(resource("alice-cues.json")), segments.flatMap { it.words })
     private val peaks = resource("alice-peaks.bin")
-    private val actions = WorkActions({}, {}, {}, {}, {}, {}, {}, { _, _ -> }, {}, {})
+    private val actions = WorkActions({}, {}, {}, {}, {}, {}, { _, _ -> }, {}, {})
 
     /**
      * The screen, or what act leads to on it (a menu, its own window); with keys, as with the
@@ -229,7 +227,6 @@ class Shots {
         step: String,
         done: Double,
         rows: List<Seg> = segments,
-        captions: Boolean = false,
         name: String = "wonderland_ch_01.flac",
         position: Double = 0.0,
         playing: Boolean = false,
@@ -254,7 +251,6 @@ class Shots {
             locate = if (locate) ({}) else null,
             stats = if (step == "done") "Transcribed in 0:11, 58.2× real time" else null,
             pace = if (step == "transcribing") "57.9× real time" else null,
-            captions = captions,
             times = false,
             playable = step == "done" && why == null,
             playing = playing,
@@ -911,39 +907,8 @@ class Shots {
     fun shareMenuKeysDark() =
         shot("share", true, keys = true, act = shareMenu) { work("done", 1.0) }
 
-    @Test
-    fun captions() =
-        shot("captions", false) { work("done", 1.0, cues, captions = true, position = 12.0) }
-
-    @Test
-    fun captionsDark() =
-        shot("captions", true) { work("done", 1.0, cues, captions = true, position = 12.0) }
-
-    // a cue's range on a phone at 360 in frames, its longest; a laptop's window keeps start over
-    // end
-    @Test
-    fun captionsNarrowFrames() =
-        shot("captions-360-frames", false, narrow = true) {
-            work(
-                "done",
-                1.0,
-                cues,
-                captions = true,
-                position = 12.0,
-                base = Timebase(frames = true, video = 29.97),
-            )
-        }
-
-    @Test
-    fun captionsWide() =
-        shot("captions", false, wide = true) {
-            work("done", 1.0, cues, captions = true, position = 12.0)
-        }
-
-    // a search: on a phone, the glass on the views line, then its field open over it with "alice"
-    // in it, on its
-    // third match; in a laptop's window beside the views; a word that is not there; and in the
-    // captions
+    // a search: closed, then its field open with "alice" in it, on its third match; in a laptop's
+    // window; and a word that is not there
     @Test fun findClosed() = shot("find-closed", false) { work("done", 1.0, position = 30.0) }
 
     @Test
@@ -977,12 +942,6 @@ class Shots {
     @Test
     fun findNone() =
         shot("find-none", false) { work("done", 1.0, find = finder(segments, "jabberwock")) }
-
-    @Test
-    fun findCaptions() =
-        shot("find-captions", false) {
-            work("done", 1.0, cues, captions = true, find = finder(cues, "the", k = 3))
-        }
 
     // the time menu as the desktop's stand-in has it (an audio file, 25 fps chosen, at the start),
     // and a 29.97 video's in frames at its own rate, drop-frame, half a minute in
@@ -1095,12 +1054,6 @@ class Shots {
     @Test
     fun tabReadyPort() =
         shot("ready-recent", false, tab = 2) { Ready(recent, readyActions, models) }
-
-    @Test
-    fun tabCaptionsLand() =
-        shot("captions", false, tab = 1) {
-            work("done", 1.0, cues, captions = true, position = 12.0)
-        }
 
     // the side, where the window has room for it: beside the drop zone, beside
     // a transcript of the list, marked, and heading the list with one under
@@ -1264,7 +1217,6 @@ class Shots {
             locate = null,
             stats = "Transcribed in 0:06, 10.9× real time",
             pace = null,
-            captions = false,
             times = false,
             playable = true,
             playing = false,

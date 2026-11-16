@@ -76,15 +76,15 @@ import net.pktito.app.Speakers
 import net.pktito.app.Stretch
 
 /*
- * Who said what on the work screen (PKT-27; the speakers design, page version 7): the switch beside
- * the views, each speaker's name as a chip that renames them, a turn's name over its first row or
+ * Who said what on the work screen (PKT-27; the speakers design, page version 7): the switch under
+ * the strip, each speaker's name as a chip that renames them, a turn's name over its first row or
  * beside its time, Who's speaking from that name, Rename, the bar over the waveform and an edit's
  * Undo, each as the desktop's window has it (ui/app.css and app.js, speakers).
  */
 
 /** The speakers as the work screen shows them (Speakers): what Work needs of them. */
 class SpeakersView(
-    /** the switch beside the views: a build with a diarizer and a finished transcript */
+    /** the switch under the strip: a build with a diarizer and a finished transcript */
     val offered: Boolean,
     val on: Boolean,
     /** finding them, or downloading their model: the switch waits */
@@ -192,11 +192,15 @@ fun Mark(n: Int, modifier: Modifier = Modifier) {
 }
 
 /**
- * The switch beside the views (app.css, .pk-spk), in a track of its own as the views are, its words
- * theirs: Speakers, pressed while it is on, with a check before the word then. busy, it waits for
- * the finding or the download under way. One width on or off, so that a second touch where the
- * first was turns them off again (Peter, 2026-11-15): off, the check keeps its place unseen and the
- * word moves half of it over, to the middle, in the strip's 150 ms.
+ * The switch under the strip (app.css, .pk-spk), in a sunk track of its own: Speakers, raised to
+ * the ground with an ink-muted edge while it is on, a check before the word then. 10 dp above and
+ * below the word to the desktop's 5, for a finger, which makes the track 40 dp, as tall as the
+ * field and the buttons it lines up with: at 8 the track of the views it stood beside was 36,
+ * centred in their line's 40, and its gaps to the strip and the rows were 17.8 dp to the screen's
+ * 16 (2026-11-01). busy, it waits for the finding or the download under way. One width on or off,
+ * so that a second touch where the first was turns them off again (Peter, 2026-11-15): off, the
+ * check keeps its place unseen and the word moves half of it over, to the middle, in the strip's
+ * 150 ms.
  */
 @Composable
 fun SpeakersSwitch(on: Boolean, busy: Boolean, state: String, onClick: () -> Unit) {

@@ -10,9 +10,7 @@
     <string name="back">Back</string><!-- nav.back -->
     <string name="stop">Stop</string><!-- work.stop -->
     <string name="copy_text">Copy text</string><!-- copy.text -->
-    <string name="copy_captions">Copy captions (SRT)</string><!-- copy.captions -->
     <string name="copied">Copied</string><!-- copy.done -->
-    <string name="copied_captions">Copied captions</string><!-- copy.done_captions -->
     <string name="share">Share</string>
     <!-- the share sheet's first choice, under the app's name: the format shared, saved instead; "Save to device" was cut to "Save to devi…" there (Android 13 and 16) -->
     <string name="save_file">Save file</string>
@@ -32,8 +30,6 @@
     <string name="find_previous">Previous match</string><!-- find.previous -->
     <string name="find_next">Next match</string><!-- find.next -->
     <string name="find_close">Close find</string>
-    <string name="sentences">Sentences</string><!-- work.sentences -->
-    <string name="captions">Captions</string><!-- work.captions -->
     <string name="play">Play</string>
     <string name="pause">Pause</string>
     <string name="play_from">Play from %1$s</string><!-- seg.play_from -->

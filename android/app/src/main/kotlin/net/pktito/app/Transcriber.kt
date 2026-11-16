@@ -17,8 +17,8 @@ import org.json.JSONObject
 class Word(val text: String, val start: Double, val end: Double)
 
 /**
- * A sentence of a transcript, or a cue of its subtitle track (no words): times in seconds; with
- * speakers, whose it is, numbered from 1 by first word (Speakers).
+ * A sentence of a transcript: times in seconds; with speakers, whose it is, numbered from 1 by
+ * first word (Speakers).
  */
 class Seg(
     val start: Double,
@@ -30,7 +30,7 @@ class Seg(
     /** The same sentence, said by speaker. */
     fun by(speaker: Int?) = Seg(start, end, text, words, speaker)
 
-    /** As Engine.transcribe gives it, for Engine.format and Engine.captions. */
+    /** As Engine.transcribe gives it, for Engine.format. */
     fun json(): JSONObject =
         JSONObject()
             .put("start", start)
@@ -98,7 +98,7 @@ object Transcriber {
     var error by mutableStateOf<String?>(null)
     /** The seconds spent transcribing so far, for the pace. */
     var transcribed by mutableStateOf(0.0)
-    /** The finished transcript's JSON, for Engine.format and Engine.captions. */
+    /** The finished transcript's JSON, for Engine.format. */
     var transcript by mutableStateOf<String?>(null)
     /** With speakers: the names given, speaker n's at n - 1, "" for Speaker n (Speakers.nameOf). */
     var names by mutableStateOf<List<String>>(emptyList())
@@ -109,8 +109,6 @@ object Transcriber {
      * (TranscribeService), so that the strip keeps the bar's place from the start.
      */
     var diarizing by mutableStateOf(false)
-    /** Its cues, made the first time the Captions view is shown. */
-    var cues by mutableStateOf<List<Seg>?>(null)
     /** A video's frame rate, for times in frames; 0 for audio. */
     var fps by mutableStateOf(0.0)
     /** Opened from the recent list, not transcribed in this run. */
@@ -161,7 +159,6 @@ object Transcriber {
         names = emptyList()
         stretches = emptyList()
         diarizing = false
-        cues = null
         fps = 0.0
         reopened = false
         why = null
@@ -205,7 +202,7 @@ object Transcriber {
         names = o.optJSONArray("names").strings()
         stretches = Stretch.parse(o.optJSONArray("stretches"))
         transcribed = o.optDouble("transcribed", 0.0)
-        // what Engine.format and Engine.captions take, as Engine.transcribe gave it
+        // what Engine.format takes, as Engine.transcribe gave it
         transcript =
             JSONObject()
                 .put("duration", duration)
@@ -245,26 +242,6 @@ object Transcriber {
     /** An array of strings, as a list; none for none. */
     private fun JSONArray?.strings(): List<String> =
         if (this == null) emptyList() else (0 until length()).map { getString(it) }
-
-    /**
-     * The cues of Engine.captions' JSON, in seconds, each with its words, which it takes from
-     * words, the transcript's in order: the Captions view follows the word playing in them, and a
-     * search's ticks stand at them, as the desktop's do (app.js, cuesOf).
-     */
-    fun parseCues(json: String, words: List<Word>): List<Seg> {
-        val a = JSONArray(json)
-        return (0 until a.length()).map { i ->
-            val c = a.getJSONObject(i)
-            val first = c.optInt("first", 0)
-            val n = c.optInt("n", 0)
-            Seg(
-                c.getLong("start") / 1000.0,
-                c.getLong("end") / 1000.0,
-                c.getString("text"),
-                if (first + n <= words.size) words.subList(first, first + n) else emptyList(),
-            )
-        }
-    }
 
     /** Whether the model in use is the one loaded, in the edition it is in now. */
     @Synchronized

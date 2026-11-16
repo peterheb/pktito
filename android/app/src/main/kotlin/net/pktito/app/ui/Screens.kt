@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -766,7 +765,6 @@ class WorkActions(
     val copy: () -> Unit,
     val share: (ext: String) -> Unit,
     val setTimes: (Boolean) -> Unit,
-    val setCaptions: (Boolean) -> Unit,
     val play: () -> Unit,
     val seek: (seconds: Double, play: Boolean) -> Unit,
     /** a seek on the waveform, whose row the list brings wherever the reader is (Follow) */
@@ -789,11 +787,11 @@ val FORMATS =
 /**
  * One file at work and then its transcript (ui/index.html, #work): the header with the way back,
  * the name, and what can be done with it (at work only Stop; Copy and Share once it is done), the
- * strip, the choice of sentences or captions, a line for what went wrong, and the rows. While the
+ * strip, the speakers' switch and Find, a line for what went wrong, and the rows. While the
  * keyboard is up for Find and leaves the rows under the floor (160 dp withText) below the header,
- * the strip and the views line as they were last shown, those make room for it: the field takes the
- * top line and the rows the rest, as a phone's find in page takes its top; the keyboard put away,
- * or the search closed, they come back (the three apps, Peter, 2026-11-01). On its side the
+ * the strip and the line under it as they were last shown, those make room for it: the field takes
+ * the top line and the rows the rest, as a phone's find in page takes its top; the keyboard put
+ * away, or the search closed, they come back (the three apps, Peter, 2026-11-01). On its side the
  * emulator's Pixel 5 has 120 dp above the keyboard, where the three took 235 and left the field out
  * of sight and the transcript not a row; upright, 499 leave the rows 250 at the default text size,
  * and at twice it 164, under the floor's 297. The emulator's 1280 by 800 dp tablet makes room too
@@ -815,7 +813,6 @@ fun Work(
     locate: (() -> Unit)?,
     stats: String?,
     pace: String?,
-    captions: Boolean,
     times: Boolean,
     playable: Boolean,
     playing: Boolean,
@@ -834,8 +831,8 @@ fun Work(
     val base = chosen.copy(duration = duration)
     val running = step == "loading" || step == "reading" || step == "transcribing"
     val review = step == "done" || step == "stopped"
-    // the header's, the strip's and the views line's heights as last shown,
-    // which making room is measured by, so that their going cannot undo it
+    // the heights of the header, the strip and the line under it as last
+    // shown, which making room is measured by, so that their going cannot undo it
     var head by remember { mutableIntStateOf(0) }
     var strip by remember { mutableIntStateOf(0) }
     var line by remember { mutableIntStateOf(0) }
@@ -905,13 +902,7 @@ fun Work(
                 ) {
                     if (running) PkButton(stringResource(R.string.stop), a.stop, kind = Kind.Ghost)
                     if (review && rows.isNotEmpty()) {
-                        IconBtn(
-                            Icons.copy,
-                            stringResource(
-                                if (captions) R.string.copy_captions else R.string.copy_text
-                            ),
-                            a.copy,
-                        )
+                        IconBtn(Icons.copy, stringResource(R.string.copy_text), a.copy)
                         ShareAs(name, times, a)
                     }
                 }
@@ -975,9 +966,7 @@ fun Work(
                 )
             if (review && rows.isNotEmpty())
                 // a step takes the playhead to its match (Finder.step)
-                Views(
-                    captions,
-                    a.setCaptions,
+                SpeakersLine(
                     find,
                     hits,
                     { t: Double -> a.seek(t, false) },
@@ -1021,7 +1010,6 @@ fun Work(
             Rows(
                 rows,
                 review,
-                captions,
                 playing,
                 position,
                 stats,
@@ -1104,22 +1092,19 @@ private fun Head(
 }
 
 /**
- * The views line: Sentences or Captions, and the search right after them, 12 dp apart, one group of
- * the transcript's controls (app.css, .pk-views and .pk-find): alone at the line's far end, a
- * reader might not see that the transcript can be searched (Peter, 2026-10-31). Its field, which
- * says Find, where that fits beside them, the desktop's 200 dp and 280 with a search in it, grown
- * with the text (withText): at twice the text size a tablet's 280 left "rabbit" 53 dp and scrolled
- * its first letter out (2026-10-31). Else the glass, which opens the field across the line until
- * the search is let go, as a phone's find in page does. The views have what the glass leaves them,
- * stacked where that is too little for the two side by side (Switch2). Alone, while the header and
- * the strip make room for the keyboard (Work): the field by itself across the line, the same field
- * as beside the views, so that it keeps the keys and the keyboard stays up as it moves.
+ * The line under the strip: the speakers' switch, where the build offers a diarizer, and the search
+ * right after it, 12 dp apart, one group of the transcript's controls (app.css, .pk-spk-line and
+ * .pk-find): alone at the line's far end, a reader might not see that the transcript can be
+ * searched (Peter, 2026-10-31). Its field, which says Find, where that fits beside the switch, the
+ * desktop's 200 dp and 280 with a search in it, grown with the text (withText): at twice the text
+ * size a tablet's 280 left "rabbit" 53 dp and scrolled its first letter out (2026-10-31). Else the
+ * glass, which opens the field across the line until the search is let go, as a phone's find in
+ * page does. Alone, while the header and the strip make room for the keyboard (Work): the field by
+ * itself across the line, the same field as beside the switch, so that it keeps the keys and the
+ * keyboard stays up as it moves.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Views(
-    captions: Boolean,
-    setCaptions: (Boolean) -> Unit,
+private fun SpeakersLine(
     find: Finder,
     hits: List<Hit>,
     seek: (Double) -> Unit,
@@ -1127,8 +1112,6 @@ private fun Views(
     modifier: Modifier,
     spk: SpeakersView,
 ) {
-    val first = stringResource(R.string.sentences)
-    val second = stringResource(R.string.captions)
     // the switch pressed while names are shown or being found: on with none
     // found yet, it finds them (MainActivity.toggleSpeakers)
     val pressed = spk.on && (spk.present.isNotEmpty() || spk.busy)
@@ -1154,23 +1137,17 @@ private fun Views(
     SubcomposeLayout(modifier.fillMaxWidth()) { c ->
         val gap = 12.dp.roundToPx()
         val loose = c.copy(minWidth = 0, minHeight = 0)
-        // the switch beside the views, or under them where the two don't fit
+        // the switch, where the build offers a diarizer
         val v =
-            subcompose("views") {
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Switch2(first, second, captions, setCaptions)
-                        if (spk.offered) SpeakersSwitch(pressed, spk.busy, state, spk.toggle)
-                    }
-                }
-                .first()
-                .measure(loose.copy(maxWidth = c.maxWidth - gap - 40.dp.roundToPx()))
+            if (spk.offered)
+                subcompose("switch") { SpeakersSwitch(pressed, spk.busy, state, spk.toggle) }
+                    .first()
+                    .measure(loose.copy(maxWidth = c.maxWidth - gap - 40.dp.roundToPx()))
+            else null
         val field = width.roundToPx()
-        val beside = !alone && v.width + gap + field <= c.maxWidth
+        val beside = !alone && (v?.let { it.width + gap } ?: 0) + field <= c.maxWidth
         // one field at either width, which keeps the keys when a search
-        // makes it too wide to stay beside the views, or the keyboard needs the room
+        // makes it too wide to stay beside the switch, or the keyboard needs the room
         val f =
             if (beside || opened || alone) {
                 val w = if (beside) field else c.maxWidth
@@ -1183,11 +1160,11 @@ private fun Views(
                 subcompose("glass") { IconBtn(Icons.search, label, find::focus, kind = Kind.Ghost) }
                     .first()
                     .measure(loose)
-        val views = beside || !(opened || alone)
-        val h = maxOf(if (views) v.height else 0, f.height)
+        val sw = v?.takeIf { beside || !(opened || alone) }
+        val h = maxOf(sw?.height ?: 0, f.height)
         layout(c.maxWidth, h) {
-            if (views) v.place(0, (h - v.height) / 2)
-            f.place(if (views) v.width + gap else 0, (h - f.height) / 2)
+            sw?.place(0, (h - sw.height) / 2)
+            f.place(if (sw != null) sw.width + gap else 0, (h - f.height) / 2)
         }
     }
 }
@@ -1226,19 +1203,16 @@ private fun ShareAs(name: String, times: Boolean, a: WorkActions) {
 }
 
 /**
- * The transcript's rows (app.css, .pk-seg): each sentence's time, or a cue's start and end, then
- * its text, at most 560 dp wide; the time above the text under 620 dp, as the desktop's window has
- * it (app.css, max-width: 619px), where the time's column is its 112 dp, and wider by as much as
- * the file's longest time needs more at a larger text size; a cue's two times a range there. The
- * row playing on the surface, the beak's square after its time and the word playing underlined in
- * it; a row, tapped anywhere, plays from its time. The fingers on the list are counted for what
- * moves it besides the reader (Follow).
+ * The transcript's rows (app.css, .pk-seg): each sentence's time, then its text, at most 560 dp
+ * wide; the time above the text under 620 dp, as the desktop's window has it (app.css, max-width:
+ * 619px), else beside it in a column as wide as the file's times. The row playing on the surface
+ * and the word playing underlined in it; a row, tapped anywhere, plays from its time. The fingers
+ * on the list are counted for what moves it besides the reader (Follow).
  */
 @Composable
 private fun Rows(
     rows: List<Seg>,
     review: Boolean,
-    captions: Boolean,
     playing: Boolean,
     position: Double,
     stats: String?,
@@ -1263,7 +1237,7 @@ private fun Rows(
     val marks = remember(hits) { hits.withIndex().groupBy { it.value.row } }
     // the text selected, if any (SegRow)
     val selection = rememberSelectionState()
-    // the list from one gap under the views line, its rows scrolling under
+    // the list from one gap under the line under the strip, its rows scrolling under
     // that edge, not up to the line, where the playing row's card had met the
     // search's field (Peter, the S25, 2026-10-27)
     // the times' column as wide as the file's times, the desktop's (app.css,
@@ -1311,7 +1285,7 @@ private fun Rows(
     var alone by remember { mutableStateOf<Speakers.Turn?>(null) }
     val change = stringResource(R.string.speakers_change)
     val menu =
-        if (review && !captions && spk.shown && spk.editable)
+        if (review && spk.shown && spk.editable)
             Modifier.appendTextContextMenuComponents {
                 val r = pressed[0]
                 val s = rows.getOrNull(r)
@@ -1340,11 +1314,9 @@ private fun Rows(
                 itemsIndexed(rows, key = { i, _ -> keys[i] }) { i, s ->
                     val now = i == current
                     val word = if (now) s.words.indexOfLast { it.start <= position + 1e-3 } else -1
-                    // with the turns shown, a turn's name opens its first sentence; a
-                    // cue's are in its words, as the saved captions have them
+                    // with the turns shown, a turn's name opens its first sentence
                     val turn =
-                        if (spk.turns && !captions && Speakers.turnStarts(rows, i))
-                            Speakers.turnAt(rows, i)
+                        if (spk.turns && Speakers.turnStarts(rows, i)) Speakers.turnAt(rows, i)
                         else null
                     // and each row has its turn's line, ending inside its first and last
                     val line =
@@ -1381,7 +1353,6 @@ private fun Rows(
                             at,
                             shown,
                             column,
-                            captions,
                             review,
                             base,
                             selection,
@@ -1413,7 +1384,6 @@ private fun Rows(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SegRow(
     s: Seg,
@@ -1423,7 +1393,6 @@ private fun SegRow(
     at: Int,
     shown: Int,
     column: Dp?,
-    cue: Boolean,
     review: Boolean,
     base: Timebase,
     selection: SelectionState,
@@ -1438,35 +1407,18 @@ private fun SegRow(
     onTime: () -> Unit,
 ) {
     val p = pk
-    val stamp = figures
-    val line = stamp.copy(lineHeight = 20.sp)
-    val start =
-        @Composable { mod: Modifier ->
-            Text(base.at(s.start), style = line, color = p.inkMuted, modifier = mod)
-        }
-    val end =
-        @Composable { mod: Modifier ->
-            Text(base.at(s.end), style = stamp, color = p.inkMuted, modifier = mod)
-        }
-    // a cue's end under its start, or on a narrow screen after it as a
-    // range, 00:02.88 – 00:05.60 (Peter, the S25, 2026-10-26). A range too
-    // wide for the line takes its end to the next whole: at 2.0 times the
-    // text size a phone's line broke the end's time in two. The row playing
-    // is its ground alone: the beak's square after its time went, as on the
-    // desktop, where beside the speakers' marks it read as one of them
-    // (Peter, 2026-11-14), and with the turn's line beside it here.
+    // its time. The row playing is its ground alone: the beak's square after
+    // its time went, as on the desktop, where beside the speakers' marks it
+    // read as one of them (Peter, 2026-11-14), and with the turn's line
+    // beside it here.
     val time =
         @Composable { mod: Modifier ->
-            if (cue && column == null)
-                FlowRow(mod) {
-                    Text("${base.at(s.start)} – ", style = line, color = p.inkMuted)
-                    Text(base.at(s.end), style = line, color = p.inkMuted)
-                }
-            else
-                Column(mod, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    start(Modifier)
-                    if (cue) end(Modifier)
-                }
+            Text(
+                base.at(s.start),
+                style = figures.copy(lineHeight = 20.sp),
+                color = p.inkMuted,
+                modifier = mod,
+            )
         }
     // the whole row plays from its time, its words as well as the time, which
     // a thumb is too broad to find (Peter, the S25, 2026-10-26); but not a
