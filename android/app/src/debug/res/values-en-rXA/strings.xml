@@ -27,6 +27,10 @@
     <string name="find_previous">[Přęvįőűș mąțčh ······]</string>
     <string name="find_next">[Ńęxț mąțčh ····· ·]</string>
     <string name="find_close">[Čłőșę fįńď ····· ·]</string>
+    <string name="find_only">[Őńłý mąțčhęș ·····]</string>
+    <string name="find_only_show">[Șhőw őńłý țhę șęńțęńčęș főűńď ····· ···]</string>
+    <string name="find_only_all">[Șhőw țhę whőłę țřąńșčřįpț ····· ·]</string>
+    <string name="find_only_none">[Ńő mąțčhęș ····· ·]</string>
     <string name="play">[Płąý ·]</string>
     <string name="pause">[Pąűșę ··]</string>
     <string name="play_from">[Płąý fřőm %1$s ····· ·]</string>

@@ -88,7 +88,9 @@ import net.pktito.app.ui.WorkActions
 import net.pktito.app.ui.byFinger
 import net.pktito.app.ui.clock
 import net.pktito.app.ui.findIn
+import net.pktito.app.ui.itemIn
 import net.pktito.app.ui.pk
+import net.pktito.app.ui.shownRows
 import net.pktito.app.ui.stepped
 import net.pktito.app.ui.turnsOf
 
@@ -323,16 +325,26 @@ class MainActivity : ComponentActivity() {
             }
         }
         // a search's matches in the sentences, a finished transcript's only;
-        // a speaker found, their turns (Finder.findWho), while their name
-        // shows: switched off, or joined to another by a rename, the search
-        // is let go
+        // a speaker found, their turns (Finder.findWho), or with words typed
+        // the words' in their sentences alone, while their name shows:
+        // switched off, or joined to another by a rename, the search is let go
         val who = finder.who.takeIf { spoken && it in present } ?: 0
         SideEffect { if (finder.who != 0 && who == 0) finder.clear() }
         val hits =
             remember(t.segments, finder.query, who, review, t.segments.size, bar) {
                 if (!review) emptyList()
-                else if (who != 0) turnsOf(t.segments, who) else findIn(t.segments, finder.query)
+                else if (who != 0 && finder.query.isBlank()) turnsOf(t.segments, who)
+                else findIn(t.segments, finder.query, who)
             }
+        // Only matches (Finder.only): the rows the list shows, and each row's
+        // place in it, -1 for one it doesn't; off again once nothing is sought
+        val sought = finder.query.isNotBlank() || who != 0
+        SideEffect { if (finder.only && !sought) finder.only = false }
+        val view =
+            remember(finder.only, sought, hits, finder.query, who, t.segments) {
+                if (finder.only && sought) shownRows(t.segments, hits, finder.query, who) else null
+            }
+        val itemOf = { row: Int -> itemIn(view, row) }
 
         // the finished transcript's recording, ready to play, its views'
         // index read first where it plays as views; another's let go. Where
@@ -418,21 +430,27 @@ class MainActivity : ComponentActivity() {
         val current =
             if (Player.playing) t.segments.indexOfLast { it.start <= Player.position + 1e-3 }
             else -1
-        LaunchedEffect(current) { follow.playing(current) }
+        // with only the matches shown, followed through those alone
+        LaunchedEffect(current) {
+            val item = itemOf(current)
+            if (current < 0 || item >= 0) follow.playing(item)
+        }
         // each move to a match brought into sight, its row a third of the way
         // down (app.js, goHit). After the row playing's: a step or a tick
         // while it plays moves both, and this scroll, the later, takes the
         // list from that one, which would have left the row at the top
         LaunchedEffect(finder.moved) {
             val h = hits.getOrNull(finder.at) ?: return@LaunchedEffect
+            val item = itemOf(h.row)
+            if (item < 0) return@LaunchedEffect
             val info = list.layoutInfo
-            val row = info.visibleItemsInfo.firstOrNull { it.index == h.row }
+            val row = info.visibleItemsInfo.firstOrNull { it.index == item }
             if (
                 row == null ||
                     row.offset < info.viewportStartOffset ||
                     row.offset + row.size > info.viewportEndOffset
             )
-                follow.scroll { animateScrollToItem(h.row, -info.viewportSize.height / 3) }
+                follow.scroll { animateScrollToItem(item, -info.viewportSize.height / 3) }
             finder.show()
         }
         LaunchedEffect(toast) {
@@ -547,6 +565,7 @@ class MainActivity : ComponentActivity() {
                     chosen = base.copy(video = t.fps),
                     find = finder,
                     hits = hits,
+                    view = view,
                     sound =
                         Sound(
                             speed = Player.speed,
@@ -579,7 +598,20 @@ class MainActivity : ComponentActivity() {
                             jump = { s ->
                                 seek(s, false)
                                 val row = t.segments.indexOfLast { it.start <= s + 1e-3 }
-                                scope.launch { follow.bring(row) }
+                                val item = itemOf(row)
+                                if (item >= 0) scope.launch { follow.bring(item) }
+                            },
+                            // Only matches turned: the reader kept on the same
+                            // sentence, where it was on the screen
+                            only = {
+                                val hit = hits.getOrNull(finder.at)?.row
+                                finder.only = !finder.only
+                                follow.keep(
+                                    view,
+                                    if (finder.only) shownRows(t.segments, hits, finder.query, who)
+                                    else null,
+                                    hit,
+                                )
                             },
                             setBase = {
                                 base = it

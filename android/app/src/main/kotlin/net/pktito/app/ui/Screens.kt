@@ -47,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -96,6 +97,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
@@ -770,6 +772,8 @@ class WorkActions(
     /** a seek on the waveform, whose row the list brings wherever the reader is (Follow) */
     val jump: (seconds: Double) -> Unit,
     val setBase: (Timebase) -> Unit,
+    /** Only matches turned, the reader kept on their sentence (MainActivity) */
+    val only: () -> Unit = {},
 )
 
 /** The formats Share offers, the desktop's Save as's, in its order. */
@@ -825,6 +829,8 @@ fun Work(
     a: WorkActions,
     /** who said what, where the build offers it (Who.kt) */
     spk: SpeakersView = SpeakersView.NONE,
+    /** with Only matches, the rows shown (Find.kt, shownRows); null for all */
+    view: IntArray? = null,
 ) {
     val p = pk
     // the file's times written with its length's hours
@@ -974,6 +980,7 @@ fun Work(
                     Modifier.onSizeChanged { if (!makeRoom) line = it.height }
                         .padding(start = edge, end = edge, top = 16.dp),
                     spk,
+                    a.only,
                 )
             // with the names shown, each speaker's chip, which renames them (app.css, .pk-names),
             // where the screen is wider than a phone's
@@ -1023,6 +1030,7 @@ fun Work(
                 Modifier.weight(1f),
                 spk,
                 compact,
+                view,
             )
         }
     }
@@ -1102,6 +1110,11 @@ private fun Head(
  * page does. Alone, while the header and the strip make room for the keyboard (Work): the field by
  * itself across the line, the same field as beside the switch, so that it keeps the keys and the
  * keyboard stays up as it moves.
+ *
+ * While something is found, Only matches after the field, as the desktop has it after the names and
+ * Find (app.js, applyOnly): on the field's line where it fits, else on a line of its own 16 dp
+ * under it, where a phone's field runs across the line. Not while the keyboard has the room
+ * (alone), whose rows it would take; a search kept to its matches stays so.
  */
 @Composable
 private fun SpeakersLine(
@@ -1111,6 +1124,7 @@ private fun SpeakersLine(
     alone: Boolean,
     modifier: Modifier,
     spk: SpeakersView,
+    onOnly: () -> Unit = {},
 ) {
     // the switch pressed while names are shown or being found: on with none
     // found yet, it finds them (MainActivity.toggleSpeakers)
@@ -1125,6 +1139,10 @@ private fun SpeakersLine(
         )
     val label = stringResource(R.string.find_label)
     val opened = find.open || find.query.isNotBlank()
+    val sought = find.query.isNotBlank() || find.who != 0
+    val only = stringResource(R.string.find_only)
+    val onlyState =
+        stringResource(if (find.only) R.string.find_only_all else R.string.find_only_show)
     // wider with a search, for its count and arrows, and with a speaker
     // found for their name as well (FindField)
     val width =
@@ -1161,10 +1179,23 @@ private fun SpeakersLine(
                     .first()
                     .measure(loose)
         val sw = v?.takeIf { beside || !(opened || alone) }
-        val h = maxOf(sw?.height ?: 0, f.height)
+        // Only matches, after the field or under it
+        val o =
+            if (sought && !alone)
+                subcompose("only") { SpeakersSwitch(find.only, false, onlyState, onOnly, only) }
+                    .first()
+                    .measure(loose)
+            else null
+        val end = (if (sw != null) sw.width + gap else 0) + f.width
+        val inline = o != null && end + gap + o.width <= c.maxWidth
+        val top = maxOf(sw?.height ?: 0, f.height, if (inline) o!!.height else 0)
+        val under = 16.dp.roundToPx()
+        val h = top + if (o != null && !inline) under + o.height else 0
         layout(c.maxWidth, h) {
-            sw?.place(0, (h - sw.height) / 2)
-            f.place(if (sw != null) sw.width + gap else 0, (h - f.height) / 2)
+            sw?.place(0, (top - sw.height) / 2)
+            f.place(if (sw != null) sw.width + gap else 0, (top - f.height) / 2)
+            if (o != null)
+                if (inline) o.place(end + gap, (top - o.height) / 2) else o.place(0, top + under)
         }
     }
 }
@@ -1228,6 +1259,11 @@ private fun Rows(
     spk: SpeakersView,
     /** a phone's width: Who's speaking as a dialog (WhoPicker) */
     compact: Boolean,
+    /**
+     * With Only matches, the rows shown (Find.kt, shownRows); null for all. The list's items are
+     * then those rows alone, the n-th item the n-th of them (MainActivity, itemOf).
+     */
+    view: IntArray? = null,
 ) {
     val p = pk
     val current =
@@ -1271,8 +1307,12 @@ private fun Rows(
     // having been that first, its key gone with it: the sentence in sight,
     // where the row was, not the one after it
     val joined = Speakers.joined
+    // Only matches turned: the reader's place, now that the rows have changed (Follow.keep)
+    SideEffect { follow.take() }
     LaunchedEffect(joined) {
-        val at = joined?.let { j -> rows.indexOfFirst { it === j.seg } } ?: -1
+        val row = joined?.let { j -> rows.indexOfFirst { it === j.seg } } ?: -1
+        // its place in the list, with Only matches among the rows shown
+        val at = itemIn(view, row)
         if (at >= 0 && at < follow.list.firstVisibleItemIndex) follow.list.requestScrollToItem(at)
     }
     // Change speaker in the menu a press-and-hold's selection brings, beside
@@ -1313,13 +1353,36 @@ private fun Rows(
                 state = follow.list,
                 contentPadding = PaddingValues(start = edge, end = edge, bottom = 16.dp),
             ) {
-                itemsIndexed(rows, key = { i, _ -> keys[i] }) { i, s ->
+                // with Only matches and nothing found, where the sentences would be
+                if (view != null && view.isEmpty())
+                    item(key = "none") {
+                        Text(
+                            stringResource(R.string.find_only_none),
+                            style = Type.ui.copy(fontWeight = FontWeight.W400),
+                            color = p.inkMuted,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                        )
+                    }
+                items(view?.size ?: rows.size, key = { k -> keys[view?.get(k) ?: k] }) { k ->
+                    val i = view?.get(k) ?: k
+                    val s = rows[i]
                     val now = i == current
                     val word = if (now) s.words.indexOfLast { it.start <= position + 1e-3 } else -1
+                    // with Only matches, a run of the rows shown stands apart as a
+                    // turn does, its line ending inside its first and last, and a
+                    // run from inside a turn has the turn's name (app.js, applyOnly)
+                    val from = view != null && (k == 0 || view[k - 1] != i - 1)
+                    val to = view != null && (k == view.lastIndex || view[k + 1] != i + 1)
                     // with the turns shown, a turn's name opens its first sentence
+                    // (a sentence no speaker was heard in has none)
                     val turn =
-                        if (spk.turns && Speakers.turnStarts(rows, i)) Speakers.turnAt(rows, i)
-                        else null
+                        if (
+                            spk.turns && s.speaker != null && (Speakers.turnStarts(rows, i) || from)
+                        ) {
+                            var a = i
+                            while (a > 0 && rows[a - 1].speaker == s.speaker) a--
+                            Speakers.turnAt(rows, a)
+                        } else null
                     // and each row has its turn's line, ending inside its first and last
                     val line =
                         s.speaker
@@ -1327,8 +1390,8 @@ private fun Rows(
                             ?.let {
                                 TurnLine(
                                     it,
-                                    Speakers.turnStarts(rows, i),
-                                    i == rows.lastIndex || rows[i + 1].speaker != it,
+                                    Speakers.turnStarts(rows, i) || from,
+                                    i == rows.lastIndex || rows[i + 1].speaker != it || to,
                                 )
                             }
                     // the rows after a sentence made one again sliding up into its
@@ -1362,13 +1425,15 @@ private fun Rows(
                             line,
                             spk,
                             compact,
-                            i == 0,
+                            k == 0,
+                            from,
                         ) {
                             a.seek(s.start, true)
                         }
                     }
                 }
-                if (stats != null)
+                // what the whole transcript cost says nothing of the matches shown
+                if (stats != null && view == null)
                     item {
                         Text(
                             stats,
@@ -1406,6 +1471,10 @@ private fun SegRow(
     /** Who's speaking as a dialog (WhoPicker) */
     dialog: Boolean,
     first: Boolean,
+    /**
+     * with Only matches, the first of a run of the rows shown, which stands apart as a turn does
+     */
+    apart: Boolean,
     onTime: () -> Unit,
 ) {
     val p = pk
@@ -1455,7 +1524,7 @@ private fun SegRow(
     // a turn 16 dp under the one before (app.css, .pk-seg.pk-turn): with the
     // rows' 6 dp, sentences 12 apart and turns 28 (Peter, 2026-11-15: at 8, a
     // touch loose)
-    val gap = if (turn != null && !first) Modifier.padding(top = 16.dp) else Modifier
+    val gap = if ((turn != null || apart) && !first) Modifier.padding(top = 16.dp) else Modifier
     // its turn's line in the middle of the gutter, past the row's 16 dp and
     // the times; with the time over the text, 5 dp in, as the desktop's
     // narrow window has it

@@ -63,6 +63,51 @@ class Follow(val list: LazyListState) {
         chasing = -1
     }
 
+    /**
+     * Only matches turned (Finder.only), the list's rows going from was to now, each the rows shown
+     * in order, or null for all (shownRows): the reader kept on their sentence, where it is on the
+     * screen, as the rows around it come and go (app.js, the switch's click; iOS's Rows.keep). The
+     * match they are on (hit, a row), where it is in sight; else the first row in sight that stays
+     * shown; with none of those, the match a third of the way down, as a move to it brings it. Read
+     * from the list as it is drawn before the change; asked of it once the rows have changed
+     * (take).
+     */
+    fun keep(was: IntArray?, now: IntArray?, hit: Int?) {
+        val info = list.layoutInfo
+        val seen =
+            info.visibleItemsInfo.filter {
+                it.offset + it.size > info.viewportStartOffset && it.offset < info.viewportEndOffset
+            }
+        // an item's row; -1 for No matches, and past the rows for the stats line
+        val rowOf = { k: Int -> if (was == null) k else was.getOrElse(k) { -1 } }
+        val place =
+            seen.firstOrNull { hit != null && it.index == itemIn(was, hit) }
+                ?: seen.firstOrNull { rowOf(it.index).let { r -> r >= 0 && itemIn(now, r) >= 0 } }
+        val k = place?.let { itemIn(now, rowOf(it.index)) } ?: -1
+        val match = hit?.let { itemIn(now, it) } ?: -1
+        asked =
+            when {
+                place != null && k >= 0 -> k to -place.offset
+                match >= 0 -> match to -info.viewportSize.height / 3
+                else -> 0 to 0
+            }
+    }
+
+    /** The place keep found, until the list is asked for it (take). */
+    private var asked: Pair<Int, Int>? = null
+
+    /**
+     * The place keep found, asked of the list from the composition that has the new rows (Rows), so
+     * that the list's next measure has both. Asked at once, the list was measured with the rows
+     * before the change, the place taken among those, then the first row in sight kept by its key
+     * once the new rows came (KeepTest, under Robolectric: rows 45 and 42 lost).
+     */
+    fun take() {
+        val (k, offset) = asked ?: return
+        asked = null
+        list.requestScrollToItem(k, offset)
+    }
+
     /** A new row playing, -1 once playback stops: brought for a reader still with it (bring). */
     suspend fun playing(now: Int) {
         val before = was

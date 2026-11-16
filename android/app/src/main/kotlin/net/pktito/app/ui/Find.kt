@@ -37,6 +37,8 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -79,13 +81,15 @@ fun turnsOf(rows: List<Seg>, n: Int): List<Hit> =
 /**
  * Each match of query in rows, the sentences, as the desktop finds them (app.js, bodyHtml and
  * runFind): its words trimmed, without regard to case, each match at a word's start (startsWord)
- * and after the one before it.
+ * and after the one before it; with a speaker found (who), in their sentences alone (Peter,
+ * 2026-11-15: a speaker and a phrase of theirs).
  */
-fun findIn(rows: List<Seg>, query: String): List<Hit> {
+fun findIn(rows: List<Seg>, query: String, who: Int = 0): List<Hit> {
     val sought = query.trim()
     if (sought.isEmpty()) return emptyList()
     val hits = ArrayList<Hit>()
     for ((i, s) in rows.withIndex()) {
+        if (who != 0 && s.speaker != who) continue
         var low = s.text.lowercase()
         var q = sought.lowercase()
         // a lowercase that changes the length would put the marks in the wrong places
@@ -107,6 +111,24 @@ fun findIn(rows: List<Seg>, query: String): List<Hit> {
     }
     return hits
 }
+
+/**
+ * The rows Only matches shows (app.js, applyOnly), in order: those with a match of the words, or
+ * with only a speaker found, every sentence of theirs.
+ */
+fun shownRows(rows: List<Seg>, hits: List<Hit>, query: String, who: Int): IntArray {
+    val shown = BooleanArray(rows.size) { query.isBlank() && who != 0 && rows[it].speaker == who }
+    for (h in hits) if (h.row in shown.indices) shown[h.row] = true
+    return shown.indices.filter { shown[it] }.toIntArray()
+}
+
+/**
+ * Row's place in a list of the rows shown (shownRows), -1 where it isn't one of them; with all
+ * shown (null), the row itself.
+ */
+fun itemIn(shown: IntArray?, row: Int): Int =
+    if (shown == null || row < 0) row
+    else java.util.Arrays.binarySearch(shown, row).let { if (it >= 0) it else -1 }
 
 /**
  * Whether a match of q at j in text starts a word, as every match must: "cat" finds "Cat" and
@@ -162,11 +184,16 @@ enum class Keys {
 class Finder {
     var query by mutableStateOf("")
     /**
-     * The speaker found (findWho), whose turns are the matches (turnsOf); 0 for words, as a search
-     * finds them.
+     * The speaker found (findWho): their turns are the matches (turnsOf), or with words typed the
+     * words' matches in their sentences alone (findIn); 0 for none.
      */
     var who by mutableIntStateOf(0)
     var open by mutableStateOf(false)
+    /**
+     * Only the sentences found shown (shownRows; app.js, applyOnly): off by default, and off again
+     * once the search is let go (clear, and the screen where nothing is sought).
+     */
+    var only by mutableStateOf(false)
     var at by mutableIntStateOf(-1)
         private set
 
@@ -210,7 +237,7 @@ class Finder {
     fun restore(q: String) {
         query = q
         open = q.isNotEmpty()
-        settled = q
+        settled = sought()
     }
 
     /**
@@ -222,8 +249,7 @@ class Finder {
      * after a change of speaker, leave the playhead where it is. The seek first, as a step's.
      */
     fun settle(hits: List<Hit>, position: Double, seek: ((Double) -> Unit)? = null) {
-        // a speaker found is sought as words typed are
-        val sought = if (who != 0) "\u0000$who" else query
+        val sought = sought()
         val typed = sought != settled
         settled = sought
         passed = passedAt(hits, position)
@@ -236,6 +262,9 @@ class Finder {
         if (typed) seek?.invoke(hits[k].time)
         go(hits, k)
     }
+
+    // what is sought: a speaker found as words typed are, and with them
+    private fun sought() = "$query\u0000$who"
 
     // as the rows find the one playing (Screens.kt, Rows)
     private fun passedAt(hits: List<Hit>, position: Double) = hits.indexOfLast {
@@ -285,11 +314,15 @@ class Finder {
      * Speaker n found, as a search finds a word (app.js, findWho; Peter, 2026-11-15, naming his
      * speakers: "who is this Speaker 4", needing "to hear their words and read the context"): their
      * turns the matches, the field open with their name in it, without the keyboard, which would
-     * cover the turns; the arrows step from turn to turn with the playhead. Found again, let go.
+     * cover the turns; the arrows step from turn to turn with the playhead. Words typed then, or
+     * before, are sought in their sentences alone. Found again, let go, and the words kept.
      */
     fun findWho(n: Int) {
-        if (who == n) return clear()
-        query = ""
+        if (who == n) {
+            who = 0
+            if (query.isEmpty()) clear()
+            return
+        }
         who = n
         open = true
     }
@@ -304,6 +337,7 @@ class Finder {
     fun clear() {
         query = ""
         who = 0
+        only = false
         open = false
         at = -1
         time = -1.0
@@ -335,6 +369,10 @@ fun FindField(
     val focus = remember { FocusRequester() }
     val manager = LocalFocusManager.current
     val has = f.query.isNotBlank() || f.who != 0
+    // a field with room for a speaker's name and words of theirs: in a
+    // phone's, with words typed, the speaker is their mark alone
+    var roomy by remember { mutableStateOf(true) }
+    val density = LocalDensity.current
     // let go, the field lets go of the keyboard too; on a phone it is gone with the search
     LaunchedEffect(f.keys) {
         when (f.keys) {
@@ -351,6 +389,7 @@ fun FindField(
     Row(
         modifier
             .height(40.dp)
+            .onSizeChanged { roomy = with(density) { it.width.toDp() } >= 360.dp }
             .then(if (f.typing) Modifier.border(2.dp, p.focus, Corner) else Modifier)
             .background(p.sunk, Corner)
             // the glass's ink and the x's on the content line, 16 dp in, as
@@ -361,33 +400,37 @@ fun FindField(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Icon(Icons.search, null, tint = p.inkMuted, modifier = Modifier.size(16.dp))
-        // the speaker found, their mark and name where a search's words would
-        // be (app.css, .pk-find-who); words typed search for words instead
-        if (f.who != 0)
+        // the speaker found, their mark and name before the words (app.css,
+        // .pk-find-who), which are sought in their sentences alone; in a
+        // phone's field, with words typed, their mark alone, its name for
+        // the screen reader
+        if (f.who != 0) {
+            val name = nameOf(f.who)
+            val full = roomy || f.query.isEmpty()
             Row(
                 Modifier.widthIn(max = 180.dp)
                     .height(28.dp)
                     .background(p.ground, CornerSm)
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = 8.dp)
+                    .semantics(mergeDescendants = true) { contentDescription = name },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Mark(f.who)
-                Text(
-                    nameOf(f.who),
-                    style = Type.ui.copy(fontSize = 13.sp, lineHeight = 16.sp),
-                    color = p.ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (full)
+                    Text(
+                        name,
+                        style = Type.ui.copy(fontSize = 13.sp, lineHeight = 16.sp),
+                        color = p.ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
             }
+        }
         val label = stringResource(R.string.find_label)
         BasicTextField(
             value = f.query,
-            onValueChange = {
-                f.who = 0
-                f.query = it
-            },
+            onValueChange = { f.query = it },
             singleLine = true,
             textStyle = Type.ui.copy(fontWeight = FontWeight.W400, color = p.ink),
             cursorBrush = SolidColor(p.ink),
@@ -410,7 +453,7 @@ fun FindField(
                     .semantics { contentDescription = label },
             decorationBox = { field ->
                 Box(contentAlignment = Alignment.CenterStart) {
-                    if (f.query.isEmpty() && f.who == 0)
+                    if (f.query.isEmpty())
                         Text(
                             stringResource(R.string.find_placeholder),
                             style = Type.ui.copy(fontWeight = FontWeight.W400),

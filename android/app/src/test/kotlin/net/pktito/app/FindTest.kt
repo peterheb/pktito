@@ -3,6 +3,7 @@ package net.pktito.app
 import net.pktito.app.ui.Finder
 import net.pktito.app.ui.Hit
 import net.pktito.app.ui.findIn
+import net.pktito.app.ui.shownRows
 import net.pktito.app.ui.turnsOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -42,7 +43,10 @@ class FindTest {
         assertEquals(emptyList<Hit>(), turnsOf(rows, 3))
     }
 
-    /** Found again, a speaker is let go; words typed replace them (FindField), as Esc does all. */
+    /**
+     * Found again, a speaker is let go, and words typed with them are kept (Peter, 2026-11-15: a
+     * speaker and a phrase of theirs); Esc lets all go, Only matches with it.
+     */
     @Test
     fun aSpeakerFound() {
         val f = Finder()
@@ -52,9 +56,63 @@ class FindTest {
         f.findWho(4)
         assertEquals(0, f.who)
         assertFalse(f.searching)
+        f.query = "rabbit"
         f.findWho(2)
+        assertEquals("words typed before are kept", "rabbit", f.query)
+        f.findWho(2)
+        assertEquals(0, f.who)
+        assertEquals("the speaker let go, the words kept", "rabbit", f.query)
+        assertTrue(f.searching)
+        f.findWho(2)
+        f.only = true
         f.clear()
         assertEquals(0, f.who)
+        assertEquals("", f.query)
+        assertFalse(f.only)
+    }
+
+    private fun seg(t: Double, n: Int?, text: String = "w") = Seg(t, t + 1, text, emptyList(), n)
+
+    /** With a speaker found, words are sought in their sentences alone. */
+    @Test
+    fun wordsOfASpeaker() {
+        val rows =
+            listOf(
+                seg(0.0, 1, "the hare"),
+                seg(1.0, 2, "the rabbit"),
+                seg(2.0, 2, "a hare"),
+                seg(3.0, 1, "no hare"),
+            )
+        assertEquals(listOf(0, 2, 3), findIn(rows, "hare").map { it.row })
+        assertEquals(listOf(2), findIn(rows, "hare", 2).map { it.row })
+        assertEquals(listOf(0, 3), findIn(rows, "hare", 1).map { it.row })
+        assertEquals(emptyList<Hit>(), findIn(rows, "rabbit", 1))
+    }
+
+    /**
+     * Only matches' rows (shownRows): those with a match of the words; with only a speaker found,
+     * every sentence of theirs, not just each turn's first, which turnsOf has.
+     */
+    @Test
+    fun onlyMatchesRows() {
+        val rows =
+            listOf(
+                seg(0.0, 1, "the hare"),
+                seg(1.0, 2, "the rabbit"),
+                seg(2.0, 2, "a hare"),
+                seg(3.0, 1, "no hare"),
+                seg(4.0, 2, "hares"),
+            )
+        assertEquals(
+            listOf(0, 2, 3, 4),
+            shownRows(rows, findIn(rows, "hare"), "hare", 0).toList(),
+        )
+        assertEquals(
+            listOf(2, 4),
+            shownRows(rows, findIn(rows, "hare", 2), "hare", 2).toList(),
+        )
+        assertEquals(listOf(1, 2, 4), shownRows(rows, turnsOf(rows, 2), "", 2).toList())
+        assertEquals(emptyList<Int>(), shownRows(rows, findIn(rows, "zebra"), "zebra", 0).toList())
     }
 
     @Test

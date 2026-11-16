@@ -203,7 +203,14 @@ fun Mark(n: Int, modifier: Modifier = Modifier) {
  * 150 ms.
  */
 @Composable
-fun SpeakersSwitch(on: Boolean, busy: Boolean, state: String, onClick: () -> Unit) {
+fun SpeakersSwitch(
+    on: Boolean,
+    busy: Boolean,
+    state: String,
+    onClick: () -> Unit,
+    /** what it says: Speakers, or Only matches (Find.kt, Finder.only) */
+    label: String = stringResource(R.string.speakers_switch),
+) {
     val p = pk
     Box(Modifier.background(p.sunk, Corner).padding(2.dp)) {
         Row(
@@ -224,7 +231,7 @@ fun SpeakersSwitch(on: Boolean, busy: Boolean, state: String, onClick: () -> Uni
                 modifier = Modifier.size(12.dp).alpha(if (on) 1f else 0f),
             )
             Text(
-                stringResource(R.string.speakers_switch),
+                label,
                 Modifier.offset(x = shift),
                 style = Type.ui.copy(fontSize = 13.sp, lineHeight = 16.sp),
                 color = if (on) p.ink else p.inkMuted,

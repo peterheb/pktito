@@ -77,6 +77,7 @@ import net.pktito.app.ui.Work
 import net.pktito.app.ui.WorkActions
 import net.pktito.app.ui.findIn
 import net.pktito.app.ui.pk
+import net.pktito.app.ui.shownRows
 import net.pktito.app.ui.turnsOf
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -1201,6 +1202,9 @@ class Shots {
         find: Finder = Finder(),
         hits: List<Hit> = emptyList(),
         onFind: (Int) -> Unit = {},
+        /** with Only matches, the rows shown (shownRows) */
+        view: IntArray? = null,
+        a: WorkActions = actions,
     ) {
         val res = LocalContext.current.resources
         val present = Speakers.present(rows)
@@ -1226,7 +1230,8 @@ class Shots {
             chosen = Timebase(),
             find = find,
             hits = hits,
-            a = actions,
+            a = a,
+            view = view,
             spk =
                 SpeakersView(
                     offered = true,
@@ -1277,6 +1282,104 @@ class Shots {
     fun speakersFindWide() {
         val (f, h) = found(2)
         shot("speakers-find", false, wide = true) { talk(find = f, hits = h) }
+    }
+
+    // a speaker and words of theirs (Peter, 2026-11-15): "to" in Speaker 2's sentences alone, their
+    // name in a phone's field their mark alone
+    private fun foundWords(n: Int, q: String, only: Boolean = false) =
+        findIn(talkRows, q, n).let { h ->
+            Triple(
+                Finder().apply {
+                    findWho(n)
+                    query = q
+                    this.only = only
+                    settle(h, 0.0)
+                },
+                h,
+                if (only) shownRows(talkRows, h, q, n) else null,
+            )
+        }
+
+    @Test
+    fun speakersFindWords() {
+        val (f, h, _) = foundWords(2, "to")
+        shot("speakers-find-words", false) { talk(find = f, hits = h) }
+    }
+
+    @Test
+    fun speakersFindWordsWide() {
+        val (f, h, _) = foundWords(2, "to")
+        shot("speakers-find-words", false, wide = true) { talk(find = f, hits = h) }
+    }
+
+    // Only matches: with only a speaker found, every sentence of theirs; a tap on the switch asks
+    // the screen (MainActivity) to turn it
+    private fun onlyWho(n: Int) =
+        turnsOf(talkRows, n).let { h ->
+            Finder().apply {
+                findWho(n)
+                only = true
+                settle(h, 0.0)
+            } to h
+        }
+
+    @Test
+    fun speakersOnly() {
+        val (f, h) = onlyWho(2)
+        var asked = 0
+        val a = WorkActions({}, {}, {}, {}, {}, {}, { _, _ -> }, {}, {}, only = { asked++ })
+        shot("speakers-only", false) {
+            talk(find = f, hits = h, view = shownRows(talkRows, h, "", 2), a = a)
+        }
+        compose.onNodeWithText("Only matches").performClick()
+        assertEquals(1, asked)
+    }
+
+    @Test
+    fun speakersOnlyDark() {
+        val (f, h) = onlyWho(2)
+        shot("speakers-only", true) {
+            talk(find = f, hits = h, view = shownRows(talkRows, h, "", 2))
+        }
+    }
+
+    @Test
+    fun speakersOnlyWide() {
+        val (f, h) = onlyWho(2)
+        shot("speakers-only", false, wide = true) {
+            talk(find = f, hits = h, view = shownRows(talkRows, h, "", 2))
+        }
+    }
+
+    // words across speakers, only theirs: each run with its speaker's name, from inside a turn too
+    @Test
+    fun speakersOnlyWords() {
+        val h = findIn(talkRows, "to")
+        val f =
+            Finder().apply {
+                query = "to"
+                open = true
+                only = true
+                settle(h, 0.0)
+            }
+        shot("speakers-only-words", false) {
+            talk(find = f, hits = h, view = shownRows(talkRows, h, "to", 0))
+        }
+    }
+
+    @Test
+    fun speakersOnlyNone() {
+        val h = findIn(talkRows, "zebra")
+        val f =
+            Finder().apply {
+                query = "zebra"
+                open = true
+                only = true
+                settle(h, 0.0)
+            }
+        shot("speakers-only-none", false) {
+            talk(find = f, hits = h, view = shownRows(talkRows, h, "zebra", 0))
+        }
     }
 
     // a phone has no names over the transcript: Who's speaking finds them
