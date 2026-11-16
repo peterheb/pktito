@@ -111,7 +111,7 @@ try {
     $s = [IO.File]::ReadAllText("$data\settings.json") | ConvertFrom-Json
     $s.model = 'parakeet-tdt-0.6b-v3'
     $s.model_file = $null
-    foreach ($k in @{ speed = 1.0; volume = 1.0; captions = $false; frames = $false }.GetEnumerator()) {
+    foreach ($k in @{ speed = 1.0; volume = 1.0; frames = $false }.GetEnumerator()) {
         $s.prefs | Add-Member -Force -NotePropertyName $k.Key -NotePropertyValue $k.Value
     }
     $s.PSObject.Properties.Remove('window')

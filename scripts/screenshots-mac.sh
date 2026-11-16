@@ -99,7 +99,7 @@ import json, sys
 p = sys.argv[1]
 s = json.load(open(p))
 s.update(model="parakeet-tdt-0.6b-v3", model_file=None)
-s.setdefault("prefs", {}).update(speed=1.0, volume=1.0, captions=False, frames=False)
+s.setdefault("prefs", {}).update(speed=1.0, volume=1.0, frames=False)
 s.pop("window", None)
 json.dump(s, open(p, "w"), indent=2)
 PY
