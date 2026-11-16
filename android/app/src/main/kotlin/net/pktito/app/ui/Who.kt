@@ -364,15 +364,15 @@ fun AnnotatedString.Builder.speakerName(
 /**
  * A row's place in its speaker's turn, for the line beside its text (app.css, .pk-seg[data-spk];
  * Peter, 2026-11-15): a 3 dp line in the speaker's colour down each row of a turn, so that a turn
- * reads as a paragraph of its own and its name, at its top, says whose. It starts and ends 10 dp
- * inside the turn's first and last rows, round there.
+ * reads as a paragraph of its own and its name, at its top, says whose. It starts and ends 8 dp
+ * inside the turn's first and last rows, 2 dp inside their text, round there.
  */
 class TurnLine(val speaker: Int, val first: Boolean, val last: Boolean)
 
 /** The turn's line, its middle mid from the row's start edge (Screens.kt, SegRow). */
 fun Modifier.turnLine(line: TurnLine, color: Color, mid: Dp): Modifier = drawBehind {
     val w = 3.dp.toPx()
-    val inset = 10.dp.toPx()
+    val inset = 8.dp.toPx()
     val top = if (line.first) inset else 0f
     val bottom = size.height - if (line.last) inset else 0f
     if (bottom <= top) return@drawBehind

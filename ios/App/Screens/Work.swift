@@ -536,7 +536,9 @@ private struct Rows: View {
             // the match playback passes, the reader with it (Finder.follow)
             .onChange(of: position) { f.follow(hits, position: position, jump: false) }
         }
-        .padding(.top, 16)
+        // the first row's text 16 under the line above, past the row's own 6
+        // (app.css, .pk-transcript; the spacing audit, 2026-11-15: it was 24)
+        .padding(.top, 10)
         .onGeometryChange(for: CGFloat.self) {
             $0.size.width
         } action: {
@@ -616,8 +618,10 @@ private struct SegRow: View, Equatable {
                 }
             }
         }
+        // sentences 12 apart (app.css, .pk-seg; Peter, 2026-11-15: at 16, a
+        // touch loose)
         .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
         .frame(maxWidth: 716, alignment: .leading)
         .background(
             now ? Pk.surface : Color.clear, in: RoundedRectangle(cornerRadius: Radius.radiusUi)
@@ -629,8 +633,6 @@ private struct SegRow: View, Equatable {
         .accessibilityElement(children: .combine)
         .accessibilityAction(named: L("play_from", base.at(s.start))) { if review { onTime() } }
     }
-
-    private var stamp: Font { PkType.stamp.font(13) }
 
     /// The row playing: the beak's square after its time, its foot on the
     /// time's baseline.
@@ -645,13 +647,15 @@ private struct SegRow: View, Equatable {
         }
     }
 
-    /// Its time, the beak's square after it while it plays.
+    /// Its time, the beak's square after it while it plays, its line the
+    /// stamp's 1.5 as the desktop's and Android's are: in the font's own,
+    /// 11 over the text where they have 14 (the spacing audit, 2026-11-15)
     private var time: some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             Text(verbatim: base.at(s.start))
             beak
         }
-        .font(stamp)
+        .pk(PkType.stamp)
         .monospacedDigit()
         .foregroundStyle(Pk.inkMuted)
     }

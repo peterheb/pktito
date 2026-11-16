@@ -850,8 +850,8 @@ html[data-side] .pk-side {
   flex-direction: column;
   gap: 16px;
   min-height: 0;
-  /* its top row on the work's header's line, the model menu's 32 in the
-     middle of the header's 62, and Choose with the strip's top, 15 under
+  /* its top row on the work's header's line, the model menu's 32 where
+     the header's buttons are, and Choose with the strip's top, 16 under
      the row as the strip is under the header's buttons: at 20 the row sat
      5 lower than the header's and read as out of line with it (Peter, on
      the iPad's, 2026-11-01). Its steps 16, the scale's, as the phones'
@@ -859,9 +859,6 @@ html[data-side] .pk-side {
      over the list */
   padding: 15px 16px 16px 20px;
   border-right: 1px solid var(--sunk);
-}
-html[data-side] .pk-side > .pk-spread {
-  margin-bottom: -1px;
 }
 html[data-side] .pk-recent {
   flex: 1 1 auto;
@@ -989,18 +986,20 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
   min-width: 0;
   min-height: 0;
 }
-/* The work screen's vertical rhythm is one step, --space-3 (16 px): between
-   the strip and the line under it, from that line to the first row, and between
-   rows (each row's 8 px padding, twice). The header's buttons are centred in
-   its 62 px, 15 px above them and below, to the window's top and the
-   strip's, on every system; the traffic lights' centre is theirs, 31 px down
-   (the title bar, above). */
+/* The work screen's vertical rhythm is one step, --space-3 (16 px), down
+   the screen: from the header's buttons to the strip, from the strip to the
+   line under it, between that line's rows where Find wraps, and from the
+   line to the first row's text, as on Android and iOS (the spacing audit,
+   2026-11-15). The rows are closer, 12 px between sentences and 28 between
+   turns (.pk-seg). The header's buttons are 15 px under the window's top,
+   their centre the traffic lights', 31 px down (the title bar, above), and
+   16 over the strip. */
 .pk-head {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 15px 24px;
-  min-height: 62px;
+  padding: 15px 24px 16px;
+  min-height: 63px;
 }
 /* the file's name gives way first, down to nothing, before Find: shrunk in
    proportion, a long name left Find a letter of its search (the Windows
@@ -1022,7 +1021,7 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 1px 24px 15px;
+  padding: 1px 24px 16px;
 }
 .pk-head-name[hidden] {
   display: none;
@@ -1087,7 +1086,8 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  margin: var(--space-2) 0 var(--space-3);
+  /* the first row's text 16 px under what is above it, past its own 6 */
+  margin: calc(var(--space-3) - 6px) 0 var(--space-3);
   padding: 0 24px;
   /* Its size is the column's (flex: 1), never its rows': contained, a
      change in the header (a search's count) no longer lays all of a 3-hour
@@ -2004,11 +2004,13 @@ html:not([data-chrome="win"]) .pk-head > #stop {
    alone at the line's far end, where it went unnoticed (Peter, 2026-10-31;
    app.js, placeFind); nothing at all while none of them shows. They wrap
    to a second line before any of them is cut. */
+/* 16 px under the strip, and Find 16 under the switch where it wraps,
+   as the transcript is 16 under the line: one step down the screen */
 .pk-spk-line {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
+  gap: var(--space-3) 12px;
   margin: var(--space-3) 24px 0;
 }
 .pk-spk-line:not(:has(> :not([hidden]))) {
@@ -2048,12 +2050,15 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 .pk-stats {
   --times-w: calc(var(--time-chars) * 7.8px);
 }
+/* 6 px over and under each row: sentences 12 apart, a turn's 16 more
+   (.pk-turn). At 8, each sentence stood apart as a paragraph of its own,
+   which read a touch loose (Peter, 2026-11-15) */
 .pk-seg {
   display: grid;
   grid-template-columns: var(--times-w) minmax(0, 1fr);
   column-gap: var(--gutter);
   align-items: baseline;
-  padding: 8px 16px;
+  padding: 6px 16px;
   border-radius: var(--radius-ui);
   max-width: var(--row);
 }
@@ -2198,7 +2203,7 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 /* and the work's, by its own width, which is the window's in one column */
 @container (max-width: 599px) {
   .pk-head {
-    padding: 15px 16px;
+    padding: 15px 16px 16px;
   }
   /* the batch's rows' icons and its count on the 16 px edge, their hover
      reaching 4 px from the window's: they stayed at 24 (the layout audit,
@@ -2207,7 +2212,7 @@ html:not([data-chrome="win"]) .pk-head > #stop {
     padding: 0 4px var(--space-3);
   }
   .pk-head-name {
-    padding: 1px 16px 15px;
+    padding: 1px 16px 16px;
   }
   .pk-strip-wrap {
     padding: 0 16px;
@@ -2684,8 +2689,9 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 /* A turn's line (Peter's question of 2026-11-15): each row of a
    speaker's turn carries a 3 px line in the speaker's colour between the
    times and the text, so that a turn reads as a paragraph of its own and
-   its name, at its top, says whose; it starts and ends 10 px inside the
-   turn's first and last rows, and turns stand 12 px apart (.pk-turn). In
+   its name, at its top, says whose; it starts and ends 8 px inside the
+   turn's first and last rows, 2 px inside their text, and turns stand
+   16 px apart (.pk-turn). In
    the middle of the gutter, 21.5 px from the times and from the text: 4 px
    from the text, the line and its button sat crowded against it beside the
    times' wide gutter, and in the middle it stands as far from every file's
@@ -2707,11 +2713,11 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   background: var(--spk);
 }
 .pk-seg[data-first]::before {
-  top: 10px;
+  top: 8px;
   border-radius: 1.5px 1.5px 0 0;
 }
 .pk-seg[data-last]::before {
-  bottom: 10px;
+  bottom: 8px;
   border-bottom-left-radius: 1.5px;
   border-bottom-right-radius: 1.5px;
 }
@@ -2724,7 +2730,7 @@ html:not([data-chrome="win"]) .pk-head > #stop {
    after the time on its line. */
 .pk-sdot {
   position: absolute;
-  top: 9.6px;
+  top: 7.6px;
   left: calc(var(--line-mid) - 12px);
   width: 24px;
   height: 24px;
@@ -2778,7 +2784,7 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   }
 }
 .pk-seg.pk-turn {
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 
 /* The strip is one height with the speaker bar or without (Peter,

@@ -1299,7 +1299,9 @@ private fun Rows(
             }
         else Modifier
     alone?.let { u -> WhoPicker(true, true, { alone = null }, u, spk) }
-    BoxWithConstraints(modifier.fillMaxWidth().padding(top = 16.dp).scrollbar(bar).then(menu)) {
+    // the first row's text 16 dp under the line above, past the row's own 6
+    // (app.css, .pk-transcript; the spacing audit, 2026-11-15: it was 24)
+    BoxWithConstraints(modifier.fillMaxWidth().padding(top = 10.dp).scrollbar(bar).then(menu)) {
         // a column from 620 dp with an hour's times at the default text size,
         // the desktop's (app.css, max-width: 619px), where the text keeps 416
         // beside them: the list's 24 dp and the row's 16 either side, and the
@@ -1450,8 +1452,10 @@ private fun SegRow(
                         }
                 else Modifier
             )
-    // a turn 12 dp under the one before (app.css, .pk-seg.pk-turn)
-    val gap = if (turn != null && !first) Modifier.padding(top = 12.dp) else Modifier
+    // a turn 16 dp under the one before (app.css, .pk-seg.pk-turn): with the
+    // rows' 6 dp, sentences 12 apart and turns 28 (Peter, 2026-11-15: at 8, a
+    // touch loose)
+    val gap = if (turn != null && !first) Modifier.padding(top = 16.dp) else Modifier
     // its turn's line in the middle of the gutter, past the row's 16 dp and
     // the times; with the time over the text, 5 dp in, as the desktop's
     // narrow window has it
@@ -1472,7 +1476,7 @@ private fun SegRow(
                 .then(ruled)
                 .heightIn(min = 48.dp)
                 .wrapContentHeight()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 6.dp)
         ) {
             time(Modifier.width(column).alignByBaseline())
             Spacer(Modifier.width(GUTTER))
@@ -1491,7 +1495,7 @@ private fun SegRow(
     else
     // the time over the text
     Column(
-            gap.then(box).then(ruled).padding(horizontal = 16.dp, vertical = 8.dp),
+            gap.then(box).then(ruled).padding(horizontal = 16.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             time(Modifier)
@@ -1505,7 +1509,7 @@ private fun SegRow(
  * the ground, as tall as its letters and 2 dp round them, its corners 3 dp; the one the reader is
  * on in plume, its letters on-plume, an ink bar 2 dp under it, for a state shown by more than its
  * colour (the tokens' contrast, 2026-10-22). Once the list has brought a move's row into sight
- * (Finder.show), the match's own line too, and the row's 8 dp round it: a row taller than the room,
+ * (Finder.show), the match's own line too, and the row's 6 dp round it: a row taller than the room,
  * above the keyboard (Work) or a long one, had its top in sight and the match below.
  */
 @Composable
@@ -1567,7 +1571,7 @@ private fun Sentence(
         lit.animateTo(0f, tween((1600 * left).toInt(), easing = EaseOut))
     }
     val sight = remember { BringIntoViewRequester() }
-    val pad = with(LocalDensity.current) { 8.dp.toPx() }
+    val pad = with(LocalDensity.current) { 6.dp.toPx() }
     // what was shown before this row came onto the list is not this row's to show
     val first = remember { shown }
     LaunchedEffect(shown) {
