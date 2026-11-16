@@ -2258,7 +2258,10 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 .pk-find input::-webkit-search-cancel-button {
   display: none;
 }
-/* previous and next, while there is something to find */
+/* previous, next and the search let go (×, as Esc), while there is
+   something to find: the phones' fields have the × too (Android's Find.kt,
+   iOS's Find.swift). Their glyphs 12 px apart, the last 8 px from the
+   field's edge */
 .pk-find-step {
   display: none;
   flex: none;
@@ -2273,7 +2276,7 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   color: var(--ink-muted);
   cursor: pointer;
 }
-.pk-find-step + .pk-find-step {
+.pk-find-step:last-child {
   margin-right: -6px;
 }
 .pk-find.has-query .pk-find-step {
@@ -2294,10 +2297,11 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
-/* wider with a search in it, for the count and the arrows beside the words */
+/* wider with a search in it, for the count, the arrows and the × beside
+   the words */
 .pk-find.has-query {
-  flex-basis: 280px;
-  min-width: 190px;
+  flex-basis: 304px;
+  min-width: 214px;
 }
 /* a speaker found (app.js, findWho): their mark and name before the field,
    where a search's words would be; words typed search for words instead */

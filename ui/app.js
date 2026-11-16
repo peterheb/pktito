@@ -3157,6 +3157,13 @@ $("find-next").onclick = (e) => {
   e.preventDefault();
   stepHit(1);
 };
+// the search let go, as Esc does: the field gives the keys back too, so
+// that Space plays again
+$("find-clear").onclick = (e) => {
+  e.preventDefault();
+  clearFind();
+  $("find").blur();
+};
 /* a tick: its match, and the playhead there. A click on the lane takes the
    tick nearest it within 16 px, as Android's lane does: ticks are 9 px
    wide and overlap where matches are close, and the one drawn over took a
@@ -4762,6 +4769,8 @@ async function start() {
   );
   $("find-next").innerHTML = ICON.down;
   $("find-next").title = keyTip(t("find.next_tip"), t("key.enter"));
+  $("find-clear").innerHTML = ICON.x;
+  $("find-clear").title = keyTip(t("find.clear"), t("key.esc"));
   try {
     recent = await invoke("recent_list");
   } catch {
