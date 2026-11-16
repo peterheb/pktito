@@ -64,7 +64,7 @@ fn probe(name: &str) -> Option<&'static str> {
 
 /// Whether this compiler's assembler takes a backend's probe, under the
 /// backend's flags; a backend it doesn't is left out.
-fn assembles(os: &str, root: &PathBuf, name: &str, flags: &[&str], asm: &str) -> bool {
+fn assembles(os: &str, root: &Path, name: &str, flags: &[&str], asm: &str) -> bool {
     let dir = PathBuf::from(env::var_os("OUT_DIR").unwrap()).join(format!("probe-{name}"));
     let _ = std::fs::create_dir_all(&dir);
     let file = dir.join("probe.c");
@@ -376,7 +376,7 @@ fn rules(json: &Path, engine: [u64; 3], out: &Path) {
     std::fs::write(out, rs).expect("OUT_DIR/rules.rs");
 }
 
-fn base(os: &str, root: &PathBuf) -> cc::Build {
+fn base(os: &str, root: &Path) -> cc::Build {
     let mut b = cc::Build::new();
     // pktito's numbers are the same bits on every backend only without
     // contraction, and it is slow without optimization, debug build or not.
@@ -506,7 +506,7 @@ fn main() {
         if flags
             .iter()
             .all(|f| b.is_flag_supported(f).unwrap_or(false))
-            && probe(name).map_or(true, |asm| assembles(&os, &root, name, flags, asm))
+            && probe(name).is_none_or(|asm| assembles(&os, &root, name, flags, asm))
         {
             for f in flags {
                 b.flag(f);

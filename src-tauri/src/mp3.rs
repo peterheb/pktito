@@ -282,7 +282,7 @@ mod tests {
     fn head(mpeg1: bool) -> [u8; 4] {
         let v = if mpeg1 { 0b11 } else { 0b10 };
         let bi = if mpeg1 { 5 } else { 8 }; // 64 kbit/s in each table
-        let h: u32 = 0x7ff << 21 | v << 19 | 1 << 17 | 1 << 16 | bi << 12 | 0 << 10 | 3 << 6;
+        let h: u32 = 0x7ff << 21 | v << 19 | 1 << 17 | 1 << 16 | bi << 12 | 3 << 6; // rate index 0: 44.1 (22.05) kHz
         h.to_be_bytes()
     }
 

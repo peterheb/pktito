@@ -67,8 +67,11 @@ fn answer(f: impl FnOnce() -> Result<serde_json::Value, String>) -> *mut c_char 
     give(v.to_string())
 }
 
+/// # Safety
+///
+/// s is null or a string one of these functions gave, freed once.
 #[unsafe(no_mangle)]
-pub extern "C" fn pkapp_free_string(s: *mut c_char) {
+pub unsafe extern "C" fn pkapp_free_string(s: *mut c_char) {
     if !s.is_null() {
         drop(unsafe { CString::from_raw(s) });
     }
@@ -425,8 +428,12 @@ pub extern "C" fn pkapp_recent(data: *const c_char) -> *mut c_char {
 /// earlier one of the same file: item is recent.rs's Item, as JSON,
 /// transcript what pkapp_transcribe gave, peaks its loudness. The list
 /// after.
+///
+/// # Safety
+///
+/// peaks is null or n bytes the caller holds for the call.
 #[unsafe(no_mangle)]
-pub extern "C" fn pkapp_keep(
+pub unsafe extern "C" fn pkapp_keep(
     data: *const c_char,
     item: *const c_char,
     transcript: *const c_char,

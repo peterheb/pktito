@@ -10,13 +10,11 @@
 /// number, so 0.9.10 is after 0.9.8.
 pub fn version(v: &str) -> Option<[u64; 3]> {
     let mut parts = [0; 3];
-    let mut n = 0;
-    for p in v.split('.') {
+    for (n, p) in v.split('.').enumerate() {
         if n == parts.len() || p.is_empty() || !p.bytes().all(|b| b.is_ascii_digit()) {
             return None;
         }
         parts[n] = p.parse().ok()?;
-        n += 1;
     }
     Some(parts)
 }

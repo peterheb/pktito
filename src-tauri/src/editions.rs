@@ -950,8 +950,11 @@ mod tests {
         include!(concat!(env!("OUT_DIR"), "/rules.rs"));
     }
 
+    /// A table's row: a device's name, the device, and each model's edition
+    type Row = (String, Device, Vec<(String, String)>);
+
     /// A table's rows: each device, and the edition of each model it runs
-    fn known(tsv: &str) -> Vec<(String, Device, Vec<(String, String)>)> {
+    fn known(tsv: &str) -> Vec<Row> {
         let mut rows = tsv.lines().filter(|l| !l.is_empty() && !l.starts_with('#'));
         let head: Vec<&str> = rows
             .next()
