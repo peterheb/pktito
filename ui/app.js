@@ -2705,34 +2705,40 @@ function at(list, t) {
 }
 
 /* The reader's place in the transcript as drawn: row if it is in sight,
-   else the first row in sight; its time (data-t, so that it holds whatever
-   rows the file has now) and where it is in the window. toPlace puts the
-   row of that time there again once the transcript is drawn anew: in the
-   window, not in the transcript, so that the text stays still while the
-   names over it come or go (eight of them took two lines) and the pointer
-   stays on the mark it clicked. */
-function placeOf(row) {
+   else the first row in sight (where stays is given, the first it keeps,
+   by index); its time (data-t, so that it holds whatever rows the file has now)
+   and where it is in the window. toPlace puts the row of that time there
+   again once the transcript is drawn anew: in the window, not in the
+   transcript, so that the text stays still while the names over it come or
+   go (eight of them took two lines) and the pointer stays on the mark it
+   clicked. */
+function placeOf(row, stays = null) {
   const tr = $("transcript"),
-    top = tr.getBoundingClientRect().top,
+    box = tr.getBoundingClientRect(),
     rows = tr.getElementsByClassName("pk-seg");
   let el = row && row.isConnected && !row.hidden && inSight(row) ? row : null;
-  if (!el && tr.classList.contains("is-only")) {
-    // with only the matches shown, the hidden rows have no place to search
-    // by: the first row shown in sight
-    for (const r of rows)
-      if (!r.hidden && r.getBoundingClientRect().bottom > top) {
+  if (!el) {
+    // the first row in sight: by halves where every row shows, else in
+    // turn, since hidden rows have no place to search by
+    let i = 0;
+    if (!tr.classList.contains("is-only")) {
+      let hi = rows.length;
+      while (i < hi) {
+        const mid = (i + hi) >> 1;
+        if (rows[mid].getBoundingClientRect().bottom <= box.top) i = mid + 1;
+        else hi = mid;
+      }
+    }
+    for (; i < rows.length; i++) {
+      const r = rows[i],
+        b = r.getBoundingClientRect();
+      if (r.hidden || b.bottom <= box.top) continue;
+      if (b.top >= box.bottom) break;
+      if (!stays || stays(i)) {
         el = r;
         break;
       }
-  } else if (!el) {
-    let lo = 0,
-      hi = rows.length;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (rows[mid].getBoundingClientRect().bottom <= top) lo = mid + 1;
-      else hi = mid;
     }
-    el = rows[lo];
   }
   return el
     ? { t: Number(el.dataset.t), y: el.getBoundingClientRect().top }
@@ -3175,11 +3181,7 @@ function applyOnly(f) {
     on = only && (!!query || !!who);
   tr.classList.toggle("is-only", on);
   for (const b of tr.querySelectorAll(".pk-lent")) b.remove();
-  let shown = null;
-  if (on) {
-    shown = rows.map((s) => !query && s.speaker === who);
-    for (const { i } of hits) shown[i] = true;
-  }
+  const shown = on ? shownRows(f) : null;
   const many = turnsShown(f);
   let seen = false;
   for (let i = 0; i < els.length; i++) {
@@ -3216,6 +3218,14 @@ function applyOnly(f) {
   } else none?.remove();
 }
 
+/* the rows Only matches shows, by index: those with a match of the words,
+   or with only a speaker found, every sentence of theirs */
+function shownRows(f) {
+  const shown = f.segments.map((s) => !query && s.speaker === who);
+  for (const { i } of hits) shown[i] = true;
+  return shown;
+}
+
 /* the switch, while something is found; off again once nothing is */
 function showOnly(finding) {
   const f = current();
@@ -3227,17 +3237,24 @@ function showOnly(finding) {
   b.title = t(only ? "find.only_all" : "find.only_show");
 }
 
-/* the switch turned, the reader on the same sentence: the match they are
-   on, else the first row in sight, where it was in the window, with what
-   was around it come back, or gone */
+/* turned, the reader kept on their sentence, where it is in the window, as
+   the rows around it come and go: the match they are on, where it is in
+   sight, else the first row in sight that stays shown; with none of those,
+   the match, brought as a move to it brings it (the same on Android and
+   iOS) */
 $("only").onclick = () => {
   const f = current();
   if (!f || !(query || who)) return;
-  const place = placeOf(hitAt >= 0 ? rowEl(hits[hitAt].i) : null);
+  const shown = only ? null : shownRows(f),
+    place = placeOf(
+      hitAt >= 0 ? rowEl(hits[hitAt].i) : null,
+      (i) => !shown || shown[i],
+    );
   only = !only;
   applyOnly(f);
   showOnly(true);
-  toPlace(f, place);
+  if (place) toPlace(f, place);
+  else if (hitAt >= 0) goHit(hitAt);
 };
 
 function clearFind() {
