@@ -2,8 +2,9 @@
 """ios/App/Localizable.xcstrings, the iOS app's words, from the Android app's
 (android/app/src/main/res/values/strings.xml), so that the two say the same
 things in the same words and a translation of one is most of the other's:
-each string by its Android name, with the comment above it for whoever
-translates it; Android's arguments (%1$s, %1$d) as iOS's (%1$@, %1$lld); its
+each string by its Android name, with its comments for whoever translates
+it (the one above it, and the desktop's key where one ends its line, as
+strings.xml's header says); Android's arguments (%1$s, %1$d) as iOS's (%1$@, %1$lld); its
 one plural as the catalog's plural; and its HTML (the strings in CDATA, as
 the desktop's) as the Markdown SwiftUI sets, links, bold and italics. Then
 the iOS app's own words (ios/strings.xml), in the same form. With
@@ -62,20 +63,34 @@ def read(srcs):
     each string's Android text first (the pseudo-language's, for one)."""
     found = {}
     for src, transform in srcs:
-        # comments are not in ElementTree's tree: each string's is the last
-        # one before it in the file
+        # comments are not in ElementTree's tree: a string's is the last one
+        # on a line of its own before it, plus the desktop's key in the one
+        # that ends its line (<string ...>Copied</string><!-- copy.done -->),
+        # which is the string's own, not the next one's
         text = open(src, encoding="utf-8").read()
-        comment_before = {}
+        notes = {}
         last = None
+        name = None
+        # the file's own comment, above <resources>, is no string's
         for m in re.finditer(
-            r"<!--(.*?)-->|<(string|plurals) name=\"([^\"]+)\"", text, re.S
+            r"<!--(.*?)-->|<(string|plurals) name=\"([^\"]+)\"",
+            text,
+            re.S,
         ):
+            if m.start() < text.index("<resources>"):
+                continue
             if m.group(1) is not None:
-                last = " ".join(m.group(1).split())
+                said = " ".join(m.group(1).split())
+                line = text[text.rfind("\n", 0, m.start()) + 1 : m.start()]
+                if name and re.search(r"</(string|plurals)>\s*$", line):
+                    notes[name].append("the desktop's " + said)
+                else:
+                    last = said
             else:
-                if last:
-                    comment_before[m.group(3)] = last
+                name = m.group(3)
+                notes[name] = [last] if last else []
                 last = None
+        comment_before = {k: "; ".join(v) for k, v in notes.items() if v}
         for el in ET.fromstring(text):
             name = el.get("name")
             if name in found:

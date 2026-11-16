@@ -150,7 +150,6 @@
     },
     "app_name": {
       "extractionState": "manual",
-      "comment": "The desktop's words where the screen is the desktop's (ui/locales/en.json, by the key in each comment); Android's own where it differs.",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -206,6 +205,7 @@
     },
     "back": {
       "extractionState": "manual",
+      "comment": "the desktop's nav.back",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -274,6 +274,7 @@
     },
     "channel_download": {
       "extractionState": "manual",
+      "comment": "the desktop's download.bar",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -296,7 +297,7 @@
     },
     "copied": {
       "extractionState": "manual",
-      "comment": "copy.text",
+      "comment": "the desktop's copy.done",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -308,7 +309,7 @@
     },
     "copy_text": {
       "extractionState": "manual",
-      "comment": "work.stop",
+      "comment": "the desktop's copy.text",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -410,7 +411,6 @@
     },
     "download_bar": {
       "extractionState": "manual",
-      "comment": "download.from_html",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -532,6 +532,7 @@
     },
     "download_from": {
       "extractionState": "manual",
+      "comment": "the desktop's download.from_html",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -720,7 +721,6 @@
     },
     "find_close": {
       "extractionState": "manual",
-      "comment": "find.next",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -732,7 +732,7 @@
     },
     "find_label": {
       "extractionState": "manual",
-      "comment": "find.placeholder",
+      "comment": "the desktop's find.label",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -744,7 +744,7 @@
     },
     "find_next": {
       "extractionState": "manual",
-      "comment": "find.previous",
+      "comment": "the desktop's find.next",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -756,6 +756,7 @@
     },
     "find_placeholder": {
       "extractionState": "manual",
+      "comment": "the desktop's find.placeholder",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -767,7 +768,7 @@
     },
     "find_previous": {
       "extractionState": "manual",
-      "comment": "find.label",
+      "comment": "the desktop's find.previous",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -823,7 +824,6 @@
     },
     "format_txt": {
       "extractionState": "manual",
-      "comment": "save.failed",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -1446,7 +1446,6 @@
     },
     "no_speech": {
       "extractionState": "manual",
-      "comment": "transcribe.failed",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -1651,6 +1650,7 @@
     },
     "play_from": {
       "extractionState": "manual",
+      "comment": "the desktop's seg.play_from",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -1956,6 +1956,7 @@
     },
     "real_time": {
       "extractionState": "manual",
+      "comment": "the desktop's time.real_time",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2046,7 +2047,7 @@
     },
     "save_failed": {
       "extractionState": "manual",
-      "comment": "save.saved",
+      "comment": "the desktop's save.failed",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2070,6 +2071,7 @@
     },
     "save_times": {
       "extractionState": "manual",
+      "comment": "the desktop's save.times",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2081,7 +2083,7 @@
     },
     "saved": {
       "extractionState": "manual",
-      "comment": "save.times",
+      "comment": "the desktop's save.saved",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2159,6 +2161,7 @@
     },
     "setup_on_device": {
       "extractionState": "manual",
+      "comment": "the desktop's setup.on_computer",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2170,7 +2173,6 @@
     },
     "setup_size": {
       "extractionState": "manual",
-      "comment": "setup.on_computer",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2227,7 +2229,6 @@
     },
     "share": {
       "extractionState": "manual",
-      "comment": "copy.done",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2575,7 +2576,7 @@
     },
     "speed_faster": {
       "extractionState": "manual",
-      "comment": "speed.slower",
+      "comment": "the desktop's speed.faster",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2587,7 +2588,7 @@
     },
     "speed_group": {
       "extractionState": "manual",
-      "comment": "speed.label",
+      "comment": "the desktop's speed.group",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2599,7 +2600,7 @@
     },
     "speed_label": {
       "extractionState": "manual",
-      "comment": "seg.play_from",
+      "comment": "the desktop's speed.label",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2611,7 +2612,7 @@
     },
     "speed_slower": {
       "extractionState": "manual",
-      "comment": "speed.group",
+      "comment": "the desktop's speed.slower",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2623,7 +2624,7 @@
     },
     "stats_transcribed": {
       "extractionState": "manual",
-      "comment": "time.real_time",
+      "comment": "the desktop's stats.transcribed",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2635,6 +2636,7 @@
     },
     "status_done": {
       "extractionState": "manual",
+      "comment": "the desktop's status.done",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2646,7 +2648,7 @@
     },
     "status_failed": {
       "extractionState": "manual",
-      "comment": "status.done",
+      "comment": "the desktop's transcribe.failed",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2658,7 +2660,6 @@
     },
     "status_loading": {
       "extractionState": "manual",
-      "comment": "times.video_rate",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2703,7 +2704,7 @@
     },
     "stop": {
       "extractionState": "manual",
-      "comment": "nav.back",
+      "comment": "the desktop's work.stop",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2737,7 +2738,7 @@
     },
     "times_frames": {
       "extractionState": "manual",
-      "comment": "times.seconds",
+      "comment": "the desktop's times.frames",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2749,7 +2750,7 @@
     },
     "times_frames_at": {
       "extractionState": "manual",
-      "comment": "times.frames",
+      "comment": "the desktop's times.frames_at",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2761,7 +2762,7 @@
     },
     "times_frames_at_video": {
       "extractionState": "manual",
-      "comment": "times.frames_at",
+      "comment": "the desktop's times.frames_at_video",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2773,7 +2774,7 @@
     },
     "times_rates": {
       "extractionState": "manual",
-      "comment": "times.frames_at_video",
+      "comment": "the desktop's times.rates",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2785,7 +2786,7 @@
     },
     "times_seconds": {
       "extractionState": "manual",
-      "comment": "times.tip",
+      "comment": "the desktop's times.seconds",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2797,7 +2798,7 @@
     },
     "times_tip": {
       "extractionState": "manual",
-      "comment": "volume.unmute",
+      "comment": "the desktop's times.tip",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2809,7 +2810,7 @@
     },
     "times_video_rate": {
       "extractionState": "manual",
-      "comment": "times.rates",
+      "comment": "the desktop's times.video_rate",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2821,7 +2822,7 @@
     },
     "volume_label": {
       "extractionState": "manual",
-      "comment": "speed.faster",
+      "comment": "the desktop's volume.label",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2833,7 +2834,7 @@
     },
     "volume_mute": {
       "extractionState": "manual",
-      "comment": "volume.label",
+      "comment": "the desktop's volume.mute",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2845,7 +2846,7 @@
     },
     "volume_unmute": {
       "extractionState": "manual",
-      "comment": "volume.mute",
+      "comment": "the desktop's volume.unmute",
       "localizations": {
         "en": {
           "stringUnit": {
