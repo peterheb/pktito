@@ -331,16 +331,23 @@ fn json(t: &Transcript, cues: &[Cue], windows: &[Window]) -> String {
     };
     let present: std::collections::BTreeSet<u32> =
         t.segments.iter().filter_map(|s| t.speaker(s)).collect();
-    let speakers = if present.is_empty() {
-        String::new()
+    // a diarizer ran: its name and the speakers, none where no one said a
+    // word, as pktito-c writes them; neither where the speakers are hidden
+    // (no names)
+    let list: Vec<String> = present
+        .iter()
+        .map(|&n| format!("    {{\"id\": {n}, \"name\": {}}}", j(&t.name_of(n))))
+        .collect();
+    let diarizer = t
+        .diarizer
+        .map_or(String::new(), |d| format!(",\n  \"diarizer\": {}", j(d)));
+    let speakers = if list.is_empty() {
+        if t.diarizer.is_some() && t.names.is_some() {
+            format!("{diarizer},\n  \"speakers\": []")
+        } else {
+            String::new()
+        }
     } else {
-        let list: Vec<String> = present
-            .iter()
-            .map(|&n| format!("    {{\"id\": {n}, \"name\": {}}}", j(&t.name_of(n))))
-            .collect();
-        let diarizer = t
-            .diarizer
-            .map_or(String::new(), |d| format!(",\n  \"diarizer\": {}", j(d)));
         format!("{diarizer},\n  \"speakers\": [\n{}\n  ]", list.join(",\n"))
     };
     // each word's speaker, for its cue's: a lone voice's too, which the
@@ -758,5 +765,31 @@ mod tests {
             "# a\\_b.mp3\n\n`00:00:00.00` Hello there.\n\n`00:01:01.50` \\# Two\n"
         );
         assert!(text(&t, "doc", false).is_err());
+    }
+
+    /// A diarizer that ran over a recording no one said a word in: it is
+    /// named and its speakers are none, as pktito-c writes them; hidden
+    /// (no names), neither is.
+    #[test]
+    fn no_one_spoke() {
+        let t = Transcript {
+            name: "quiet.wav",
+            duration: 10.0,
+            model: Some("parakeet-tdt-0.6b-v2"),
+            segments: &[],
+            names: Some(&[]),
+            diarizer: Some("Nemotron-3-Diarization"),
+            name_lone: true,
+        };
+        let json = text(&t, "json", false).unwrap();
+        assert!(
+            json.contains("\n  \"diarizer\": \"Nemotron-3-Diarization\",\n  \"speakers\": [],\n"),
+            "{json}"
+        );
+        let hidden = text(&Transcript { names: None, ..t }, "json", false).unwrap();
+        assert!(
+            !hidden.contains("speakers") && !hidden.contains("diarizer"),
+            "{hidden}"
+        );
     }
 }

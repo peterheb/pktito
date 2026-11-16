@@ -404,6 +404,7 @@ pub fn run_windows(
             spk.as_deref(),
             c.start as f64 / rate,
             c.at_frame,
+            c.end as f64 / rate,
             end,
             &mut open,
         );
@@ -567,11 +568,13 @@ impl<'s, 'a> Heard<'s, 'a> {
 /// ended in the middle of, its frames counted from the recording's start
 /// as pk_sentences counts them; for each token, the seconds its chunk
 /// started at and the frames that added, for the words' times, which stay
-/// each chunk's own; and the words' language, once pk_language says.
+/// each chunk's own, and where its word ends (word_ends); and the words'
+/// language, once pk_language says.
 #[derive(Default)]
 struct Open {
     toks: Vec<Tok>,
     at: Vec<(f64, i32)>,
+    ends: Vec<f64>,
     // each token's speaker, with speakers (Heard::tokens)
     spk: Vec<i32>,
     lang: Option<String>,
@@ -587,8 +590,15 @@ impl Open {
         }
         let toks = std::mem::take(&mut self.toks);
         let at = std::mem::take(&mut self.at);
+        let ends = std::mem::take(&mut self.ends);
         let spk = std::mem::take(&mut self.spk);
-        Some(segment(model, &toks, &at, spk.first().map(|&s| s as u32)))
+        Some(segment(
+            model,
+            &toks,
+            &at,
+            &ends,
+            spk.first().map(|&s| s as u32),
+        ))
     }
 
     /// How many words the open sentence has so far.
@@ -597,9 +607,38 @@ impl Open {
     }
 }
 
-/// Tokens as a segment: their text whole, each word timed in seconds, and
-/// whose they are, where there are speakers.
-fn segment(model: &Model, toks: &[Tok], at: &[(f64, i32)], speaker: Option<u32>) -> Segment {
+/// Where each of a chunk's words ends, in seconds, for each of its tokens:
+/// at its last token's end, but no later than the chunk's (stop, the end
+/// of the audio it was heard in), nor than the next word's start, and no
+/// earlier than its own, as pktito-c's word_ends has it. A token's length
+/// is the model's guess, and a chunk's last word often runs past the chunk
+/// (in 67 of a 37-minute podcast's 89 chunks, libpktito 3712e60), into the
+/// next chunk's first word. A chunk's words all start inside it.
+fn word_ends(model: &Model, toks: &[Tok], offset: f64, stop: f64) -> Vec<f64> {
+    let frame = model.frame_seconds();
+    let words = model.words(toks);
+    let mut ends = vec![0.0; toks.len()];
+    for (k, w) in words.iter().enumerate() {
+        let s = offset + w.start as f64 * frame;
+        let mut e = (offset + w.end as f64 * frame).min(stop);
+        if let Some(n) = words.get(k + 1) {
+            e = e.min(offset + n.start as f64 * frame);
+        }
+        ends[w.tok as usize..(w.tok + w.ntok) as usize].fill(e.max(s));
+    }
+    ends
+}
+
+/// Tokens as a segment: their text whole, each word timed in seconds (its
+/// end, ends' for its first token), and whose they are, where there are
+/// speakers.
+fn segment(
+    model: &Model,
+    toks: &[Tok],
+    at: &[(f64, i32)],
+    ends: &[f64],
+    speaker: Option<u32>,
+) -> Segment {
     let frame = model.frame_seconds();
     let time = |i: usize, f: i32| at[i].0 + (f - at[i].1) as f64 * frame;
     let words: Vec<Word> = model
@@ -609,7 +648,7 @@ fn segment(model: &Model, toks: &[Tok], at: &[(f64, i32)], speaker: Option<u32>)
             let (first, last) = (w.tok as usize, (w.tok + w.ntok - 1) as usize);
             Word {
                 start: time(first, w.start),
-                end: time(last, w.end),
+                end: ends[first],
                 text: model.text(&toks[first..=last]),
             }
         })
@@ -626,7 +665,8 @@ fn segment(model: &Model, toks: &[Tok], at: &[(f64, i32)], speaker: Option<u32>)
 /// A chunk's tokens as sentences, after the tokens open before it
 /// (pk_sentences): spk, each token's speaker, with speakers, a change of
 /// which ends a sentence too; the chunk starting offset seconds and base
-/// frames into the recording; done, whether they end the recording. The
+/// frames into the recording, and ending stop seconds into it; done,
+/// whether they end the recording. The
 /// tokens after the last sentence are left open, for the next chunk.
 fn sentences(
     model: &Model,
@@ -634,9 +674,11 @@ fn sentences(
     spk: Option<&[i32]>,
     offset: f64,
     base: i32,
+    stop: f64,
     done: bool,
     open: &mut Open,
 ) -> Vec<Segment> {
+    open.ends.extend(word_ends(model, toks, offset, stop));
     // the chunk's frames from the recording's start, as pk_sentences counts
     // them: plus its start in whole frames (base, pk_chunk_out.at_frame)
     for t in toks {
@@ -684,12 +726,19 @@ fn sentences(
         .map(|s| {
             let r = s.first as usize..(s.first + s.n) as usize;
             let speaker = with.then(|| open.spk[s.first as usize] as u32);
-            segment(model, &open.toks[r.clone()], &open.at[r], speaker)
+            segment(
+                model,
+                &open.toks[r.clone()],
+                &open.at[r.clone()],
+                &open.ends[r],
+                speaker,
+            )
         })
         .collect();
     let used = found.last().map_or(0, |s| (s.first + s.n) as usize);
     open.toks.drain(..used);
     open.at.drain(..used);
+    open.ends.drain(..used);
     if with {
         open.spk.drain(..used);
     }
