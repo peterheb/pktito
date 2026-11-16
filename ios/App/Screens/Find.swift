@@ -9,6 +9,15 @@ struct Hit: Equatable {
     let time: Double
 }
 
+/// Speaker n's turns in rows, as the desktop finds a speaker (app.js,
+/// runFind with who): a match a turn, at its first row's start, its name
+/// marked (start -1: Sentence marks the name, not words).
+func turnsOf(_ rows: [Segment], _ n: Int) -> [Hit] {
+    rows.indices
+        .filter { i in rows[i].speaker == n && (i == 0 || rows[i - 1].speaker != n) }
+        .map { Hit(row: $0, start: -1, end: -1, time: rows[$0].start) }
+}
+
 /// Each match of query in rows, the sentences, as the desktop finds them
 /// (app.js, runFind; Android's Find.kt): its words trimmed, without regard
 /// to case, each match at a word's start (startsWord) and after the one
@@ -96,6 +105,9 @@ private func timeAt(_ s: Segment, _ offset: Int) -> Double {
 @MainActor @Observable
 final class Finder {
     var query = ""
+    /// the speaker found (findWho), whose turns are the matches (turnsOf);
+    /// 0 for words, as a search finds them
+    var who = 0
     var open = false
     private(set) var at = -1
     private(set) var moved = 0
@@ -111,7 +123,20 @@ final class Finder {
         let rect: CGRect
     }
 
-    var searching: Bool { open || !query.isEmpty }
+    var searching: Bool { open || !query.isEmpty || who != 0 }
+
+    /// Speaker n found, as a search finds a word (app.js, findWho; Peter,
+    /// 2026-11-15, naming his speakers: "who is this Speaker 4", needing "to
+    /// hear their words and read the context"): their turns the matches, the
+    /// field open with their name in it, without the keyboard, which would
+    /// cover the turns; the arrows step from turn to turn with the playhead.
+    /// Found again, let go.
+    func findWho(_ n: Int) {
+        if who == n { return clear() }
+        query = ""
+        who = n
+        open = true
+    }
 
     func spotted(_ k: Int, _ rect: CGRect) {
         let s = Spot(k: k, rect: rect)
@@ -166,6 +191,7 @@ final class Finder {
 
     func clear() {
         query = ""
+        who = 0
         open = false
         at = -1
         time = -1
@@ -177,7 +203,10 @@ final class Finder {
 /// The search's field on the line under the strip (app.css, .pk-find), sunk, 40 tall:
 /// the glass, what is sought, and while there is something its count and
 /// the previous and next match, dimmed with fewer than two, then the way to
-/// close it. Return is the next match.
+/// close it. Return is the next match. A speaker found shows as their mark
+/// and name where words would be (app.css, .pk-find-who); words typed
+/// search for words instead, and so does a hardware keyboard's delete in the
+/// empty field.
 struct FindField: View {
     @Bindable var finder: Finder
     let hits: [Hit]
@@ -186,12 +215,28 @@ struct FindField: View {
     /// field that stays at its width shows its × only with a search in
     /// it, to let the search go, as the desktop's field does
     var opened = false
+    /// a speaker's name, for the one found (Finder.who)
+    var nameOf: (Int) -> String = { _ in "" }
     @FocusState private var typing: Bool
 
     var body: some View {
+        let has = !finder.query.trimmingCharacters(in: .whitespaces).isEmpty || finder.who != 0
         HStack(spacing: 8) {
             PkIcon.search.frame(width: 16, height: 16).foregroundStyle(Pk.inkMuted)
-            TextField(L("find_placeholder"), text: $finder.query)
+            if finder.who != 0 {
+                HStack(spacing: 6) {
+                    SpeakerMark(n: finder.who)
+                    Text(nameOf(finder.who))
+                        .font(PkType.ui.font(13))
+                        .foregroundStyle(Pk.ink)
+                        .lineLimit(1)
+                }
+                .padding(.horizontal, 8)
+                .frame(maxWidth: 180, minHeight: 28)
+                .background(Pk.ground, in: RoundedRectangle(cornerRadius: Radius.radiusSm))
+                .fixedSize()
+            }
+            TextField(finder.who != 0 ? "" : L("find_placeholder"), text: $finder.query)
                 .font(PkType.ui.font(14))
                 .foregroundStyle(Pk.ink)
                 .focused($typing)
@@ -199,7 +244,14 @@ struct FindField: View {
                 .onSubmit { finder.step(hits, 1, seek: seek) }
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
-            if !finder.query.trimmingCharacters(in: .whitespaces).isEmpty {
+                // words typed search for words, the speaker let go
+                .onChange(of: finder.query) { _, q in if !q.isEmpty { finder.who = 0 } }
+                .onKeyPress(.delete) {
+                    guard finder.query.isEmpty && finder.who != 0 else { return .ignored }
+                    finder.clear()
+                    return .handled
+                }
+            if has {
                 Text(hits.isEmpty ? "0/0" : "\(finder.at + 1)/\(hits.count)")
                     .font(PkType.stamp.font(12))
                     .monospacedDigit()
@@ -210,7 +262,7 @@ struct FindField: View {
                 }
                 .disabled(hits.count < 2)
             }
-            if opened || !finder.query.isEmpty {
+            if opened || !finder.query.isEmpty || finder.who != 0 {
                 Button {
                     finder.clear()
                     typing = false
@@ -234,7 +286,9 @@ struct FindField: View {
                 RoundedRectangle(cornerRadius: Radius.radiusUi).stroke(Pk.focus, lineWidth: 2)
             }
         }
-        .onAppear { if finder.open && finder.query.isEmpty { typing = true } }
+        // the keyboard for a field the glass opened, not for a speaker found,
+        // whose turns it would cover
+        .onAppear { if finder.open && finder.query.isEmpty && finder.who == 0 { typing = true } }
     }
 
     private func step(_ icon: PkIcon, _ label: String, _ d: Int) -> some View {

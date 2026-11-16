@@ -55,20 +55,44 @@ void pkapp_free(uint64_t handle);
 char *pkapp_use_ane(uint64_t handle, const char *path);
 
 /* The recording at path transcribed: its Transcript, {"duration",
- * "complete", "model", "segments"}. audio(ctx, seconds, fps or 0, peaks,
- * count) once it is read; update(ctx, fraction, segments JSON) after each
- * chunk; both on the calling thread. */
-char *pkapp_transcribe(uint64_t handle, const char *path, const char *name, void *ctx,
+ * "complete", "model", "segments"}, and with diar (a pkapp_load_diarizer
+ * handle, 0 for none) each segment's "speaker" and the "stretches" and
+ * "diarizer". audio(ctx, seconds, fps or 0, peaks, count) once it is read;
+ * update(ctx, fraction, segments JSON) after each chunk; both on the
+ * calling thread. */
+char *pkapp_transcribe(uint64_t handle, uint64_t diar, const char *path, const char *name, void *ctx,
                        void (*audio)(void *ctx, double seconds, double fps, const uint8_t *peaks, size_t n),
                        void (*update)(void *ctx, double done, const char *segments));
 void pkapp_stop(void);
 
-/* {"text"}: a Transcript as txt, md, srt, vtt or json */
-char *pkapp_format(const char *transcript, const char *ext, const char *name, bool times);
+/* {"text"}: a Transcript as txt, md, srt, vtt or json, with each turn's
+ * speaker where speakers */
+char *pkapp_format(const char *transcript, const char *ext, const char *name, bool times, bool speakers);
+
+/* The speaker model this build offers: {"offer": {"name", "license",
+ * "file", "bytes", "url", "kept", "have"}} or {"offer": null} */
+char *pkapp_diarizer(const char *dir);
+/* Its file that URLSession brought, checked and put in place: {"path"} or
+ * {"error", "key", "detail"} */
+char *pkapp_land_diarizer(const char *dir, const char *got);
+/* Its files deleted, or with part what a download kept: {} or {"error"} */
+char *pkapp_delete_diarizer(const char *dir, bool part);
+/* {"handle"}: the speaker model at path, loaded, for pkapp_transcribe and
+ * pkapp_find_speakers */
+char *pkapp_load_diarizer(const char *path);
+void pkapp_free_diarizer(uint64_t handle);
+/* Who said what in a finished Transcript, from its recording at path, not
+ * transcribed again: the Transcript with its speakers. done(ctx, fraction
+ * heard, bar JSON {"closed": ended since the last, "open"}) a whole percent
+ * at a time, on the calling thread. */
+char *pkapp_find_speakers(uint64_t diar, const char *path, const char *name, const char *transcript,
+                          void *ctx, void (*done)(void *ctx, double done, const char *bar));
 
 /* The recent list, in the folder data: {"items"} */
 char *pkapp_recent(const char *data);
 char *pkapp_keep(const char *data, const char *item, const char *transcript, const uint8_t *peaks, size_t n);
+/* A kept transcript's speakers as transcript has them now: {} or {"error"} */
+char *pkapp_keep_speakers(const char *data, const char *id, const char *transcript);
 char *pkapp_open_recent(const char *data, const char *id);
 char *pkapp_forget(const char *data, const char *id);
 void pkapp_clear_recent(const char *data);

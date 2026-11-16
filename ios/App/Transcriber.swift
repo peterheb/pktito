@@ -26,6 +26,13 @@ final class Transcriber {
     /// its loudness for the strip (audio.rs's peaks), once it is read
     private(set) var peaks: [UInt8]?
     private(set) var segments: [Segment] = []
+    /// with speakers: the names given, speaker n's at n - 1, "" for Speaker
+    /// n (Speakers.nameOf); and each one's stretches of speech, for the bar
+    private(set) var names: [String] = []
+    private(set) var stretches: [Stretch] = []
+    /// whether this run finds the speakers as it goes, the switch on and
+    /// their model here: the strip keeps the bar's place for them
+    private(set) var diarizing = false
     /// what went wrong, in the engine's words or the system's
     private(set) var error: String?
     /// the seconds spent transcribing so far, for the pace
@@ -66,6 +73,9 @@ final class Transcriber {
         duration = 0
         peaks = nil
         segments = []
+        names = []
+        stretches = []
+        diarizing = false
         error = nil
         transcribed = 0
         transcript = nil
@@ -113,12 +123,31 @@ final class Transcriber {
         fps = t.item.fps
         peaks = t.peaks
         segments = t.segments
+        names = t.names
+        stretches = t.stretches
         transcribed = t.item.transcribed
         transcript = Transcript(
-            duration: t.item.duration, complete: true, model: t.item.model, segments: t.segments)
+            duration: t.item.duration, complete: true, model: t.item.model, segments: t.segments,
+            names: t.names, stretches: t.stretches, diarizer: t.diarizer)
         done = 1
         reopened = true
         step = .done
+    }
+
+    /// The transcript's speakers as Speakers changed or found them: its
+    /// sentences, their names and stretches, and its JSON with them, which
+    /// the formats and the recent list take; with diarizer, the model that
+    /// found them, where a find did.
+    func respeak(
+        _ segments: [Segment], names: [String], stretches: [Stretch], diarizer: String? = nil
+    ) {
+        self.segments = segments
+        self.names = names
+        self.stretches = stretches
+        transcript?.segments = segments
+        transcript?.names = names
+        transcript?.stretches = stretches
+        if let diarizer { transcript?.diarizer = diarizer }
     }
 
     /// The model loaded from name (a catalog model's, or the own file's
@@ -238,6 +267,9 @@ final class Transcriber {
         begin(url.lastPathComponent, url)
         let id = self.id
         let name = self.name
+        // with the switch on and the speaker model here, who said what, heard
+        // in the same pass (Speakers)
+        let diarizer = Speakers.shared.on ? Speakers.shared.file : nil
         UIApplication.shared.isIdleTimerDisabled = true
         Continued.begin(id: id, name: name)
         trace("transcribe: \(name)")
@@ -266,6 +298,7 @@ final class Transcriber {
                         self.duration = duration
                         self.fps = fps
                         self.peaks = peaks
+                        self.diarizing = diarizer != nil
                         self.step = .transcribing
                         Continued.update()
                     }
@@ -288,7 +321,12 @@ final class Transcriber {
                     ])
                     // a copy sent to pktito is kept itself (Recents.keep)
                     let bookmark = Recents.held(url) ? nil : try? url.bookmarkData()
-                    let t = try engine.transcribe(url, name: name, progress: progress)
+                    let t =
+                        try diarizer.map { file in
+                            try Speakers.with(file) {
+                                try engine.transcribe(url, name: name, diar: $0, progress: progress)
+                            }
+                        } ?? engine.transcribe(url, name: name, diar: nil, progress: progress)
                     if t.complete {
                         let item = RecentItem(
                             id: id, path: url.path, name: name, duration: t.duration,
@@ -307,6 +345,7 @@ final class Transcriber {
                 }.value
                 if let moved { self.url = moved }
                 transcript = t
+                stretches = t.stretches
                 done = t.complete ? 1 : done
                 step = t.complete ? .done : .stopped
                 if t.complete { ran() }

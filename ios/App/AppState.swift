@@ -40,6 +40,12 @@ final class AppState {
     var toast: String?
     /// the toast says something went wrong: its alert in the check's place
     var toastErr = false
+    /// an edit of the speakers that Undo takes back, and what its toast says
+    var undo: (text: String, before: Speakers.Before)?
+    /// the speaker Rename is up for
+    var renaming: Int?
+    /// the speaker model's download, asked about
+    var askSpeakers = false
     var about = false
     var managing = false
     /// a file to pick: a recording, a model file, or the recording of the
@@ -65,8 +71,10 @@ final class AppState {
         #if DEBUG
             if pretendSetup { return true }
         #endif
-        return !Models.shared.ready || Downloads.shared.state != nil || Models.shared.copying != nil
-            || Transcriber.shared.preparing
+        // the speaker model's download is the work screen's (Downloads.speakers)
+        return !Models.shared.ready
+            || (Downloads.shared.state != nil && !Downloads.shared.speakers)
+            || Models.shared.copying != nil || Transcriber.shared.preparing
     }
 
     #if DEBUG
@@ -127,6 +135,9 @@ final class AppState {
 
     /// The transcript let go, its search and its player with it.
     func leave(keeping url: URL? = nil) {
+        // an edit's Undo is the transcript's that goes
+        undo = nil
+        renaming = nil
         Player.shared.release()
         finder.clear()
         Transcriber.shared.clear()
@@ -154,10 +165,77 @@ final class AppState {
         }
     }
 
+    /// An edit of the speakers done, said in a toast whose Undo takes it
+    /// back, for 6 s, as Android's.
+    func offerUndo(_ text: String, _ before: Speakers.Before) {
+        undo = (text, before)
+        Task {
+            try? await Task.sleep(for: .seconds(6))
+            if undo?.text == text { undo = nil }
+        }
+    }
+
+    /// Whether the formats name the speakers: the switch on and a voice or
+    /// more found. format.rs leaves a lone one out of the text, as the screen
+    /// does, and the JSON keeps it.
+    private var spoken: Bool {
+        Speakers.shared.on && !Speakers.present(Transcriber.shared.segments).isEmpty
+    }
+
+    /// The switch (app.js, the switch's click): on, the first time it asks
+    /// to download the speaker model, and for a transcript from before finds
+    /// its speakers, which takes seconds, not a transcription again; tapped
+    /// again, the names go from the screen and the formats, kept for when it
+    /// is on again. On with none found yet, it finds them; while their
+    /// model's download has failed, it tries again.
+    func toggleSpeakers() {
+        let t = Transcriber.shared
+        let spk = Speakers.shared
+        guard t.step == .done || t.step == .stopped, !spk.finding else { return }
+        if Downloads.shared.speakers {
+            if Downloads.shared.state?.step == .failed { Downloads.shared.retry() }
+            return
+        }
+        let none = Speakers.present(t.segments).isEmpty
+        let on = !spk.on || none
+        if on && spk.offer?.have == false {
+            askSpeakers = true
+            return
+        }
+        spk.set(on)
+        if on && none { spk.find { self.say($0, err: true) } }
+    }
+
+    /// A turn given to a speaker in Who's speaking, a new one where fresh;
+    /// its toast's Undo.
+    func moveSpeaker(_ u: Speakers.Turn, to: Int, fresh: Bool) {
+        guard let before = Speakers.shared.move(u, to: to, fresh: fresh) else { return }
+        let name = Speakers.nameOf(Transcriber.shared.names, to)
+        offerUndo(L("speakers_moved", name), before)
+    }
+
+    /// Rename's name for speaker n: where it is another's, the two join, and
+    /// Undo parts them.
+    func renameSpeaker(_ n: Int, _ v: String) {
+        guard let (other, before) = Speakers.shared.rename(n, v), let other else { return }
+        offerUndo(L("speakers_joined", Speakers.nameOf(Transcriber.shared.names, other)), before)
+    }
+
+    /// What the speakers' work says at the screen's foot while it goes on
+    /// (app.js's toasts): their model's download and how far it has got, or
+    /// why it failed. Finding them says so in the strip (Work, the ring).
+    var speakersNote: String? {
+        guard Downloads.shared.speakers, let d = Downloads.shared.state else { return nil }
+        if d.step == .failed, let p = d.problem { return p.localizedDescription }
+        return L("speakers_downloading", percent(Double(d.got) / Double(max(d.total, 1))))
+    }
+
     /// The transcript as text on the clipboard, as the desktop's Copy.
     func copy() {
         guard let t = Transcriber.shared.transcript else { return }
-        if let text = try? Core.format(t, ext: "txt", name: Transcriber.shared.name, times: false) {
+        if let text = try? Core.format(
+            t, ext: "txt", name: Transcriber.shared.name, times: false, speakers: spoken)
+        {
             UIPasteboard.general.string = text
             say(L("copied"))
         }
@@ -169,7 +247,7 @@ final class AppState {
     func file(_ ext: String) -> URL? {
         let t = Transcriber.shared
         guard let tr = t.transcript,
-            let text = try? Core.format(tr, ext: ext, name: t.name, times: times)
+            let text = try? Core.format(tr, ext: ext, name: t.name, times: times, speakers: spoken)
         else { return nil }
         let stem = (t.name as NSString).deletingPathExtension
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(

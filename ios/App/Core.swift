@@ -42,22 +42,72 @@ struct Word: Codable, Hashable {
     let text: String
 }
 
-/// A sentence, or 20 s of one (transcribe.rs), with its words.
+/// A sentence, or 20 s of one (transcribe.rs), with its words; with
+/// speakers, whose it is, numbered from 1 by first word (Speakers), left
+/// out of the JSON without them.
 struct Segment: Codable, Hashable {
     let start: Double
     let end: Double
     let text: String
     let words: [Word]
+    var speaker: Int? = nil
+
+    /// The same sentence, said by speaker.
+    func by(_ speaker: Int?) -> Segment {
+        Segment(start: start, end: end, text: text, words: words, speaker: speaker)
+    }
+}
+
+/// A stretch of one speaker's speech, in seconds, for the speaker bar:
+/// they overlap where two talk (transcribe.rs, Stretch).
+struct Stretch: Codable, Hashable {
+    let start: Double
+    let end: Double
+    let speaker: Int
 }
 
 /// What a transcription gives: the core's Transcript, which format() takes
-/// back as it is.
+/// back as it is. With speakers, the names given in place of Speaker n,
+/// speaker n's at n - 1 ("" keeps Speaker n), each speaker's stretches for
+/// the bar, and the diarizer that found them, each left out of the JSON
+/// without them, as ios.rs's are.
 struct Transcript: Codable {
     let duration: Double
     /// false where stop() ended it before the end
     let complete: Bool
     let model: String
-    let segments: [Segment]
+    var segments: [Segment]
+    var names: [String] = []
+    var stretches: [Stretch] = []
+    var diarizer = ""
+}
+
+extension Transcript {
+    private enum Keys: String, CodingKey {
+        case duration, complete, model, segments, names, stretches, diarizer
+    }
+
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: Keys.self)
+        duration = try c.decode(Double.self, forKey: .duration)
+        complete = try c.decode(Bool.self, forKey: .complete)
+        model = try c.decode(String.self, forKey: .model)
+        segments = try c.decode([Segment].self, forKey: .segments)
+        names = try c.decodeIfPresent([String].self, forKey: .names) ?? []
+        stretches = try c.decodeIfPresent([Stretch].self, forKey: .stretches) ?? []
+        diarizer = try c.decodeIfPresent(String.self, forKey: .diarizer) ?? ""
+    }
+
+    func encode(to e: Encoder) throws {
+        var c = e.container(keyedBy: Keys.self)
+        try c.encode(duration, forKey: .duration)
+        try c.encode(complete, forKey: .complete)
+        try c.encode(model, forKey: .model)
+        try c.encode(segments, forKey: .segments)
+        if !names.isEmpty { try c.encode(names, forKey: .names) }
+        if !stretches.isEmpty { try c.encode(stretches, forKey: .stretches) }
+        if !diarizer.isEmpty { try c.encode(diarizer, forKey: .diarizer) }
+    }
 }
 
 enum Core {
@@ -131,13 +181,47 @@ enum Core {
     /// waiting, and its refusals.
     static func delete(_ name: String) { pkapp_delete(Store.models.path, name) }
 
-    /// transcript as a file of the kind ext names: txt, md, srt, vtt, json.
-    static func format(_ transcript: Transcript, ext: String, name: String, times: Bool) throws
-        -> String
-    {
+    /// transcript as a file of the kind ext names: txt, md, srt, vtt, json;
+    /// with speakers, each turn's name, where the switch shows them.
+    static func format(
+        _ transcript: Transcript, ext: String, name: String, times: Bool, speakers: Bool
+    ) throws -> String {
         struct Text: Decodable { let text: String }
         let json = String(decoding: try JSONEncoder().encode(transcript), as: UTF8.self)
-        return try take(pkapp_format(json, ext, name, times), as: Text.self).text
+        return try take(pkapp_format(json, ext, name, times, speakers), as: Text.self).text
+    }
+
+    /// The speaker model this build offers, as the models folder has it;
+    /// nil where it offers none (ios.rs, pkapp_diarizer).
+    static func diarizer() throws -> Speakers.Offer? {
+        struct Answer: Decodable { let offer: Speakers.Offer? }
+        return try take(pkapp_diarizer(Store.models.path), as: Answer.self).offer
+    }
+
+    /// The speaker model's file that URLSession brought, at got, checked
+    /// and put in place, as land puts a model's.
+    static func landDiarizer(got: URL) throws -> URL {
+        struct Landed: Decodable { let path: String }
+        do {
+            let l = try take(pkapp_land_diarizer(Store.models.path, got.path), as: Landed.self)
+            return URL(fileURLWithPath: l.path)
+        } catch let e as CoreError {
+            guard let key = e.key else { throw e }
+            throw DownloadProblem(key: key, detail: e.detail)
+        }
+    }
+
+    /// The speaker model's files deleted, or with part what a download of
+    /// it kept. Nothing may have it loaded (Speakers.with).
+    static func deleteDiarizer(part: Bool) throws {
+        _ = try take(pkapp_delete_diarizer(Store.models.path, part), as: Nothing.self)
+    }
+
+    /// A kept transcript's speakers as transcript has them now, found or
+    /// changed on the screen (recent.rs, replace). Off the main thread.
+    static func keepSpeakers(_ id: String, _ transcript: Transcript) throws {
+        let json = String(decoding: try JSONEncoder().encode(transcript), as: UTF8.self)
+        _ = try take(pkapp_keep_speakers(Recents.data.path, id, json), as: Nothing.self)
     }
 
     /// What a model file the core refused for why means, as the strings'
@@ -208,13 +292,16 @@ final class Engine: @unchecked Sendable {
     }
 
     /// The recording at file read and transcribed, as pktito transcribes
-    /// one on every platform.
-    func transcribe(_ file: URL, name: String, progress: Progress) throws -> Transcript {
+    /// one on every platform; with diar, who said what too, heard in the
+    /// same pass.
+    func transcribe(_ file: URL, name: String, diar: Diarizer?, progress: Progress) throws
+        -> Transcript
+    {
         let ctx = Unmanaged.passRetained(progress)
         defer { ctx.release() }
         let answer = file.withUnsafeFileSystemRepresentation { path in
             pkapp_transcribe(
-                handle, path, name, ctx.toOpaque(),
+                handle, diar?.handle ?? 0, path, name, ctx.toOpaque(),
                 { ctx, seconds, fps, peaks, n in
                     let p = Unmanaged<Progress>.fromOpaque(ctx!).takeUnretainedValue()
                     p.heard(
@@ -235,4 +322,54 @@ final class Engine: @unchecked Sendable {
 
     /// The transcription running ends before its next chunk.
     static func stop() { pkapp_stop() }
+}
+
+/// The speaker model loaded, and a diarizer for it, for one transcription
+/// or one find at a time (Speakers.with): loading its 100 MB takes a moment
+/// beside a transcription's seconds, and the phone keeps none of it between
+/// them.
+final class Diarizer: @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    init(file: URL) throws {
+        struct Loaded: Decodable { let handle: UInt64 }
+        handle = try file.withUnsafeFileSystemRepresentation {
+            try take(pkapp_load_diarizer($0), as: Loaded.self)
+        }.handle
+    }
+
+    deinit { pkapp_free_diarizer(handle) }
+
+    /// What a find hears as it goes, on its thread: the fraction of the
+    /// recording heard, and the bar's stretches ended since the last and
+    /// those going.
+    final class Heard: @unchecked Sendable {
+        var done: (Double, [Stretch], [Stretch]) -> Void = { _, _, _ in }
+    }
+
+    /// Who said what in transcript, a finished one, from its recording at
+    /// file, without transcribing it again (transcribe.rs, find): the
+    /// transcript with its speakers and no names yet. Seconds where a
+    /// transcription takes a minute.
+    func find(_ file: URL, name: String, transcript: Transcript, heard: Heard) throws
+        -> Transcript
+    {
+        struct Bar: Decodable {
+            let closed: [Stretch]
+            let open: [Stretch]
+        }
+        let json = String(decoding: try JSONEncoder().encode(transcript), as: UTF8.self)
+        let ctx = Unmanaged.passRetained(heard)
+        defer { ctx.release() }
+        let answer = file.withUnsafeFileSystemRepresentation { path in
+            pkapp_find_speakers(handle, path, name, json, ctx.toOpaque()) { ctx, done, bar in
+                let h = Unmanaged<Heard>.fromOpaque(ctx!).takeUnretainedValue()
+                let b = bar.flatMap {
+                    try? JSONDecoder().decode(Bar.self, from: Data(bytes: $0, count: strlen($0)))
+                }
+                h.done(done, b?.closed ?? [], b?.open ?? [])
+            }
+        }
+        return try take(answer, as: Transcript.self)
+    }
 }

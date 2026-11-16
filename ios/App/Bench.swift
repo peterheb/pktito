@@ -126,7 +126,7 @@
             let name = url.lastPathComponent
             do {
                 let t = try await Task.detached(priority: .userInitiated) {
-                    try engine.transcribe(url, name: name, progress: progress)
+                    try engine.transcribe(url, name: name, diar: nil, progress: progress)
                 }.value
                 let took = Date().timeIntervalSince(t0)
                 text = t.segments.map(\.text).joined(separator: "\n")

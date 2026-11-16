@@ -13,6 +13,8 @@ struct Root: View {
     @State private var picked = AppState.Pick.media
     /// the window's height as if the keyboard weren't up
     @State private var tall: CGFloat = 0
+    /// the name Rename's field holds while it is up
+    @State private var renamed = ""
 
     /// What the player loads anew for.
     private struct Playing: Equatable {
@@ -49,12 +51,23 @@ struct Root: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                // over Manage models while it is up, which has it too
-                if !s.managing, let toast = s.toast {
-                    Toast(text: toast, err: s.toastErr)
+                // over Manage models while it is up, which has it too: an
+                // edit's Undo first, then what was said, then the speaker
+                // model's download as it goes
+                if !s.managing {
+                    if let u = s.undo {
+                        UndoToast(text: u.text) {
+                            s.undo = nil
+                            Speakers.shared.undo(u.before)
+                        }
                         .padding(.horizontal, 16)
                         .padding(.bottom, 24)
-                        .allowsHitTesting(false)
+                    } else if let toast = s.toast ?? s.speakersNote {
+                        Toast(text: toast, err: s.toast != nil && s.toastErr)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 24)
+                            .allowsHitTesting(false)
+                    }
                 }
             }
         }
@@ -86,6 +99,58 @@ struct Root: View {
         .sheet(isPresented: Binding(get: { s.managing }, set: { s.managing = $0 })) {
             Manage().presentationBackground(Pk.ground)
         }
+        // Rename, from Who's speaking, in iOS's own question, which says so
+        // where the name typed is another speaker's (joins). Where the
+        // desktop's and Android's field opens with the name selected, so that
+        // typing replaces it, an alert's can't select: a speaker still
+        // "Speaker 2" starts empty, and a name given before is there to put
+        // right
+        .alert(
+            L("speakers_rename_title", s.renaming.map { Speakers.nameOf(t.names, $0) } ?? ""),
+            isPresented: Binding(get: { s.renaming != nil }, set: { if !$0 { s.renaming = nil } })
+        ) {
+            TextField(L("speakers_name"), text: $renamed)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+                .submitLabel(.done)
+            Button(L("ask_cancel"), role: .cancel) { s.renaming = nil }
+            Button(L("speakers_rename_do")) {
+                if let n = s.renaming { s.renameSpeaker(n, renamed) }
+                s.renaming = nil
+            }
+        } message: {
+            if let n = s.renaming, let other = Speakers.joinee(t.segments, t.names, n, renamed) {
+                Text(L("speakers_joins", Speakers.nameOf(t.names, other)))
+            }
+        }
+        .onChange(of: s.renaming) { _, n in
+            if let n { renamed = n <= t.names.count ? t.names[n - 1] : "" }
+        }
+        // the speaker model, asked for the first time the switch is turned on
+        .alert(
+            L("speakers_ask_title"),
+            isPresented: Binding(get: { s.askSpeakers }, set: { s.askSpeakers = $0 })
+        ) {
+            Button(L("ask_cancel"), role: .cancel) {}
+            Button(L("speakers_download")) {
+                Speakers.shared.set(true)
+                Downloads.shared.startSpeakers()
+            }
+        } message: {
+            Text(
+                L(
+                    "speakers_ask_about", mb(Speakers.shared.offer?.bytes ?? 0), Speakers.most))
+        }
+        // the speaker model downloaded for the switch: the speakers of the
+        // transcript shown found, where it has none (app.js, diarizerDownload)
+        .onChange(of: Speakers.shared.offer?.have == true) { had, has in
+            let review = t.step == .done || t.step == .stopped
+            if has && !had && Speakers.shared.on && review
+                && Speakers.present(t.segments).isEmpty
+            {
+                Speakers.shared.find { s.say($0, err: true) }
+            }
+        }
         // the finished transcript's recording, ready to play; another's let
         // go. Where it can't be played, the strip says why in its times'
         // place, and Locate… finds it again
@@ -113,6 +178,7 @@ struct Root: View {
         // screen says
         .task {
             await Models.shared.start()
+            Speakers.shared.load()
             Downloads.shared.resumeAfterLaunch()
             Transcriber.shared.prepareIfNew()
             #if DEBUG
@@ -135,8 +201,13 @@ struct Root: View {
         /// -pauseAfter S pauses it S seconds on, and -resumeAfter S goes on S
         /// seconds after that; -pretend setup, download, checking, paused,
         /// failed, preparing, loading, transcribing, error or toast shows that
-        /// state, with nothing downloaded or transcribed. (A default's own -key
-        /// value, as -times YES, sets it for the run.)
+        /// state, with nothing downloaded or transcribed. With speakers
+        /// (-speakers YES turns the switch on for the run): -findSpeakers finds
+        /// those of the transcript opened; -who N finds speaker N; -moveRow I N
+        /// gives sentence I to speaker N, as Change speaker does; -rename N
+        /// asks to rename speaker N; -askSpeakers asks to download their
+        /// model. (A default's own -key value, as -times YES, sets it for the
+        /// run.)
         private func debugArguments() {
             let args = CommandLine.arguments
             let s = AppState.shared
@@ -208,6 +279,35 @@ struct Root: View {
                     }
                 }
             }
+            // the speakers' steps, once the transcript opened is on the screen
+            let who = value("-who").flatMap(Int.init)
+            let move = value("-moveRow").flatMap(Int.init)
+            let to = args.firstIndex(of: "-moveRow").flatMap {
+                $0 + 2 < args.count ? Int(args[$0 + 2]) : nil
+            }
+            let rename = value("-rename").flatMap(Int.init)
+            if args.contains("-findSpeakers") || who != nil || move != nil || rename != nil {
+                Task {
+                    try? await Task.sleep(for: .seconds(1))
+                    if args.contains("-findSpeakers") {
+                        Speakers.shared.find { s.say($0, err: true) }
+                        while Speakers.shared.finding {
+                            try? await Task.sleep(for: .milliseconds(100))
+                        }
+                    }
+                    let t = Transcriber.shared
+                    if let who { s.finder.findWho(who) }
+                    if let move, let to, move < t.segments.count, let n = t.segments[move].speaker {
+                        let seg = t.segments[move]
+                        s.moveSpeaker(
+                            Speakers.Turn(
+                                from: move, to: move, speaker: n, start: seg.start, end: seg.end),
+                            to: to, fresh: !Speakers.present(t.segments).contains(to))
+                    }
+                    if let rename { s.renaming = rename }
+                }
+            }
+            if args.contains("-askSpeakers") { s.askSpeakers = true }
             switch value("-show") {
             case "about": s.about = true
             case "manage": s.managing = true

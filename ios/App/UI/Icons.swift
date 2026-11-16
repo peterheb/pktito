@@ -40,6 +40,9 @@ struct PkIcon: View {
         "M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z", "M12 8v4", "M12 16h0.01",
     ])
     static let x = PkIcon(paths: ["M18 6L6 18", "M6 6L18 18"])
+    static let info = PkIcon(paths: [
+        "M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z", "M12 16v-4", "M12 8h0.01",
+    ])
     static let file = PkIcon(paths: [
         "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z", "M14 2L14 8L20 8",
         "M16 13H8", "M16 17H8",

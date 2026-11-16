@@ -233,6 +233,55 @@ struct Manage: View {
                     s.deleted(m.deleteOwn())
                 })
         }
+        // the speaker model, last, counted in the total with the models
+        // (Peter, 2026-11-14): downloaded, coming, or what a download of it
+        // kept, its Delete dimmed while a transcription with speakers or a
+        // find has it (Speakers.with)
+        if let o = Speakers.shared.offer {
+            let title = L("manage_speakers")
+            let dl = d?.name == o.name ? d : nil
+            let held = Speakers.shared.finding || (t.running && t.diarizing)
+            let kept = Downloads.shared.kept(o)
+            if o.have {
+                out.append(
+                    Kept(
+                        id: "have:" + o.name, title: title,
+                        note: o.name + dot + L("manage_size", mb(o.bytes)), bytes: o.bytes,
+                        act: L("manage_delete"), enabled: !held,
+                        ask: (
+                            L("manage_ask_speakers_title"),
+                            L("manage_ask_speakers_text", mb(o.bytes))
+                        )
+                    ) { s.deleted(Speakers.shared.delete(part: false)) })
+            } else if let dl, dl.going {
+                out.append(
+                    Kept(
+                        id: "part:" + o.name, title: title,
+                        note: L("manage_downloading", mb(dl.got), mb(dl.total)),
+                        bytes: dl.got, act: L("stop"), ask: nil
+                    ) {
+                        Downloads.shared.cancel()
+                        s.deleted(nil)
+                    })
+            } else if dl != nil || kept > 0 {
+                let got = dl?.got ?? kept
+                out.append(
+                    Kept(
+                        id: "part:" + o.name, title: title,
+                        note: L("manage_paused", mb(got), mb(o.bytes)),
+                        bytes: got, act: L("manage_delete"),
+                        ask: (
+                            L("manage_ask_part_title"), L("manage_ask_speakers_part_text", mb(got))
+                        )
+                    ) {
+                        if dl != nil {
+                            Downloads.shared.cancel()
+                        } else {
+                            s.deleted(Speakers.shared.delete(part: true))
+                        }
+                    })
+            }
+        }
         return out
     }
 

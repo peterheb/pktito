@@ -21,19 +21,26 @@ struct RecentItem: Codable, Identifiable, Hashable {
 }
 
 /// A transcript of the list opened again: its item, its loudness and its
-/// segments (recent.rs, Transcript).
+/// segments, and with speakers their names, stretches and the diarizer
+/// that found them (recent.rs, Transcript).
 struct RecentTranscript: Decodable {
     let item: RecentItem
     let peaks: [UInt8]
     let segments: [Segment]
+    let names: [String]
+    let stretches: [Stretch]
+    let diarizer: String
 
-    enum Keys: String, CodingKey { case peaks, segments }
+    enum Keys: String, CodingKey { case peaks, segments, names, stretches, diarizer }
 
     init(from d: Decoder) throws {
         item = try RecentItem(from: d)
         let c = try d.container(keyedBy: Keys.self)
         peaks = try c.decode([UInt8].self, forKey: .peaks)
         segments = try c.decode([Segment].self, forKey: .segments)
+        names = try c.decodeIfPresent([String].self, forKey: .names) ?? []
+        stretches = try c.decodeIfPresent([Stretch].self, forKey: .stretches) ?? []
+        diarizer = try c.decodeIfPresent(String.self, forKey: .diarizer) ?? ""
     }
 }
 

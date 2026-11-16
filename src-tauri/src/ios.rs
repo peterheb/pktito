@@ -38,6 +38,42 @@ struct Transcript {
     complete: bool,
     model: String,
     segments: Vec<transcribe::Segment>,
+    /// With speakers: the names given in place of Speaker N, by number from
+    /// 1 ("" keeps Speaker N), and each speaker's stretches for the bar.
+    /// Left out without them, so a transcript without speakers is the JSON
+    /// it was.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    names: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    stretches: Vec<transcribe::Stretch>,
+    /// And the diarizer that found them, its model's name, for the JSON.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    diarizer: String,
+}
+
+impl Transcript {
+    /// What format.rs takes of it, named name: with its speakers where the
+    /// switch shows them (speakers), as android.rs's has it.
+    fn formatted<'t>(&'t self, name: &'t str, speakers: bool) -> format::Transcript<'t> {
+        format::Transcript {
+            name,
+            duration: self.duration,
+            model: Some(&self.model),
+            segments: &self.segments,
+            names: speakers.then_some(&self.names[..]),
+            diarizer: Some(self.diarizer.as_str()).filter(|d| !d.is_empty()),
+            name_lone: false,
+        }
+    }
+}
+
+/// What pkapp_load_diarizer's handle stands for: the diarizer's model and a
+/// diarizer for it, for pkapp_transcribe and pkapp_find_speakers; Swift's
+/// Speakers loads it for each and lets it go after, one at a time.
+struct DiarLoaded {
+    // declared first, so dropped first: it reads the model
+    diar: pktito::Diar,
+    model: pktito::Model,
 }
 
 /// pkapp_stop's word to the transcription running, read before each chunk.
@@ -309,13 +345,17 @@ pub extern "C" fn pkapp_use_ane(handle: u64, path: *const c_char) -> *mut c_char
 }
 
 /// The recording at path (name: what to call it in an error), read and
-/// transcribed, as a Transcript's JSON. Once it is read, audio(ctx, seconds,
-/// a video's frame rate or 0, the loudness in audio::PEAKS slices, their
-/// count) draws the strip; update(ctx, fraction, the segments just done, in
-/// JSON) after each chunk. All on this thread.
+/// transcribed, as a Transcript's JSON; with diar, a pkapp_load_diarizer
+/// handle (0 for none), who said what too, fed ahead in the same pass
+/// (transcribe::Speakers), each segment one speaker's, with the speakers'
+/// stretches. Once it is read, audio(ctx, seconds, a video's frame rate or
+/// 0, the loudness in audio::PEAKS slices, their count) draws the strip;
+/// update(ctx, fraction, the segments just done, in JSON) after each chunk.
+/// All on this thread.
 #[unsafe(no_mangle)]
 pub extern "C" fn pkapp_transcribe(
     handle: u64,
+    diar: u64,
     path: *const c_char,
     name: *const c_char,
     ctx: *mut c_void,
@@ -326,6 +366,12 @@ pub extern "C" fn pkapp_transcribe(
     let name = arg(name);
     answer(|| {
         let l = unsafe { &mut *(handle as usize as *mut Loaded) };
+        let mut d = (diar != 0).then(|| unsafe { &mut *(diar as usize as *mut DiarLoaded) });
+        // the diarizer's model's name, which the JSON names
+        let heard_by = d.as_ref().map(|d| d.model.name()).unwrap_or_default();
+        let mut speakers = d
+            .as_mut()
+            .map(|d| transcribe::Speakers::new(&d.model, &mut d.diar));
         STOP.store(false, Ordering::Relaxed);
         let fps = decode::frame_rate(&path).unwrap_or(0.0);
         // a file that can't be read: its words' key and what said so, for
@@ -349,7 +395,7 @@ pub extern "C" fn pkapp_transcribe(
             &l.model,
             &mut l.asr,
             &x,
-            None,
+            speakers.as_mut(),
             |done, segs| {
                 let segs = CString::new(
                     serde_json::to_string(segs)
@@ -361,11 +407,20 @@ pub extern "C" fn pkapp_transcribe(
             },
             || STOP.load(Ordering::Relaxed),
         )?;
+        // the diarizer, where it found speakers: not where the switch went
+        // off before the end
+        let diarizer = match segments.iter().any(|s| s.speaker.is_some()) {
+            true => heard_by,
+            false => String::new(),
+        };
         let t = Transcript {
             duration,
             complete,
             model: l.model.name(),
             segments,
+            names: Vec::new(),
+            stretches: speakers.map(|s| s.stretches).unwrap_or_default(),
+            diarizer,
         };
         serde_json::to_value(&t).map_err(|e| e.to_string())
     })
@@ -383,31 +438,184 @@ fn parse(transcript: *const c_char) -> Result<Transcript, String> {
 
 /// A Transcript's JSON as a file of the kind ext names (txt, md, srt, vtt,
 /// json), the desktop's; times puts each sentence's time before it in txt
-/// and md. {"text"}.
+/// and md, and speakers each turn's name, where the switch shows them.
+/// {"text"}.
 #[unsafe(no_mangle)]
 pub extern "C" fn pkapp_format(
     transcript: *const c_char,
     ext: *const c_char,
     name: *const c_char,
     times: bool,
+    speakers: bool,
 ) -> *mut c_char {
     let (ext, name) = (arg(ext), arg(name));
     answer(|| {
         let t = parse(transcript)?;
-        let text = format::text(
-            &format::Transcript {
-                name: &name,
-                duration: t.duration,
-                model: Some(&t.model),
-                segments: &t.segments,
-                names: None,
-                diarizer: None,
-                name_lone: false,
-            },
-            &ext,
-            times,
-        )?;
+        let text = format::text(&t.formatted(&name, speakers), &ext, times)?;
         Ok(json!({ "text": text }))
+    })
+}
+
+/// The diarizer the app offers (model::DIARIZER), for the speakers'
+/// switch, Manage models and URLSession: {"offer": {name, license, file,
+/// bytes, url, kept: what a download that stopped kept of it, have: whether
+/// it is in dir, the models folder}}, or {"offer": null} where this build
+/// offers none.
+#[unsafe(no_mangle)]
+pub extern "C" fn pkapp_diarizer(dir: *const c_char) -> *mut c_char {
+    let dir = PathBuf::from(arg(dir));
+    answer(|| {
+        let offer = model::DIARIZER.map(|d| {
+            let w = model::Wanted::diarizer(&dir, &d);
+            json!({
+                "name": d.name,
+                "license": d.license,
+                "file": d.model.file,
+                "bytes": d.model.bytes,
+                "url": w.url,
+                "kept": w.partial(),
+                "have": w.here(),
+            })
+        });
+        Ok(json!({ "offer": offer }))
+    })
+}
+
+/// The speaker model's file that URLSession brought, at got: checked against
+/// the catalog's SHA-256 and put in place in dir (model::land), as
+/// pkapp_land puts a model's. {"path"}, or {"error", "key", "detail"}.
+#[unsafe(no_mangle)]
+pub extern "C" fn pkapp_land_diarizer(dir: *const c_char, got: *const c_char) -> *mut c_char {
+    let (dir, got) = (PathBuf::from(arg(dir)), arg(got));
+    answer(|| {
+        let d = model::DIARIZER.ok_or("this build offers no speaker model")?;
+        Ok(
+            match model::land(&model::Wanted::diarizer(&dir, &d), Path::new(&got)) {
+                Ok(path) => json!({ "path": path }),
+                Err(p) => json!({ "error": p.line(), "key": p.key, "detail": p.detail }),
+            },
+        )
+    })
+}
+
+/// The speaker model's files in dir deleted for Manage models
+/// (model::delete_diarizer): the model and what a download of it kept, or
+/// with part what the download kept alone. Nothing may have it loaded.
+/// {} or {"error"}.
+#[unsafe(no_mangle)]
+pub extern "C" fn pkapp_delete_diarizer(dir: *const c_char, part: bool) -> *mut c_char {
+    let dir = PathBuf::from(arg(dir));
+    answer(|| {
+        if let Some(d) = model::DIARIZER {
+            model::delete_diarizer(&dir, &d, part)?;
+        }
+        Ok(json!({}))
+    })
+}
+
+/// The diarizer's model at path and a diarizer for it, on one thread a
+/// core, as the transcriber's: {"handle"}, for pkapp_transcribe and
+/// pkapp_find_speakers, let go with pkapp_free_diarizer.
+#[unsafe(no_mangle)]
+pub extern "C" fn pkapp_load_diarizer(path: *const c_char) -> *mut c_char {
+    let path = arg(path);
+    answer(|| {
+        let model = pktito::Model::load(Path::new(&path))?;
+        let diar = pktito::Diar::new(&model, transcribe::threads_wanted())?;
+        let handle = Box::into_raw(Box::new(DiarLoaded { diar, model })) as usize as u64;
+        Ok(json!({ "handle": handle }))
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn pkapp_free_diarizer(handle: u64) {
+    if handle != 0 {
+        drop(unsafe { Box::from_raw(handle as usize as *mut DiarLoaded) });
+    }
+}
+
+/// Who said what in a finished transcript (a Transcript's JSON), from its
+/// recording at path, without transcribing it again (transcribe::find): the
+/// transcript with each segment one speaker's, its speakers' stretches and
+/// no names yet. done(ctx, fraction of the recording heard, the bar so far)
+/// a whole percent at a time, on this thread: the bar's JSON is the
+/// stretches ended since the last ("closed") and those going ("open"), as
+/// transcribe::SoFar has them. A recording that can't be read answers as
+/// pkapp_transcribe's does.
+#[unsafe(no_mangle)]
+pub extern "C" fn pkapp_find_speakers(
+    diar: u64,
+    path: *const c_char,
+    name: *const c_char,
+    transcript: *const c_char,
+    ctx: *mut c_void,
+    done_fn: extern "C" fn(*mut c_void, f64, *const c_char),
+) -> *mut c_char {
+    let path = PathBuf::from(arg(path));
+    let name = arg(name);
+    answer(|| {
+        let d = unsafe { &mut *(diar as usize as *mut DiarLoaded) };
+        let heard_by = d.model.name();
+        let mut t = parse(transcript)?;
+        let x = match decode::decode(&path) {
+            Ok(x) => x,
+            Err(e) => {
+                let p = e.problem();
+                let line = if name.is_empty() {
+                    p.line()
+                } else {
+                    format!("{name}: {}", p.line())
+                };
+                return Ok(json!({ "error": line, "key": p.key, "detail": p.detail }));
+            }
+        };
+        let segments = std::mem::take(&mut t.segments);
+        let (mut shown, mut sent) = (0, 0);
+        let tell = |done: f64, bar: &transcribe::SoFar| {
+            let pct = (done * 100.0) as u32;
+            if pct <= shown {
+                return;
+            }
+            shown = pct;
+            // the bar's stretches ended since the last, and those going, as
+            // the window's find has them (main.rs, Finding)
+            let json = json!({ "closed": &bar.closed[sent..], "open": &bar.open }).to_string();
+            sent = bar.closed.len();
+            let json = CString::new(json.replace('\0', "")).unwrap_or_default();
+            done_fn(ctx, done, json.as_ptr());
+        };
+        let (segments, stretches) = transcribe::find(&d.model, &mut d.diar, &x, segments, tell)?;
+        t.diarizer = match segments.iter().any(|s| s.speaker.is_some()) {
+            true => heard_by,
+            false => String::new(),
+        };
+        t.segments = segments;
+        t.stretches = stretches;
+        t.names = Vec::new();
+        serde_json::to_value(&t).map_err(|e| e.to_string())
+    })
+}
+
+/// A kept transcript's speakers as transcript (a Transcript's JSON) has
+/// them now, found or changed on the screen: its segments, names, stretches
+/// and diarizer in place of the ones it was kept with, as android.rs's
+/// keepSpeakers keeps them. {} or {"error"}.
+#[unsafe(no_mangle)]
+pub extern "C" fn pkapp_keep_speakers(
+    data: *const c_char,
+    id: *const c_char,
+    transcript: *const c_char,
+) -> *mut c_char {
+    let (data, id) = (PathBuf::from(arg(data)), arg(id));
+    answer(|| {
+        let t = parse(transcript)?;
+        let mut k = recent::load(&data, &id).map_err(|p| p.line())?;
+        k.segments = t.segments;
+        k.names = t.names;
+        k.stretches = t.stretches;
+        k.diarizer = t.diarizer;
+        recent::replace(&data, &k).map_err(|p| p.line())?;
+        Ok(json!({}))
     })
 }
 
@@ -455,9 +663,9 @@ pub unsafe extern "C" fn pkapp_keep(
                 item,
                 peaks,
                 segments: t.segments,
-                names: Vec::new(),
-                stretches: Vec::new(),
-                diarizer: String::new(),
+                names: t.names,
+                stretches: t.stretches,
+                diarizer: t.diarizer,
             },
         )?;
         Ok(listed(&data))

@@ -299,6 +299,14 @@ final class Downloads {
 
     var running: Bool { work != nil }
 
+    /// Whether the download shown is the speaker model's (Speakers): the
+    /// work screen shows how far it has got, not the setup screen, and the
+    /// model in use stays in use.
+    var speakers: Bool {
+        guard let s = state, let o = Speakers.shared.offer else { return false }
+        return s.name == o.name
+    }
+
     #if DEBUG
         /// A download's state as it would be, for the simulator's screenshots
         /// (Root, -pretend): no bytes move.
@@ -310,6 +318,29 @@ final class Downloads {
     func kept(_ v: ModelView) -> Int64 {
         if state?.name == v.name, let s = state { return s.got }
         return (v.offer?.parts ?? []).reduce(Int64(0)) { $0 + Downloader.shared.kept($1) }
+    }
+
+    /// The bytes a stopped download of the speaker model kept.
+    func kept(_ o: Speakers.Offer) -> Int64 {
+        if state?.name == o.name, let s = state { return s.got }
+        return Downloader.shared.kept(o.part)
+    }
+
+    /// The speaker model downloaded (Speakers.offer), or its download gone
+    /// on with from what it kept, for the switch: the work screen says how
+    /// far it has got, and once it is here the speakers of the transcript
+    /// shown are found (Root). One waiting to try again tries now.
+    func startSpeakers() {
+        if running {
+            wait?.cancel()
+            return
+        }
+        guard let o = Speakers.shared.offer, !o.have else { return }
+        pausing = false
+        UserDefaults.standard.set(o.name, forKey: "downloading")
+        UserDefaults.standard.set(false, forKey: "downloadPaused")
+        state = DownloadState(name: o.name, step: .downloading, got: kept(o), total: o.bytes)
+        work = Task { await run(o.name, first: false) }
     }
 
     /// o's offer downloaded, or its download gone on with; one waiting to
@@ -332,9 +363,10 @@ final class Downloads {
     func resumeAfterLaunch() {
         let d = UserDefaults.standard
         guard state == nil, !d.bool(forKey: "downloadPaused"),
-            let name = d.string(forKey: "downloading"),
-            let o = Models.shared.offer(name)
+            let name = d.string(forKey: "downloading")
         else { return }
+        if name == Speakers.shared.offer?.name { return startSpeakers() }
+        guard let o = Models.shared.offer(name) else { return }
         if o.entry.offer == nil {
             d.removeObject(forKey: "downloading")
             return
@@ -348,7 +380,9 @@ final class Downloads {
             state?.trying = true
             return
         }
-        if let name = state?.name, let o = Models.shared.offer(name) {
+        if speakers {
+            startSpeakers()
+        } else if let name = state?.name, let o = Models.shared.offer(name) {
             start(o)
         }
     }
@@ -378,8 +412,11 @@ final class Downloads {
             UserDefaults.standard.removeObject(forKey: "downloading")
             UserDefaults.standard.removeObject(forKey: "downloadPaused")
         }
-        guard let o = Models.shared.offer(name) else { return }
-        for p in o.entry.files { Downloader.shared.forget(p.file) }
+        if let o = Speakers.shared.offer, o.name == name {
+            Downloader.shared.forget(o.file)
+        } else if let o = Models.shared.offer(name) {
+            for p in o.entry.files { Downloader.shared.forget(p.file) }
+        }
     }
 
     /// name's offer as the core sees it now, so that a download gone on with
@@ -388,7 +425,9 @@ final class Downloads {
     private func run(_ name: String, first: Bool) async {
         defer { work = nil }
         Models.shared.refresh()
-        let parts = Models.shared.offer(name)?.entry.offer?.parts ?? []
+        // the speaker model, the switch's and not the catalog's (Speakers)
+        let spk = Speakers.shared.offer.flatMap { $0.name == name && !$0.have ? $0 : nil }
+        let parts = spk.map { [$0.part] } ?? Models.shared.offer(name)?.entry.offer?.parts ?? []
         var landed: Set<String> = []
         got = [:]
         for p in parts {
@@ -408,7 +447,9 @@ final class Downloads {
                     defer { time.end() }
                     state?.step = .checking
                     _ = try await Task.detached(priority: .userInitiated) {
-                        try Core.land(name, file: p.file, got: held)
+                        spk != nil
+                            ? try Core.landDiarizer(got: held)
+                            : try Core.land(name, file: p.file, got: held)
                     }.value
                     landed.insert(p.file)
                     got[p.file] = p.bytes
@@ -441,6 +482,13 @@ final class Downloads {
                     delay = min(delay * 2, 30)
                 }
             }
+        }
+        if spk != nil {
+            UserDefaults.standard.removeObject(forKey: "downloading")
+            state = nil
+            Speakers.shared.refresh()
+            Models.shared.news = L("speakers_ready")
+            return
         }
         // a Neural Engine encoder that replaces none unpacked now (v2's 547
         // MB archive in 0.24 s on the M4 Pro, 2026-11-08); one that replaces

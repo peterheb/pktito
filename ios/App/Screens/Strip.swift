@@ -19,6 +19,16 @@ private let tstamp = PkType.stamp.font(13)
 /// A touch screen's strip, as Android's for a finger: play 48 across, no
 /// speaker or slider, as the volume buttons set the level, and a drag on the
 /// waveform moves the playhead with the thumb, seeking where it lets go.
+///
+/// With speakers, the speaker bar over the waveform (Who.swift, SpeakerBar).
+/// The strip is one height with the bar or without (Peter, 2026-11-15:
+/// turning speakers on moved the switch out from under the pointer that had
+/// turned it on): the bar has the lane's top 18, and without it the
+/// waveform reaches up into them, 82 tall to the bar's 64 (74 and 56 with
+/// ticks). Play and the ring keep to the waveform's middle, so they move 9
+/// with it, in the desktop's 0.15 s (app.css, #strip.spk). While the
+/// speakers of a transcript from before are found (heard), the ring in
+/// play's place and the waveform filling, as while it was transcribed.
 struct Strip: View {
     let review: Bool
     /// at work, the time's place: the step, or the pace
@@ -29,7 +39,20 @@ struct Strip: View {
     let tickAt: Int
     let onTick: (Int) -> Void
     let seek: (Double) -> Void
+    /// while the speakers are found, how much of the recording the diarizer
+    /// has heard, 0 to 1
+    var heard: Double? = nil
+    /// the speaker bar, where the speakers show
+    var bar: Bar? = nil
     @State private var scrub: Double?
+
+    /// What the speaker bar draws: the turns, or while the speakers are
+    /// found the stretches heard so far, up to upto seconds.
+    struct Bar {
+        let stretches: [Stretch]
+        let upto: Double
+        let finding: Bool
+    }
     /// the recording still not ready to play, a moment after it was asked for
     @State private var waited = false
 
@@ -39,9 +62,11 @@ struct Strip: View {
         let silent = review && why != nil
         let duration = t.duration
         let ticks = review && duration > 0 ? hits.map { $0.time / duration } : []
-        let wave: CGFloat = ticks.isEmpty ? 64 : 56
+        let lead: CGFloat = bar != nil ? 18 : 0
+        let wave: CGFloat = (ticks.isEmpty ? 64 : 56) + 18 - lead
         let gap: CGFloat = ticks.isEmpty ? 3 : 7
-        let at = scrub ?? (review ? (duration > 0 ? player.position / duration : 0) : t.done)
+        let done = heard ?? t.done
+        let at = scrub ?? (review ? (duration > 0 ? player.position / duration : 0) : done)
         HStack(alignment: .top, spacing: Space.space4) {
             if review && !silent {
                 VStack {
@@ -83,9 +108,9 @@ struct Strip: View {
                     Spacer(minLength: 0)
                     SpeedMenu().disabled(!player.ready).opacity(player.ready ? 1 : 0.45)
                 }
-                .padding(.top, (wave - 48) / 2)
+                .padding(.top, lead + (wave - 48) / 2)
             } else if !review {
-                Ring(done: t.done).padding(.top, (wave - 48) / 2)
+                Ring(done: done).padding(.top, lead + (wave - 48) / 2)
             }
             VStack(spacing: gap) {
                 GeometryReader { g in
@@ -94,6 +119,9 @@ struct Strip: View {
                     }
                     Waveform(peaks: t.peaks, seconds: duration, at: at, height: wave)
                         .opacity(review && !player.ready && !silent ? 0.45 : 1)
+                        // the bar's place, a drag on which moves the playhead
+                        // as one on the waveform does (app.css, #strip.spk)
+                        .padding(.top, lead)
                         .contentShape(Rectangle())
                         .gesture(
                             review
@@ -104,7 +132,19 @@ struct Strip: View {
                                         seek(x(v))
                                     } : nil)
                 }
-                .frame(height: wave)
+                .frame(height: wave + lead)
+                // the bar in the lane's top 10, 8 over the waveform, fading in
+                // and out as the waveform gives its place and takes it back
+                .overlay(alignment: .top) {
+                    if let bar, duration > 0 {
+                        SpeakerBar(
+                            stretches: bar.stretches, duration: duration, upto: bar.upto,
+                            finding: bar.finding
+                        )
+                        .allowsHitTesting(false)
+                        .transition(.opacity)
+                    }
+                }
                 Ticks(ticks: ticks, at: tickAt, onTick: onTick)
                     .frame(height: 18)
                 if let why, silent {
@@ -158,6 +198,7 @@ struct Strip: View {
                 }
             }
         }
+        .animation(.easeInOut(duration: 0.15), value: bar != nil)
         // as tall as its lanes, play's column too, whose speed is then on
         // the times' line (Android's IntrinsicSize.Min)
         .fixedSize(horizontal: false, vertical: true)

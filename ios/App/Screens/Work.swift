@@ -34,12 +34,15 @@ struct Work: View {
     /// the waveform's seeks, each a jump the rows bring into sight (Rows)
     @State private var jumped = 0
 
-    /// What the matches are found anew for.
+    /// What the matches are found anew for: a search, or a speaker found
+    /// and their turns, which a change of speaker moves.
     private struct Sought: Equatable {
         let query: String
+        let who: Int
         let review: Bool
         let id: String
         let count: Int
+        let speakers: [Int?]
     }
 
     var body: some View {
@@ -49,12 +52,29 @@ struct Work: View {
         let rows = t.segments
         let room = makesRoom(review: review, rows: rows)
         let edge: CGFloat = roomy ? 24 : 16
+        // who said what (Speakers): those of the transcript in the order they
+        // first speak, their names shown with the switch on, one as much as
+        // eight: the model may have heard two voices as one, which New
+        // speaker puts right (Peter, 2026-11-14). The turns, the bar and the
+        // formats with a second voice only (app.js, turnsShown)
+        let spk = Speakers.shared
+        let present = Speakers.present(rows)
+        let spoken = spk.on && !present.isEmpty
+        let turns = spoken && present.count > 1
+        // a speaker found, their turns (Finder.findWho), while their name
+        // shows: switched off, or joined to another by a rename, the search
+        // is let go
+        let who = spoken && present.contains(s.finder.who) ? s.finder.who : 0
+        // the strip keeps the bar's place: the turns shown, the speakers being
+        // found, or a transcription finding them as it goes (app.js, barShown)
+        let place = (review && (turns || spk.finding)) || (t.running && t.diarizing)
         VStack(spacing: 0) {
             VStack(spacing: 0) {
                 if !room { Header(review: review, edge: edge, shown: !rows.isEmpty) }
                 if t.step != .error && !room {
                     Strip(
-                        review: review, left: left, why: t.why,
+                        review: review && !spk.finding,
+                        left: spk.finding ? L("speakers_finding") : left, why: t.why,
                         locate: t.locate ? { s.pick = .locate } : nil,
                         hits: hits, tickAt: s.finder.at,
                         // a tick: its match, and the playhead there (app.js,
@@ -67,7 +87,13 @@ struct Work: View {
                         seek: {
                             seek($0 * t.duration)
                             jumped += 1
-                        }
+                        },
+                        heard: spk.finding ? spk.heard : nil,
+                        bar: place
+                            ? Strip.Bar(
+                                stretches: spk.finding ? spk.growing : barOf(rows),
+                                upto: t.running ? t.done * t.duration : .greatestFiniteMagnitude,
+                                finding: spk.finding) : nil
                     )
                     // 16 under the header's buttons: their 11 and 5
                     .padding(.horizontal, edge)
@@ -75,10 +101,26 @@ struct Work: View {
                 }
                 if review && !rows.isEmpty {
                     // a step takes the playhead to its match, at rest too (Finder.step)
-                    FindLine(hits: hits, seek: { seek($0) }, alone: room)
-                        .padding(.horizontal, edge)
-                        // alone, the search where the header's buttons were
-                        .padding(.top, room ? 11 : 16)
+                    FindLine(
+                        hits: hits, seek: { seek($0) }, alone: room,
+                        speakers: switchOf(present: present),
+                        nameOf: { Speakers.nameOf(t.names, $0) }
+                    )
+                    .padding(.horizontal, edge)
+                    // alone, the search where the header's buttons were
+                    .padding(.top, room ? 11 : 16)
+                }
+                // with the names shown on a screen wider than a phone's, each
+                // speaker's name, which finds where they speak (app.css,
+                // .pk-names); a phone finds them from Who's speaking
+                if review && !rows.isEmpty && spk.offer != nil && spoken && !room && roomy {
+                    Chips(
+                        present: present, nameOf: { Speakers.nameOf(t.names, $0) }, found: who,
+                        onFind: { s.finder.findWho($0) }
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, edge)
+                    .padding(.top, 8)
                 }
                 if let msg = message(rows), !room {
                     HStack(spacing: 6) {
@@ -106,7 +148,10 @@ struct Work: View {
             }
             Rows(
                 rows: rows, review: review, marks: marks, hits: hits, stats: stats(review),
-                edge: edge, jump: jumped
+                edge: edge, jump: jumped,
+                speakers: Rows.Voices(
+                    turns: turns, editable: review && spoken, present: present, names: t.names,
+                    joined: spk.joined)
             ) { time, play in
                 seek(time, play: play)
             }
@@ -131,17 +176,23 @@ struct Work: View {
         .onChange(of: room) {
             trace("room for the keyboard: \(room); \(height) of \(whole), \(above) above the rows")
         }
+        .onChange(of: s.finder.who != 0 && who == 0) { _, gone in
+            if gone { s.finder.clear() }
+        }
         .onChange(
-            of: Sought(query: s.finder.query, review: review, id: t.id, count: rows.count),
+            of: Sought(
+                query: s.finder.query, who: who, review: review, id: t.id, count: rows.count,
+                speakers: rows.map(\.speaker)),
             initial: true
         ) { was, now in
-            hits = review ? findIn(rows, s.finder.query) : []
+            hits = !review ? [] : who != 0 ? turnsOf(rows, who) : findIn(rows, s.finder.query)
             marks = Dictionary(
                 grouping: hits.indices.map { Marked(k: $0, hit: hits[$0]) }, by: \.hit.row)
             // a search typed at rest takes the playhead to its match, so that
-            // Play starts where the rows went (app.js, runFind); the rows
-            // marked anew for the list leave it where it is
-            let typed = was.query != now.query && !Player.shared.playing
+            // Play starts where the rows went (app.js, runFind), and so does
+            // a speaker found; the rows marked anew for the list, or after a
+            // change of speaker, leave it where it is
+            let typed = (was.query != now.query || was.who != now.who) && !Player.shared.playing
             s.finder.settle(
                 hits, position: Player.shared.position, seek: typed ? { seek($0) } : nil)
         }
@@ -154,6 +205,28 @@ struct Work: View {
     /// a hardware keyboard's bar leaves the room it finds.
     private func makesRoom(review: Bool, rows: [Segment]) -> Bool {
         review && !rows.isEmpty && whole > height && height - above - 16 < least
+    }
+
+    /// The speakers' switch on the line under the strip, where the build
+    /// offers a speaker model and the transcript is finished; pressed while
+    /// names are shown or being found: on with none found yet, it finds them
+    /// (AppState.toggleSpeakers).
+    private func switchOf(present: [Int]) -> FindLine.Switch? {
+        let spk = Speakers.shared
+        let d = Downloads.shared
+        guard spk.offer != nil else { return nil }
+        let busy = spk.finding || (d.speakers && d.state?.step != .failed)
+        let pressed = spk.on && (!present.isEmpty || busy)
+        return FindLine.Switch(
+            on: pressed, busy: busy,
+            hint: L(pressed && !present.isEmpty ? "speakers_hide" : "speakers_show"),
+            toggle: { AppState.shared.toggleSpeakers() })
+    }
+
+    /// The bar's turns: the transcript's sentences, each its speaker's, a
+    /// change included (app.js, drawBar).
+    private func barOf(_ rows: [Segment]) -> [Stretch] {
+        rows.compactMap { s in s.speaker.map { Stretch(start: s.start, end: s.end, speaker: $0) } }
     }
 
     /// The playhead at time, and the reader on the match it last passed.
@@ -347,41 +420,74 @@ func share(_ url: URL, from view: UIView?) {
     top.present(vc, animated: true)
 }
 
-/// The line under the strip, Find's (app.css, .pk-spk-line, where the
-/// desktop has the speakers' switch before it): a field that says "Find",
-/// 200 wide and 280 with a search in it, where it fits, else the glass,
-/// which opens the field across the line until the search is let go, as a
-/// phone's find in page does. At the line's start, not its far end, where
-/// a reader might not see that the transcript can be searched (Peter,
-/// 2026-10-31).
-private struct FindLine: View {
+/// The line under the strip (app.css, .pk-spk-line): the speakers'
+/// switch, where the build offers a speaker model, and Find right after it,
+/// 12 apart, one group of the transcript's controls: a field that says
+/// "Find", 200 wide, 280 with a search in it and 380 with a speaker found,
+/// for their name, where that fits beside the switch. Else the field across
+/// the line, the switch giving it its place, while there is a search or a
+/// speaker found, and the glass, which opens it so, while there is neither,
+/// as a phone's find in page does (Android's SpeakersLine). At the line's
+/// start, not its far end, where a reader might not see that the transcript
+/// can be searched (Peter, 2026-10-31).
+struct FindLine: View {
+    /// The speakers' switch as the line shows it (Work.switchOf).
+    struct Switch {
+        let on: Bool
+        let busy: Bool
+        let hint: String
+        let toggle: () -> Void
+    }
+
     let hits: [Hit]
     let seek: ((Double) -> Void)?
     /// the search alone on the line, while the rest makes room for the
     /// keyboard (Work)
     let alone: Bool
-    /// the line's width
+    var speakers: Switch?
+    var nameOf: (Int) -> String = { _ in "" }
+    /// the line's width, and the switch's
     @State private var width: CGFloat = 0
-    /// the field's 200 and 280, scaled as its text is: Android's app at
+    @State private var switchWidth: CGFloat = 0
+    /// the field's 200, 280 and 380, scaled as its text is: Android's app at
     /// twice the text size left a search 53 of a fixed 280 (2026-10-31)
     @ScaledMetric(relativeTo: .subheadline) private var narrow: CGFloat = 200
     @ScaledMetric(relativeTo: .subheadline) private var searching: CGFloat = 280
+    @ScaledMetric(relativeTo: .subheadline) private var finding: CGFloat = 380
 
     var body: some View {
         let f = AppState.shared.finder
-        let wide = f.query.trimmingCharacters(in: .whitespaces).isEmpty ? narrow : searching
-        let room = { (w: CGFloat) in width > 0 && w <= width }
-        let field: CGFloat? = room(wide) ? wide : room(narrow) ? narrow : nil
-        let across = alone || (field == nil && f.open)
+        let typed = !f.query.trimmingCharacters(in: .whitespaces).isEmpty
+        let wide = f.who != 0 ? finding : typed ? searching : narrow
+        let before = speakers == nil ? 0 : switchWidth + 12
+        let field: CGFloat? = !alone && width > 0 && before + wide <= width ? wide : nil
+        let across = alone || (field == nil && (f.open || typed || f.who != 0))
         HStack(spacing: 12) {
+            if let s = speakers, !across {
+                SpeakersSwitch(on: s.on, busy: s.busy, hint: s.hint, action: s.toggle)
+                    .fixedSize()
+            }
             // one field, at its width or across the line, so that it keeps
             // the keyboard from one to the other
             if field != nil || across {
-                FindField(finder: f, hits: hits, seek: seek, opened: across)
+                FindField(finder: f, hits: hits, seek: seek, opened: across, nameOf: nameOf)
                     .frame(width: across ? nil : field)
                     .frame(maxWidth: across ? .infinity : nil)
             } else {
                 IconButton(icon: .search, label: L("find_label"), kind: .ghost) { f.open = true }
+            }
+        }
+        // the switch's width, while it is given its place too
+        .background(alignment: .leading) {
+            if let s = speakers {
+                SpeakersSwitch(on: s.on, busy: s.busy, hint: s.hint, action: {})
+                    .fixedSize()
+                    .hidden()
+                    .onGeometryChange(for: CGFloat.self) {
+                        $0.size.width
+                    } action: {
+                        switchWidth = $0
+                    }
             }
         }
         // to the start by its frame, not a spacer after it: the line's 12
@@ -403,11 +509,13 @@ struct Marked: Equatable {
 }
 
 /// The transcript's rows (app.css, .pk-seg): each sentence's time, then
-/// its text, at most 560 wide; under 620 the time above the text, as the
-/// desktop's window has it, where its 112 column left too little of the
-/// line. The row playing
-/// on the surface, the beak's square after its time and the word playing
-/// underlined in it; a row, tapped anywhere, plays from its time.
+/// its text, in a column as wide as the file's times, 46 between them, the
+/// desktop's and Android's, where the text keeps 496 beside them; else the
+/// time above the text. The row playing on the surface and the word playing
+/// underlined in it; a row, tapped anywhere, plays from its time. With the
+/// turns shown, a turn's name opens its first sentence, Who's speaking from
+/// it, and its line runs down its rows, in the middle of the gutter, or 5
+/// in where the time is over the text; a sentence held, Change speaker.
 ///
 /// The list follows: the transcript's end as it comes, for a reader who is
 /// there; finished, it starts at its top; the row playing is kept in sight
@@ -433,7 +541,20 @@ private struct Rows: View {
     let edge: CGFloat
     /// the waveform's seeks so far, each a jump to bring into sight (Work)
     let jump: Int
+    let speakers: Voices
     let seek: (Double, Bool) -> Void
+
+    /// The speakers as the rows show them (Work): the turns, a second voice
+    /// heard; whether a sentence's speaker can be changed, the names shown
+    /// on a finished transcript; who is in it and their names; and the last
+    /// move's sentence made one again, lit a moment.
+    struct Voices {
+        let turns: Bool
+        let editable: Bool
+        let present: [Int]
+        let names: [String]
+        let joined: Speakers.Joined?
+    }
     /// the id of the current match's view in its row (Sentence)
     static let match = "match"
     @State private var seen: [Int] = []
@@ -448,9 +569,7 @@ private struct Rows: View {
     /// a move to a match not yet brought into sight
     @State private var revealing = false
     @State private var width: CGFloat = 0
-    /// the time's column, which grows with the stamps in it at a larger
-    /// text size, and the row's text with it, 508 at the least
-    @ScaledMetric(relativeTo: .footnote) private var column: CGFloat = 112
+    @Environment(\.dynamicTypeSize) private var type
 
     var body: some View {
         let t = Transcriber.shared
@@ -462,22 +581,45 @@ private struct Rows: View {
         let current =
             review && (p.playing || position > 0)
             ? rows.lastIndex { $0.start <= position + 1e-3 } ?? -1 : -1
-        let wide = width >= 508 + column
+        // the times' column as wide as the file's times: all of a file's as
+        // long as its length's, at the reader's text size
+        let column = ceil(
+            (base.at(base.duration) as NSString).size(withAttributes: [
+                .font: PkType.stamp.uiFont(PkType.stamp.scaled(type))
+            ]).width)
+        let wide = width >= 496 + 46 + column
+        let v = speakers
         ScrollViewReader { list in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(rows.indices, id: \.self) { i in
                         let now = i == current
                         let mine = marks[i] ?? []
+                        let s = rows[i]
+                        // with the turns shown, a turn's name opens its first
+                        // sentence, and each row has its turn's line, ending
+                        // inside its first and last
+                        let starts = v.turns && Speakers.turnStarts(rows, i)
+                        let turn = starts ? Speakers.turnAt(rows, i) : nil
+                        let line =
+                            v.turns
+                            ? s.speaker.map { n in
+                                TurnLine(
+                                    speaker: n, first: starts,
+                                    last: i == rows.count - 1 || rows[i + 1].speaker != n)
+                            } : nil
                         SegRow(
-                            s: rows[i], now: now,
+                            s: s, index: i, now: now,
                             word: now
-                                ? rows[i].words.lastIndex { $0.start <= position + 1e-3 } ?? -1
+                                ? s.words.lastIndex { $0.start <= position + 1e-3 } ?? -1
                                 : -1,
                             marks: mine, at: mine.contains { $0.k == f.at } ? f.at : -1,
-                            wide: wide, column: column, review: review,
-                            base: base
-                        ) { seek(rows[i].start, true) }
+                            column: wide ? column : nil, review: review, base: base,
+                            name: turn.map { Speakers.nameOf(v.names, $0.speaker) },
+                            turn: turn, line: line,
+                            who: v.editable ? Who(present: v.present, names: v.names) : nil,
+                            lit: v.joined?.seg == s ? v.joined : nil, first: i == 0
+                        ) { seek(s.start, true) }
                         .equatable()
                     }
                     if let stats {
@@ -485,7 +627,7 @@ private struct Rows: View {
                             .font(PkType.small.font(12))
                             .monospacedDigit()
                             .foregroundStyle(Pk.inkMuted)
-                            .padding(.leading, wide ? 28 + column : 16)
+                            .padding(.leading, wide ? 16 + column + 46 : 16)
                             .padding(.top, 16)
                     }
                 }
@@ -582,39 +724,95 @@ private struct Rows: View {
     }
 }
 
+/// Who a sentence or a turn can be given to, where its speaker can be
+/// changed: the speakers in the transcript, and their names.
+private struct Who: Equatable {
+    let present: [Int]
+    let names: [String]
+}
+
+/// Who's speaking for a turn, or for one sentence (WhoItems): the turn,
+/// the speakers and their names, and its times.
+private struct WhoMenu: Equatable {
+    let turn: Speakers.Turn
+    let who: Who
+    let times: String
+}
+
+/// Change speaker, a held row's menu, where its speaker can be changed: no
+/// menu at all elsewhere, so that a row held without one doesn't lift.
+private struct ChangeSpeaker: ViewModifier {
+    let menu: WhoMenu?
+
+    func body(content: Content) -> some View {
+        if let menu {
+            content.contextMenu {
+                WhoItems(
+                    turn: menu.turn, present: menu.who.present, names: menu.who.names,
+                    times: menu.times, alone: true)
+            }
+        } else {
+            content
+        }
+    }
+}
+
 /// A row: its time and its text.
 private struct SegRow: View, Equatable {
     let s: Segment
+    let index: Int
     let now: Bool
     let word: Int
     let marks: [Marked]
     let at: Int
-    let wide: Bool
-    let column: CGFloat
+    /// the times' column's width, where the time stands beside the text;
+    /// nil where it stands over it
+    let column: CGFloat?
     let review: Bool
     let base: Timebase
+    /// the turn this row starts, if any, and its speaker's name, which opens
+    /// the text (Sentence)
+    let name: String?
+    let turn: Speakers.Turn?
+    /// its turn's line, with the turns shown
+    let line: TurnLine?
+    /// who it can be given to, where its speaker can be changed
+    let who: Who?
+    /// the sentence a move made one again, lit a moment
+    let lit: Speakers.Joined?
+    let first: Bool
     let onTime: () -> Void
 
     // the action aside, which is a new closure each frame and does the same
     static func == (a: SegRow, b: SegRow) -> Bool {
-        a.s == b.s && a.now == b.now && a.word == b.word && a.marks == b.marks && a.at == b.at
-            && a.wide == b.wide && a.column == b.column && a.review == b.review
-            && a.base == b.base
+        a.s == b.s && a.index == b.index && a.now == b.now && a.word == b.word
+            && a.marks == b.marks && a.at == b.at && a.column == b.column
+            && a.review == b.review && a.base == b.base && a.name == b.name && a.turn == b.turn
+            && a.line == b.line && a.who == b.who && a.lit == b.lit && a.first == b.first
     }
 
     var body: some View {
+        let menu = turn.flatMap { t in who.map { WhoMenu(turn: t, who: $0, times: times(t)) } }
+        // Change speaker, for this sentence alone: iOS's menu of a held row
+        let alone = who.flatMap { w in
+            s.speaker.map { n in
+                let t = Speakers.Turn(
+                    from: index, to: index, speaker: n, start: s.start, end: s.end)
+                return WhoMenu(turn: t, who: w, times: times(t))
+            }
+        }
+        let sentence = Sentence(
+            s: s, word: word, marks: marks, at: at, name: name, menu: menu, lit: lit)
         Group {
-            if wide {
-                HStack(alignment: .firstTextBaseline, spacing: 12) {
+            if let column {
+                HStack(alignment: .firstTextBaseline, spacing: 46) {
                     time.frame(width: column, alignment: .leading)
-                    Sentence(s: s, word: word, marks: marks, at: at).frame(
-                        maxWidth: .infinity, alignment: .leading)
+                    sentence.frame(maxWidth: .infinity, alignment: .leading)
                 }
             } else {
                 VStack(alignment: .leading, spacing: 2) {
                     time
-                    Sentence(s: s, word: word, marks: marks, at: at).frame(
-                        maxWidth: .infinity, alignment: .leading)
+                    sentence.frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }
@@ -623,6 +821,16 @@ private struct SegRow: View, Equatable {
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
         .frame(maxWidth: 716, alignment: .leading)
+        // its turn's line in the middle of the gutter, past the row's 16 and
+        // the times; with the time over the text, 5 in, as the desktop's
+        // narrow window has it
+        .background(alignment: .leading) {
+            if let line {
+                TurnLineShape(line: line, mid: column.map { 16 + $0 + 23 } ?? 6.5)
+                    .fill(Pk.speaker(line.speaker))
+                    .flipsForRightToLeftLayoutDirection(true)
+            }
+        }
         .background(
             now ? Pk.surface : Color.clear, in: RoundedRectangle(cornerRadius: Radius.radiusUi)
         )
@@ -630,43 +838,38 @@ private struct SegRow: View, Equatable {
         // the whole row plays from its time, its words as well as the time,
         // which a thumb is too broad to find (Peter, the S25, 2026-10-26)
         .onTapGesture { if review { onTime() } }
+        .modifier(ChangeSpeaker(menu: alone))
         .accessibilityElement(children: .combine)
         .accessibilityAction(named: L("play_from", base.at(s.start))) { if review { onTime() } }
+        // a turn 16 under the one before (app.css, .pk-seg.pk-turn): with the
+        // rows' 6, sentences 12 apart and turns 28
+        .padding(.top, turn != nil && !first ? 16 : 0)
     }
 
-    /// The row playing: the beak's square after its time, its foot on the
-    /// time's baseline.
-    @ViewBuilder private var beak: some View {
-        if now {
-            Rectangle()
-                .fill(Pk.beak)
-                .frame(width: 7, height: 7)
-                .padding(.leading, 3)
-                .alignmentGuide(.firstTextBaseline) { $0[.bottom] }
-                .accessibilityHidden(true)
-        }
-    }
+    private func times(_ t: Speakers.Turn) -> String { "\(base.at(t.start))–\(base.at(t.end))" }
 
-    /// Its time, the beak's square after it while it plays, its line the
-    /// stamp's 1.5 as the desktop's and Android's are: in the font's own,
-    /// 11 over the text where they have 14 (the spacing audit, 2026-11-15)
+    /// Its time, its line the stamp's 1.5 as the desktop's and Android's
+    /// are: in the font's own, 11 over the text where they have 14 (the
+    /// spacing audit, 2026-11-15). The row playing is its ground alone: the
+    /// beak's square after its time went, as on the desktop and Android,
+    /// where beside the speakers' marks it read as one of them (Peter,
+    /// 2026-11-14).
     private var time: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 0) {
-            Text(verbatim: base.at(s.start))
-            beak
-        }
-        .pk(PkType.stamp)
-        .monospacedDigit()
-        .foregroundStyle(Pk.inkMuted)
+        Text(verbatim: base.at(s.start))
+            .pk(PkType.stamp)
+            .monospacedDigit()
+            .foregroundStyle(Pk.inkMuted)
     }
 }
 
 /// What a stretch of a row's text is: in the k-th match (-1: none), that
-/// the reader is on, and in the word playing.
+/// the reader is on, in the word playing, and in the words a move joined to
+/// it (Speakers.rejoin).
 private struct Mark: TextAttribute {
     var k = -1
     var current = false
     var word = false
+    var lit = false
 }
 
 /// A row's text in the transcript's type, the word playing underlined in
@@ -675,12 +878,29 @@ private struct Mark: TextAttribute {
 /// tall as its letters and 2 round them, its corners 3; the one the reader
 /// is on in plume, its letters on-plume, an ink bar 2 under it, for a state
 /// shown by more than its colour (the tokens' contrast, 2026-10-22).
+///
+/// A turn's name opens its first sentence's text, bold with a colon, as the
+/// saved files have it ("Speaker 1: ..."), Peter's pick of three
+/// (2026-11-14), iOS's menu of Who's speaking over it; marked as a match is
+/// where a speaker found has the turn for one (turnsOf). A sentence a move
+/// made one again has the words joined to it lit in their speaker's colour,
+/// 30% of it fading out over 1.6 s (app.css, .pk-joined), from where it has
+/// got to if the row comes back into sight meanwhile; not at all with Reduce
+/// Motion.
 private struct Sentence: View {
     let s: Segment
     let word: Int
     let marks: [Marked]
     let at: Int
+    var name: String? = nil
+    var menu: WhoMenu? = nil
+    var lit: Speakers.Joined? = nil
+    @State private var glow = 0.0
     @Environment(\.dynamicTypeSize) private var type
+    @Environment(\.accessibilityReduceMotion) private var still
+
+    private static let bold = Font.custom(
+        "ArchivoRoman-Bold", size: PkType.transcript.size, relativeTo: .body)
 
     var body: some View {
         marked
@@ -705,35 +925,91 @@ private struct Sentence: View {
                         ? nil
                         : { k, r in
                             Task { @MainActor in AppState.shared.finder.spotted(k, r) }
-                        })
+                        },
+                    glow: glow, glowColor: lit.map { Pk.speaker($0.speaker) } ?? .clear)
             )
             .fixedSize(horizontal: false, vertical: true)
+            .overlay(alignment: .topLeading) {
+                if let menu, let name { who(menu, name) }
+            }
+            .onChange(of: lit?.at, initial: true) { _, at in light(at) }
     }
 
-    /// The text cut where a match or the word playing begins or ends, each
-    /// stretch with what it is.
+    /// Who's speaking from the turn's name: iOS's menu, from the name's own
+    /// place on the text's first line.
+    private func who(_ m: WhoMenu, _ name: String) -> some View {
+        let size = PkType.transcript.scaled(type)
+        let font = UIFont(name: "ArchivoRoman-Bold", size: size) ?? .boldSystemFont(ofSize: size)
+        let w = ceil(((name + ":") as NSString).size(withAttributes: [.font: font]).width)
+        return Menu {
+            WhoItems(turn: m.turn, present: m.who.present, names: m.who.names, times: m.times)
+        } label: {
+            Color.clear
+                .frame(width: w + 4, height: PkType.transcript.lineHeight * size)
+                .contentShape(Rectangle())
+        }
+        .padding(.leading, -2)
+        .accessibilityLabel(L("speakers_name_label", name))
+    }
+
+    /// The words a move joined lit from where their 1.6 s has got to,
+    /// fading out.
+    private func light(_ at: Date?) {
+        let left = at.map { 1 - Date().timeIntervalSince($0) / 1.6 } ?? 0
+        guard left > 0, !still else {
+            glow = 0
+            return
+        }
+        var now = Transaction()
+        now.disablesAnimations = true
+        withTransaction(now) { glow = left }
+        Task { @MainActor in withAnimation(.easeOut(duration: 1.6 * left)) { glow = 0 } }
+    }
+
+    /// The text cut where a match, the word playing or the words a move
+    /// joined begin or end, each stretch with what it is, after the turn's
+    /// name, where one opens it.
     private var marked: Text {
         let chars = Array(s.text)
         let span = word >= 0 ? wordSpan(s, word) : nil
-        let ms = marks.filter { $0.hit.end <= chars.count && $0.hit.start < $0.hit.end }
-        if span == nil && ms.isEmpty { return Text(verbatim: s.text) }
+        let ms = marks.filter {
+            $0.hit.start >= 0 && $0.hit.end <= chars.count && $0.hit.start < $0.hit.end
+        }
+        let from = lit.flatMap { wordSpan(s, $0.words)?.0 }
+        if span == nil && ms.isEmpty && from == nil { return lead + Text(verbatim: s.text) }
         var cuts: Set<Int> = [0, chars.count]
         if let span { cuts.formUnion([span.0, span.1]) }
+        if let from { cuts.insert(from) }
         for m in ms { cuts.formUnion([m.hit.start, m.hit.end]) }
         let at = cuts.sorted()
-        var out = Text(verbatim: "")
+        var out = lead
         for (a, b) in zip(at, at.dropFirst()) where b > a {
             let m = ms.first { $0.hit.start <= a && b <= $0.hit.end }
             let w = span.map { $0.0 <= a && b <= $0.1 } ?? false
+            let l = from.map { $0 <= a } ?? false
             var piece = Text(verbatim: String(chars[a..<b]))
-            if m != nil || w {
+            if m != nil || w || l {
                 let current = m?.k == self.at && m != nil
-                piece = piece.customAttribute(Mark(k: m?.k ?? -1, current: current, word: w))
+                piece = piece.customAttribute(
+                    Mark(k: m?.k ?? -1, current: current, word: w, lit: l))
                 if current { piece = piece.foregroundStyle(Pk.onPlume) }
             }
             out = out + piece
         }
         return out
+    }
+
+    /// The turn's name and its colon, then a space; nothing where the row
+    /// starts no turn.
+    private var lead: Text {
+        guard let name else { return Text(verbatim: "") }
+        var piece = Text(verbatim: name + ":").font(Sentence.bold)
+        if let m = marks.first(where: { $0.hit.start < 0 }) {
+            let current = m.k == at
+            piece = piece.customAttribute(Mark(k: m.k, current: current))
+            if current { piece = piece.foregroundStyle(Pk.onPlume) }
+        }
+        return piece + Text(verbatim: " ")
     }
 }
 
@@ -769,11 +1045,44 @@ private func firstIndex(of q: [Character], in s: [Character], from: Int) -> Int?
 private struct Marks: TextRenderer {
     let em: CGFloat
     var spotted: ((Int, CGRect) -> Void)? = nil
+    /// the words a move joined, lit: 1 is 30% of their speaker's colour
+    var glow: Double = 0
+    var glowColor: Color = .clear
+
+    var animatableData: Double {
+        get { glow }
+        set { glow = newValue }
+    }
 
     func draw(layout: Text.Layout, in ctx: inout GraphicsContext) {
         let hl = Pk.matchFill
         var spot: (k: Int, rect: CGRect)?
         defer { if let spot, let spotted { spotted(spot.k, spot.rect) } }
+        if glow > 0 {
+            for line in layout {
+                var x0: CGFloat?
+                var x1: CGFloat = 0
+                var y: CGFloat = 0
+                for run in line {
+                    guard let m = run[Mark.self], m.lit else { continue }
+                    let b = run.typographicBounds
+                    if x0 == nil {
+                        x0 = b.origin.x
+                        y = b.origin.y
+                    }
+                    x1 = b.origin.x + b.width
+                }
+                guard let x0 else { continue }
+                let top = y - 0.878 * em - 2
+                let bottom = y + 0.21 * em + 2
+                ctx.fill(
+                    Path(
+                        roundedRect: CGRect(
+                            x: x0 - 2, y: top, width: x1 - x0 + 4, height: bottom - top),
+                        cornerRadius: 3),
+                    with: .color(glowColor.opacity(0.3 * glow)))
+            }
+        }
         for line in layout {
             var spans: [(k: Int, current: Bool, x0: CGFloat, x1: CGFloat, y: CGFloat)] = []
             for run in line {
