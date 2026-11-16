@@ -208,36 +208,13 @@
             </div>
           </div>
         </div>
-        <!-- a finished transcript as its sentences or as its subtitle track's
-             cues; and Find, where the header hasn't the room for it (placeFind) -->
-        <div class="pk-views-line" id="views-line">
-          <div
-            class="pk-views"
-            id="views"
-            role="radiogroup"
-            data-t-aria-label="work.views_label"
-            hidden
-          >
+        <!-- who said what: the switch, kept for the next file, then each
+             speaker's name, which finds their turns (app.js, speakers); and
+             Find, where the header hasn't the room for it (placeFind) -->
+        <div class="pk-spk-line" id="spk-line">
+          <div class="pk-track" id="spk-track" hidden>
             <button
-              class="pk-view"
-              type="button"
-              role="radio"
-              data-view="sentences"
-              data-t="work.sentences"
-            ></button>
-            <button
-              class="pk-view"
-              type="button"
-              role="radio"
-              data-view="captions"
-              data-t="work.captions"
-            ></button>
-          </div>
-          <!-- who said what: the switch, kept for the next file, then each
-               speaker's name, which renames them (app.js, speakers) -->
-          <div class="pk-views" id="spk-track" hidden>
-            <button
-              class="pk-view pk-spk"
+              class="pk-spk"
               id="spk"
               type="button"
               aria-pressed="false"

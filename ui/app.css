@@ -258,7 +258,7 @@ button.pk-wm:focus-visible {
     .pk-choice,
     .pk-find,
     .pk-find-step,
-    .pk-view,
+    .pk-spk,
     .pk-timebtn,
     .pk-speed,
     .pk-volbtn,
@@ -276,7 +276,7 @@ button.pk-wm:focus-visible {
     .pk-play,
     .pk-choice,
     .pk-find-step,
-    .pk-view,
+    .pk-spk,
     .pk-timebtn,
     .pk-speed,
     .pk-volbtn,
@@ -990,7 +990,7 @@ html[data-side] .pk-recent .pk-row[data-live] > .pk-stamp {
   min-height: 0;
 }
 /* The work screen's vertical rhythm is one step, --space-3 (16 px): between
-   the strip and the views, from the views to the first row, and between
+   the strip and the line under it, from that line to the first row, and between
    rows (each row's 8 px padding, twice). The header's buttons are centred in
    its 62 px, 15 px above them and below, to the window's top and the
    strip's, on every system; the traffic lights' centre is theirs, 31 px down
@@ -1072,11 +1072,11 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 .pk-strip-wrap {
   padding: 0 24px;
 }
-/* 8 px over the first row, under the views, the strip or the message
-   alike, a margin outside the scroll: inside it, a transcript scrolled down
-   ran up against the views (Peter's screenshot, 2026-10-22). With the row's
-   own 8 px over its text that is the gutter's 16 px to the text, and the
-   playing row's box 8 px under the views; 16 px here put 24 px over the
+/* 8 px over the first row, under the line under the strip, the strip or
+   the message alike, a margin outside the scroll: inside it, a transcript
+   scrolled down ran up against the line (Peter's screenshot, 2026-10-22).
+   With the row's own 8 px over its text that is the gutter's 16 px to the
+   text, and the playing row's box 8 px under the line; 16 px here put 24 px over the
    first row's text, its padding a second gutter (Peter, 2026-11-05). 16 px under
    the last, outside it too, so that the rows stop short of the window's
    edge as they scroll by. Its rows on the strip's edges, 24 px in, and
@@ -1996,24 +1996,26 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   margin-top: var(--space-2);
 }
 
-/* -------------------------------------------- sentences or captions -- */
-/* two buttons in a sunk track, the one chosen raised to the ground */
+/* ------------------------------------------------- under the strip -- */
 /* 16 px above, and the transcript's 16 px margin below: the same space
    either side when its first row is the current one, drawn as a block */
-/* the views and, where the header hasn't the room for it, Find beside
-   them, a field that says what it is, not an icon alone at the line's far
-   end, where it went unnoticed (Peter, 2026-10-31; app.js, placeFind);
-   nothing at all while neither shows */
-.pk-views-line {
+/* the speakers' switch and names and, where the header hasn't the room
+   for it, Find beside them, a field that says what it is, not an icon
+   alone at the line's far end, where it went unnoticed (Peter, 2026-10-31;
+   app.js, placeFind); nothing at all while none of them shows. They wrap
+   to a second line before any of them is cut. */
+.pk-spk-line {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px 12px;
   margin: var(--space-3) 24px 0;
 }
-.pk-views-line:not(:has(> :not([hidden]))) {
+.pk-spk-line:not(:has(> :not([hidden]))) {
   display: none;
 }
-.pk-views {
+/* the switch's sunk track */
+.pk-track {
   display: flex;
   gap: 2px;
   align-self: flex-start;
@@ -2021,39 +2023,12 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   border-radius: var(--radius-ui);
   background: var(--sunk);
 }
-/* each choice's words on one line: Find beside them gives way first. 32
-   tall with the track, as Find beside them and every button are: at 30 its
-   middle sat 1 px above Find's (the layout audit, 2026-11-01) */
-.pk-view {
-  border: 0;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--ink-muted);
-  font: 500 13px/16px var(--font-sans);
-  white-space: nowrap;
-  cursor: pointer;
-}
-/* the one chosen raised to the ground, with an edge in ink-muted: the tone
-   step alone is 1.2:1 against the track, the edge 5.6:1 (6.5:1 dark), over
-   the 3:1 a state's cue needs (WCAG 1.4.11; the tokens' contrast,
-   2026-10-22) */
-.pk-view[aria-checked="true"] {
-  background: var(--ground);
-  color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--ink-muted);
-}
-.pk-view:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
-}
 
 /* ------------------------------------------------------------- transcript -- */
 /* A row: its time, a gutter, then its text. The times' column is as wide
    as the file's times (app.js, timeChars): 8 characters under an hour, 10
    with hours, 11 from 10 hours or with frames counted, 7.8 px each (Commit
-   Mono's 0.6 em at 13 px), and in Captions 16 px more, for a fast cue's
-   mark after its end time. The gutter is 46 px beside every file's times,
+   Mono's 0.6 em at 13 px). The gutter is 46 px beside every file's times,
    so that a speaker's line, centred in it, stands as far from the times in
    each, and the text takes what the times leave of the row (Peter,
    2026-11-15). With one 112 px column for all, a short file's times ended
@@ -2064,7 +2039,6 @@ html:not([data-chrome="win"]) .pk-head > #stop {
    to 79 (the window study, 2026-10-23). A batch's file rows are as wide. */
 :root {
   --time-chars: 10;
-  --time-mark: 0px;
   --gutter: 46px;
   --row: calc(16px + 78px + var(--gutter) + var(--column-narrow) + 16px);
 }
@@ -2072,10 +2046,7 @@ html:not([data-chrome="win"]) .pk-head > #stop {
    is the one it reads */
 .pk-seg,
 .pk-stats {
-  --times-w: calc(var(--time-chars) * 7.8px + var(--time-mark));
-}
-.has-cues {
-  --time-mark: 16px;
+  --times-w: calc(var(--time-chars) * 7.8px);
 }
 .pk-seg {
   display: grid;
@@ -2098,31 +2069,11 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   font-variant-numeric: tabular-nums;
   color: var(--ink-muted);
 }
-/* a row's times: a segment's start; a cue's start and its end under it,
-   with a mark if it reads faster than 20 characters a second. The two the
-   same size, so that their digits stand in columns: at 12 px the end sat
-   narrower than the start (Peter's screenshot, 2026-10-22). */
+/* a row's time, and with the time above the text the sentence's button
+   after it on its line (.pk-sdot) */
 .pk-seg-times {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-}
-.pk-seg-end {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font: 400 13px/1.5 var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  color: var(--ink-muted);
-}
-.pk-fast {
-  display: inline-flex;
-  color: var(--ink-muted);
-}
-/* a cue's lines as the subtitle shows them */
-.pk-cue p {
-  white-space: pre-line;
+  align-items: baseline;
 }
 .pk-seg-t {
   border: 0;
@@ -2227,27 +2178,6 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   .pk-stats {
     padding-left: 12px;
   }
-  /* a cue's start and end side by side above its lines, as a range,
-     00:02.88 – 00:05.60, spaced as the mono type spaces it (0.6 em, a
-     space's width) */
-  .pk-seg-times {
-    flex-direction: row;
-    align-items: baseline;
-    gap: 0;
-  }
-  .pk-cue .pk-seg-end {
-    align-items: baseline;
-    gap: 0;
-  }
-  .pk-cue .pk-seg-end::before {
-    content: "\2013";
-    padding: 0 0.6em;
-  }
-  .pk-cue .pk-fast {
-    order: 1;
-    align-self: center;
-    margin-left: 4px;
-  }
 }
 /* a narrow window, down to the 480 it allows: the edges closer in */
 /* a narrow window's screens on one edge, 16 px in, the work's and the
@@ -2282,7 +2212,7 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   .pk-strip-wrap {
     padding: 0 16px;
   }
-  .pk-views-line {
+  .pk-spk-line {
     margin-left: 16px;
     margin-right: 16px;
   }
@@ -2394,7 +2324,7 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 }
 /* a field that says "Find" wherever it is: the header keeps it only with
    room for the field and 160 of the name (app.js, placeFind), else it goes
-   beside the views. Folded to its icon under 860 px of the work, it was an
+   on the line under the strip. Folded to its icon under 860 px of the work, it was an
    icon alone in the header at the window's default 680 on Windows and
    Linux, where a reader might not see that the transcript can be searched
    (Peter, 2026-10-31; the layout audit, 2026-11-01) */
@@ -2585,23 +2515,34 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 }
 
 /* -------------------------------------------------------------- speakers -- */
-/* Who said what (PKT-27): the switch beside the views, a name on each turn,
+/* Who said what (PKT-27): the switch under the strip, a name on each turn,
    the speaker bar on the strip, and Who's speaking; the design's measures
    (the speakers design, page version 7, Peter's calls of 2026-11-09). */
 
-/* the views, the switch and the names wrap to a second line before any
-   of them is cut */
-.pk-views-line {
-  flex-wrap: wrap;
-  row-gap: 8px;
-}
-/* the switch: a track of one, raised as a chosen view is while it is on,
-   its check before its word */
+/* the switch: a track of one, its check before its word, on one line:
+   Find beside it gives way first. 32 tall with the track, as Find beside
+   it and every button are: at 30 its middle sat 1 px above Find's (the
+   layout audit, 2026-11-01) */
 .pk-spk {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  border: 0;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink-muted);
+  font: 500 13px/16px var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
 }
+.pk-spk:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+/* on, raised to the ground, with an edge in ink-muted: the tone step alone
+   is 1.2:1 against the track, the edge 5.6:1 (6.5:1 dark), over the 3:1 a
+   state's cue needs (WCAG 1.4.11; the tokens' contrast, 2026-10-22) */
 .pk-spk[aria-pressed="true"] {
   background: var(--ground);
   color: var(--ink);

@@ -1458,29 +1458,6 @@ fn forget_recent(app: AppHandle, id: String) -> Result<(), Problem> {
     Ok(())
 }
 
-/// The cues of a transcript's subtitle track, from the engine's pk_captions,
-/// so that the app's .srt and .vtt are the CLI's: times in milliseconds, and
-/// with names, where the view shows speakers, a cue for each turn's start
-/// with its speaker's name counted in its line (format::raw_cues).
-#[tauri::command]
-fn captions(
-    name: String,
-    duration: f64,
-    model: Option<String>,
-    segments: Vec<transcribe::Segment>,
-    names: Option<Vec<String>>,
-) -> Result<Vec<pktito::Cue>, Problem> {
-    Ok(format::raw_cues(&format::Transcript {
-        name: &name,
-        duration,
-        model: model.as_deref(),
-        segments: &segments,
-        names: names.as_deref(),
-        diarizer: None,
-        name_lone: false,
-    })?)
-}
-
 /// A transcript's speakers as Who's speaking or a rename left them, kept on
 /// the recent list: its sentences with their speakers (a cut one may have
 /// joined again), the names, the bar's stretches.
@@ -2408,7 +2385,6 @@ fn main() {
             pick_folder,
             reveal,
             open_link,
-            captions,
             set_speakers,
             find_speakers,
             download_diarizer,

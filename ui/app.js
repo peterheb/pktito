@@ -151,10 +151,6 @@ const ICON = {
     '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>',
     "pk-ico pk-ico-20 pk-ico-fill",
   ),
-  zap: svg(
-    '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
-    "pk-ico pk-ico-12",
-  ),
   external: svg(
     '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/>' +
       '<line x1="10" y1="14" x2="21" y2="3"/>',
@@ -1453,7 +1449,6 @@ function newFile(path) {
     audioWhy: "",
     pos: 0,
     segments: [],
-    cues: null,
     names: [],
     stretches: [],
     diarizer: "",
@@ -1709,7 +1704,6 @@ function again(f) {
     audioWhy: "",
     pos: 0,
     segments: [],
-    cues: null,
     names: [],
     stretches: [],
     diarizer: "",
@@ -1954,22 +1948,7 @@ function buildMain(f, mode, key) {
     $("wavebtn").removeAttribute("aria-label");
   }
   $("wavebtn").disabled = !review || !playable(f);
-  $("views").hidden = !review || !f.segments.length;
   updateSpeakers(f, review);
-  for (const b of $("views").children)
-    b.setAttribute(
-      "aria-checked",
-      String((b.dataset.view === "captions") === !!prefs.captions),
-    );
-  // its cues, the first time it is shown as captions
-  if (review && prefs.captions && !f.cues && f.segments.length) {
-    cuesOf(f).then(
-      () => {
-        if (current() === f && prefs.captions) rebuild();
-      },
-      (e) => toastErr(e),
-    );
-  }
   // a transcript whose audio is gone: its waveform dims with the play button
   wave.classList.toggle("is-off", review && !playable(f));
   renderTranscript(f, mode);
@@ -1994,9 +1973,9 @@ function cutName(name) {
     : `<span>${esc(name.slice(0, at))}</span><span>${esc(name.slice(at))}</span>`;
 }
 
-/* Find in the header, beside the name, or on the views line, beside the
-   views, where the header hasn't the room for it beside its buttons and
-   160 of the name:
+/* Find in the header, beside the name, or on the line under the strip,
+   beside the speakers' switch, where the header hasn't the room for it
+   beside its buttons and 160 of the name:
    the floor the phones' apps keep their name's (the out-of-space rules,
    2026-10-31). And the name itself on a line of its own under the row,
    on the strip's edge, where even without Find it would keep under 160
@@ -2009,7 +1988,7 @@ const NAME_FLOOR = 160;
 function placeFind() {
   const head = $("head"),
     box = $("find-box"),
-    line = $("views-line"),
+    line = $("spk-line"),
     nameLine = $("head-name"),
     cs = getComputedStyle(head),
     room =
@@ -2046,7 +2025,7 @@ function updateHead(f, mode) {
   $("copy").hidden = !review;
   // its icon, which everyone reads, and its words for tooltip and reader
   $("copy").innerHTML = ICON.copy;
-  $("copy").title = t(prefs.captions ? "copy.captions" : "copy.text");
+  $("copy").title = t("copy.text");
   $("copy").setAttribute("aria-label", $("copy").title);
   $("copy").disabled = !has;
   $("spin").hidden = !spins(f, mode);
@@ -2099,18 +2078,11 @@ function updateRunning(f) {
 
 /* ---------------------------------------------------------- transcript -- */
 
-/* A segment, or a cue; its time plays from there once the transcript is
-   finished. A cue shows its end too, its lines as they will read, and a
-   mark if it asks more than 20 characters a second of its reader. */
+/* A segment; its time plays from there once the transcript is finished. */
 function segHtml(s, i, filling, turn = -1, dot = false, spk = false) {
-  const cue = s.endMs !== undefined;
   // a turn's name opens its text (app.css, .pk-speaker), and with speakers
   // each sentence's mark ends its times (dotBtn)
   const f = turn >= 0 || dot || spk ? current() : null;
-  const fast =
-    cue && s.flags & 1
-      ? `<span class="pk-fast" title="${esc(t("seg.fast", { rate: num(s.chars / (s.end - s.start), 1) }))}">${ICON.zap}</span>`
-      : "";
   const start = tc(s.start);
   // the turn's line beside the text, in its speaker's colour: where the
   // turn starts and ends it stops short of the row's edge (app.css,
@@ -2120,8 +2092,7 @@ function segHtml(s, i, filling, turn = -1, dot = false, spk = false) {
   if ((spk || dot) && s.speaker != null) {
     line = ` style="--spk:var(--speaker-${slotOf(s.speaker)})"`;
     if (spk) {
-      const rows = cue ? f.cues : f.segments,
-        next = rows[i + 1];
+      const next = f.segments[i + 1];
       line +=
         ` data-spk="${s.speaker}"` +
         (turn >= 0 || i === 0 ? " data-first" : "") +
@@ -2129,11 +2100,10 @@ function segHtml(s, i, filling, turn = -1, dot = false, spk = false) {
     } else line += " data-dot";
   }
   return (
-    `<div class="pk-seg${cue ? " pk-cue" : ""}${turn >= 0 && i > 0 ? " pk-turn" : ""}" data-i="${i}" data-t="${s.start}"${line}><div class="pk-seg-times"><button class="pk-seg-t" type="button" tabindex="-1" ` +
+    `<div class="pk-seg${turn >= 0 && i > 0 ? " pk-turn" : ""}" data-i="${i}" data-t="${s.start}"${line}><div class="pk-seg-times"><button class="pk-seg-t" type="button" tabindex="-1" ` +
     `aria-label="${esc(t("seg.play_from", { time: start }))}"${filling ? "" : ` title="${esc(t("seg.play_here"))}"`}>${start}</button>` +
-    (cue ? `<span class="pk-seg-end">${tc(s.end)}${fast}</span>` : "") +
     (dot ? dotBtn(f, i) : "") +
-    `</div><p>${turn >= 0 ? nameBtn(f, turn, cue) : ""}${bodyHtml(s, i)}</p></div>`
+    `</div><p>${turn >= 0 ? nameBtn(f, turn) : ""}${bodyHtml(s, i)}</p></div>`
   );
 }
 
@@ -2144,22 +2114,20 @@ function segHtml(s, i, filling, turn = -1, dot = false, spk = false) {
    piece: the first carries its place in the text (data-at), every piece its
    number (data-hit), so that the current one lights whole. */
 /* Row s's matches of the search, each [start, end) in its text and at a
-   word's start (startsWord). A cue's line break reads as the space it
-   stands for. Each row's lowercase is kept: a search runs on every key
-   typed, over every row. */
+   word's start (startsWord). Each row's lowercase is kept: a search runs
+   on every key typed, over every row. */
 const lowered = new WeakMap();
 function matchesIn(s) {
   if (!query) return [];
   let l = lowered.get(s);
   if (!l) {
-    const flat = s.text.replace(/\n/g, " ");
-    const low = flat.toLowerCase();
+    const low = s.text.toLowerCase();
     // a lowercase that changes the length would put the marks in the wrong
     // places: such a row is searched as written
     l =
       low.length === s.text.length
         ? { low, as: false }
-        : { low: flat, as: true };
+        : { low: s.text, as: true };
     lowered.set(s, l);
   }
   const q = l.as ? query : query.toLowerCase(),
@@ -2233,15 +2201,13 @@ function renderTranscript(f, mode) {
   const tr = $("transcript");
   tr.classList.toggle("is-live", mode === "running");
   tr._spk = turnsShown(f);
-  // the times' column as wide as the file's times, and in Captions with
-  // room for a fast cue's mark (app.css, .pk-seg)
+  // the times' column as wide as the file's times (app.css, .pk-seg)
   tr.style.setProperty("--time-chars", timeChars(f));
-  tr.classList.toggle("has-cues", !!f.cues && rowsOf(f) === f.cues);
   tr.innerHTML =
-    rowsHtml(f, rowsOf(f), 0, mode === "running") +
+    rowsHtml(f, f.segments, 0, mode === "running") +
     (mode === "review" ? statsHtml(f) : "");
   curSeg = curWord = null;
-  watchRows(mode === "review" ? rowsOf(f) : []);
+  watchRows(mode === "review" ? f.segments : []);
   if (mode === "running") markLive();
   let msg = "",
     err = false;
@@ -2327,7 +2293,7 @@ $("transcript").addEventListener("click", (e) => {
   if (nb) return openWho(nb);
   if (!t || !f || modeOf(f) !== "review") return;
   if (touch && tapClears) return getSelection().removeAllRanges();
-  seek(rowsOf(f)[Number(t.closest(".pk-seg").dataset.i)].start, true);
+  seek(f.segments[Number(t.closest(".pk-seg").dataset.i)].start, true);
 });
 
 /* ------------------------------------------------------------ waveform -- */
@@ -2761,7 +2727,7 @@ function placeOf(row) {
     : null;
 }
 function toPlace(f, place) {
-  const el = place && rowEl(at(rowsOf(f), place.t));
+  const el = place && rowEl(at(f.segments, place.t));
   if (el) $("transcript").scrollTop += el.getBoundingClientRect().top - place.y;
 }
 
@@ -2780,7 +2746,7 @@ function showTime(t, follow = false) {
   let seg = null,
     word = null;
   if (t > 0 || playing) {
-    const rows = rowsOf(f),
+    const rows = f.segments,
       i = at(rows, t);
     seg = i >= 0 ? rowEl(i) : null;
     if (seg) {
@@ -2989,7 +2955,7 @@ function watchRows(rows) {
 function markRow(i) {
   if (!stale.delete(i)) return;
   const f = current(),
-    s = f && rowsOf(f)[i],
+    s = f && f.segments[i],
     p = rowEl(i)?.querySelector("p");
   if (!s || !p) return;
   const lit = curWord && p.contains(curWord) ? curWord.dataset.w : null;
@@ -3015,7 +2981,7 @@ function runFind(sought) {
   // the speaker found while their name shows, else the words in the field
   if (who && !(spkShown(f) && present(f).includes(who))) who = 0;
   query = who ? "" : $("find").value.trim();
-  const rows = rowsOf(f);
+  const rows = f.segments;
   // each match, by its row and its number in the row, at its word's time,
   // for its tick under the waveform; the speaker found's, each of their
   // turns, by its first row (hi -1: its name, not its words), at its start
@@ -3264,8 +3230,6 @@ const spkShown = (f) => !!prefs.speakers && !!f && present(f).length > 0;
 const turnsShown = (f) => spkShown(f) && present(f).length > 1;
 const nameOf = (f, n) =>
   ((f.names && f.names[n - 1]) || "").trim() || t("speakers.default", { n });
-/* the names f is written with, where the view shows speakers; else none */
-const namesFor = (f) => (turnsShown(f) ? f.names || [] : null);
 /* the names a file is saved with: a lone voice's too, which format.rs
    leaves out of the text but keeps in the JSON */
 const namesSaved = (f) => (spkShown(f) ? f.names || [] : null);
@@ -3289,7 +3253,7 @@ function turnAt(f, i, alone = false) {
 }
 /* a turn's name, its words a whole match (data-at, data-end: app.css,
    .pk-hit) while its speaker is found (markNames) */
-const nameBtn = (f, i, mark) => {
+const nameBtn = (f, i) => {
   const n = f.segments[i].speaker,
     name = nameOf(f, n);
   return (
@@ -3301,8 +3265,7 @@ const nameBtn = (f, i, mark) => {
    click gives that sentence alone to another speaker, where the name
    gives its whole turn (Peter, 2026-11-14: a sentence inside a turn had
    nothing to click). Out of the tab order, as the times are: a turn's
-   name is the keys'. Captions have none: a cue can hold words of two
-   sentences, as 150 of 691 did in a 37-minute podcast. */
+   name is the keys'. */
 const dotBtn = (f, i) => {
   const n = f.segments[i].speaker,
     label = esc(t("speakers.name_label", { name: nameOf(f, n) }));
@@ -3315,14 +3278,12 @@ const rowEl = (i) => $("transcript").getElementsByClassName("pk-seg")[i];
    its first */
 function rowsHtml(f, rows, base, filling) {
   const on = spkShown(f),
-    many = turnsShown(f),
-    cues = !!f.cues && rows === f.cues;
+    many = turnsShown(f);
   let out = "";
   rows.forEach((s, k) => {
     const i = base + k;
-    let turn = -1;
-    if (many) turn = cues ? s.turnSeg : turnStarts(f.segments, i) ? i : -1;
-    out += segHtml(s, i, filling, turn, on && !cues && s.speaker != null, many);
+    const turn = many && turnStarts(f.segments, i) ? i : -1;
+    out += segHtml(s, i, filling, turn, on && s.speaker != null, many);
   });
   return out;
 }
@@ -3330,7 +3291,7 @@ function rowsHtml(f, rows, base, filling) {
 /* what the switch is doing, if anything: "downloading" or "finding" */
 let spkBusy = "";
 
-/* The switch beside the views, where the build offers a diarizer
+/* The switch under the strip, where the build offers a diarizer
    (main.rs, DiarizerOffer), and with speakers shown each one's name,
    which finds their turns (findWho) */
 function updateSpeakers(f, review) {
@@ -3383,11 +3344,11 @@ const limitHtml = () =>
 
 /* f drawn again after its speakers changed, where it shows, the reader
    left where they were (Peter, 2026-11-15: a speaker changed from a
-   sentence's mark snapped the transcript back to the playhead, as a change
-   of view does): row, the one just changed, where it was on the screen if
-   it was in sight, else the first row in sight; a search kept with its
-   match, as retime keeps them. Names come and go and cues are cut again,
-   so the rows above can change height: the row is kept, not the pixels. */
+   sentence's mark snapped the transcript back to the playhead): row, the
+   one just changed, where it was on the screen if it was in sight, else
+   the first row in sight; a search kept with its match, as retime keeps
+   them. Names come and go, so the rows above can change height: the row
+   is kept, not the pixels. */
 function spkRefresh(f, row, joined) {
   if (!f || current() !== f || modeOf(f) !== "review" || viewName() !== "work")
     return;
@@ -3493,8 +3454,6 @@ $("spk").onclick = async () => {
     return spkRefresh(f);
   }
   await setPref("speakers", on);
-  f.cues = null;
-  if (prefs.captions) await cuesOf(f).catch(toastErr);
   // a transcript from before: its speakers from its recording, which takes
   // seconds, not a transcription again
   if (on && !present(f).length) return findSpeakers(f);
@@ -3606,7 +3565,6 @@ async function findSpeakers(f) {
       stretches: r.stretches,
       diarizer: r.diarizer || "",
       names: [],
-      cues: null,
     });
   } catch (e) {
     toastErr(e);
@@ -3615,7 +3573,6 @@ async function findSpeakers(f) {
   spkBusy = "";
   manageRunning();
   showFinding(f);
-  if (prefs.captions) await cuesOf(f).catch(toastErr);
   spkRefresh(f);
 }
 
@@ -3703,9 +3660,7 @@ function edit(f, change, said, row) {
     });
 }
 
-async function spkChanged(f, row, joined) {
-  f.cues = null;
-  if (prefs.captions) await cuesOf(f).catch(toastErr);
+function spkChanged(f, row, joined) {
   spkRefresh(f, row, joined);
   if (f.recentId)
     invoke("set_speakers", {
@@ -4067,122 +4022,6 @@ function pixels(parts, px, per, everyTurn) {
   return who;
 }
 
-/* ------------------------------------------------------------ captions -- */
-
-/* A finished transcript as its subtitle track: the engine's pk_captions
-   (the captions command) cuts its words into cues of one or two lines of
-   42 characters, as the CLI's --srt does; English's rules for a model of
-   English alone. Asked for once a transcript, the first time something
-   needs them: the view, or a .srt, .vtt or .json. */
-async function cuesOf(f) {
-  if (f.cues) return f.cues;
-  const w = f.segments.flatMap((s) => s.words || []);
-  // each word's segment, and each segment's first word: a cue that starts
-  // a turn names its speaker
-  const segOf = f.segments.flatMap((s, i) => (s.words || []).map(() => i));
-  const firstOf = [];
-  f.segments.forEach(
-    (s, i) =>
-      (firstOf[i] = i
-        ? firstOf[i - 1] + (f.segments[i - 1].words || []).length
-        : 0),
-  );
-  const names = namesFor(f);
-  // the English model's words are English; the multilingual model's say
-  // which they are (the engine's pk_language). With speakers shown, a
-  // change of speaker ends a cue, and the name counts in its line.
-  const raw = await invoke("captions", {
-    name: f.name,
-    duration: f.duration || 0,
-    model: f.model || null,
-    segments: f.segments,
-    names,
-  });
-  // each cue a row of the transcript: its text with its line break, its
-  // words, its times; one a pause cut in mid-sentence ends in an ellipsis
-  // (pktito's PK_CUE_PAUSE, which its line has room for)
-  f.cues = raw.map((c) => {
-    const ws = w.slice(c.first, c.first + c.n);
-    const seg = segOf[c.first];
-    return {
-      // the segment whose turn this cue starts, -1 for one that starts none
-      turnSeg:
-        names &&
-        seg != null &&
-        firstOf[seg] === c.first &&
-        turnStarts(f.segments, seg)
-          ? seg
-          : -1,
-      // its speaker's line (segHtml): a change of speaker ends a cue
-      speaker: names && seg != null ? f.segments[seg].speaker : null,
-      start: c.start / 1000,
-      end: c.end / 1000,
-      startMs: c.start,
-      endMs: c.end,
-      chars: c.chars,
-      flags: c.flags,
-      words: ws,
-      text:
-        ws
-          .map(
-            (x, k) =>
-              (k ? (c.first + k === c.line2 ? "\n" : " ") : "") + x.text,
-          )
-          .join("") + (c.flags & 8 ? "\u2026" : ""),
-    };
-  });
-  return f.cues;
-}
-
-/* what the transcript shows: its cues, once a finished one is shown as
-   captions and they have come, else its sentences */
-const rowsOf = (f) =>
-  prefs.captions && f.cues && modeOf(f) === "review" ? f.cues : f.segments;
-
-/* The transcript drawn again in the view chosen, a search kept, and the
-   playhead's row in sight: the other view's place means nothing in this
-   one, and with its row out of sight playback no longer took the reader
-   along (the Windows test, 2026-10-22). */
-function rebuild() {
-  const f = current();
-  if (!f) return;
-  if (modeOf(f) !== "review") {
-    mainKey = "";
-    return showMain();
-  }
-  // the transcript alone: through showMain it paused playback and dropped
-  // the search (Peter, 2026-10-22)
-  for (const b of $("views").children)
-    b.setAttribute(
-      "aria-checked",
-      String((b.dataset.view === "captions") === !!prefs.captions),
-    );
-  updateHead(f, "review");
-  const on = hitAt;
-  renderTranscript(f, "review");
-  showTime(f.pos);
-  if (query || who) {
-    runFind();
-    if (on >= 0 && on < hits.length) goHit(on);
-  }
-  if (curSeg) curSeg.scrollIntoView({ block: "center" });
-}
-
-$("views").onclick = async (e) => {
-  const b = e.target.closest("[data-view]"),
-    f = current();
-  if (!b || !f) return;
-  const on = b.dataset.view === "captions";
-  if (on === !!prefs.captions) return;
-  setPref("captions", on);
-  try {
-    if (on) await cuesOf(f);
-  } catch (err) {
-    toastErr(err);
-  }
-  if (current() === f) rebuild();
-};
-
 /* -------------------------------------------------------- copy and save -- */
 
 const FORMATS = [
@@ -4212,18 +4051,13 @@ const textOf = (f, ext, times = !!prefs.times) =>
     diarizer: f.diarizer || null,
   });
 
-/* What the view shows: a finished transcript's captions as an .srt's text,
-   numbered cues and their times, the form subtitle tools take; or its
-   sentences, without their times. */
+/* A transcript's sentences, without their times */
 async function copyText() {
   const f = current();
   if (!f || !f.segments.length) return;
-  const cues = !!prefs.captions && modeOf(f) === "review";
   try {
-    await navigator.clipboard.writeText(
-      await textOf(f, cues ? "srt" : "txt", false),
-    );
-    toast(t(cues ? "copy.done_captions" : "copy.done"));
+    await navigator.clipboard.writeText(await textOf(f, "txt", false));
+    toast(t("copy.done"));
   } catch (e) {
     toast(t("copy.failed"), { err: true, detail: String(e) });
   }

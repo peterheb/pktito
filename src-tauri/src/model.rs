@@ -571,8 +571,6 @@ pub struct Prefs {
     pub next_to_original: bool,
     /// Each segment's time before its text, in .txt and .md.
     pub times: bool,
-    /// Show a finished transcript as its subtitle track's cues, not its sentences.
-    pub captions: bool,
     /// Times in frames, not seconds and hundredths.
     pub frames: bool,
     /// The frame rate an audio file's times are counted in.
@@ -586,8 +584,8 @@ pub struct Prefs {
     /// A wide window's recent list's width in pixels; 0 for its default.
     pub side: f64,
     /// Who said what: a transcription runs the diarizer too, once its model
-    /// is here, and the window shows each turn's speaker. The switch beside
-    /// the views, kept for the next file (speakers UI, PKT-27); on to begin
+    /// is here, and the window shows each turn's speaker. The switch under
+    /// the strip, kept for the next file (speakers UI, PKT-27); on to begin
     /// with, one voice showing nothing more than without (Peter,
     /// 2026-11-15).
     pub speakers: bool,
@@ -598,7 +596,6 @@ impl Default for Prefs {
         Prefs {
             next_to_original: true,
             times: false,
-            captions: false,
             frames: false,
             fps: 24.0,
             video_rate: true,

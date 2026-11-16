@@ -101,7 +101,7 @@ struct CapWord {
 /// A cue of a subtitle track (pk_cue): words [first, first + n) from start
 /// to end in milliseconds, the second line from word line2 on (0: one line).
 #[repr(C)]
-#[derive(Clone, Copy, Default, serde::Serialize)]
+#[derive(Clone, Copy, Default)]
 pub struct Cue {
     pub first: i32,
     pub n: i32,

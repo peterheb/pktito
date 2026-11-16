@@ -254,12 +254,6 @@ pub fn cues(t: &Transcript) -> Result<Vec<Cue>, String> {
         .collect())
 }
 
-/// pk_captions' own cues for t, as cues() makes them: for the desktop
-/// window, which draws a cue from its words, and a turn's name as a button.
-pub fn raw_cues(t: &Transcript) -> Result<Vec<pktito::Cue>, String> {
-    Ok(captioned(t)?.2)
-}
-
 /// The words' own language, before any name goes in: English for a model
 /// of English alone, else the engine's guess from all of them
 /// (pk_language), as pktito-c's file_language has it.
@@ -581,7 +575,9 @@ mod tests {
             "{json}"
         );
         assert!(
-            json.contains("{\"start\": 2.6, \"end\": 3, \"speaker\": 2, \"text\": \"Yes.\", \"words\": [\n"),
+            json.contains(
+                "{\"start\": 2.6, \"end\": 3, \"speaker\": 2, \"text\": \"Yes.\", \"words\": [\n"
+            ),
             "{json}"
         );
         assert!(
@@ -621,15 +617,24 @@ mod tests {
             diarizer: Some("Nemotron-3-Diarization"),
             name_lone: false,
         };
-        assert_eq!(text(&t, "txt", false).unwrap(), "Good morning.\nShall we?\n");
+        assert_eq!(
+            text(&t, "txt", false).unwrap(),
+            "Good morning.\nShall we?\n"
+        );
         assert!(!text(&t, "srt", false).unwrap().contains("Speaker"));
         let json = text(&t, "json", false).unwrap();
         assert!(
             json.contains("\"speakers\": [\n    {\"id\": 1, \"name\": \"Speaker 1\"}\n  ],"),
             "{json}"
         );
-        assert!(json.contains("\"speaker\": 1, \"text\": \"Good morning.\""), "{json}");
-        assert!(json.contains("\"speaker\": 1, \"lines\": [\"Good morning.\"]"), "{json}");
+        assert!(
+            json.contains("\"speaker\": 1, \"text\": \"Good morning.\""),
+            "{json}"
+        );
+        assert!(
+            json.contains("\"speaker\": 1, \"lines\": [\"Good morning.\"]"),
+            "{json}"
+        );
         let named = Transcript {
             name_lone: true,
             ..t
@@ -638,11 +643,9 @@ mod tests {
             text(&named, "txt", false).unwrap(),
             "Speaker 1: Good morning.\nShall we?\n"
         );
-        assert!(
-            text(&named, "json", false)
-                .unwrap()
-                .contains("\"lines\": [\"Speaker 1: Good morning."),
-        );
+        assert!(text(&named, "json", false)
+            .unwrap()
+            .contains("\"lines\": [\"Speaker 1: Good morning."),);
     }
 
     /// The whole document, pktito/1, as pktito-c's --json writes it too
@@ -663,13 +666,20 @@ mod tests {
             name_lone: true,
         };
         let windows = [
-            Window { start: 0.25, end: 2.4, words: 2, retried: 0 },
-            Window { start: 2.4, end: 4.0, words: 1, retried: 1 },
+            Window {
+                start: 0.25,
+                end: 2.4,
+                words: 2,
+                retried: 0,
+            },
+            Window {
+                start: 2.4,
+                end: 4.0,
+                words: 1,
+                retried: 1,
+            },
         ];
-        assert_eq!(
-            text_windows(&t, "json", false, &windows).unwrap(),
-            DOCUMENT
-        );
+        assert_eq!(text_windows(&t, "json", false, &windows).unwrap(), DOCUMENT);
     }
 
     const DOCUMENT: &str = r#"{
