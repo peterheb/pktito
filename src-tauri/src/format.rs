@@ -202,19 +202,16 @@ pub fn text_windows(
 
 /// A cue as the files write it: its times in milliseconds, its text with a
 /// line break where its second line begins, and an ellipsis after one cut
-/// at a pause in mid-sentence (PK_CUE_PAUSE); and its words, n of the
-/// transcript's from the first, for the iOS app's Captions view to follow
-/// and find them, which the files leave out.
-#[derive(serde::Serialize)]
+/// at a pause in mid-sentence (PK_CUE_PAUSE); and its first word, the
+/// transcript's first-th, whose speaker the JSON gives it even where its
+/// text names none (json).
 pub struct Cue {
     pub start: i64,
     pub end: i64,
     pub text: String,
     pub first: usize,
-    pub n: usize,
     /// Whose words they are, where the transcript shows speakers: a change
     /// of speaker ends a cue, so a cue is one speaker's.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub speaker: Option<u32>,
 }
 
@@ -224,8 +221,7 @@ const PK_CUE_PAUSE: i32 = 8;
 /// and for any other the engine's own guess whether its words are English.
 /// With speakers, a change of speaker ends a cue, and the first word of each
 /// turn carries its speaker's name, "Speaker 1: ", so that its line counts
-/// the name (pk_captions; pktito-c's --srt writes the same). The iOS
-/// app's Captions view shows them as they are (ios.rs).
+/// the name (pk_captions; pktito-c's --srt writes the same).
 pub fn cues(t: &Transcript) -> Result<Vec<Cue>, String> {
     let (timed, words, raw) = captioned(t)?;
     Ok(raw
@@ -247,7 +243,6 @@ pub fn cues(t: &Transcript) -> Result<Vec<Cue>, String> {
                 end: c.end,
                 text,
                 first,
-                n,
                 speaker: words.get(first).and_then(|s| *s),
             }
         })

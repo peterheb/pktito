@@ -9,21 +9,21 @@ struct Hit: Equatable {
     let time: Double
 }
 
-/// Each match of query in rows, sentences or cues, as the desktop finds them
+/// Each match of query in rows, the sentences, as the desktop finds them
 /// (app.js, runFind; Android's Find.kt): its words trimmed, without regard
-/// to case, a cue's line break read as the space it stands for, each match
-/// at a word's start (startsWord) and after the one before it.
+/// to case, each match at a word's start (startsWord) and after the one
+/// before it.
 func findIn(_ rows: [Segment], _ query: String) -> [Hit] {
     let sought = query.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !sought.isEmpty else { return [] }
     var hits: [Hit] = []
     for (i, s) in rows.enumerated() {
-        let flat = Array(s.text.replacingOccurrences(of: "\n", with: " "))
-        var low = Array(String(flat).lowercased())
+        let text = Array(s.text)
+        var low = Array(s.text.lowercased())
         var q = Array(sought.lowercased())
         // a lowercase that changes the length would put the marks in the wrong places
-        if low.count != flat.count {
-            low = flat
+        if low.count != text.count {
+            low = text
             q = Array(sought)
         }
         var from = 0
@@ -174,7 +174,7 @@ final class Finder {
     }
 }
 
-/// The search's field on the views line (app.css, .pk-find), sunk, 40 tall:
+/// The search's field on the line under the strip (app.css, .pk-find), sunk, 40 tall:
 /// the glass, what is sought, and while there is something its count and
 /// the previous and next match, dimmed with fewer than two, then the way to
 /// close it. Return is the next match.
@@ -183,7 +183,7 @@ struct FindField: View {
     let hits: [Hit]
     let seek: ((Double) -> Void)?
     /// opened across the line from the glass, which its × closes again; a
-    /// field that stays beside the views shows its × only with a search in
+    /// field that stays at its width shows its × only with a search in
     /// it, to let the search go, as the desktop's field does
     var opened = false
     @FocusState private var typing: Bool

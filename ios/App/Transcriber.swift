@@ -30,7 +30,7 @@ final class Transcriber {
     private(set) var error: String?
     /// the seconds spent transcribing so far, for the pace
     private(set) var transcribed = 0.0
-    /// the finished transcript, for the formats and the captions
+    /// the finished transcript, for the formats
     private(set) var transcript: Transcript?
     /// a video's frame rate, for times in frames; 0 for audio
     private(set) var fps = 0.0

@@ -27,8 +27,8 @@ struct Root: View {
         GeometryReader { g in
             // the side where a list and what it opens fit side by side:
             // 840 wide, which leaves the work 540, where its rows stack
-            // (Rows, under 620) and Find keeps the views line (Views, from
-            // 480); and 480 tall, which keeps a phone on its side one column.
+            // (Rows, under 620) and Find keeps its field (FindLine); and 480
+            // tall, which keeps a phone on its side one column.
             // The window's height, not what the keyboard leaves of it, which
             // on an 11-inch iPad on its side (834 tall) can be under 480 and
             // would change the layout under the field being typed in (as in
@@ -136,7 +136,7 @@ struct Root: View {
         /// seconds after that; -pretend setup, download, checking, paused,
         /// failed, preparing, loading, transcribing, error or toast shows that
         /// state, with nothing downloaded or transcribed. (A default's own -key
-        /// value, as -captions YES, sets it for the run.)
+        /// value, as -times YES, sets it for the run.)
         private func debugArguments() {
             let args = CommandLine.arguments
             let s = AppState.shared

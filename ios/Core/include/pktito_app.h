@@ -65,8 +65,6 @@ void pkapp_stop(void);
 
 /* {"text"}: a Transcript as txt, md, srt, vtt or json */
 char *pkapp_format(const char *transcript, const char *ext, const char *name, bool times);
-/* {"cues"} */
-char *pkapp_captions(const char *transcript);
 
 /* The recent list, in the folder data: {"items"} */
 char *pkapp_recent(const char *data);

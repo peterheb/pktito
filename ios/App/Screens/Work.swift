@@ -3,11 +3,11 @@ import UIKit
 
 /// One file at work and then its transcript (ui/index.html, #work; Android's
 /// Work): the header with the way back, the name, and what can be done with
-/// it (at work only Stop; Copy and Share once it is done), the strip, the
-/// choice of sentences or captions, a line for what went wrong, and the rows.
+/// it (at work only Stop; Copy and Share once it is done), the strip, Find,
+/// a line for what went wrong, and the rows.
 ///
 /// Where the keyboard leaves the rows under `least` below the header, the
-/// strip and the views line, as on a phone on its side, those make room
+/// strip and Find's line, as on a phone on its side, those make room
 /// while it is up: the search takes the top line, its words, count and
 /// steps, and the rows the rest, the match in sight. The keyboard put away
 /// brings them back with the search kept; the field's × closes the search
@@ -21,7 +21,7 @@ struct Work: View {
     /// the screen's height above the keyboard, and as if there were none
     @State private var height: CGFloat = 0
     @State private var whole: CGFloat = 0
-    /// the header's, strip's, views line's and message's height as last
+    /// the header's, strip's, Find line's and message's height as last
     /// shown, which the rows' room is reckoned from while they make room
     @State private var above: CGFloat = 0
     /// the least of the rows worth the header and the strip with the
@@ -37,7 +37,6 @@ struct Work: View {
     /// What the matches are found anew for.
     private struct Sought: Equatable {
         let query: String
-        let captions: Bool
         let review: Bool
         let id: String
         let count: Int
@@ -47,7 +46,7 @@ struct Work: View {
         let t = Transcriber.shared
         let s = AppState.shared
         let review = t.step == .done || t.step == .stopped
-        let rows = s.rows
+        let rows = t.segments
         let room = makesRoom(review: review, rows: rows)
         let edge: CGFloat = roomy ? 24 : 16
         VStack(spacing: 0) {
@@ -76,7 +75,7 @@ struct Work: View {
                 }
                 if review && !rows.isEmpty {
                     // a step takes the playhead to its match, at rest too (Finder.step)
-                    Views(hits: hits, seek: { seek($0) }, alone: room)
+                    FindLine(hits: hits, seek: { seek($0) }, alone: room)
                         .padding(.horizontal, edge)
                         // alone, the search where the header's buttons were
                         .padding(.top, room ? 11 : 16)
@@ -133,9 +132,7 @@ struct Work: View {
             trace("room for the keyboard: \(room); \(height) of \(whole), \(above) above the rows")
         }
         .onChange(
-            of: Sought(
-                query: s.finder.query, captions: s.captions, review: review, id: t.id,
-                count: rows.count),
+            of: Sought(query: s.finder.query, review: review, id: t.id, count: rows.count),
             initial: true
         ) { was, now in
             hits = review ? findIn(rows, s.finder.query) : []
@@ -143,7 +140,7 @@ struct Work: View {
                 grouping: hits.indices.map { Marked(k: $0, hit: hits[$0]) }, by: \.hit.row)
             // a search typed at rest takes the playhead to its match, so that
             // Play starts where the rows went (app.js, runFind); the rows
-            // marked anew for the views or the list leave it where it is
+            // marked anew for the list leave it where it is
             let typed = was.query != now.query && !Player.shared.playing
             s.finder.settle(
                 hits, position: Player.shared.position, seek: typed ? { seek($0) } : nil)
@@ -151,7 +148,7 @@ struct Work: View {
     }
 
     /// Whether the header and the strip make room for the keyboard: it is
-    /// up, a transcript is searched, and under them and the views line, 16
+    /// up, a transcript is searched, and under them and Find's line, 16
     /// over the rows, the rows would keep less than `least`. Reckoned from
     /// their height as last shown, so that making room doesn't undo itself;
     /// a hardware keyboard's bar leaves the room it finds.
@@ -269,9 +266,7 @@ private struct Header: View {
             PkButton(text: L("stop"), kind: .ghost) { t.stop() }.fixedSize()
         }
         if review && shown {
-            IconButton(icon: .copy, label: L(s.captions ? "copy_captions" : "copy_text")) {
-                s.copy()
-            }
+            IconButton(icon: .copy, label: L("copy_text")) { s.copy() }
             ShareAs().fixedSize()
         }
     }
@@ -352,45 +347,35 @@ func share(_ url: URL, from view: UIView?) {
     top.present(vc, animated: true)
 }
 
-/// The views line: Sentences or Captions, and Find beside them, the one
-/// group of the transcript's controls (app.css, .pk-views-line): a field
-/// that says "Find", 200 wide and 280 with a search in it, where it fits
-/// beside the views, else the glass, which opens the field across the line
-/// until the search is let go, as a phone's find in page does. Not at the
-/// line's far end, nearly alone, where a reader might not see that the
-/// transcript can be searched (Peter, 2026-10-31).
-private struct Views: View {
+/// The line under the strip, Find's (app.css, .pk-spk-line, where the
+/// desktop has the speakers' switch before it): a field that says "Find",
+/// 200 wide and 280 with a search in it, where it fits, else the glass,
+/// which opens the field across the line until the search is let go, as a
+/// phone's find in page does. At the line's start, not its far end, where
+/// a reader might not see that the transcript can be searched (Peter,
+/// 2026-10-31).
+private struct FindLine: View {
     let hits: [Hit]
     let seek: ((Double) -> Void)?
     /// the search alone on the line, while the rest makes room for the
     /// keyboard (Work)
     let alone: Bool
-    /// the line's width, and the views' at their own, from a hidden copy,
-    /// so that it is known where they are not shown: a line drawn anew with
-    /// the search open across it, as an iPad turned or its window resized
-    /// past the side's 840 makes it, kept them away until the search closed
+    /// the line's width
     @State private var width: CGFloat = 0
-    @State private var viewsWidth: CGFloat = 0
     /// the field's 200 and 280, scaled as its text is: Android's app at
     /// twice the text size left a search 53 of a fixed 280 (2026-10-31)
     @ScaledMetric(relativeTo: .subheadline) private var narrow: CGFloat = 200
     @ScaledMetric(relativeTo: .subheadline) private var searching: CGFloat = 280
 
     var body: some View {
-        let s = AppState.shared
-        let f = s.finder
+        let f = AppState.shared.finder
         let wide = f.query.trimmingCharacters(in: .whitespaces).isEmpty ? narrow : searching
-        let room = { (w: CGFloat) in viewsWidth > 0 && viewsWidth + 12 + w <= width }
+        let room = { (w: CGFloat) in width > 0 && w <= width }
         let field: CGFloat? = room(wide) ? wide : room(narrow) ? narrow : nil
         let across = alone || (field == nil && f.open)
         HStack(spacing: 12) {
-            if !across {
-                Switch2(
-                    first: L("sentences"), second: L("captions"),
-                    onSecond: Binding(get: { s.captions }, set: { s.captions = $0 }))
-            }
-            // one field, beside the views or across the line, so that it
-            // keeps the keyboard from one to the other
+            // one field, at its width or across the line, so that it keeps
+            // the keyboard from one to the other
             if field != nil || across {
                 FindField(finder: f, hits: hits, seek: seek, opened: across)
                     .frame(width: across ? nil : field)
@@ -403,18 +388,6 @@ private struct Views: View {
         // between the field across it and a spacer left the field 12 short
         // of the strip's edge above it (Peter, the iPhone 16e, 2026-11-01)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(alignment: .leading) {
-            Switch2(first: L("sentences"), second: L("captions"), onSecond: .constant(s.captions))
-                .fixedSize()
-                .hidden()
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-                .onGeometryChange(for: CGFloat.self) {
-                    $0.size.width
-                } action: {
-                    viewsWidth = $0
-                }
-        }
         .onGeometryChange(for: CGFloat.self) {
             $0.size.width
         } action: {
@@ -429,10 +402,10 @@ struct Marked: Equatable {
     let hit: Hit
 }
 
-/// The transcript's rows (app.css, .pk-seg): each sentence's time, or a
-/// cue's start and end, then its text, at most 560 wide; under 620 the time
-/// above the text, as the desktop's window has it, where its 112 column
-/// left too little of the line, a cue's two times a range. The row playing
+/// The transcript's rows (app.css, .pk-seg): each sentence's time, then
+/// its text, at most 560 wide; under 620 the time above the text, as the
+/// desktop's window has it, where its 112 column left too little of the
+/// line. The row playing
 /// on the surface, the beak's square after its time and the word playing
 /// underlined in it; a row, tapped anywhere, plays from its time.
 ///
@@ -502,7 +475,7 @@ private struct Rows: View {
                                 ? rows[i].words.lastIndex { $0.start <= position + 1e-3 } ?? -1
                                 : -1,
                             marks: mine, at: mine.contains { $0.k == f.at } ? f.at : -1,
-                            wide: wide, column: column, cue: s.captions && review, review: review,
+                            wide: wide, column: column, review: review,
                             base: base
                         ) { seek(rows[i].start, true) }
                         .equatable()
@@ -607,7 +580,7 @@ private struct Rows: View {
     }
 }
 
-/// A row: its time, or a cue's start and end, and its text.
+/// A row: its time and its text.
 private struct SegRow: View, Equatable {
     let s: Segment
     let now: Bool
@@ -616,7 +589,6 @@ private struct SegRow: View, Equatable {
     let at: Int
     let wide: Bool
     let column: CGFloat
-    let cue: Bool
     let review: Bool
     let base: Timebase
     let onTime: () -> Void
@@ -624,7 +596,7 @@ private struct SegRow: View, Equatable {
     // the action aside, which is a new closure each frame and does the same
     static func == (a: SegRow, b: SegRow) -> Bool {
         a.s == b.s && a.now == b.now && a.word == b.word && a.marks == b.marks && a.at == b.at
-            && a.wide == b.wide && a.column == b.column && a.cue == b.cue && a.review == b.review
+            && a.wide == b.wide && a.column == b.column && a.review == b.review
             && a.base == b.base
     }
 
@@ -673,31 +645,15 @@ private struct SegRow: View, Equatable {
         }
     }
 
-    /// A cue's end under its start, or on a narrow screen after it as a
-    /// range, 00:02.88 – 00:05.60, the beak after the range: side by side, a
-    /// start with the beak after it and the end beside that read as two
-    /// times of their own (Peter, the S25, 2026-10-26).
-    @ViewBuilder private var time: some View {
-        if cue && !wide {
-            HStack(alignment: .firstTextBaseline, spacing: 0) {
-                Text(verbatim: base.at(s.start) + " – " + base.at(s.end))
-                beak
-            }
-            .font(stamp)
-            .monospacedDigit()
-            .foregroundStyle(Pk.inkMuted)
-        } else {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(alignment: .firstTextBaseline, spacing: 0) {
-                    Text(verbatim: base.at(s.start))
-                    beak
-                }
-                if cue { Text(verbatim: base.at(s.end)) }
-            }
-            .font(stamp)
-            .monospacedDigit()
-            .foregroundStyle(Pk.inkMuted)
+    /// Its time, the beak's square after it while it plays.
+    private var time: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            Text(verbatim: base.at(s.start))
+            beak
         }
+        .font(stamp)
+        .monospacedDigit()
+        .foregroundStyle(Pk.inkMuted)
     }
 }
 

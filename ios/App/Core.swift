@@ -50,8 +50,8 @@ struct Segment: Codable, Hashable {
     let words: [Word]
 }
 
-/// What a transcription gives: the core's Transcript, which format() and
-/// captions() take back as it is.
+/// What a transcription gives: the core's Transcript, which format() takes
+/// back as it is.
 struct Transcript: Codable {
     let duration: Double
     /// false where stop() ended it before the end

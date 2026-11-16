@@ -164,59 +164,6 @@ struct Spinner: View {
     }
 }
 
-/// Two choices in a sunk track, the one chosen raised to the ground with an
-/// ink-muted edge (app.css, .pk-views); the second under the first where a
-/// large text size leaves no room for both on a line, each word whole.
-struct Switch2: View {
-    let first: String
-    let second: String
-    @Binding var onSecond: Bool
-
-    var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 2) {
-                choice(first, second: false)
-                choice(second, second: true)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                choice(first, second: false)
-                choice(second, second: true)
-            }
-        }
-        .padding(2)
-        .background(Pk.sunk, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
-    }
-
-    private func choice(_ text: String, second: Bool) -> some View {
-        let on = onSecond == second
-        return Button {
-            onSecond = second
-        } label: {
-            Text(text)
-                .font(PkType.ui.font(13))
-                .fixedSize()
-                .foregroundStyle(on ? Pk.ink : Pk.inkMuted)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                // 36 and the switch's 2 round it: 40, as Find's field and the
-                // buttons on its line, which it was 3 short of (the layout audit)
-                .frame(minHeight: 36)
-                .background(
-                    on ? Pk.ground : Color.clear,
-                    in: RoundedRectangle(cornerRadius: Radius.radiusSm)
-                )
-                .overlay {
-                    if on {
-                        RoundedRectangle(cornerRadius: Radius.radiusSm).stroke(
-                            Pk.inkMuted, lineWidth: 1)
-                    }
-                }
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(on ? .isSelected : [])
-    }
-}
-
 /// A button that reads as a link (app.css, .pk-linkbtn): its words in ink,
 /// underlined, 500 14/20.
 struct LinkButton: View {

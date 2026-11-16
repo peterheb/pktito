@@ -28,8 +28,6 @@ final class AppState {
 
     /// Share's choice: each sentence's time before it in .txt and .md
     var times: Bool { didSet { UserDefaults.standard.set(times, forKey: "times") } }
-    /// the transcript as its subtitle track's cues, not its sentences
-    var captions: Bool { didSet { UserDefaults.standard.set(captions, forKey: "captions") } }
     /// the strip's choice of how times are written
     var base: Timebase {
         didSet {
@@ -50,16 +48,12 @@ final class AppState {
     /// a recording opened before there was a model: transcribed once there is
     var waiting: URL?
     let finder = Finder()
-    /// the transcript's cues, made the first time the Captions view shows
-    /// them, by the transcript they are of
-    @ObservationIgnored private var cues: (key: String, rows: [Segment])?
 
     enum Pick { case media, model, locate }
 
     private init() {
         let d = UserDefaults.standard
         times = d.bool(forKey: "times")
-        captions = d.bool(forKey: "captions")
         base = Timebase(
             frames: d.bool(forKey: "frames"), fps: d.object(forKey: "fps") as? Double ?? 24,
             videoRate: d.object(forKey: "video_rate") as? Bool ?? true)
@@ -160,51 +154,12 @@ final class AppState {
         }
     }
 
-    /// The rows shown: the sentences, or as captions their cues.
-    var rows: [Segment] {
-        let t = Transcriber.shared
-        let review = t.step == .done || t.step == .stopped
-        guard captions && review, let tr = t.transcript else { return t.segments }
-        let key = "\(t.id) \(tr.segments.count)"
-        if cues?.key != key { cues = (key, AppState.cuesOf(tr)) }
-        return cues?.rows ?? []
-    }
-
-    /// A transcript's cues (format::cues), each with its words, taken in
-    /// order from the transcript's (app.js, cuesOf).
-    private static func cuesOf(_ t: Transcript) -> [Segment] {
-        struct Cue: Decodable {
-            let start: Int64
-            let end: Int64
-            let text: String
-            var first: Int? = 0
-            var n: Int? = 0
-        }
-        struct Cues: Decodable { let cues: [Cue] }
-        guard let json = try? JSONEncoder().encode(t) else { return [] }
-        let out = String(decoding: json, as: UTF8.self).withCString { pkapp_captions($0) }
-        guard let out else { return [] }
-        defer { pkapp_free_string(out) }
-        guard
-            let c = try? JSONDecoder().decode(Cues.self, from: Data(bytes: out, count: strlen(out)))
-        else { return [] }
-        let words = t.segments.flatMap(\.words)
-        return c.cues.map { q in
-            let first = q.first ?? 0
-            let n = q.n ?? 0
-            return Segment(
-                start: Double(q.start) / 1000, end: Double(q.end) / 1000, text: q.text,
-                words: first + n <= words.count ? Array(words[first..<(first + n)]) : [])
-        }
-    }
-
-    /// The transcript as text, or as captions their SRT, on the clipboard.
+    /// The transcript as text on the clipboard, as the desktop's Copy.
     func copy() {
         guard let t = Transcriber.shared.transcript else { return }
-        let ext = captions ? "srt" : "txt"
-        if let text = try? Core.format(t, ext: ext, name: Transcriber.shared.name, times: false) {
+        if let text = try? Core.format(t, ext: "txt", name: Transcriber.shared.name, times: false) {
             UIPasteboard.general.string = text
-            say(L(captions ? "copied_captions" : "copied"))
+            say(L("copied"))
         }
     }
 

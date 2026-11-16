@@ -215,18 +215,6 @@
         }
       }
     },
-    "captions": {
-      "extractionState": "manual",
-      "comment": "work.sentences",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Captions"
-          }
-        }
-      }
-    },
     "catalog_english": {
       "extractionState": "manual",
       "comment": "The models: the catalog's words (catalog.*), the model menu (models.*), the setup screen (setup.*), a download (download.*), a model file of one's own (model_file.*)",
@@ -308,36 +296,12 @@
     },
     "copied": {
       "extractionState": "manual",
-      "comment": "copy.captions",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copied"
-          }
-        }
-      }
-    },
-    "copied_captions": {
-      "extractionState": "manual",
-      "comment": "copy.done",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copied captions"
-          }
-        }
-      }
-    },
-    "copy_captions": {
-      "extractionState": "manual",
       "comment": "copy.text",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Copy captions (SRT)"
+            "value": "Copied"
           }
         }
       }
@@ -1641,7 +1605,6 @@
     },
     "play": {
       "extractionState": "manual",
-      "comment": "work.captions",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2128,17 +2091,6 @@
         }
       }
     },
-    "sentences": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sentences"
-          }
-        }
-      }
-    },
     "setup_accuracy": {
       "extractionState": "manual",
       "localizations": {
@@ -2275,7 +2227,7 @@
     },
     "share": {
       "extractionState": "manual",
-      "comment": "copy.done_captions",
+      "comment": "copy.done",
       "localizations": {
         "en": {
           "stringUnit": {

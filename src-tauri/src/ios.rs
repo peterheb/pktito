@@ -29,8 +29,8 @@ struct Loaded {
     model: pktito::Model,
 }
 
-/// A transcript as Swift gets it, and gives back to pkapp_format and
-/// pkapp_captions: android.rs's, with the name of the model that made it.
+/// A transcript as Swift gets it, and gives back to pkapp_format:
+/// android.rs's, with the name of the model that made it.
 #[derive(Serialize, Deserialize)]
 struct Transcript {
     duration: f64,
@@ -405,25 +405,6 @@ pub extern "C" fn pkapp_format(
             times,
         )?;
         Ok(json!({ "text": text }))
-    })
-}
-
-/// A Transcript's subtitle track, the cues its .srt and .vtt have
-/// (format::cues), for the Captions view: {"cues"}.
-#[unsafe(no_mangle)]
-pub extern "C" fn pkapp_captions(transcript: *const c_char) -> *mut c_char {
-    answer(|| {
-        let t = parse(transcript)?;
-        let cues = format::cues(&format::Transcript {
-            name: "",
-            duration: t.duration,
-            model: Some(&t.model),
-            segments: &t.segments,
-            names: None,
-            diarizer: None,
-            name_lone: false,
-        })?;
-        Ok(json!({ "cues": cues }))
     })
 }
 
