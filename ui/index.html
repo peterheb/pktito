@@ -101,12 +101,19 @@
           <h1 class="pk-ui pk-cut" id="title"></h1>
           <span class="pk-spin" id="spin" hidden aria-hidden="true"></span>
           <span class="pk-grow"></span>
-          <label class="pk-find" id="find-box">
+          <!-- for: the speaker's button before the field would be the
+               label's control otherwise -->
+          <label class="pk-find" id="find-box" for="find">
             <svg class="pk-ico" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
-            <span class="pk-find-who" id="find-who" hidden></span>
+            <button
+              class="pk-find-who"
+              id="find-who"
+              type="button"
+              hidden
+            ></button>
             <input
               id="find"
               type="search"

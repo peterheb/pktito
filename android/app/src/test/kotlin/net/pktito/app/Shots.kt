@@ -1300,10 +1300,14 @@ class Shots {
             )
         }
 
+    // then the speaker's x: let go, the words kept (Finder.dropWho)
     @Test
     fun speakersFindWords() {
         val (f, h, _) = foundWords(2, "to")
         shot("speakers-find-words", false) { talk(find = f, hits = h) }
+        compose.onNodeWithContentDescription("Remove Speaker 2 from the search").performClick()
+        assertEquals(0, f.who)
+        assertEquals("to", f.query)
     }
 
     @Test

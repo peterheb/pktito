@@ -263,6 +263,7 @@
   "find.previous_tip": "Previous",
   "find.next_tip": "Next",
   "find.clear": "Clear search",
+  "find.who_remove": "Remove {name} from the search",
   "find.only": "Only matches",
   "find.only_show": "Show only the sentences found",
   "find.only_all": "Show the whole transcript",

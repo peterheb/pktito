@@ -30,6 +30,8 @@
     <string name="find_previous">Previous match</string><!-- find.previous -->
     <string name="find_next">Next match</string><!-- find.next -->
     <string name="find_close">Close find</string>
+    <!-- the speaker found, before the words in Find: a tap lets them go and keeps the words -->
+    <string name="find_who_remove">Remove %1$s from the search</string><!-- find.who_remove -->
     <!-- the switch after Find that shows only what a search found: its sentences, or the speaker found's -->
     <string name="find_only">Only matches</string><!-- find.only -->
     <string name="find_only_show">Show only the sentences found</string><!-- find.only_show -->

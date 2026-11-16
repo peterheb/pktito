@@ -2,9 +2,11 @@ package net.pktito.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -37,6 +39,7 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -318,13 +321,19 @@ class Finder {
      * before, are sought in their sentences alone. Found again, let go, and the words kept.
      */
     fun findWho(n: Int) {
-        if (who == n) {
-            who = 0
-            if (query.isEmpty()) clear()
-            return
-        }
+        if (who == n) return dropWho()
         who = n
         open = true
+    }
+
+    /**
+     * The speaker found let go and the words kept (FindField: their x, which a phone's keyboard
+     * needs, having no Backspace in an empty field; Peter, 2026-11-16); with no words, the search
+     * ends.
+     */
+    fun dropWho() {
+        who = 0
+        if (query.isEmpty()) clear()
     }
 
     /** The field, with its keys. */
@@ -407,24 +416,37 @@ fun FindField(
         if (f.who != 0) {
             val name = nameOf(f.who)
             val full = roomy || f.query.isEmpty()
-            Row(
-                Modifier.widthIn(max = 180.dp)
-                    .height(28.dp)
-                    .background(p.ground, CornerSm)
-                    .padding(horizontal = 8.dp)
-                    .semantics(mergeDescendants = true) { contentDescription = name },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            // a button, whose x lets them go and keeps the words (Finder.dropWho);
+            // the field's height to a finger, its 28 drawn
+            Box(
+                Modifier.fillMaxHeight().pointerInput(Unit) { detectTapGestures { f.dropWho() } },
+                contentAlignment = Alignment.Center,
             ) {
-                Mark(f.who)
-                if (full)
-                    Text(
-                        name,
-                        style = Type.ui.copy(fontSize = 13.sp, lineHeight = 16.sp),
-                        color = p.ink,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                Row(
+                    Modifier.widthIn(max = 180.dp)
+                        .height(28.dp)
+                        .control(
+                            CornerSm,
+                            p.ground,
+                            label = stringResource(R.string.find_who_remove, name),
+                            onClick = f::dropWho,
+                        )
+                        .padding(start = 8.dp, end = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Mark(f.who)
+                    if (full)
+                        Text(
+                            name,
+                            Modifier.weight(1f, fill = false),
+                            style = Type.ui.copy(fontSize = 13.sp, lineHeight = 16.sp),
+                            color = p.ink,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    Icon(Icons.x, null, tint = p.inkMuted, modifier = Modifier.size(12.dp))
+                }
             }
         }
         val label = stringResource(R.string.find_label)

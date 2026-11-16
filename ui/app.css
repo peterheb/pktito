@@ -2308,8 +2308,9 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   flex-basis: 304px;
   min-width: 214px;
 }
-/* a speaker found (app.js, findWho): their mark and name before the field,
-   where a search's words would be; words typed search for words instead */
+/* a speaker found (app.js, findWho): their mark and name before the
+   field's words, which are sought in their sentences alone; a button,
+   whose x lets them go and keeps the words */
 .pk-find-who {
   display: inline-flex;
   align-items: center;
@@ -2317,16 +2318,27 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   flex: none;
   max-width: 60%;
   height: 22px;
-  padding: 0 8px;
+  padding: 0 6px 0 8px;
+  border: 0;
   border-radius: var(--radius-sm);
   background: var(--ground);
   color: var(--ink);
   font: 500 13px/16px var(--font-sans);
   white-space: nowrap;
+  cursor: pointer;
 }
 .pk-find-who > span {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.pk-find-who > .pk-ico {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--ink-muted);
+}
+.pk-find-who:hover > .pk-ico {
+  color: var(--ink);
 }
 /* with a speaker found, room after their name for words of theirs to
    find (app.js, findWho), as the phones' 380 */

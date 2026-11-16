@@ -826,6 +826,18 @@
         }
       }
     },
+    "find_who_remove": {
+      "extractionState": "manual",
+      "comment": "the speaker found, before the words in Find: a tap lets them go and keeps the words; the desktop's find.who_remove",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove %1$@ from the search"
+          }
+        }
+      }
+    },
     "format_json": {
       "extractionState": "manual",
       "localizations": {

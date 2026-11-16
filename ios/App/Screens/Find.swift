@@ -150,13 +150,17 @@ final class Finder {
     /// Words typed then, or before, are sought in their sentences alone.
     /// Found again, let go, and the words kept.
     func findWho(_ n: Int) {
-        if who == n {
-            who = 0
-            if query.isEmpty { clear() }
-            return
-        }
+        if who == n { return dropWho() }
         who = n
         open = true
+    }
+
+    /// The speaker found let go and the words kept (FindField: their x,
+    /// which a phone's keyboard needs, having no delete for an empty field;
+    /// Peter, 2026-11-16); with no words, the search ends.
+    func dropWho() {
+        who = 0
+        if query.isEmpty { clear() }
     }
 
     func spotted(_ k: Int, _ rect: CGRect) {
@@ -255,21 +259,30 @@ struct FindField: View {
         let has = !finder.query.trimmingCharacters(in: .whitespaces).isEmpty || finder.who != 0
         HStack(spacing: 8) {
             PkIcon.search.frame(width: 16, height: 16).foregroundStyle(Pk.inkMuted)
+            // a button, whose x lets them go and keeps the words (Finder.dropWho)
             if finder.who != 0 {
-                HStack(spacing: 6) {
-                    SpeakerMark(n: finder.who)
-                    if finder.query.isEmpty || width >= 360 {
-                        Text(nameOf(finder.who))
-                            .font(PkType.ui.font(13))
-                            .foregroundStyle(Pk.ink)
-                            .lineLimit(1)
+                Button {
+                    finder.dropWho()
+                } label: {
+                    HStack(spacing: 6) {
+                        SpeakerMark(n: finder.who)
+                        if finder.query.isEmpty || width >= 360 {
+                            Text(nameOf(finder.who))
+                                .font(PkType.ui.font(13))
+                                .foregroundStyle(Pk.ink)
+                                .lineLimit(1)
+                        }
+                        PkIcon.x.frame(width: 12, height: 12).foregroundStyle(Pk.inkMuted)
                     }
+                    .padding(.leading, 8)
+                    .padding(.trailing, 6)
+                    .frame(maxWidth: 180, minHeight: 28)
+                    .background(Pk.ground, in: RoundedRectangle(cornerRadius: Radius.radiusSm))
+                    // 40 to a finger, the field's height, its 28 drawn
+                    .contentShape(Rectangle().inset(by: -6))
                 }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(nameOf(finder.who))
-                .padding(.horizontal, 8)
-                .frame(maxWidth: 180, minHeight: 28)
-                .background(Pk.ground, in: RoundedRectangle(cornerRadius: Radius.radiusSm))
+                .buttonStyle(.plain)
+                .accessibilityLabel(L("find_who_remove", nameOf(finder.who)))
                 .fixedSize()
             }
             TextField(L("find_placeholder"), text: $finder.query)

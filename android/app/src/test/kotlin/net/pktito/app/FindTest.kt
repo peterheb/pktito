@@ -64,6 +64,15 @@ class FindTest {
         assertEquals("the speaker let go, the words kept", "rabbit", f.query)
         assertTrue(f.searching)
         f.findWho(2)
+        f.dropWho()
+        assertEquals("the field's x: the speaker let go", 0, f.who)
+        assertEquals("the words kept", "rabbit", f.query)
+        f.query = ""
+        f.findWho(2)
+        f.dropWho()
+        assertFalse("with no words, the search ends", f.searching)
+        f.query = "rabbit"
+        f.findWho(2)
         f.only = true
         f.clear()
         assertEquals(0, f.who)

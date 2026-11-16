@@ -3150,14 +3150,20 @@ function findCount() {
   $("strip").classList.toggle("has-ticks", !!dur && hits.length > 0);
 }
 
-/* the speaker found before the field, and their name over the transcript
+/* the speaker found before the field, an x after their name, which lets
+   them go and keeps the words (Peter, 2026-11-16: a phone's keyboard has
+   no Backspace for an empty field), and their name over the transcript
    pressed */
 function showWho() {
   const f = current(),
-    el = $("find-who");
+    el = $("find-who"),
+    name = who && f ? nameOf(f, who) : "";
   el.hidden = !who;
-  el.innerHTML =
-    who && f ? `${markHtml(who)}<span>${esc(nameOf(f, who))}</span>` : "";
+  el.innerHTML = name
+    ? `${markHtml(who)}<span>${esc(name)}</span>${ICON.x}`
+    : "";
+  el.title = name ? t("find.who_remove", { name }) : "";
+  el.setAttribute("aria-label", el.title);
   $("find-box").classList.toggle("has-who", !!who);
   for (const c of $("chips").querySelectorAll(".pk-chip"))
     c.setAttribute("aria-pressed", String(Number(c.dataset.s) === who));
@@ -3309,6 +3315,12 @@ $("ticks").addEventListener("click", (e) => {
   // after the seek, which puts the reader on the match it last passed: a
   // tick's own, where two share its time
   goHit(i);
+});
+/* the speaker before the field let go, the words kept, and the keys back
+   in the field */
+$("find-who").addEventListener("click", () => {
+  findWho(current(), who);
+  $("find").focus({ preventScroll: true });
 });
 $("find").addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
