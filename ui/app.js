@@ -2004,7 +2004,8 @@ function placeFind() {
       shown.reduce((n, b) => n + b.offsetWidth, 0) + gap * (shown.length + 1),
     under = buttons + gap + 200 + NAME_FLOOR > room,
     stacked = buttons + NAME_FLOOR > room;
-  if (under && box.parentElement !== line) line.append(box);
+  if (under && box.parentElement !== line)
+    line.insertBefore(box, $("only-track"));
   else if (!under && box.parentElement === line)
     head.insertBefore(box, $("copy"));
   if (stacked && $("title").parentElement !== nameLine)
@@ -2118,7 +2119,8 @@ function segHtml(s, i, filling, turn = -1, dot = false, spk = false) {
    on every key typed, over every row. */
 const lowered = new WeakMap();
 function matchesIn(s) {
-  if (!query) return [];
+  // with a speaker found, words are sought in their sentences alone
+  if (!query || (who && s.speaker !== who)) return [];
   let l = lowered.get(s);
   if (!l) {
     const low = s.text.toLowerCase();
@@ -2200,6 +2202,8 @@ function bodyHtml(s, i) {
 function renderTranscript(f, mode) {
   const tr = $("transcript");
   tr.classList.toggle("is-live", mode === "running");
+  // every row drawn: a search kept shows only its matches again (runFind)
+  tr.classList.remove("is-only");
   tr._spk = turnsShown(f);
   // the times' column as wide as the file's times (app.css, .pk-seg)
   tr.style.setProperty("--time-chars", timeChars(f));
@@ -2711,8 +2715,16 @@ function placeOf(row) {
   const tr = $("transcript"),
     top = tr.getBoundingClientRect().top,
     rows = tr.getElementsByClassName("pk-seg");
-  let el = row && row.isConnected && inSight(row) ? row : null;
-  if (!el) {
+  let el = row && row.isConnected && !row.hidden && inSight(row) ? row : null;
+  if (!el && tr.classList.contains("is-only")) {
+    // with only the matches shown, the hidden rows have no place to search
+    // by: the first row shown in sight
+    for (const r of rows)
+      if (!r.hidden && r.getBoundingClientRect().bottom > top) {
+        el = r;
+        break;
+      }
+  } else if (!el) {
     let lo = 0,
       hi = rows.length;
     while (lo < hi) {
@@ -2728,7 +2740,8 @@ function placeOf(row) {
 }
 function toPlace(f, place) {
   const el = place && rowEl(at(f.segments, place.t));
-  if (el) $("transcript").scrollTop += el.getBoundingClientRect().top - place.y;
+  if (el && !el.hidden)
+    $("transcript").scrollTop += el.getBoundingClientRect().top - place.y;
 }
 
 /* The playhead at t: the time, the waveform, and the segment and word
@@ -2883,8 +2896,11 @@ $("wavebtn").addEventListener("keydown", (e) => {
 /* ---------------------------------------------------------------- find -- */
 
 let query = "",
-  // the speaker found (findWho), whose turns are the matches; 0 for words
+  // the speaker found (findWho): their turns are the matches, or with
+  // words typed the words' matches in their sentences alone; 0 for none
   who = 0,
+  // only the sentences found shown (applyOnly)
+  only = false,
   hits = [],
   hitTimes = [],
   hitAt = -1,
@@ -2978,13 +2994,16 @@ function runFind(sought) {
   if (!f || modeOf(f) !== "review") return;
   // the time of the match the reader is on, before the search changes
   const was = hitTimes[hitAt];
-  // the speaker found while their name shows, else the words in the field
+  // the speaker found while their name shows, and the words in the field:
+  // with both, the words in the speaker's sentences (Peter, 2026-11-15:
+  // "show me everything Ed Elson said", and a phrase of theirs)
   if (who && !(spkShown(f) && present(f).includes(who))) who = 0;
-  query = who ? "" : $("find").value.trim();
+  query = $("find").value.trim();
   const rows = f.segments;
   // each match, by its row and its number in the row, at its word's time,
-  // for its tick under the waveform; the speaker found's, each of their
-  // turns, by its first row (hi -1: its name, not its words), at its start
+  // for its tick under the waveform; with no words, the speaker found's,
+  // each of their turns, by its first row (hi -1: its name, not its
+  // words), at its start
   hits = [];
   hitTimes = [];
   rows.forEach((s, i) => {
@@ -2994,7 +3013,12 @@ function runFind(sought) {
       const k = wordAt(s, a);
       hitTimes.push(k >= 0 ? s.words[k].start : s.start);
     });
-    if (who && s.speaker === who && (i === 0 || rows[i - 1].speaker !== who)) {
+    if (
+      who &&
+      !query &&
+      s.speaker === who &&
+      (i === 0 || rows[i - 1].speaker !== who)
+    ) {
       hits.push({ i, hi: -1 });
       hitTimes.push(s.start);
     }
@@ -3003,6 +3027,7 @@ function runFind(sought) {
   hitAt = -1;
   for (const i of inView) markRow(i);
   markNames();
+  applyOnly(f);
   // the match the reader was on while it is still one, so that a search
   // typed on keeps its place, as Android's does; otherwise the match the
   // playhead last passed, so that a search typed as it plays or rests
@@ -3095,6 +3120,7 @@ function findCount() {
     : "";
   $("find-box").classList.toggle("has-query", finding);
   showWho();
+  showOnly(finding);
   $("find-prev").disabled = $("find-next").disabled = hits.length < 2;
   const f = current(),
     dur = f && f.duration;
@@ -3131,6 +3157,89 @@ function showWho() {
     c.setAttribute("aria-pressed", String(Number(c.dataset.s) === who));
 }
 
+/* Only matches (Peter's question of 2026-11-15: "show me everything Ed
+   Elson said"): while something is found, the switch after the names, and
+   after Find where Find is on that line, shows only the sentences found:
+   those with a match of the words, or with only a speaker found, every
+   sentence of theirs. Each still plays from its time, and the playhead
+   still goes through the whole recording. A run of the rows shown stands
+   apart as a turn does, its line ending inside its first and last, and a
+   run that starts inside a turn has its speaker's name, which otherwise
+   only a turn's first sentence has. Off by default, and off again once the
+   search is let go; Copy and Save as have the whole transcript. The other
+   rows are hidden, not taken out: rowEl counts them. */
+function applyOnly(f) {
+  const tr = $("transcript"),
+    els = tr.getElementsByClassName("pk-seg"),
+    rows = f.segments,
+    on = only && (!!query || !!who);
+  tr.classList.toggle("is-only", on);
+  for (const b of tr.querySelectorAll(".pk-lent")) b.remove();
+  let shown = null;
+  if (on) {
+    shown = rows.map((s) => !query && s.speaker === who);
+    for (const { i } of hits) shown[i] = true;
+  }
+  const many = turnsShown(f);
+  let seen = false;
+  for (let i = 0; i < els.length; i++) {
+    const el = els[i],
+      show = !shown || shown[i],
+      from = !!shown && show && !(i > 0 && shown[i - 1]),
+      to = !!shown && show && !(i + 1 < rows.length && shown[i + 1]);
+    el.hidden = !show;
+    el.classList.toggle("pk-from", from);
+    el.classList.toggle("pk-to", to);
+    el.classList.toggle("pk-lead", !!shown && show && !seen);
+    el.classList.toggle("pk-gap", from && seen);
+    if (shown && show) seen = true;
+    // a run from inside a turn: the turn's name, for the whole turn
+    if (from && many && rows[i].speaker != null && !turnStarts(rows, i)) {
+      let a = i;
+      while (a > 0 && rows[a - 1].speaker === rows[i].speaker) a--;
+      el.querySelector("p").insertAdjacentHTML(
+        "afterbegin",
+        nameBtn(f, a).replace(
+          'class="pk-speaker"',
+          'class="pk-speaker pk-lent"',
+        ),
+      );
+    }
+  }
+  const none = tr.querySelector(".pk-none");
+  if (on && !seen) {
+    if (!none)
+      tr.insertAdjacentHTML(
+        "afterbegin",
+        `<p class="pk-none">${esc(t("find.only_none"))}</p>`,
+      );
+  } else none?.remove();
+}
+
+/* the switch, while something is found; off again once nothing is */
+function showOnly(finding) {
+  const f = current();
+  if (!finding) only = false;
+  $("only-track").hidden = !finding || !f || modeOf(f) !== "review";
+  const b = $("only");
+  b.setAttribute("aria-pressed", String(only));
+  b.innerHTML = `${ICON.check}<span>${esc(t("find.only"))}</span>`;
+  b.title = t(only ? "find.only_all" : "find.only_show");
+}
+
+/* the switch turned, the reader on the same sentence: the match they are
+   on, else the first row in sight, where it was in the window, with what
+   was around it come back, or gone */
+$("only").onclick = () => {
+  const f = current();
+  if (!f || !(query || who)) return;
+  const place = placeOf(hitAt >= 0 ? rowEl(hits[hitAt].i) : null);
+  only = !only;
+  applyOnly(f);
+  showOnly(true);
+  toPlace(f, place);
+};
+
 function clearFind() {
   who = 0;
   $("find").value = "";
@@ -3144,11 +3253,8 @@ function openFind() {
   $("find").select();
 }
 
-// words typed search for words: the speaker found gives way to them
-$("find").addEventListener("input", () => {
-  who = 0;
-  runFind(true);
-});
+// words typed are sought, in the speaker found's sentences where one is
+$("find").addEventListener("input", () => runFind(true));
 $("find-prev").onclick = (e) => {
   e.preventDefault();
   stepHit(-1);
@@ -3884,11 +3990,12 @@ $("chips").onclick = (e) => {
    from turn to turn and take the playhead along, so that Play plays their
    words, and each comes to the middle of the transcript with what was said
    before it, where a name is often said. The others' words stay: they are
-   the context. The name again, Esc, or words typed end it, and a turn's
-   name has Rename (Who's speaking). Before, a name over the transcript
-   renamed its speaker. */
+   the context. Words typed then are sought in their sentences alone, and
+   so are words typed before (Peter, 2026-11-15). The name again lets the
+   speaker go and keeps the words, Esc both, and a turn's name has Rename
+   (Who's speaking). Before, a name over the transcript renamed its
+   speaker. */
 function findWho(f, n) {
-  $("find").value = "";
   who = who === n ? 0 : n;
   runFind(true);
   if (who) $("find").focus({ preventScroll: true });

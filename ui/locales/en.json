@@ -263,6 +263,10 @@
   "find.previous_tip": "Previous",
   "find.next_tip": "Next",
   "find.clear": "Clear search",
+  "find.only": "Only matches",
+  "find.only_show": "Show only the sentences found",
+  "find.only_all": "Show the whole transcript",
+  "find.only_none": "No matches",
 
   "play.play": "Play",
   "play.pause": "Pause",

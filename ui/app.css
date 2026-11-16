@@ -2328,8 +2328,10 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.pk-find.has-who input::placeholder {
-  color: transparent;
+/* with a speaker found, room after their name for words of theirs to
+   find (app.js, findWho), as the phones' 380 */
+.pk-find.has-query.has-who {
+  flex-basis: 400px;
 }
 /* a field that says "Find" wherever it is: the header keeps it only with
    room for the field and 160 of the name (app.js, placeFind), else it goes
@@ -2785,6 +2787,36 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 }
 .pk-seg.pk-turn {
   margin-top: var(--space-3);
+}
+/* Only matches (app.js, applyOnly): each run of the rows shown stands
+   apart as a turn does, 16 px, its line ending 8 px inside its first and
+   last rows, and the first row shown at the top */
+.pk-transcript.is-only .pk-seg.pk-gap {
+  margin-top: var(--space-3);
+}
+.pk-transcript.is-only .pk-seg.pk-lead {
+  margin-top: 0;
+}
+.pk-seg[data-spk].pk-from::before {
+  top: 8px;
+  border-top-left-radius: 1.5px;
+  border-top-right-radius: 1.5px;
+}
+.pk-seg[data-spk].pk-to::before {
+  bottom: 8px;
+  border-bottom-left-radius: 1.5px;
+  border-bottom-right-radius: 1.5px;
+}
+/* what the whole transcript cost says nothing of the sentences shown */
+.pk-transcript.is-only .pk-stats {
+  display: none;
+}
+/* with nothing found, where the sentences would be */
+.pk-none {
+  margin: 0;
+  padding: 6px 16px;
+  font: 400 14px/20px var(--font-sans);
+  color: var(--ink-muted);
 }
 
 /* The strip is one height with the speaker bar or without (Peter,
