@@ -124,17 +124,28 @@
             }
             let t0 = Date()
             let name = url.lastPathComponent
+            // -speakers: who said what too, with the speaker model in the
+            // models folder, loaded for the run as the app loads it
+            let diarizer =
+                CommandLine.arguments.contains("-speakers")
+                ? Store.models.appendingPathComponent("nemotron-3-diarization.pkf") : nil
             do {
                 let t = try await Task.detached(priority: .userInitiated) {
-                    try engine.transcribe(url, name: name, diar: nil, progress: progress)
+                    if let diarizer {
+                        return try Speakers.with(diarizer) {
+                            try engine.transcribe(url, name: name, diar: $0, progress: progress)
+                        }
+                    }
+                    return try engine.transcribe(url, name: name, diar: nil, progress: progress)
                 }.value
                 let took = Date().timeIntervalSince(t0)
                 text = t.segments.map(\.text).joined(separator: "\n")
                 stats = String(
-                    format: "%.1f s of audio in %.2f s, %.1fx real time, %@, %@", t.duration, took,
-                    t.duration / max(took, 0.001),
+                    format: "%.1f s of audio in %.2f s, %.1fx real time, %@, %@%@", t.duration,
+                    took, t.duration / max(took, 0.001),
                     edition == "cpu" ? "CPU" : "Neural Engine",
-                    Core.backend)
+                    Core.backend,
+                    diarizer == nil ? "" : ", speakers \(Speakers.present(t.segments).count)")
             } catch {
                 stats = error.localizedDescription
             }
