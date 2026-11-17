@@ -411,13 +411,23 @@ fn json(t: &Transcript, cues: &[Cue], windows: &[Window]) -> String {
         format!(",\n  \"chunks\": [\n{}\n  ]", chunks.join(",\n"))
     };
     format!(
-        "{{\n  \"format\": \"pktito/1\",\n  \"file\": {},\n  \"duration\": {},\n  \"model\": {},\n  \"language\": {lang}{speakers},\n  \"segments\": [\n{}\n  ],\n  \"captions\": [\n{}\n  ]{chunks}\n}}\n",
+        "{{\n  \"format\": \"pktito/1\",\n  \"file\": {},\n  \"duration\": {},\n  \"model\": {},\n  \"language\": {lang}{speakers},\n  \"segments\": {},\n  \"captions\": {}{chunks}\n}}\n",
         j(t.name),
         r3(t.duration),
         t.model.filter(|m| !m.is_empty()).map(j).unwrap_or_else(|| "null".into()),
-        segs.join(",\n"),
-        cues.join(",\n"),
+        json_list(&segs),
+        json_list(&cues),
     )
+}
+
+/// A JSON list of items one to a line, indented under its key; a list of
+/// nothing is [], as pktito-c writes it.
+fn json_list(items: &[String]) -> String {
+    if items.is_empty() {
+        "[]".into()
+    } else {
+        format!("[\n{}\n  ]", items.join(",\n"))
+    }
 }
 
 /// A number to three decimals, written as JavaScript writes it: the
