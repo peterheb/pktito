@@ -2663,9 +2663,11 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 /* A speaker's mark beside a name, in the names over the transcript and in
    Who's speaking: a swatch, not the transcript's line, which 3 px wide
    beside a name read as a divider (Peter, 2026-11-15). A circle for
-   speakers 1 to 4 and a square a pixel smaller for 5 to 8, the same area. Every pair close in
-   color crosses that line but magenta and orchid, 5 and 8 (the design's
-   palette check, OKLab ΔE: neighbors 8.9 or more for color-blind readers). */
+   speakers 1 to 4 and a square a pixel smaller for 5 to 8, the same area. The three
+   pairs closest in color cross that line: magenta 4 with purple 6 and
+   rose 8, violet 1 with purple 6 (CIEDE2000 18.3 or more between any two
+   in the light theme, 17.6 in the dark; 12.2 or more between neighbors
+   and among the first five for color-blind readers). */
 /* Sized from the text beside it and inline in it, its middle at the middle
    of the lowercase letters (vertical-align: middle), mark-gap before the
    name: the design's Baseline rules (Peter, 2026-11-17: "make swatch 0.75em

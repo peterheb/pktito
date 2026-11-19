@@ -208,8 +208,8 @@ private const val X_HEIGHT = 0.526f
 /**
  * A speaker's mark beside a name (app.css, .pk-mark), sized from the name's text: a circle
  * mark-size across for speakers 1 to 4, a square mark-size-sq for 5 to 8, about the same area, each
- * in whole pixels, which a fraction draws soft. Every pair close in color crosses that line but
- * magenta and orchid, 5 and 8 (the design's palette check). In a Row, its middle at the middle of
+ * in whole pixels, which a fraction draws soft. The three pairs closest in color cross that line:
+ * magenta 4 with purple 6 and rose 8, violet 1 with purple 6. In a Row, its middle at the middle of
  * the name's lowercase letters, half the x-height above the baseline the name's Text aligns by
  * (alignBy(FirstBaseline)), and mark-gap after it: the design's Baseline rules (Peter, 2026-11-17:
  * "make swatch 0.75em centered around x-height"). At 13 sp a 10 dp circle 8 from the name.

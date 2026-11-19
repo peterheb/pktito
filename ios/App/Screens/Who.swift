@@ -28,8 +28,8 @@ extension Pk {
 
 /// A speaker's mark beside a name (app.css, .pk-mark): a 10 pt circle for
 /// speakers 1 to 4 and a 9 pt square with 2 pt corners for 5 to 8, about
-/// the same area. Every pair close in color crosses that line but magenta
-/// and orchid, 5 and 8 (the design's palette check).
+/// the same area. The three pairs closest in color cross that line:
+/// magenta 4 with purple 6 and rose 8, violet 1 with purple 6.
 struct SpeakerMark: View {
     let n: Int
     /// the size of the text beside it, before Dynamic Type
