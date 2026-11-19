@@ -288,38 +288,122 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
                 return Ok(env.new_string(nothing())?.into());
             }
             let fps = decode::frame_rate_fd(fd).unwrap_or(0.0);
-            // how far Android's decoder has got, for the screen while it reads
-            // (progress.reading); a failed call ends the run as update's does
-            let mut told = None;
-            let x = decode::decode_fd(fd, &name, &mut |fraction| {
-                if told.is_none() {
-                    if let Err(e) = env.call_method(
-                        &progress,
-                        jni_str!("reading"),
-                        jni_sig!("(D)V"),
-                        &[JValue::Double(fraction)],
-                    ) {
-                        told = Some(e);
-                    }
-                }
-                STOP.load(Ordering::Relaxed)
+            // the recording transcribed as Android's decoder reads it
+            // (LIB-8): the decoder on a thread of its own, filling x, the
+            // transcription reading it as it fills; Stop, while the
+            // decoder goes, cancels x, which ends both
+            let x = pktito::Growing::new();
+            let (run, decoded, failed) = std::thread::scope(|sc| {
+                let decoder = sc.spawn(|| {
+                    decode::decode_fd_into(
+                        fd,
+                        &name,
+                        &mut |_| {
+                            if STOP.load(Ordering::Relaxed) {
+                                x.cancel();
+                            }
+                            x.cancelled()
+                        },
+                        &x,
+                    )
+                });
+                let mut failed = None;
+                // the waveform as the decoder passes it, over the length the
+                // container gives until the end, said with each chunk
+                let mut rising: Option<audio::Rising> = None;
+                let audio = |env: &mut Env, duration: f64, peaks: &[u8]| {
+                    env.with_local_frame(2, |env| -> jni::errors::Result<()> {
+                        let peaks = env.byte_array_from_slice(peaks)?;
+                        env.call_method(
+                            &progress,
+                            jni_str!("audio"),
+                            jni_sig!("(DD[B)V"),
+                            &[
+                                JValue::Double(duration),
+                                JValue::Double(fps),
+                                JValue::from(&peaks),
+                            ],
+                        )?;
+                        Ok(())
+                    })
+                };
+                let run = transcribe::run_growing(
+                    &l.model,
+                    &mut l.asr,
+                    &x,
+                    speakers.as_mut(),
+                    |done, segs| {
+                        if failed.is_some() {
+                            return;
+                        }
+                        let estimate = x.estimate();
+                        let r = rising
+                            .get_or_insert_with(|| audio::Rising::new(estimate, audio::PEAKS));
+                        if let Ok(new) = x.slice(r.seen(), x.len()) {
+                            r.add(&new);
+                        }
+                        let duration = estimate as f64 / decode::RATE as f64;
+                        let peaks = r.peaks();
+                        let segs = serde_json::to_string(segs).unwrap_or_default();
+                        // a frame of its own, so a long recording's calls leave
+                        // no local references behind
+                        let call = audio(env, duration, &peaks).and_then(|_| {
+                            env.with_local_frame(2, |env| -> jni::errors::Result<()> {
+                                let segs = env.new_string(segs)?;
+                                env.call_method(
+                                    &progress,
+                                    jni_str!("update"),
+                                    jni_sig!("(DLjava/lang/String;)V"),
+                                    &[JValue::Double(done), JValue::from(&segs)],
+                                )?;
+                                Ok(())
+                            })
+                        });
+                        if let Err(e) = call {
+                            failed.get_or_insert(e);
+                            STOP.store(true, Ordering::Relaxed);
+                            x.cancel();
+                        }
+                    },
+                    || STOP.load(Ordering::Relaxed),
+                );
+                // the decoder ends x whatever happens, so this returns
+                let decoded = decoder.join().unwrap_or(Err(decode::DecodeError::Stopped));
+                (run, decoded, failed)
             });
-            if let Some(e) = told {
+            if let Some(e) = failed {
                 return Err(e);
             }
-            let x = match x {
-                Ok(x) => x,
-                Err(decode::DecodeError::Stopped) => {
-                    return Ok(env.new_string(nothing())?.into());
-                }
+            // the decoder's trouble before the transcription's: a recording
+            // that could not be read is said as one
+            // Stop while it read: what was transcribed by then, a stopped
+            // transcript, as Stop between chunks gives
+            match decoded {
+                Ok(()) | Err(decode::DecodeError::Stopped) => {}
                 Err(e) => {
                     let p = e.problem();
                     let why = serde_json::json!({ "key": p.key, "detail": p.detail });
                     return throw(env, &why.to_string()).map(|_| JObject::null());
                 }
+            }
+            // stopped before the decoder's end: the length the container
+            // gives, and the waveform as far as it got
+            let length = x.estimate();
+            let whole = x.ended();
+            let x = x.into_vec();
+            let duration = length as f64 / decode::RATE as f64;
+            if x.is_empty() {
+                return Ok(env.new_string(nothing())?.into());
+            }
+            // the waveform of the whole recording, its length now known
+            let peaks = match whole {
+                true => audio::peaks(&x, audio::PEAKS),
+                false => {
+                    let mut r = audio::Rising::new(length, audio::PEAKS);
+                    r.add(&x);
+                    r.peaks()
+                }
             };
-            let duration = x.len() as f64 / decode::RATE as f64;
-            let peaks = audio::peaks(&x, audio::PEAKS);
             env.with_local_frame(2, |env| -> jni::errors::Result<()> {
                 let peaks = env.byte_array_from_slice(&peaks)?;
                 env.call_method(
@@ -334,36 +418,6 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
                 )?;
                 Ok(())
             })?;
-            let mut failed = None;
-            let run = transcribe::run(
-                &l.model,
-                &mut l.asr,
-                &x,
-                speakers.as_mut(),
-                |done, segs| {
-                    let segs = serde_json::to_string(segs).unwrap_or_default();
-                    // a frame of its own, so a long recording's calls leave
-                    // no local references behind
-                    let call = env.with_local_frame(2, |env| -> jni::errors::Result<()> {
-                        let segs = env.new_string(segs)?;
-                        env.call_method(
-                            &progress,
-                            jni_str!("update"),
-                            jni_sig!("(DLjava/lang/String;)V"),
-                            &[JValue::Double(done), JValue::from(&segs)],
-                        )?;
-                        Ok(())
-                    });
-                    if let Err(e) = call {
-                        failed.get_or_insert(e);
-                        STOP.store(true, Ordering::Relaxed);
-                    }
-                },
-                || STOP.load(Ordering::Relaxed),
-            );
-            if let Some(e) = failed {
-                return Err(e);
-            }
             let (segments, complete) = match run {
                 Ok(r) => r,
                 // a slim file's encoder is the NPU's alone: the NPU failed a

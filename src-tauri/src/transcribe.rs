@@ -366,8 +366,54 @@ pub fn run_windows(
     asr: &mut Asr,
     x: &[f32],
     speakers: Option<&mut Speakers>,
+    progress: impl FnMut(f64, &[Segment]),
+    stop: impl Fn() -> bool,
+) -> Result<(Vec<Segment>, Vec<Window>, bool), String> {
+    let call = |each: &mut dyn FnMut(&Done) -> bool| asr.transcribe(x, each);
+    run_with(model, &x, call, speakers, progress, stop, || 0)
+}
+
+/// run() of a recording still being read (LIB-8): its sentences as the
+/// chunks come, while the decoder fills x, the progress against the
+/// container's length until the end. Where the run goes to the end, the
+/// transcript is made again from every chunk's last coming, in order, as
+/// run() makes it from the decoded array: the same sentences, words and
+/// speakers, a provisional chunk's retried words in their places, which
+/// the apps put in place of what they showed (the transcript at the end).
+pub fn run_growing(
+    model: &Model,
+    asr: &mut Asr,
+    x: &pktito::Growing,
+    speakers: Option<&mut Speakers>,
+    progress: impl FnMut(f64, &[Segment]),
+    stop: impl Fn() -> bool,
+) -> Result<(Vec<Segment>, bool), String> {
+    let call = |each: &mut dyn FnMut(&Done) -> bool| asr.transcribe_growing(x, each);
+    run_with(model, &x, call, speakers, progress, stop, || x.estimate())
+        .map(|(segs, _, whole)| (segs, whole))
+}
+
+/// A chunk as it came last (Done's own copy), for the transcript made again
+/// at a growing recording's end.
+struct Kept {
+    start: i64,
+    end: i64,
+    toks: Vec<Tok>,
+    retried: i32,
+    at_frame: i32,
+}
+
+/// The run of a recording, a decoded array's or a growing one's: call runs
+/// the transcription with the chunk callback it is given; estimate, the
+/// recording's samples while pk_chunk_out's total is 0.
+fn run_with<X: Recording>(
+    model: &Model,
+    x: &X,
+    call: impl FnOnce(&mut dyn FnMut(&Done) -> bool) -> Result<bool, String>,
+    speakers: Option<&mut Speakers>,
     mut progress: impl FnMut(f64, &[Segment]),
     stop: impl Fn() -> bool,
+    estimate: impl Fn() -> usize,
 ) -> Result<(Vec<Segment>, Vec<Window>, bool), String> {
     let rate = model.rate() as f64;
     let mut all = Vec::new();
@@ -382,7 +428,27 @@ pub fn run_windows(
     let mut done = 0.0;
     // the diarizer's trouble, which ends the run as the chunk callback can't
     let mut failed = None;
-    let whole = asr.transcribe(x, |c| {
+    // each chunk as it came last, by its place; whether any came twice
+    let mut kept: Vec<Option<Kept>> = Vec::new();
+    let mut again = false;
+    let whole = call(&mut |c: &Done| {
+        if kept.len() <= c.i {
+            kept.resize_with(c.i + 1, || None);
+        }
+        let first = kept[c.i].is_none();
+        kept[c.i] = Some(Kept {
+            start: c.start,
+            end: c.end,
+            toks: c.toks.to_vec(),
+            retried: c.retried,
+            at_frame: c.at_frame,
+        });
+        // a provisional chunk's second coming: its words go into the
+        // transcript made again at the end
+        if !first {
+            again = true;
+            return !c.last && stop();
+        }
         let stopping = !c.last && stop();
         let held = open.words(model);
         // the recording's end, or where it stops: the sentence still open ends
@@ -418,13 +484,76 @@ pub fn run_windows(
             words,
             retried: c.retried,
         });
-        done = c.done as f64 / c.total.max(1) as f64;
+        done = match c.total {
+            0 => (c.end as f64 / estimate().max(1) as f64).min(0.99),
+            total => c.done as f64 / total as f64,
+        };
         progress(done, &segs);
         all.extend(segs);
         stopping
     })?;
     if let Some(why) = failed {
         return Err(why);
+    }
+    // a growing recording heard to its end: the transcript as the decoded
+    // array's run makes it, from each chunk's last coming
+    if whole && (again || x.growing()) {
+        if let Some(h) = heard.as_mut() {
+            h.renumber();
+        }
+        let n = kept.len();
+        let mut open = Open::default();
+        let (mut segs, mut wins) = (Vec::new(), Vec::new());
+        for (i, k) in kept.iter().enumerate() {
+            let Some(k) = k else {
+                return Err("a chunk did not come".into());
+            };
+            let c = Done {
+                i,
+                provisional: false,
+                start: k.start,
+                end: k.end,
+                toks: &k.toks,
+                retried: k.retried,
+                last: i + 1 == n,
+                done: 0,
+                total: 0,
+                at_frame: k.at_frame,
+            };
+            let held = open.words(model);
+            let spk = heard.as_mut().map(|h| h.tokens(model, x, &c)).transpose()?;
+            let s = sentences(
+                model,
+                c.toks,
+                spk.as_deref(),
+                c.start as f64 / rate,
+                c.at_frame,
+                c.end as f64 / rate,
+                c.last,
+                &mut open,
+            );
+            let words = (s.iter().map(|s| s.words.len()).sum::<usize>() + open.words(model))
+                .saturating_sub(held);
+            wins.push(Window {
+                start: c.start as f64 / rate,
+                end: c.end as f64 / rate,
+                words,
+                retried: c.retried,
+            });
+            segs.extend(s);
+        }
+        segs.extend(open.close(model));
+        all = segs;
+        windows = wins;
+        if dropped {
+            for s in all.iter_mut() {
+                s.speaker = None;
+            }
+        }
+        if let Some(h) = heard {
+            h.stretches(x)?;
+        }
+        return Ok((all, windows, whole));
     }
     // a sentence still open where pktito ended with no last chunk to close it
     let mut rest: Vec<Segment> = open.close(model).into_iter().collect();
@@ -444,6 +573,36 @@ pub fn run_windows(
         h.stretches(x)?;
     }
     Ok((all, windows, whole))
+}
+
+/// A recording as run_with reads it beside the transcription, for the
+/// diarizer: samples [from, to) of it, fewer where it ends first; a growing
+/// one's once the decoder has them.
+trait Recording {
+    fn piece(&self, from: usize, to: usize) -> Result<std::borrow::Cow<'_, [f32]>, String>;
+    /// Whether it is still being read as it is transcribed.
+    fn growing(&self) -> bool;
+}
+
+impl Recording for &[f32] {
+    fn piece(&self, from: usize, to: usize) -> Result<std::borrow::Cow<'_, [f32]>, String> {
+        let to = to.min(self.len());
+        Ok(std::borrow::Cow::Borrowed(&self[from.min(to)..to]))
+    }
+    fn growing(&self) -> bool {
+        false
+    }
+}
+
+impl Recording for &pktito::Growing {
+    fn piece(&self, from: usize, to: usize) -> Result<std::borrow::Cow<'_, [f32]>, String> {
+        self.slice(from, to)
+            .map(std::borrow::Cow::Owned)
+            .map_err(|_| "the recording could not be read to its end".to_string())
+    }
+    fn growing(&self) -> bool {
+        true
+    }
 }
 
 /// Samples the diarizer is fed ahead of a chunk's last word: its rows trail
@@ -487,7 +646,7 @@ impl<'s, 'a> Heard<'s, 'a> {
     /// pk_diar_run's, whatever the pieces), or until it has heard the whole
     /// recording, then each word's by NeMo's rule (pk_speakers), its samples
     /// those of its frames from the chunk's start, as pktito-c's are.
-    fn tokens(&mut self, model: &Model, x: &[f32], c: &Done) -> Result<Vec<i32>, String> {
+    fn tokens<X: Recording>(&mut self, model: &Model, x: &X, c: &Done) -> Result<Vec<i32>, String> {
         let frame = (model.frame_seconds() * model.rate() as f64).round() as i64;
         let row = (self.s.model.frame_seconds() * self.s.model.rate() as f64).round() as i64;
         let width = self.s.model.speakers();
@@ -504,12 +663,12 @@ impl<'s, 'a> Heard<'s, 'a> {
             .last()
             .map_or(0, |w| ((w.end - 1).max(0) / frame + 1) * frame);
         while !self.ended && (self.rows.len() / width) as i64 * row < need {
-            if self.fed < x.len() {
-                let to = (need.max(0) as usize + LEAD)
-                    .max(self.fed + row as usize)
-                    .min(x.len());
-                self.s.diar.feed(&x[self.fed..to], &mut self.rows)?;
-                self.fed = to;
+            let to = (need.max(0) as usize + LEAD).max(self.fed + row as usize);
+            // what there is of [fed, to): fewer at the recording's end
+            let piece = x.piece(self.fed, to)?;
+            if !piece.is_empty() {
+                self.s.diar.feed(&piece, &mut self.rows)?;
+                self.fed += piece.len();
             } else {
                 self.s.diar.finish(&mut self.rows)?;
                 self.ended = true;
@@ -539,12 +698,20 @@ impl<'s, 'a> Heard<'s, 'a> {
         Ok(out)
     }
 
+    /// Speakers numbered anew by their first words, for the transcript made
+    /// again from the start (run_with): the rows stay, as the recording's.
+    fn renumber(&mut self) {
+        self.number.iter_mut().for_each(|n| *n = 0);
+        self.count = 0;
+    }
+
     /// The recording heard through: each speaker's stretches of speech, from
     /// every row, for those who said a word, numbered as their segments are.
-    fn stretches(mut self, x: &[f32]) -> Result<(), String> {
+    fn stretches<X: Recording>(mut self, x: &X) -> Result<(), String> {
         if !self.ended {
-            if self.fed < x.len() {
-                self.s.diar.feed(&x[self.fed..], &mut self.rows)?;
+            let rest = x.piece(self.fed, usize::MAX)?;
+            if !rest.is_empty() {
+                self.s.diar.feed(&rest, &mut self.rows)?;
             }
             self.s.diar.finish(&mut self.rows)?;
         }
@@ -789,6 +956,79 @@ mod files {
         assert!(off.stretches.is_empty());
         let (plain, _) = super::run(&model, &mut asr, &x, None, |_, _| {}, || false).unwrap();
         assert_eq!(words(&without), words(&plain));
+    }
+
+    /// `PKAPP_MODEL=parakeet-tdt-0.6b-v2.pkf
+    /// PKAPP_DIARIZER=nemotron-3-diarization.pkf PKAPP_SPEECH=four.m4a
+    /// cargo test growing_is_whole -- --ignored`: a recording transcribed as
+    /// a decoder fills it (LIB-8), in pieces of uneven sizes at an uneven
+    /// pace, ends with the transcript of the decoded array, sentences,
+    /// words, times and speakers, and the same speakers' bar
+    #[test]
+    #[ignore]
+    fn growing_is_whole() {
+        let var = |k| std::path::PathBuf::from(std::env::var(k).expect(k));
+        let model = crate::pktito::Model::load(&var("PKAPP_MODEL")).unwrap();
+        let mut asr = crate::pktito::Asr::new(&model, super::threads_wanted()).unwrap();
+        let heard = crate::pktito::Model::load(&var("PKAPP_DIARIZER")).unwrap();
+        let mut diar = crate::pktito::Diar::new(&heard, 0).unwrap();
+        let x = crate::decode::decode(&var("PKAPP_SPEECH")).unwrap();
+        let json = |segs: &[super::Segment]| serde_json::to_string(segs).unwrap();
+        for speakers in [false, true] {
+            let (whole, bar) = {
+                let mut s = super::Speakers::new(&heard, &mut diar);
+                let (segs, all) = super::run(
+                    &model,
+                    &mut asr,
+                    &x,
+                    speakers.then_some(&mut s),
+                    |_, _| {},
+                    || false,
+                )
+                .unwrap();
+                assert!(all);
+                (segs, s.stretches)
+            };
+            let g = crate::pktito::Growing::new();
+            g.set_estimate(x.len());
+            let mut s = super::Speakers::new(&heard, &mut diar);
+            let (segs, all) = std::thread::scope(|sc| {
+                sc.spawn(|| {
+                    // pieces of 0.1 to 9.7 s, a pause now and then
+                    let (mut at, mut k) = (0usize, 7u64);
+                    while at < x.len() {
+                        k = k
+                            .wrapping_mul(6364136223846793005)
+                            .wrapping_add(1442695040888963407);
+                        let n = 1_600 + (k >> 33) as usize % 155_000;
+                        let to = (at + n).min(x.len());
+                        g.push(&x[at..to]);
+                        at = to;
+                        if k >> 60 == 0 {
+                            std::thread::sleep(std::time::Duration::from_millis(30));
+                        }
+                    }
+                    g.end();
+                });
+                super::run_growing(
+                    &model,
+                    &mut asr,
+                    &g,
+                    speakers.then_some(&mut s),
+                    |_, _| {},
+                    || false,
+                )
+                .unwrap()
+            });
+            assert!(all);
+            assert_eq!(json(&segs), json(&whole), "speakers {speakers}");
+            if speakers {
+                assert_eq!(
+                    serde_json::to_string(&s.stretches).unwrap(),
+                    serde_json::to_string(&bar).unwrap()
+                );
+            }
+        }
     }
 
     /// `PKAPP_DIARIZER=nemotron-3-diarization.pkf PKAPP_SPEECH=conv2.wav

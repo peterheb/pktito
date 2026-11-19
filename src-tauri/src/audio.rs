@@ -44,6 +44,61 @@ pub fn peaks(x: &[f32], n: usize) -> Vec<u8> {
         .collect()
 }
 
+/// peaks() of a recording still being read (LIB-8), for the waveform while
+/// it is: n slices of its estimated length, each one's RMS once the decoder
+/// has passed it, the ones still to come silent. peaks() of the whole
+/// recording replaces it at the end, the length then known.
+pub struct Rising {
+    len: usize,
+    sums: Vec<f64>,
+    at: usize,
+}
+
+impl Rising {
+    pub fn new(len: usize, n: usize) -> Rising {
+        Rising {
+            len: len.max(1),
+            sums: vec![0.0; n],
+            at: 0,
+        }
+    }
+
+    /// The decoder's next samples.
+    pub fn add(&mut self, x: &[f32]) {
+        let n = self.sums.len();
+        for &v in x {
+            let i = (self.at * n / self.len).min(n - 1);
+            self.sums[i] += v as f64 * v as f64;
+            self.at += 1;
+        }
+    }
+
+    /// The samples added so far.
+    pub fn seen(&self) -> usize {
+        self.at
+    }
+
+    /// As peaks() gives them, over the slices the decoder has reached.
+    pub fn peaks(&self) -> Vec<u8> {
+        let n = self.sums.len();
+        let reached = (self.at * n / self.len).min(n);
+        let db: Vec<f64> = (0..reached)
+            .map(|i| {
+                let a = i * self.len / n;
+                let b = ((i + 1) * self.len / n).max(a + 1);
+                10.0 * (self.sums[i] / (b - a) as f64 + 1e-12).log10()
+            })
+            .collect();
+        let top = db.iter().cloned().fold(f64::MIN, f64::max);
+        let mut out: Vec<u8> = db
+            .iter()
+            .map(|&d| (((d - (top - 48.0)) / 48.0).clamp(0.0, 1.0) * 255.0).round() as u8)
+            .collect();
+        out.resize(n, 0);
+        out
+    }
+}
+
 /// Where the cache keeps a transcript's audio.
 pub fn wav_in(dir: &Path, id: &str) -> PathBuf {
     dir.join(format!("{id}.wav"))

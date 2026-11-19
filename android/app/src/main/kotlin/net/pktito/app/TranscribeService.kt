@@ -147,9 +147,12 @@ class TranscribeService : Service() {
                         }
                     }
 
+                    // with each chunk while the recording is read as it is
+                    // transcribed (LIB-8), the length the container's and the
+                    // waveform as far as the decoder has got; once more at
+                    // the end, the recording's own
                     override fun audio(duration: Double, fps: Double, peaks: ByteArray) {
-                        began = SystemClock.elapsedRealtime()
-                        Log.i(TAG, "read $name: ${"%.1f".format((began - start) / 1000.0)} s")
+                        if (began == 0L) began = SystemClock.elapsedRealtime()
                         video = fps
                         loudness = peaks
                         Transcriber.post {
@@ -224,7 +227,13 @@ class TranscribeService : Service() {
                     Log.w(TAG, "keeping $name on the recent list", e)
                 }
             val bar = Stretch.parse(o.optJSONArray("stretches"))
+            // the transcript as it ends, in place of the sentences shown as
+            // it went: a chunk the retry heard again has its words in it
+            // (transcribe.rs, run_growing)
+            val final = Transcriber.parse(o.getJSONArray("segments").toString())
             Transcriber.post {
+                segments.clear()
+                segments.addAll(final)
                 transcript = t
                 stretches = bar
                 step = if (complete) "done" else "stopped"

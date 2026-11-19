@@ -50,6 +50,7 @@ struct ChunkOut {
     done: i64,
     total: i64,
     at_frame: i32,
+    provisional: c_int,
 }
 
 /// A chunk of a recording, transcribed: its samples in the recording, its
@@ -59,6 +60,11 @@ struct ChunkOut {
 /// frames, rounded (pk_chunk_out.at_frame), which counts its tokens' frames
 /// from the recording's start for pk_sentences.
 pub struct Done<'a> {
+    /// its place among the chunks, from 0, on a first coming as on a second
+    pub i: usize,
+    /// a recording still being read (Growing): this chunk comes again after
+    /// the last, its words as the retry leaves them (pk_chunk_out.provisional)
+    pub provisional: bool,
     pub start: i64,
     pub end: i64,
     pub toks: &'a [Tok],
@@ -89,6 +95,11 @@ struct Audio {
     n: i64,
     read: Option<unsafe extern "C" fn(*mut c_void, i64, *mut f32, usize) -> c_int>,
     arg: *mut c_void,
+    // a recording still being read (n < 0): until [0, want) can be read,
+    // how much can; at its end, its length (LIB-8). NULL where n is the
+    // length; a field every mirror has, as pk_audio_floats returns the
+    // struct whole
+    wait: Option<unsafe extern "C" fn(*mut c_void, i64) -> i64>,
 }
 
 #[repr(C)]
@@ -508,6 +519,51 @@ impl Asr {
         x: &[f32],
         each: F,
     ) -> Result<bool, String> {
+        // x is borrowed for the whole call, which is as long as the library
+        // reads it
+        let audio = unsafe { pk_audio_floats(x.as_ptr(), x.len()) };
+        self.run(&audio, each)
+    }
+
+    /// The same of a recording still being read (LIB-8): its chunks
+    /// transcribed as the decoder gets to them, the first sentences there
+    /// while the rest is decoded. A chunk with a stretch the retry may hear
+    /// again comes first provisional, and again after the last chunk, so
+    /// that each chunk's last coming is the whole recording's: the tokens of
+    /// pk_asr_transcribe on the decoded array, to the bit (libpktito's
+    /// checks). A recording cancelled (Growing::cancel) is one stopped: false.
+    pub fn transcribe_growing<F: FnMut(&Done) -> bool>(
+        &mut self,
+        x: &Growing,
+        each: F,
+    ) -> Result<bool, String> {
+        unsafe extern "C" fn read(arg: *mut c_void, at: i64, out: *mut f32, n: usize) -> c_int {
+            let g = unsafe { &*(arg as *const Growing) };
+            let out = unsafe { std::slice::from_raw_parts_mut(out, n) };
+            if g.read(at.max(0) as usize, out) {
+                0
+            } else {
+                -1
+            }
+        }
+        unsafe extern "C" fn wait(arg: *mut c_void, want: i64) -> i64 {
+            let g = unsafe { &*(arg as *const Growing) };
+            g.wait(want.max(0) as usize).map_or(-1, |n| n as i64)
+        }
+        let audio = Audio {
+            n: -1,
+            read: Some(read),
+            arg: x as *const Growing as *mut c_void,
+            wait: Some(wait),
+        };
+        match self.run(&audio, each) {
+            Err(_) if x.cancelled() => Ok(false),
+            Err(_) if x.failed() => Err("the recording could not be read to its end".into()),
+            r => r,
+        }
+    }
+
+    fn run<F: FnMut(&Done) -> bool>(&mut self, audio: &Audio, each: F) -> Result<bool, String> {
         struct Call<F> {
             each: F,
             panic: Option<Box<dyn std::any::Any + Send>>,
@@ -523,11 +579,14 @@ impl Asr {
                 &[]
             };
             let done = Done {
+                i: c.i,
+                provisional: c.provisional != 0,
                 start: c.at.start,
                 end: c.at.end,
                 toks,
                 retried: c.retried,
-                last: c.i + 1 == c.n,
+                // n is 0 until a growing recording's end is known
+                last: c.n > 0 && c.i + 1 == c.n,
                 done: c.done,
                 total: c.total,
                 at_frame: c.at_frame,
@@ -543,13 +602,10 @@ impl Asr {
             }
         }
         let mut call = Call { each, panic: None };
-        // x is borrowed for the whole call, which is as long as the library
-        // reads it
-        let audio = unsafe { pk_audio_floats(x.as_ptr(), x.len()) };
         let rc = unsafe {
             pk_asr_transcribe(
                 self.raw,
-                &audio,
+                audio,
                 ptr::null(),
                 chunk::<F>,
                 &mut call as *mut Call<F> as *mut c_void,
@@ -746,4 +802,275 @@ pub fn speaker_segments(diarizer: &Model, rows: &[f32]) -> Vec<SpkSeg> {
     let k = unsafe { pk_speaker_segments(diarizer.raw(), rows.as_ptr(), n, out.as_mut_ptr()) };
     out.truncate(k);
     out
+}
+
+/// A recording still being read (LIB-8): the 16 kHz mono samples a decoder
+/// appends (push) as it gets to them, which a transcription reads from
+/// several threads while it goes (pk_audio's read and wait), and its length
+/// once the decoder says it has ended. Until then the container's duration,
+/// estimate, stands for it, for the progress. The samples are kept in
+/// blocks of BLOCK that never move, and a push wakes the waiters only once
+/// one of them has what it waits for: an array grown by doubling under the
+/// lock, and a wake at each of the decoder's 400-sample pushes, slowed an
+/// 87-minute AAC's read on a Galaxy S25 from 32.4 s to 39.8 s with three
+/// readers (android-9950x, 2026-11-19).
+pub struct Growing {
+    state: std::sync::Mutex<Grown>,
+    more: std::sync::Condvar,
+    estimate: std::sync::atomic::AtomicUsize,
+}
+
+/// Samples a block: 4 s, 256 KB.
+const BLOCK: usize = 1 << 16;
+
+struct Grown {
+    blocks: Vec<Vec<f32>>,
+    len: usize,
+    // None while the decoder goes; Some(true) at the recording's end,
+    // Some(false) where it failed or was cancelled
+    end: Option<bool>,
+    cancelled: bool,
+    // the least a waiter waits for, usize::MAX with none waiting
+    wanted: usize,
+}
+
+impl Default for Grown {
+    fn default() -> Grown {
+        Grown {
+            blocks: Vec::new(),
+            len: 0,
+            end: None,
+            cancelled: false,
+            wanted: usize::MAX,
+        }
+    }
+}
+
+impl Grown {
+    /// Samples [at, at + out.len()) into out, which are there.
+    fn copy(&self, mut at: usize, out: &mut [f32]) {
+        let mut o = 0;
+        while o < out.len() {
+            let b = &self.blocks[at / BLOCK];
+            let k = at % BLOCK;
+            let n = (b.len() - k).min(out.len() - o);
+            out[o..o + n].copy_from_slice(&b[k..k + n]);
+            o += n;
+            at += n;
+        }
+    }
+}
+
+impl Default for Growing {
+    fn default() -> Growing {
+        Growing::new()
+    }
+}
+
+impl Growing {
+    pub fn new() -> Growing {
+        Growing {
+            state: Default::default(),
+            more: Default::default(),
+            estimate: Default::default(),
+        }
+    }
+
+    /// The samples the container says it holds, once the decoder has
+    /// opened it.
+    pub fn set_estimate(&self, n: usize) {
+        self.estimate.store(n, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    fn lock(&self) -> std::sync::MutexGuard<'_, Grown> {
+        self.state.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// The decoder's next samples.
+    pub fn push(&self, mut x: &[f32]) {
+        let mut g = self.lock();
+        while !x.is_empty() {
+            if g.blocks.last().is_none_or(|b| b.len() == BLOCK) {
+                g.blocks.push(Vec::with_capacity(BLOCK));
+            }
+            let b = g.blocks.last_mut().unwrap();
+            let n = (BLOCK - b.len()).min(x.len());
+            b.extend_from_slice(&x[..n]);
+            g.len += n;
+            x = &x[n..];
+        }
+        if g.len >= g.wanted {
+            g.wanted = usize::MAX;
+            drop(g);
+            self.more.notify_all();
+        }
+    }
+
+    fn finish(&self, well: bool, cancel: bool) {
+        let mut g = self.lock();
+        g.end.get_or_insert(well);
+        g.cancelled |= cancel;
+        drop(g);
+        self.more.notify_all();
+    }
+
+    /// The recording read through: its length is the samples pushed.
+    pub fn end(&self) {
+        self.finish(true, false);
+    }
+
+    /// The decoder failed: a wait for what it can't give fails the call.
+    pub fn fail(&self) {
+        self.finish(false, false);
+    }
+
+    /// Stop pressed while the audio is read: the transcription ends as a
+    /// stopped one, the decoder told by cancelled() to go no further.
+    pub fn cancel(&self) {
+        self.finish(false, true);
+    }
+
+    pub fn cancelled(&self) -> bool {
+        self.lock().cancelled
+    }
+
+    pub fn failed(&self) -> bool {
+        self.lock().end == Some(false)
+    }
+
+    /// The samples pushed so far.
+    pub fn len(&self) -> usize {
+        self.lock().len
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// The recording's length in samples: the container's word for it
+    /// until the end, then the samples there are.
+    pub fn estimate(&self) -> usize {
+        let g = self.lock();
+        match g.end {
+            Some(true) => g.len,
+            _ => self
+                .estimate
+                .load(std::sync::atomic::Ordering::Relaxed)
+                .max(g.len),
+        }
+    }
+
+    /// Whether the recording has ended, and well.
+    pub fn ended(&self) -> bool {
+        self.lock().end == Some(true)
+    }
+
+    /// pk_audio's wait: once [0, want) is there, how many samples are;
+    /// at the end, the length, less than want; Err where it failed.
+    pub fn wait(&self, want: usize) -> Result<usize, ()> {
+        let mut g = self.lock();
+        loop {
+            if g.len >= want || g.end == Some(true) {
+                return Ok(g.len);
+            }
+            if g.end == Some(false) {
+                return Err(());
+            }
+            g.wanted = g.wanted.min(want);
+            g = self.more.wait(g).unwrap_or_else(|e| e.into_inner());
+        }
+    }
+
+    /// pk_audio's read: out filled from sample at, which a wait has said
+    /// is there; false where it isn't.
+    pub fn read(&self, at: usize, out: &mut [f32]) -> bool {
+        let g = self.lock();
+        if at + out.len() > g.len {
+            return false;
+        }
+        g.copy(at, out);
+        true
+    }
+
+    /// Samples [from, to) once they are there (waiting for them), or as
+    /// many as the recording has; Err where it failed.
+    pub fn slice(&self, from: usize, to: usize) -> Result<Vec<f32>, ()> {
+        let n = self.wait(to)?;
+        let (from, to) = (from.min(n), to.min(n));
+        let mut out = vec![0.0; to - from];
+        self.lock().copy(from, &mut out);
+        Ok(out)
+    }
+
+    /// The whole recording, once it has ended (the transcript's copy, the
+    /// diarizer's last rows).
+    pub fn into_vec(self) -> Vec<f32> {
+        let g = self.state.into_inner().unwrap_or_else(|e| e.into_inner());
+        let mut x = Vec::with_capacity(g.len);
+        for b in g.blocks {
+            x.extend_from_slice(&b);
+        }
+        x
+    }
+}
+
+#[cfg(test)]
+mod growing {
+    use super::Growing;
+    use std::sync::Arc;
+    use std::thread;
+    use std::time::Duration;
+
+    /// A wait blocks until the decoder has pushed what it asks for, and
+    /// reads give exactly what was pushed.
+    #[test]
+    fn waits_for_the_decoder() {
+        let g = Arc::new(Growing::new());
+        g.set_estimate(48_000);
+        let d = {
+            let g = g.clone();
+            thread::spawn(move || {
+                for k in 0..3 {
+                    thread::sleep(Duration::from_millis(20));
+                    let x: Vec<f32> = (0..16_000).map(|i| (k * 16_000 + i) as f32).collect();
+                    g.push(&x);
+                }
+                g.end();
+            })
+        };
+        assert!(g.wait(20_000).unwrap() >= 20_000);
+        let mut out = [0f32; 4];
+        assert!(g.read(19_998, &mut out));
+        assert_eq!(out, [19_998.0, 19_999.0, 20_000.0, 20_001.0]);
+        // past the end: the length, less than asked
+        assert_eq!(g.wait(1_000_000).unwrap(), 48_000);
+        assert_eq!(g.estimate(), 48_000);
+        assert!(!g.read(47_999, &mut out));
+        assert_eq!(g.slice(47_000, 1_000_000).unwrap().len(), 1_000);
+        d.join().unwrap();
+        assert!(g.ended());
+    }
+
+    /// Cancel and fail wake a waiter with an error; the length estimate
+    /// grows with what is pushed past it.
+    #[test]
+    fn cancel_and_fail_wake_waiters() {
+        let g = Arc::new(Growing::new());
+        let w = {
+            let g = g.clone();
+            thread::spawn(move || g.wait(10))
+        };
+        thread::sleep(Duration::from_millis(20));
+        g.cancel();
+        assert!(w.join().unwrap().is_err());
+        assert!(g.cancelled() && g.failed() && !g.ended());
+
+        let g = Growing::new();
+        g.set_estimate(5);
+        g.push(&[0.0; 8]);
+        assert_eq!(g.estimate(), 8);
+        g.fail();
+        assert!(g.wait(9).is_err());
+        assert!(g.wait(8).is_ok());
+    }
 }
