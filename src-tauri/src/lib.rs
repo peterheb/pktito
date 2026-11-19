@@ -10,6 +10,7 @@
 #[cfg(target_os = "android")]
 pub mod android;
 pub mod audio;
+pub mod audiocache;
 pub mod awake;
 pub mod decode;
 pub mod download;
