@@ -2088,7 +2088,7 @@ function updateRunning(f) {
   const wave = $("wave");
   if (wave._peaks !== f.peaks) drawMainWave();
   else {
-    setHead(wave, Math.floor((going ? f.done : 0) * wave._n));
+    setHead(wave, going ? f.done : 0);
     drawBar(f);
   }
   wave.setAttribute("aria-valuenow", percent(going ? f.done : 0));
@@ -2367,7 +2367,7 @@ function rangeOf(peaks, seconds) {
    than a bar. Each bar's height is its share of the waveform's (--v, app.css,
    .pk-wave i), so that the bars follow the waveform's height as the speaker
    bar's place is given or taken, with nothing drawn again. */
-function drawWave(el, peaks, k, seconds) {
+function drawWave(el, peaks, at, seconds) {
   const n = barsIn(el);
   const [lo, hi] = peaks && peaks.length ? rangeOf(peaks, seconds) : [0, 255];
   const h = [];
@@ -2383,21 +2383,27 @@ function drawWave(el, peaks, k, seconds) {
   }
   Object.assign(el, { _peaks: peaks, _n: n, _k: -1 });
   el.classList.toggle("is-idle", !peaks);
-  el.innerHTML = h.map((v) => `<i style="--v:${v.toFixed(4)}"></i>`).join("");
-  setHead(el, k);
+  el.innerHTML =
+    h.map((v) => `<i style="--v:${v.toFixed(4)}"></i>`).join("") +
+    `<b class="head"></b>`;
+  setHead(el, at);
 }
 
-/* the playhead at bar k of el, the bars before it played: the playhead
-   alone reaches the top (app.css, .pk-wave i.head) */
-function setHead(el, k) {
+/* the playhead at at (0 to 1) of el, the bars before it played. The
+   playhead alone reaches the top, centred on its time as a match's tick
+   and a found speaker's turn are (app.css, .pk-wave b.head): drawn as the
+   bar it fell in, from that bar's edge, it stood up to 1.5 px off the tick
+   of the same time (Peter, Android's on the S25, 2026-11-18). */
+function setHead(el, at) {
   if (!el._n) return;
-  k = Math.max(0, Math.min(el._n - 1, k || 0));
+  at = Math.max(0, Math.min(1, at || 0));
+  el.lastChild.style.left = `${(at * 100).toFixed(4)}%`;
+  const k = Math.max(0, Math.min(el._n - 1, Math.floor(at * el._n)));
   if (k === el._k) return;
   const bars = el.children;
   const [a, b] =
     el._k < 0 ? [0, el._n - 1] : [Math.min(el._k, k), Math.max(el._k, k)];
   for (let i = a; i <= b; i++) bars[i].className = i < k ? "on" : "";
-  bars[k].className = "head";
   el._k = k;
 }
 
@@ -2418,12 +2424,7 @@ function drawMainWave() {
       : f.step === "transcribing"
         ? f.done
         : 0;
-  drawWave(
-    wave,
-    mode === "waiting" ? null : f.peaks,
-    Math.floor(at * n),
-    f.duration,
-  );
+  drawWave(wave, mode === "waiting" ? null : f.peaks, at, f.duration);
   drawBar(f);
 }
 
@@ -2777,8 +2778,7 @@ function showTime(t, follow = false) {
   if (!f) return;
   $("time").textContent = tc(t, f);
   const wave = $("wave");
-  if (wave._n && f.duration && !f.finding)
-    setHead(wave, Math.floor((t / f.duration) * wave._n));
+  if (wave._n && f.duration && !f.finding) setHead(wave, t / f.duration);
   let seg = null,
     word = null;
   if (t > 0 || playing) {
@@ -3051,6 +3051,8 @@ function runFind(sought) {
   for (const i of inView) markRow(i);
   markNames();
   applyOnly(f);
+  // the bar: the speaker found's turns alone (drawBar)
+  drawBar(f);
   // the match the reader was on while it is still one, so that a search
   // typed on keeps its place, as Android's does; otherwise the match the
   // playhead last passed, so that a search typed as it plays or rests
@@ -3792,7 +3794,7 @@ function showFinding(f) {
   wave.setAttribute("aria-valuemin", "0");
   wave.setAttribute("aria-valuemax", "100");
   wave.setAttribute("aria-valuenow", percent(g.done));
-  setHead(wave, Math.floor(g.done * wave._n));
+  setHead(wave, g.done);
 }
 
 /* A change to f's speakers: made, drawn with row, the one changed, where
@@ -4085,9 +4087,25 @@ function drawBar(f) {
   const src = g
     ? g.closed.concat(g.open)
     : f.segments
-        .filter((s) => s.speaker != null)
+        .filter((s) => s.speaker != null && (!who || s.speaker === who))
         .map((s) => ({ start: s.start, end: s.end, speaker: s.speaker }));
-  const who = pixels(
+  // a speaker found: their turns alone, each at its own times from half a
+  // tick before its start, so that it hangs from the same line as its
+  // match's tick and the playhead there (Peter, 2026-11-18; Android's
+  // SpeakerBar, exact)
+  if (who && !g) {
+    const upto = running ? f.done * f.duration : Infinity;
+    bar.innerHTML = src
+      .filter((s) => s.start < upto)
+      .map((s) => {
+        const a = (s.start / f.duration) * px - 1.5,
+          b = Math.max((Math.min(s.end, upto) / f.duration) * px, a + 3);
+        return `<b style="left:${a.toFixed(1)}px;width:${(b - a).toFixed(1)}px;background:var(--speaker-bar-${slotOf(s.speaker)})"></b>`;
+      })
+      .join("");
+    return;
+  }
+  const by = pixels(
     barParts(src, running ? f.done * f.duration : Infinity),
     px,
     per,
@@ -4095,9 +4113,9 @@ function drawBar(f) {
   );
   let html = "";
   for (let x = 0; x < px; ) {
-    const n = who[x];
+    const n = by[x];
     let e = x + 1;
-    while (e < px && who[e] === n) e++;
+    while (e < px && by[e] === n) e++;
     if (n) {
       // a pixel apart from the next, where there is room
       const w = e - x,

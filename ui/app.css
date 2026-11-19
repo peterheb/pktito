@@ -1435,7 +1435,7 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   top: 0;
   bottom: 0;
   width: 9px;
-  margin-left: -4px;
+  margin-left: -4.5px;
   cursor: pointer;
   background: linear-gradient(var(--plume), var(--plume)) center / 2px 100%
     no-repeat;
@@ -1505,16 +1505,21 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 .pk-wave i.on {
   background: var(--wave-played);
 }
-.pk-wave i.head {
-  height: 100%;
+/* the playhead, over the bars at its own time (app.js, setHead), 4 wide as
+   the bar it once was with its edge either side; the waveform its room */
+.pk-wave {
+  position: relative;
+}
+.pk-wave b.head {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  margin-left: -2px;
   background: var(--beak);
-  box-shadow: 0 0 0 1px var(--beak);
 }
 .pk-wave.is-idle i {
   background: var(--term-line);
-}
-.pk-wave.is-idle i.head {
-  background: var(--beak);
 }
 .pk-wave.is-off {
   opacity: 0.45;
