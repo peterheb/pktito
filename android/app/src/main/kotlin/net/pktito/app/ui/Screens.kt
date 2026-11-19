@@ -114,6 +114,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import net.pktito.app.R
@@ -1315,6 +1316,17 @@ private fun Rows(
         val at = itemIn(view, row)
         if (at >= 0 && at < follow.list.firstVisibleItemIndex) follow.list.requestScrollToItem(at)
     }
+    // the rows' slide (animateItem, below) for the join's own change of the
+    // rows alone, half a second from it: left on, it ran on the list's own
+    // scroll to the row playing too, which a moment after landing at the top
+    // dropped rows down and slid them back up over the next (Peter's S25
+    // recording, 2026-11-18; the S24, gone with the slide off)
+    var slid by remember { mutableStateOf<Speakers.Joined?>(null) }
+    LaunchedEffect(joined) {
+        delay(500)
+        slid = joined
+    }
+    val slide = joined != null && slid !== joined
     // Change speaker in the menu a press-and-hold's selection brings, beside
     // Copy: Android's and iOS's way in to a sentence, where the desktop has
     // its button on the line, as the transcript's text is there to be
@@ -1397,18 +1409,21 @@ private fun Rows(
                     // the rows after a sentence made one again sliding up into its
                     // place over 150 ms, the desktop's (app.js, closeUp)
                     Box(
-                        Modifier.animateItem(null, tween(150, easing = EaseOut), null).pointerInput(
-                            i
-                        ) {
-                            // the row a finger comes down on, for Change speaker
-                            awaitEachGesture {
-                                awaitFirstDown(
-                                    requireUnconsumed = false,
-                                    pass = PointerEventPass.Initial,
-                                )
-                                pressed[0] = i
+                        Modifier.animateItem(
+                                null,
+                                if (slide) tween(150, easing = EaseOut) else null,
+                                null,
+                            )
+                            .pointerInput(i) {
+                                // the row a finger comes down on, for Change speaker
+                                awaitEachGesture {
+                                    awaitFirstDown(
+                                        requireUnconsumed = false,
+                                        pass = PointerEventPass.Initial,
+                                    )
+                                    pressed[0] = i
+                                }
                             }
-                        }
                     ) {
                         SegRow(
                             s,
