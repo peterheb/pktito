@@ -461,6 +461,7 @@ fun LinkButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier)
  */
 @Composable
 fun Modal(onDismiss: () -> Unit, content: @Composable BoxScope.() -> Unit) {
+    Follow.Held()
     Dialog(
         onDismiss,
         DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
@@ -595,6 +596,7 @@ fun Menu(
     content: @Composable () -> Unit,
 ) {
     val p = pk
+    if (expanded) Follow.Held()
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,

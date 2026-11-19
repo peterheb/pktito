@@ -2,6 +2,8 @@ package net.pktito.app.ui
 
 import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -17,6 +19,26 @@ import androidx.compose.ui.input.pointer.pointerInput
  * and taken along again from the next row once theirs is back in sight.
  */
 class Follow(val list: LazyListState) {
+    companion object {
+        /**
+         * Menus and dialogs open (Menu, Modal): while any is, the list stays where it is. Who's
+         * speaking, opened from a turn's name, lives in that turn's row, and the list taken to the
+         * next row playing took the dialog away from under the finger (Peter, the S25, 2026-11-18);
+         * a reader left behind has Now to come back by.
+         */
+        var held = 0
+            private set
+
+        /** Holds the list while the composition it is in is shown. */
+        @Composable
+        fun Held() {
+            DisposableEffect(Unit) {
+                held++
+                onDispose { held-- }
+            }
+        }
+    }
+
     /** Fingers on the list (Modifier.hands); one coming down ends a chase. */
     var fingers = 0
         set(n) {
@@ -54,7 +76,7 @@ class Follow(val list: LazyListState) {
      * as it goes, where iOS's list can stop short and tries again.
      */
     suspend fun bring(row: Int) {
-        if (row < 0 || hands) return
+        if (row < 0 || hands || held > 0) return
         if (list.layoutInfo.visibleItemsInfo.dropLast(1).any { it.index == row }) {
             chasing = -1
             return
