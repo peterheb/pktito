@@ -22,6 +22,7 @@
  * nonzero answer stops the decode there and gives -3, with nothing in
  * *out. A percent of a 39-minute AAC podcast is 0.3 s of a Galaxy S25
  * Ultra's 27 s read of it, so the app's Stop is that late at most. */
+#define _GNU_SOURCE /* sched.h's cpu_set_t, for the decode's cores */
 #include <dlfcn.h>
 #include <media/NdkMediaCodec.h>
 #include <media/NdkMediaExtractor.h>
@@ -29,8 +30,10 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sched.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "mix.h"
 
@@ -62,6 +65,41 @@ static AMediaCodec *decoder_for(const char *mime) {
                 return c;
         }
     return AMediaCodec_createDecoderByType(mime);
+}
+
+/* The phone's fastest cores, the top tier of its CPUs' capacities (or,
+ * where the kernel gives none, their top frequencies): those within a
+ * tenth of the fastest. A Galaxy S25 Ultra's are its two at 1024 (the six
+ * others 765). 0 with them in *set, -1 where /sys says nothing of the
+ * kind. */
+static int fastest(cpu_set_t *set) {
+    static const char *const kinds[] = {"cpu_capacity", "cpufreq/cpuinfo_max_freq"};
+    long n = sysconf(_SC_NPROCESSORS_CONF);
+    if (n <= 0 || n > CPU_SETSIZE)
+        return -1;
+    for (size_t k = 0; k < sizeof kinds / sizeof kinds[0]; k++) {
+        long v[CPU_SETSIZE], top = 0, i;
+        for (i = 0; i < n; i++) {
+            char path[96];
+            snprintf(path, sizeof path, "/sys/devices/system/cpu/cpu%ld/%s", i, kinds[k]);
+            FILE *f = fopen(path, "r");
+            int got = f && fscanf(f, "%ld", &v[i]) == 1 && v[i] > 0;
+            if (f)
+                fclose(f);
+            if (!got)
+                break;
+            if (v[i] > top)
+                top = v[i];
+        }
+        if (i < n)
+            continue; /* a CPU this kind says nothing of: the next kind */
+        CPU_ZERO(set);
+        for (i = 0; i < n; i++)
+            if (v[i] * 10 >= top * 9)
+                CPU_SET((int)i, set);
+        return 0;
+    }
+    return -1;
 }
 
 static int fail(char *err, size_t errlen, const char *fmt, ...) {
@@ -116,6 +154,19 @@ int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *err, si
     struct stat st;
     if (fstat(fd, &st) || !S_ISREG(st.st_mode))
         return fail(err, errlen, "Android's extractor reads a file, and this is not one");
+    /* This thread and the in-process decoder's (decoder_for), which take
+     * this thread's cores as they start, on the phone's fastest cores while
+     * the file is decoded; the thread's own cores back after, for the
+     * transcription. Android's scheduler left the decode on slower ones:
+     * the S24's 39-minute AAC took 34.0 s in the app, 22.4 s on its prime
+     * core alone (2026-11-18). Where /sys can't say, or the cores the app
+     * may use now have none of them, nothing moves. */
+    cpu_set_t was, fast;
+    int pinned = 0;
+    if (!sched_getaffinity(0, sizeof was, &was) && !fastest(&fast)) {
+        CPU_AND(&fast, &fast, &was);
+        pinned = CPU_COUNT(&fast) > 0 && !sched_setaffinity(0, sizeof fast, &fast);
+    }
     AMediaExtractor *ex = AMediaExtractor_new();
     AMediaCodec *c = NULL;
     AMediaFormat *f = NULL;
@@ -267,6 +318,8 @@ done:
         AMediaExtractor_delete(ex);
     pkapp_mix_free(mix);
     free(x);
+    if (pinned)
+        sched_setaffinity(0, sizeof was, &was);
     return rc;
 }
 
