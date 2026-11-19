@@ -141,3 +141,14 @@ int pkapp_mix_take(pkapp_mix *m, float **y, size_t *n) {
     m->n = m->cap = 0;
     return 0;
 }
+
+void pkapp_mix_drain(pkapp_mix *m, const float **y, size_t *n) {
+    *y = m->n ? m->y : NULL;
+    *n = m->n;
+    /* the buffer stays for the next push to write over from its start */
+    m->n = 0;
+}
+
+int pkapp_mix_end(pkapp_mix *m) {
+    return finish(m);
+}

@@ -13,15 +13,23 @@
  * and the extractor reads it by offset, so it must be a file, not a pipe;
  * fd stays the caller's.
  *
- * 0 on success, with *out malloc'd (the caller frees it) holding *n
- * samples (decode.rs says where they start and end against ffmpeg's); -1
- * if the file has no audio track Android shows, which a track it has no
- * decoder for is not; -2 if Android cannot read it, the reason in err.
- * read, where it is not NULL, is told how far into the track the
- * extractor has got, a fraction, each time it gains a whole percent; a
- * nonzero answer stops the decode there and gives -3, with nothing in
- * *out. A percent of a 39-minute AAC podcast is 0.3 s of a Galaxy S25
- * Ultra's 27 s read of it, so the app's Stop is that late at most. */
+ * The samples go to take as they are made, the signal at rate in pieces
+ * of whatever size the decoder's buffers make (decode.rs says where it
+ * starts and ends against ffmpeg's), so that the transcription can start
+ * on the first of them while the rest is read; the pieces put end to end
+ * are the same samples however they fall (mix.h, pkapp_mix_drain). Before
+ * the first, span, where it is not NULL, is told the track's length in
+ * microseconds as its container says it (not called where it says none):
+ * an estimate, which the samples' end corrects.
+ *
+ * 0 once the last sample is taken; -1 if the file has no audio track
+ * Android shows, which a track it has no decoder for is not; -2 if
+ * Android cannot read it, the reason in err, after whatever was taken
+ * before it failed. read, where it is not NULL, is told how far into the
+ * track the extractor has got, a fraction, each time it gains a whole
+ * percent; a nonzero answer stops the decode there and gives -3. A percent
+ * of a 39-minute AAC podcast is 0.3 s of a Galaxy S25 Ultra's 27 s read
+ * of it, so the app's Stop is that late at most. */
 #define _GNU_SOURCE /* sched.h's cpu_set_t, for the decode's cores */
 #include <dlfcn.h>
 #include <media/NdkMediaCodec.h>
@@ -147,10 +155,19 @@ int pkapp_binder_pool(void) {
     return 0;
 }
 
-int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *err, size_t errlen,
-                    int (*read)(void *ctx, double fraction), void *ctx) {
-    *out = NULL;
-    *n = 0;
+/* What the mix has made since the last call, to take. */
+static void hand(pkapp_mix *mix, void (*take)(void *ctx, const float *y, size_t n), void *ctx) {
+    const float *y;
+    size_t n;
+    pkapp_mix_drain(mix, &y, &n);
+    if (n)
+        take(ctx, y, n);
+}
+
+int pkapp_decode_fd(int fd, unsigned rate, char *err, size_t errlen, void *ctx,
+                    void (*span)(void *ctx, int64_t us),
+                    void (*take)(void *ctx, const float *y, size_t n),
+                    int (*read)(void *ctx, double fraction)) {
     struct stat st;
     if (fstat(fd, &st) || !S_ISREG(st.st_mode))
         return fail(err, errlen, "Android's extractor reads a file, and this is not one");
@@ -201,6 +218,8 @@ int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *err, si
     /* the track's length, for read: 0 where it says none */
     int64_t length = 0;
     AMediaFormat_getInt64(f, AMEDIAFORMAT_KEY_DURATION, &length);
+    if (length > 0 && span)
+        span(ctx, length);
     int told = 0;
     if (!(c = decoder_for(mime))) {
         rc = fail(err, errlen, "Android has no decoder for %s", mime);
@@ -294,6 +313,8 @@ int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *err, si
                     rc = fail(err, errlen, "out of memory");
                     goto done;
                 }
+                /* with whatever a change of rate finished before it */
+                hand(mix, take, ctx);
             }
             AMediaCodec_releaseOutputBuffer(c, (size_t)ob, false);
             moved = 1;
@@ -306,7 +327,12 @@ int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *err, si
             goto done;
         }
     }
-    rc = pkapp_mix_take(mix, out, n) ? fail(err, errlen, "out of memory") : 0;
+    if (pkapp_mix_end(mix)) {
+        rc = fail(err, errlen, "out of memory");
+        goto done;
+    }
+    hand(mix, take, ctx);
+    rc = 0;
 done:
     if (c) {
         AMediaCodec_stop(c);

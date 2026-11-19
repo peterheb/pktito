@@ -20,6 +20,8 @@
 // Android reads every file through decode_fd, and none of the desktop's decoders
 #![cfg_attr(target_os = "android", allow(dead_code))]
 
+#[cfg(target_os = "android")]
+use crate::pktito::Growing;
 use crate::strings::Problem;
 use std::env;
 use std::ffi::{c_char, c_int, c_uint, c_void, CStr, CString};
@@ -272,14 +274,57 @@ pub fn decode_fd(
     name: &str,
     read: &mut dyn FnMut(f64) -> bool,
 ) -> Result<Vec<f32>, DecodeError> {
-    if let Some(x) = wav_fd(fd, name) {
-        return x;
+    let into = Growing::new();
+    decode_fd_into(fd, name, read, &into)?;
+    Ok(into.into_vec())
+}
+
+/// The same samples into `into` as they are read, for a transcription that
+/// starts on the first of them (pktito.rs, Asr::transcribe_growing): run
+/// on a thread of its own while others read `into`. Android's decoder
+/// hands them over a buffer at a time, its track's length as the estimate
+/// till the end (native/decode_android.c); pktito's readers, a hundred
+/// times faster, in one push with the true length. decode_fd is this, the
+/// pushes put together, so the two give the same samples. On success the
+/// end is the length; on an error `into` fails, and on a stop - read's
+/// true, or into.cancel() from outside, seen at the next percent - it is
+/// cancelled, so that every reader waiting on it wakes.
+#[cfg(target_os = "android")]
+pub fn decode_fd_into(
+    fd: c_int,
+    name: &str,
+    read: &mut dyn FnMut(f64) -> bool,
+    into: &Growing,
+) -> Result<(), DecodeError> {
+    let r = fill(fd, name, read, into);
+    match r {
+        Ok(()) => into.end(),
+        Err(DecodeError::Stopped) => into.cancel(),
+        Err(_) => into.fail(),
     }
-    let x = match flac_fd(fd) {
-        Some(x) => x?,
-        None => decode_android(fd, read)?,
+    r
+}
+
+#[cfg(target_os = "android")]
+fn fill(
+    fd: c_int,
+    name: &str,
+    read: &mut dyn FnMut(f64) -> bool,
+    into: &Growing,
+) -> Result<(), DecodeError> {
+    let whole = |x: Vec<f32>| {
+        into.set_estimate(x.len());
+        into.push(&x);
     };
-    Ok(flac_cut_in(&mut copy_of(fd)?, x))
+    if let Some(x) = wav_fd(fd, name) {
+        whole(x?);
+        return Ok(());
+    }
+    match flac_fd(fd) {
+        Some(x) => whole(flac_cut_in(&mut copy_of(fd)?, x?)),
+        None => decode_android(fd, read, into, flac_samples(&mut copy_of(fd)?))?,
+    }
+    Ok(())
 }
 
 /// The FLAC open at fd, decoded here: a lossless file's samples are its
@@ -429,49 +474,77 @@ fn wav_fd(fd: c_int, name: &str) -> Option<Result<Vec<f32>, DecodeError>> {
     Some(read_wav(&w, &info))
 }
 
-/// Android's decoder's samples at 16 kHz.
+/// Android's decoder's samples at 16 kHz, into `into` as they come, no
+/// more than limit of them (a FLAC's STREAMINFO length, flac_cut_in).
 #[cfg(target_os = "android")]
-fn decode_android(fd: c_int, read: &mut dyn FnMut(f64) -> bool) -> Result<Vec<f32>, DecodeError> {
+fn decode_android(
+    fd: c_int,
+    read: &mut dyn FnMut(f64) -> bool,
+    into: &Growing,
+    limit: Option<usize>,
+) -> Result<(), DecodeError> {
+    type Span = unsafe extern "C" fn(*mut c_void, i64);
+    type Take = unsafe extern "C" fn(*mut c_void, *const f32, usize);
+    type Told = unsafe extern "C" fn(*mut c_void, f64) -> c_int;
     extern "C" {
         fn pkapp_decode_fd(
             fd: c_int,
             rate: c_uint,
-            out: *mut *mut f32,
-            n: *mut usize,
             err: *mut c_char,
             errlen: usize,
-            read: Option<unsafe extern "C" fn(*mut c_void, f64) -> c_int>,
             ctx: *mut c_void,
+            span: Option<Span>,
+            take: Option<Take>,
+            read: Option<Told>,
         ) -> c_int;
     }
-    unsafe extern "C" fn told(ctx: *mut c_void, fraction: f64) -> c_int {
-        let read = unsafe { &mut *(ctx as *mut &mut dyn FnMut(f64) -> bool) };
-        read(fraction) as c_int
+    struct To<'a> {
+        read: &'a mut dyn FnMut(f64) -> bool,
+        into: &'a Growing,
+        limit: usize,
+        pushed: usize,
     }
-    let mut read = read;
-    let mut out: *mut f32 = std::ptr::null_mut();
-    let mut n = 0usize;
+    unsafe extern "C" fn span(ctx: *mut c_void, us: i64) {
+        let to = unsafe { &mut *(ctx as *mut To) };
+        let n = (us.max(0) as u128 * RATE as u128 + 500_000) / 1_000_000;
+        to.into
+            .set_estimate(usize::try_from(n).unwrap_or(usize::MAX).min(to.limit));
+    }
+    unsafe extern "C" fn take(ctx: *mut c_void, y: *const f32, n: usize) {
+        let to = unsafe { &mut *(ctx as *mut To) };
+        let x = unsafe { std::slice::from_raw_parts(y, n) };
+        let keep = n.min(to.limit - to.pushed);
+        if keep > 0 {
+            to.into.push(&x[..keep]);
+            to.pushed += keep;
+        }
+    }
+    unsafe extern "C" fn told(ctx: *mut c_void, fraction: f64) -> c_int {
+        let to = unsafe { &mut *(ctx as *mut To) };
+        ((to.read)(fraction) || to.into.cancelled()) as c_int
+    }
+    let mut to = To {
+        read,
+        into,
+        limit: limit.unwrap_or(usize::MAX),
+        pushed: 0,
+    };
     let mut err = [0 as c_char; 512];
     let rc = unsafe {
         pkapp_decode_fd(
             fd,
             RATE as c_uint,
-            &mut out,
-            &mut n,
             err.as_mut_ptr(),
             err.len(),
+            &mut to as *mut To as *mut c_void,
+            Some(span),
+            Some(take),
             Some(told),
-            &mut read as *mut &mut dyn FnMut(f64) -> bool as *mut c_void,
         )
     };
     match rc {
-        0 => {
-            let x = take_c(out, n);
-            if x.is_empty() {
-                return Err(DecodeError::NoAudio);
-            }
-            Ok(x)
-        }
+        0 if to.pushed == 0 => Err(DecodeError::NoAudio),
+        0 => Ok(()),
         -1 => Err(DecodeError::NoAudio),
         -3 => Err(DecodeError::Stopped),
         _ => {
@@ -614,18 +687,25 @@ fn flac_cut(path: &Path, x: Vec<f32>) -> Vec<f32> {
 
 /// The same of a file already open, from its start.
 fn flac_cut_in(f: &mut std::fs::File, mut x: Vec<f32>) -> Vec<f32> {
-    use std::io::{Seek, SeekFrom};
-    let mut b = [0u8; 26];
-    let read = f
-        .seek(SeekFrom::Start(0))
-        .and_then(|_| f.read_exact(&mut b));
-    if let Some((rate, total)) = read.ok().and_then(|_| flac_length(&b)) {
-        // at 16 kHz, the samples themselves; at another rate, the mix's
-        // count of them, to the nearest; a count past usize cuts nothing
-        let n = (total as u128 * RATE as u128 + rate as u128 / 2) / rate as u128;
-        x.truncate(usize::try_from(n).unwrap_or(usize::MAX));
+    if let Some(n) = flac_samples(f) {
+        x.truncate(n);
     }
     x
+}
+
+/// The samples at 16 kHz a FLAC open in f holds by its STREAMINFO, read
+/// from its start; None for a file that is not a FLAC or gives no length.
+fn flac_samples(f: &mut std::fs::File) -> Option<usize> {
+    use std::io::{Seek, SeekFrom};
+    let mut b = [0u8; 26];
+    f.seek(SeekFrom::Start(0))
+        .and_then(|_| f.read_exact(&mut b))
+        .ok()?;
+    let (rate, total) = flac_length(&b)?;
+    // at 16 kHz, the samples themselves; at another rate, the mix's count
+    // of them, to the nearest; a count past usize cuts nothing
+    let n = (total as u128 * RATE as u128 + rate as u128 / 2) / rate as u128;
+    Some(usize::try_from(n).unwrap_or(usize::MAX))
 }
 
 /// A FLAC's sample rate and length in samples, from its STREAMINFO, the

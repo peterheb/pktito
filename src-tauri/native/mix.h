@@ -43,4 +43,16 @@ int pkapp_mix_push(pkapp_mix *m, const float *x, size_t n);
  * when it is empty), and its length. 0, or -1 when memory runs out. */
 int pkapp_mix_take(pkapp_mix *m, float **y, size_t *n);
 
+/* For a caller that hands the signal on as it is made instead of taking
+ * it whole: the samples made since the last drain, in *y, good until the
+ * next call on m, and their count (0 and NULL when there are none). They
+ * are the mix's no longer: take gives only what came after. The samples
+ * are the same ones take would give, in the same order, however the
+ * pushes and drains fall. */
+void pkapp_mix_drain(pkapp_mix *m, const float **y, size_t *n);
+
+/* After the last push, for a caller that drains: what the resampler still
+ * holds, made, for one drain more. 0, or -1 when memory runs out. */
+int pkapp_mix_end(pkapp_mix *m);
+
 #endif /* PKAPP_MIX_H */
