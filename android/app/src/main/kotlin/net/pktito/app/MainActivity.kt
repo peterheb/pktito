@@ -139,6 +139,8 @@ class MainActivity : ComponentActivity() {
     private var toast by mutableStateOf<String?>(null)
     /** An edit of the speakers that Undo takes back, and what its toast says (Speakers). */
     private var undo by mutableStateOf<Pair<String, Speakers.Before>?>(null)
+    /** the last change undo was, kept past its toast for the Speakers menu (SpeakersView.undo) */
+    private var last by mutableStateOf<Pair<String, Speakers.Before>?>(null)
     /** The speaker Rename is up for (RenameSpeaker). */
     private var renaming by mutableStateOf<Int?>(null)
     /** The speaker model's download, asked about. */
@@ -460,6 +462,8 @@ class MainActivity : ComponentActivity() {
                 toast = null
             }
         }
+        // another transcript, or this one again: the last change no longer to undo
+        LaunchedEffect(Transcriber.id) { last = null }
         LaunchedEffect(undo) {
             if (undo != null) {
                 delay(6000)
@@ -669,6 +673,13 @@ class MainActivity : ComponentActivity() {
                                 Speakers.set(this, false)
                                 t.diarizing = false
                             },
+                            undo = last?.first,
+                            onUndo = {
+                                last?.let { Speakers.undo(this, it.second) }
+                                last = null
+                                undo = null
+                            },
+                            lifted = undo != null || toast != null || speakersNote() != null,
                             times = { u ->
                                 val tb = base.copy(video = t.fps, duration = t.duration)
                                 "${tb.at(u.start)}–${tb.at(u.end)}"
@@ -754,6 +765,7 @@ class MainActivity : ComponentActivity() {
                                 u.first,
                                 {
                                     undo = null
+                                    last = null
                                     Speakers.undo(this@MainActivity, u.second)
                                 },
                                 foot,
@@ -1055,6 +1067,7 @@ class MainActivity : ComponentActivity() {
         val before = Speakers.move(this, u, to, fresh) ?: return
         val name = Speakers.nameOf(resources, Transcriber.names, to)
         undo = getString(R.string.speakers_moved, name) to before
+        last = undo
     }
 
     /** Rename's name for speaker n: where it is another's, the two join, and Undo parts them. */
@@ -1066,6 +1079,7 @@ class MainActivity : ComponentActivity() {
                     R.string.speakers_joined,
                     Speakers.nameOf(resources, Transcriber.names, other),
                 ) to before
+        last = undo
     }
 
     /**

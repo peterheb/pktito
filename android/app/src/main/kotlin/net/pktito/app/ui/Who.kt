@@ -132,6 +132,15 @@ class SpeakersView(
     val running: Boolean = false,
     /** that transcription goes on without them (Engine.quiet), and the switch is off */
     val quiet: () -> Unit = {},
+    /**
+     * the last change to the speakers, as its toast said it, which the menu can still undo after
+     * the toast has gone, until the next change or another transcript (Peter, 2026-11-18: a move
+     * made by mistake, and no Undo seen)
+     */
+    val undo: String? = null,
+    val onUndo: () -> Unit = {},
+    /** a toast at the screen's foot, which the Now button stands over */
+    val lifted: Boolean = false,
 ) {
     companion object {
         val NONE =
@@ -309,6 +318,13 @@ fun SpeakersMenu(open: Boolean, close: () -> Unit, spk: SpeakersView, found: Int
                 ) {
                     Icon(Icons.who, null, tint = p.inkMuted, modifier = Modifier.size(18.dp))
                 }
+            }
+        }
+        spk.undo?.let { said ->
+            MenuLine()
+            Item(stringResource(R.string.speakers_undo), null, note = AnnotatedString(said)) {
+                close()
+                spk.onUndo()
             }
         }
     }
