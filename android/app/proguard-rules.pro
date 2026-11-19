@@ -7,8 +7,16 @@
 # signatures on whatever implements it (src-tauri/src/android.rs, transcribe:
 # "audio" (DD[B)V and "update" (DLjava/lang/String;)V)
 -keepclassmembers class * implements net.pktito.app.Engine$Progress {
+    public void reading(double);
     public void audio(double, double, byte[]);
     public void update(double, java.lang.String);
+}
+
+# and Engine.Heard's, while speakers are found (android.rs, find:
+# "decoding" (D)V and "done" (DLjava/lang/String;)V)
+-keepclassmembers class * implements net.pktito.app.Engine$Heard {
+    public void decoding(double);
+    public void done(double, java.lang.String);
 }
 
 # and Engine.Download's one (android.rs, download: "state" (Ljava/lang/String;)V)
