@@ -150,10 +150,17 @@ private struct Credits: View {
             .pk(tagline)
             .foregroundStyle(Pk.ink)
             VStack(alignment: .leading, spacing: 0) {
-                // the engine's code for this processor, without its words (Android's)
-                Text(L("about_version", version, Core.backend.components(separatedBy: " (")[0]))
-                    .pk(small)
-                    .foregroundStyle(Pk.inkMuted)
+                // the engine's code for this processor, without its words (Android's),
+                // and ", ANE" where the core runs a model's encoder on the Neural Engine
+                // here, as Android names its NPU (PKT-39)
+                let ane = Models.shared.offers.contains { $0.entry.runs?.neuralEngine == true }
+                Text(
+                    L(
+                        "about_version", version,
+                        Core.backend.components(separatedBy: " (")[0] + (ane ? ", ANE" : ""))
+                )
+                .pk(small)
+                .foregroundStyle(Pk.inkMuted)
                 linked(markdown: L("about_copyright")).pk(small).foregroundStyle(Pk.inkMuted)
                 // on a line, or one over the next where they don't fit, each
                 // word whole: at AX2 on the iPhone SE the line broke

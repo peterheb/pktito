@@ -4576,12 +4576,13 @@ async function openAbout() {
   pausePlayback();
   aboutFrom = document.activeElement;
   about = true;
-  // the engine's code for this processor by its name; all of "neon-dp (ARMv8.2: SDOT)" in the tooltip
+  // the engine's code for this processor by its name; all of "neon-dp (ARMv8.2: SDOT)" in the tooltip;
+  // ", ANE" on a Mac whose Neural Engine runs the encoder, as Android adds its NPU (PKT-39)
   $("about-version").textContent = t(
     st.store ? "about.version_store" : "about.version",
     {
       version: st.version,
-      backend: st.backend.split(" (")[0],
+      backend: st.backend.split(" (")[0] + (st.neural ? ", ANE" : ""),
     },
   );
   $("about-version").title = st.backend;

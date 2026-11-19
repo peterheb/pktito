@@ -206,6 +206,10 @@ struct Status {
     /// The app's, from Cargo.toml, for About.
     version: &'static str,
     backend: String,
+    /// A Mac whose Neural Engine runs a model's Core ML edition
+    /// (model::neural), which About names beside the backend, as Android
+    /// names the Snapdragon's NPU (PKT-39).
+    neural: bool,
     platform: &'static str,
     /// Running from the Microsoft Store's package (store_edition).
     store: bool,
@@ -460,6 +464,7 @@ fn status(app: AppHandle, state: State<'_, AppState>) -> Result<Status, Problem>
         prefs: s.prefs,
         version: env!("CARGO_PKG_VERSION"),
         backend: pktito::backend(),
+        neural: model::neural(),
         platform: std::env::consts::OS,
         store: store_edition(),
         data_in_package: in_package,
