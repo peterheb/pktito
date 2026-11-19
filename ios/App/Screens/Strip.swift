@@ -54,6 +54,8 @@ struct Strip: View {
         let stretches: [Stretch]
         let upto: Double
         let finding: Bool
+        /// one speaker found, their turns at their own times (SpeakerBar.exact)
+        var exact = false
     }
     /// the recording still not ready to play, a moment after it was asked for
     @State private var waited = false
@@ -147,7 +149,7 @@ struct Strip: View {
                     if let bar, duration > 0 {
                         SpeakerBar(
                             stretches: bar.stretches, duration: duration, upto: bar.upto,
-                            finding: bar.finding
+                            finding: bar.finding, exact: bar.exact
                         )
                         .allowsHitTesting(false)
                         .transition(.opacity)
@@ -255,17 +257,18 @@ struct Waveform: View {
                     v = min(max((sum / Double(b - a) - range.0) / (range.1 - range.0), 0), 1)
                 }
                 let x = CGFloat(i) * (bar + gap)
-                if i == k {
-                    ctx.fill(
-                        Path(CGRect(x: x - gap, y: 0, width: bar + 2 * gap, height: top)),
-                        with: .color(Pk.beak))
-                    continue
-                }
                 let h = 3 + (v * Double(top - 7)).rounded()
                 let c = peaks == nil ? Pk.termLine : i < k ? Pk.wavePlayed : Pk.wave
                 ctx.fill(
                     Path(CGRect(x: x, y: (top - h) / 2, width: bar, height: h)), with: .color(c))
             }
+            // the playhead centred on its time, as a match's tick and a found
+            // speaker's turn are (SpeakerBar, exact): on the bar it fell in, from
+            // that bar's edge, it stood up to 1.5 off the tick of the same time
+            // (Peter, Android's on the S25, 2026-11-18)
+            let w = bar + 2 * gap
+            let x = min(max(CGFloat(at) * size.width, w / 2), size.width - w / 2)
+            ctx.fill(Path(CGRect(x: x - w / 2, y: 0, width: w, height: top)), with: .color(Pk.beak))
         }
         .frame(height: height)
         .accessibilityHidden(true)

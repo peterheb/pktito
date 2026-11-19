@@ -64,6 +64,7 @@ char *pkapp_transcribe(uint64_t handle, uint64_t diar, const char *path, const c
                        void (*audio)(void *ctx, double seconds, double fps, const uint8_t *peaks, size_t n),
                        void (*update)(void *ctx, double done, const char *segments));
 void pkapp_stop(void);
+void pkapp_quiet(void);
 
 /* {"text"}: a Transcript as txt, md, srt, vtt or json, with each turn's
  * speaker where speakers */

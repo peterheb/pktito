@@ -85,6 +85,10 @@ struct DiarLoaded {
 
 /// stop()'s word to the transcription running, read before each chunk.
 static STOP: AtomicBool = AtomicBool::new(false);
+/// Speakers turned off while the run goes on (Engine.quiet): from the next
+/// chunk the diarizer is fed no more (transcribe::Speakers::off_when), as
+/// the desktop's switch does (main.rs, quiet).
+static QUIET: AtomicBool = AtomicBool::new(false);
 
 /// The download download() is running, for pauseDownload, cancelDownload
 /// and retryDownload to tell from the screen's thread, as main.rs's
@@ -258,9 +262,11 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
             let mut d = (diar != 0).then(|| unsafe { &mut *(diar as *mut DiarLoaded) });
             // the diarizer's model's name, which the JSON names
             let heard_by = d.as_ref().map(|d| d.model.name()).unwrap_or_default();
-            let mut speakers = d
-                .as_mut()
-                .map(|d| transcribe::Speakers::new(&d.model, &mut d.diar));
+            QUIET.store(false, Ordering::Relaxed);
+            let mut speakers = d.as_mut().map(|d| {
+                transcribe::Speakers::new(&d.model, &mut d.diar)
+                    .off_when(|| QUIET.load(Ordering::Relaxed))
+            });
             let name = name.try_to_string(env)?;
             STOP.store(false, Ordering::Relaxed);
             let fps = decode::frame_rate_fd(fd).unwrap_or(0.0);
@@ -376,6 +382,16 @@ pub extern "system" fn Java_net_pktito_app_Engine_stop<'a>(
     _class: JClass<'a>,
 ) {
     STOP.store(true, Ordering::Relaxed);
+}
+
+/// Engine.quiet(): the transcription running goes on without its speakers
+/// from its next chunk (QUIET), its transcript as one made without them.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_quiet<'a>(
+    _unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+) {
+    QUIET.store(true, Ordering::Relaxed);
 }
 
 /// Engine.format(transcript, ext, name, times, speakers): a Transcript's

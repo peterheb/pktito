@@ -228,6 +228,8 @@
     <string name="speakers_switch">[Șpęąkęřș ·····]</string>
     <string name="speakers_show">[Șhőw whő șąįď whąț ····· ··]</string>
     <string name="speakers_hide">[Hįďę șpęąkęřș ·····]</string>
+    <string name="speakers_turn_off">[Țűřń őff șpęąkęřș ····· ··]</string>
+    <string name="speakers_turn_off_note">[Țřąńșčřįbęș fąșțęř ····· ··]</string>
     <string name="speakers_default">[Șpęąkęř %1$d ·····]</string>
     <string name="speakers_bar">[Whő țąłkș whęń ······]</string>
     <string name="speakers_name_label">[%1$s: whő’ș șpęąkįńg ····· ·]</string>

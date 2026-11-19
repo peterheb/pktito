@@ -322,6 +322,8 @@ final class Engine: @unchecked Sendable {
 
     /// The transcription running ends before its next chunk.
     static func stop() { pkapp_stop() }
+    /// the transcription running goes on without its speakers from its next chunk
+    static func quiet() { pkapp_quiet() }
 }
 
 /// The speaker model loaded, and a diarizer for it, for one transcription

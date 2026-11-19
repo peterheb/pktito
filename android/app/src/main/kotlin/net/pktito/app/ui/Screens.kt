@@ -990,10 +990,14 @@ fun Work(
                                     spk.upto,
                                     m,
                                     finding = spk.heard != null,
+                                    exact = find.who != 0 && spk.heard == null,
                                 )
                             })
                         else null,
                 )
+            // while it transcribes with its speakers, the way to go on without them
+            if (spk.running && !makeRoom)
+                RunningSpeakers(spk, Modifier.padding(start = edge, end = edge, top = 16.dp))
             if (review && rows.isNotEmpty())
                 // a step takes the playhead to its match (Finder.step)
                 SpeakersLine(

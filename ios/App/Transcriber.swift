@@ -37,6 +37,23 @@ final class Transcriber {
     private(set) var error: String?
     /// the seconds spent transcribing so far, for the pace
     private(set) var transcribed = 0.0
+    /// the pace now, seconds of audio a second over about the last 10 seconds
+    /// of work, while it transcribes; the finished transcript's is the whole
+    /// run's (transcribed), which while it ran was slow to show a change:
+    /// speakers turned off partway, at 20x after 15x, read 17x a minute later
+    /// (Peter, the S24, 2026-11-18; Android's Transcriber.pace)
+    private(set) var pace = 0.0
+    /// (seconds spent, seconds of audio done) at each chunk, back 10 seconds
+    private var lately: [(Double, Double)] = []
+
+    /// A chunk done: spent seconds in, audio seconds of the recording transcribed.
+    private func chunk(_ spent: Double, _ audio: Double) {
+        transcribed = spent
+        lately.append((spent, audio))
+        while lately.count > 2 && spent - lately[1].0 >= 10 { lately.removeFirst() }
+        let (s0, a0) = lately[0]
+        pace = lately.count > 1 && spent > s0 ? (audio - a0) / (spent - s0) : audio / spent
+    }
     /// the finished transcript, for the formats
     private(set) var transcript: Transcript?
     /// a video's frame rate, for times in frames; 0 for audio
@@ -78,6 +95,8 @@ final class Transcriber {
         diarizing = false
         error = nil
         transcribed = 0
+        pace = 0
+        lately = []
         transcript = nil
         fps = 0
         reopened = false
@@ -308,7 +327,7 @@ final class Transcriber {
                     Task { @MainActor in
                         self.done = done
                         self.segments += segs
-                        self.transcribed = spent
+                        self.chunk(spent, done * self.duration)
                         Continued.update()
                     }
                 }
@@ -366,6 +385,14 @@ final class Transcriber {
 
     /// The transcription running ends before its next chunk.
     func stop() { Engine.stop() }
+
+    /// The transcription running goes on without its speakers, from its next
+    /// chunk (Engine.quiet), and the switch is off, as the desktop's is.
+    func quiet() {
+        Engine.quiet()
+        Speakers.shared.set(false)
+        diarizing = false
+    }
 
     /// A transcription finished with the catalog model loaded: the core
     /// hears so (Core.ran), and once the Neural Engine's edition has run from

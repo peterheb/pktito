@@ -211,6 +211,22 @@ function clock(s) {
   return h ? `${h}:${two(m)}:${two(s % 60)}` : `${m}:${two(s % 60)}`;
 }
 /* how many seconds of audio a second's work transcribed */
+/* The pace now: seconds of audio a second over about the last 10 seconds of
+   work, while a file transcribes; a finished one's is the whole run's
+   (transcribed), which while it ran was slow to show a change: speakers
+   turned off partway, at 20x after 15x, read 17x a minute later (Peter, the
+   S24, 2026-11-18; Android's Transcriber.pace). */
+function paceNow(f) {
+  const spent = f.transcribed,
+    audio = f.done * f.duration,
+    l = (f.lately ??= []);
+  if (l.length && spent < l[l.length - 1][0]) l.length = 0; // transcribed again
+  l.push([spent, audio]);
+  while (l.length > 2 && spent - l[1][0] >= 10) l.shift();
+  const [s0, a0] = l[0];
+  f.pace =
+    l.length > 1 && spent > s0 ? (audio - a0) / (spent - s0) : audio / spent;
+}
 function realTime(audio, secs) {
   return t("time.real_time", { x: num(audio / secs, 1) });
 }
@@ -1558,6 +1574,7 @@ listen("job", (e) => {
     f.done = j.done;
     f.eta = j.eta;
     f.transcribed = j.transcribed;
+    paceNow(f);
   }
   f.segments.push(...j.segments);
   if (j.step === "error") f.problem = j.problem;
@@ -2063,8 +2080,8 @@ function updateRunning(f) {
       ? t("status.reading")
       : f.step === "loading"
         ? t("status.loading")
-        : going && f.done > 0 && f.transcribed > 0
-          ? realTime(f.done * f.duration, f.transcribed)
+        : going && f.done > 0 && f.pace > 0
+          ? realTime(f.pace, 1)
           : "";
   $("prog").title = going && f.eta > 0 ? timeLeft(f.eta) : "";
   $("dur").textContent = f.duration == null ? "" : lengthOf(f);

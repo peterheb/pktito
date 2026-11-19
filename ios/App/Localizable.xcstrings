@@ -2656,6 +2656,28 @@
         }
       }
     },
+    "speakers_turn_off": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn off speakers"
+          }
+        }
+      }
+    },
+    "speakers_turn_off_note": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribes faster"
+          }
+        }
+      }
+    },
     "speakers_undo": {
       "extractionState": "manual",
       "localizations": {

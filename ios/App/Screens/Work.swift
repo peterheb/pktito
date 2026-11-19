@@ -108,13 +108,20 @@ struct Work: View {
                                     : who != 0
                                         ? barOf(rows).filter { $0.speaker == who } : barOf(rows),
                                 upto: t.running ? t.done * t.duration : .greatestFiniteMagnitude,
-                                finding: spk.finding) : nil,
+                                finding: spk.finding, exact: who != 0 && !spk.finding) : nil,
                         // the transcript at the sentence under a scrubbing finger
                         onScrub: { scrubbed = Scrub(at: $0 * t.duration, n: scrubbed.n + 1) }
                     )
                     // 16 under the header's buttons: their 11 and 5
                     .padding(.horizontal, edge)
                     .padding(.top, 5)
+                }
+                // while it transcribes with its speakers, the way to go on without them
+                if t.running && t.diarizing && !room {
+                    RunningSpeakers()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, edge)
+                        .padding(.top, 16)
                 }
                 if review && !rows.isEmpty {
                     // a step takes the playhead to its match, at rest too (Finder.step)
@@ -275,8 +282,8 @@ struct Work: View {
         switch t.step {
         case .loading: return L("status_loading")
         case .reading: return L("status_reading")
-        case .transcribing where t.done > 0 && t.transcribed > 0:
-            return pace(t.done * t.duration, t.transcribed)
+        case .transcribing where t.done > 0 && t.pace > 0:
+            return L("real_time", String(format: "%.1f", locale: .current, t.pace))
         default: return ""
         }
     }

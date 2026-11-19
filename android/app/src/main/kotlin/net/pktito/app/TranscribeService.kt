@@ -163,7 +163,7 @@ class TranscribeService : Service() {
                         Transcriber.post {
                             this.done = done
                             this.segments.addAll(segs)
-                            transcribed = spent
+                            chunk(spent, done * duration)
                         }
                         // Android drops a notification's updates past a few a second
                         val now = SystemClock.elapsedRealtime()

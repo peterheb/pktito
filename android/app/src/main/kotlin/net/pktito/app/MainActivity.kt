@@ -560,8 +560,11 @@ class MainActivity : ComponentActivity() {
                             )
                         else null,
                     pace =
-                        if (t.step == "transcribing" && t.done > 0 && t.transcribed > 0)
-                            pace(t.done * t.duration, t.transcribed)
+                        if (t.step == "transcribing" && t.done > 0 && t.pace > 0)
+                            getString(
+                                R.string.real_time,
+                                String.format(Locale.getDefault(), "%.1f", t.pace),
+                            )
                         else null,
                     times = times,
                     playable = Player.ready,
@@ -660,6 +663,12 @@ class MainActivity : ComponentActivity() {
                             move = ::moveSpeaker,
                             rename = { renaming = it },
                             find = finder::findWho,
+                            running = t.running && t.diarizing,
+                            quiet = {
+                                Engine.quiet()
+                                Speakers.set(this, false)
+                                t.diarizing = false
+                            },
                             times = { u ->
                                 val tb = base.copy(video = t.fps, duration = t.duration)
                                 "${tb.at(u.start)}–${tb.at(u.end)}"

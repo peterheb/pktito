@@ -114,6 +114,9 @@ object Engine {
     /** The transcription running stops before its next chunk. */
     @JvmStatic external fun stop()
 
+    /** The transcription running goes on without its speakers from its next chunk. */
+    @JvmStatic external fun quiet()
+
     /**
      * A transcript as a file of the kind ext names: txt, md, srt, vtt or json, the desktop's bytes;
      * times puts each sentence's time before it in txt and md, and speakers each turn's name, where

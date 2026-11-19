@@ -78,6 +78,9 @@ struct DiarLoaded {
 
 /// pkapp_stop's word to the transcription running, read before each chunk.
 static STOP: AtomicBool = AtomicBool::new(false);
+/// pkapp_quiet's: the transcription running goes on without its speakers
+/// from its next chunk (transcribe::Speakers::off_when).
+static QUIET: AtomicBool = AtomicBool::new(false);
 
 fn arg(p: *const c_char) -> String {
     if p.is_null() {
@@ -369,10 +372,12 @@ pub extern "C" fn pkapp_transcribe(
         let mut d = (diar != 0).then(|| unsafe { &mut *(diar as usize as *mut DiarLoaded) });
         // the diarizer's model's name, which the JSON names
         let heard_by = d.as_ref().map(|d| d.model.name()).unwrap_or_default();
-        let mut speakers = d
-            .as_mut()
-            .map(|d| transcribe::Speakers::new(&d.model, &mut d.diar));
+        let mut speakers = d.as_mut().map(|d| {
+            transcribe::Speakers::new(&d.model, &mut d.diar)
+                .off_when(|| QUIET.load(Ordering::Relaxed))
+        });
         STOP.store(false, Ordering::Relaxed);
+        QUIET.store(false, Ordering::Relaxed);
         let fps = decode::frame_rate(&path).unwrap_or(0.0);
         // a file that can't be read: its words' key and what said so, for
         // the app's catalog to word (Words.swift), the line for a log
@@ -430,6 +435,13 @@ pub extern "C" fn pkapp_transcribe(
 #[unsafe(no_mangle)]
 pub extern "C" fn pkapp_stop() {
     STOP.store(true, Ordering::Relaxed);
+}
+
+/// The transcription running goes on without its speakers from its next
+/// chunk, its transcript as one made without them.
+#[unsafe(no_mangle)]
+pub extern "C" fn pkapp_quiet() {
+    QUIET.store(true, Ordering::Relaxed);
 }
 
 fn parse(transcript: *const c_char) -> Result<Transcript, String> {

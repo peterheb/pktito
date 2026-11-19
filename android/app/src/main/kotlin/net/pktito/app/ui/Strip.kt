@@ -859,10 +859,6 @@ fun Waveform(
                 v = ((sum / (b - a) - lo) / (hi - lo)).coerceIn(0.0, 1.0)
             }
             val x = i * (bar + gap)
-            if (i == k) {
-                drawRect(p.beak, Offset(x - gap, 0f), Size(bar + 2 * gap, top))
-                continue
-            }
             val h = 3.dp.toPx() + (v * (top - 7.dp.toPx())).roundToInt()
             val c =
                 when {
@@ -872,6 +868,12 @@ fun Waveform(
                 }
             drawRect(c, Offset(x, (top - h) / 2), Size(bar, h))
         }
+        // the playhead centred on its time, as a match's tick and a speaker's turn found are
+        // (Ticks, SpeakerBar): on the bar it fell in, from that bar's edge, it stood up to 1.5 dp
+        // off the tick of the same time (Peter, the S25, 2026-11-18)
+        val w = bar + 2 * gap
+        val x = (at * size.width).toFloat().coerceIn(w / 2, size.width - w / 2)
+        drawRect(p.beak, Offset(x - w / 2, 0f), Size(w, top))
     }
 }
 

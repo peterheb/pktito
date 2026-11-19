@@ -126,6 +126,30 @@ struct SwitchFace: View {
     }
 }
 
+/// While a transcription finds its speakers as it goes, the switch, which
+/// opens a menu of one: Turn off speakers, which transcribes faster (Peter,
+/// 2026-11-18: for a long recording of one voice). The speaker model takes as
+/// long again as the words or more on a phone: on a Galaxy S24 Ultra a
+/// 39-minute podcast took 1.6 to 2.6 times as long with it, on an iPhone 16e
+/// 4.7 times (Android's RunningSpeakers).
+struct RunningSpeakers: View {
+    var body: some View {
+        Menu {
+            Button {
+                Transcriber.shared.quiet()
+            } label: {
+                Text(L("speakers_turn_off"))
+                Text(L("speakers_turn_off_note"))
+            }
+        } label: {
+            SwitchFace(on: true, label: L("speakers_switch"), menu: true)
+        }
+        .buttonStyle(.plain)
+        .fixedSize()
+        .accessibilityHint(L("speakers_turn_off"))
+    }
+}
+
 /// The speakers of a transcript, for a phone, where the names over the
 /// transcript give way to the text (Chips): Hide speakers, each speaker,
 /// which finds where they speak as a name does (the one found checked), and
@@ -417,11 +441,27 @@ struct SpeakerBar: View {
     let duration: Double
     let upto: Double
     var finding = false
+    /// one speaker's turns alone (a speaker found): each at its own times,
+    /// not by the point, from half a tick before its start, so that a turn's
+    /// mark hangs from the same line as its match's tick and the playhead
+    /// there, a short one centred on it (Peter, Android's on the S25, 2026-11-18)
+    var exact = false
 
     var body: some View {
         let parts = Speakers.parts(stretches, upto: upto)
         Canvas { ctx, size in
             guard duration > 0 else { return }
+            if exact {
+                let half: CGFloat = 1.5
+                for s in stretches where s.start < upto {
+                    let a = CGFloat(s.start / duration) * size.width - half
+                    let b = max(CGFloat(min(s.end, upto) / duration) * size.width, a + 2 * half)
+                    ctx.fill(
+                        Path(CGRect(x: a, y: 6, width: b - a, height: 4)),
+                        with: .color(Pk.speakerBar(s.speaker)))
+                }
+                return
+            }
             let px = max(1, Int(size.width))
             let per = duration / Double(px)
             let who = Speakers.pixels(parts, px, per, everyTurn: !finding)

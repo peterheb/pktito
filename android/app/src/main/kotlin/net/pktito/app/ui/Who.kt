@@ -128,6 +128,10 @@ class SpeakersView(
     val times: (Speakers.Turn) -> String,
     /** a speaker found, as a search finds a word (Finder.findWho) */
     val find: (speaker: Int) -> Unit = {},
+    /** a transcription finding its speakers as it goes, which quiet can stop doing */
+    val running: Boolean = false,
+    /** that transcription goes on without them (Engine.quiet), and the switch is off */
+    val quiet: () -> Unit = {},
 ) {
     companion object {
         val NONE =
@@ -683,6 +687,12 @@ fun SpeakerBar(
     upto: Double,
     modifier: Modifier,
     finding: Boolean = false,
+    /**
+     * one speaker's turns alone (a speaker found): each at its own times, not by the dp, from half
+     * a tick before its start, so that a turn's mark hangs from the same line as its match's tick
+     * and the playhead there, a short one centred on it (Peter, the S25, 2026-11-18)
+     */
+    exact: Boolean = false,
 ) {
     val p = pk
     val parts = remember(stretches, upto) { Speakers.parts(stretches, upto) }
@@ -690,6 +700,16 @@ fun SpeakerBar(
     Canvas(modifier.fillMaxWidth().height(10.dp).semantics { contentDescription = label }) {
         if (duration <= 0) return@Canvas
         val dp = density
+        if (exact) {
+            val half = 1.5f * dp
+            for (s in stretches) {
+                if (s.start >= upto) continue
+                val a = (s.start / duration * size.width).toFloat() - half
+                val b = maxOf((minOf(s.end, upto) / duration * size.width).toFloat(), a + 2 * half)
+                drawRect(p.speakerBar(s.speaker), Offset(a, 6f * dp), Size(b - a, 4f * dp))
+            }
+            return@Canvas
+        }
         val px = maxOf(1, (size.width / dp).toInt())
         val per = duration / px
         val who = Speakers.pixels(parts, px, per, everyTurn = !finding)
@@ -745,6 +765,36 @@ fun UndoToast(text: String, onUndo: () -> Unit, modifier: Modifier = Modifier) {
                 style = Type.ui.copy(fontSize = 13.sp, fontWeight = FontWeight.W500),
                 color = p.termInk,
             )
+        }
+    }
+}
+
+/**
+ * While a transcription finds its speakers as it goes, the switch, which opens a menu of one: Turn
+ * off speakers, which transcribes faster (Peter, 2026-11-18: for a long recording of one voice).
+ * The speaker model takes as long again as the words or more on a phone: on a Galaxy S24 Ultra a
+ * 39-minute podcast took 1.6 to 2.6 times as long with it, on an iPhone 16e 4.7 times.
+ */
+@Composable
+fun RunningSpeakers(spk: SpeakersView, modifier: Modifier = Modifier) {
+    var open by remember { mutableStateOf(false) }
+    Box(modifier) {
+        SpeakersSwitch(
+            true,
+            false,
+            stringResource(R.string.speakers_hide),
+            { open = true },
+            menu = true,
+        )
+        Menu(open, { open = false }) {
+            Item(
+                stringResource(R.string.speakers_turn_off),
+                null,
+                note = AnnotatedString(stringResource(R.string.speakers_turn_off_note)),
+            ) {
+                open = false
+                spk.quiet()
+            }
         }
     }
 }

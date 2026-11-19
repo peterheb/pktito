@@ -100,6 +100,26 @@ object Transcriber {
     var error by mutableStateOf<String?>(null)
     /** The seconds spent transcribing so far, for the pace. */
     var transcribed by mutableStateOf(0.0)
+    /**
+     * The pace now, seconds of audio a second over about the last PACE seconds (lately), while it
+     * transcribes; the finished transcript's is the whole run's (transcribed). The whole run's,
+     * while it ran, was slow to show a change: speakers turned off partway, at 20x after 15x, read
+     * 17x a minute later (Peter, the S24, 2026-11-18).
+     */
+    var pace by mutableStateOf(0.0)
+    /** (seconds spent, seconds of audio done) at each chunk, back to PACE seconds ago */
+    private val lately = ArrayDeque<Pair<Double, Double>>()
+
+    /** A chunk done: spent seconds in, audio seconds of the recording transcribed. */
+    fun chunk(spent: Double, audio: Double) {
+        transcribed = spent
+        lately.addLast(spent to audio)
+        while (lately.size > 2 && spent - lately[1].first >= PACE) lately.removeFirst()
+        val (s0, a0) = lately.first()
+        // the first chunk's own: from the start of the work, not of its reading
+        pace = if (lately.size > 1 && spent > s0) (audio - a0) / (spent - s0) else audio / spent
+    }
+
     /** The finished transcript's JSON, for Engine.format. */
     var transcript by mutableStateOf<String?>(null)
     /** With speakers: the names given, speaker n's at n - 1, "" for Speaker n (Speakers.nameOf). */
@@ -158,6 +178,8 @@ object Transcriber {
         segments.clear()
         error = null
         transcribed = 0.0
+        pace = 0.0
+        lately.clear()
         transcript = null
         names = emptyList()
         stretches = emptyList()
@@ -444,4 +466,7 @@ object Transcriber {
 
     private const val TAG = "pktito"
     private const val IDLE_MS = 30_000L
+
+    /** the seconds the pace while it runs is reckoned over */
+    private const val PACE = 10.0
 }
