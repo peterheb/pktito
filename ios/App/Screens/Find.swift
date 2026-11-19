@@ -269,12 +269,10 @@ struct FindField: View {
                     finder.dropWho()
                 } label: {
                     HStack(spacing: 6) {
-                        SpeakerMark(n: finder.who)
                         if finder.query.isEmpty || width >= 360 {
-                            Text(nameOf(finder.who))
-                                .font(PkType.ui.font(13))
-                                .foregroundStyle(Pk.ink)
-                                .lineLimit(1)
+                            MarkedName(n: finder.who, name: nameOf(finder.who))
+                        } else {
+                            SpeakerMark(n: finder.who)
                         }
                         PkIcon.x.frame(width: 12, height: 12).foregroundStyle(Pk.inkMuted)
                     }
@@ -377,8 +375,7 @@ struct WhoBadge: View {
         HStack(spacing: 0) {
             SpeakersMenu(people: people) {
                 HStack(spacing: 6) {
-                    SpeakerMark(n: finder.who)
-                    Text(name).font(PkType.ui.font(13)).foregroundStyle(Pk.ink).lineLimit(1)
+                    MarkedName(n: finder.who, name: name)
                     PkIcon.down.frame(width: 12, height: 12).foregroundStyle(Pk.inkMuted)
                 }
                 .padding(.leading, 8)

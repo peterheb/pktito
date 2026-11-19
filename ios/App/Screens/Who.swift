@@ -32,29 +32,79 @@ extension Pk {
 /// and orchid, 5 and 8 (the design's palette check).
 struct SpeakerMark: View {
     let n: Int
+    /// the size of the text beside it, before Dynamic Type
+    var text: CGFloat = 13
+    @Environment(\.dynamicTypeSize) private var type
+    @Environment(\.displayScale) private var scale
 
     var body: some View {
         let square = Speakers.slotOf(n) > 4
-        RoundedRectangle(cornerRadius: square ? 2 : 5)
+        let em = PkType.ui.scaled(type, text)
+        // whole pixels, which a fraction draws soft
+        let side = ((square ? MarkSize.sizeSq : MarkSize.size) * em * scale).rounded() / scale
+        RoundedRectangle(cornerRadius: square ? MarkSize.radiusSq * em : side / 2)
             .fill(Pk.speaker(n))
-            .frame(width: square ? 9 : 10, height: square ? 9 : 10)
+            .frame(width: side, height: side)
             .accessibilityHidden(true)
+    }
+}
+
+/// mark-size, mark-size-sq, mark-radius-sq and mark-gap (design/tokens.json),
+/// in the text's em, and Archivo's x-height, its OS/2 sxHeight, 526 of 1000.
+enum MarkSize {
+    static let size: CGFloat = 0.75
+    static let sizeSq: CGFloat = 0.68
+    static let radiusSq: CGFloat = 0.15
+    static let gap: CGFloat = 0.6
+    static let xHeight: CGFloat = 0.526
+}
+
+/// A speaker's mark and name: the mark mark-size of the name's text, its
+/// middle at the middle of the lowercase letters, half the x-height above
+/// the baseline, and mark-gap before the name, the design's Baseline rules
+/// (Peter, 2026-11-17: "make swatch 0.75em centered around x-height";
+/// Android's Marked). At 13 pt a 9.75 pt circle 7.8 from the name.
+struct MarkedName: View {
+    let n: Int
+    let name: String
+    var text: CGFloat = 13
+    var weight: Font? = nil
+    @Environment(\.dynamicTypeSize) private var type
+
+    var body: some View {
+        let em = PkType.ui.scaled(type, text)
+        HStack(alignment: .firstTextBaseline, spacing: MarkSize.gap * em) {
+            SpeakerMark(n: n, text: text)
+                .alignmentGuide(.firstTextBaseline) { $0.height / 2 + MarkSize.xHeight * em / 2 }
+            Text(name)
+                .font(weight ?? PkType.ui.font(text))
+                .foregroundStyle(Pk.ink)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
     }
 }
 
 /// Speaker n's mark as an image for a menu's item, in its own color for
 /// the theme the screen is in: a menu draws its items' images in its ink
 /// unless they keep their own.
+/// Sized from the menu's text, the body style at the reader's text size,
+/// as SpeakerMark is from its own (mark-size of it): the system centres a
+/// menu item's image on its label, which it lays out itself.
 @MainActor func markImage(_ n: Int, _ scheme: ColorScheme) -> UIImage {
     let square = Speakers.slotOf(n) > 4
-    let side: CGFloat = square ? 9 : 10
+    let em = UIFont.preferredFont(forTextStyle: .body).pointSize
+    let px = UIScreen.main.scale
+    let side = ((square ? MarkSize.sizeSq : MarkSize.size) * em * px).rounded() / px
     let style: UIUserInterfaceStyle = scheme == .dark ? .dark : .light
     let color = UIColor(Pk.speaker(n)).resolvedColor(
         with: UITraitCollection(userInterfaceStyle: style))
-    let image = UIGraphicsImageRenderer(size: CGSize(width: 12, height: 12)).image { _ in
+    let image = UIGraphicsImageRenderer(size: CGSize(width: side, height: side)).image { _ in
         color.setFill()
-        let r = CGRect(x: (12 - side) / 2, y: (12 - side) / 2, width: side, height: side)
-        (square ? UIBezierPath(roundedRect: r, cornerRadius: 2) : UIBezierPath(ovalIn: r)).fill()
+        let r = CGRect(x: 0, y: 0, width: side, height: side)
+        (square
+            ? UIBezierPath(roundedRect: r, cornerRadius: MarkSize.radiusSq * em)
+            : UIBezierPath(ovalIn: r)).fill()
     }
     return image.withRenderingMode(.alwaysOriginal)
 }
@@ -293,28 +343,21 @@ struct Chips: View {
         return Button {
             onFind(n)
         } label: {
-            HStack(spacing: 8) {
-                SpeakerMark(n: n)
-                Text(name)
-                    .font(PkType.ui.font(13))
-                    .foregroundStyle(Pk.ink)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: 240, alignment: .leading)
-                    .fixedSize()
-            }
-            .padding(.horizontal, 8)
-            .frame(minHeight: 32)
-            .background(
-                on ? Pk.tint : Color.clear, in: RoundedRectangle(cornerRadius: Radius.radiusSm)
-            )
-            .overlay {
-                if on {
-                    RoundedRectangle(cornerRadius: Radius.radiusSm).strokeBorder(
-                        Pk.inkMuted, lineWidth: 1)
+            MarkedName(n: n, name: name)
+                .frame(maxWidth: 260, alignment: .leading)
+                .fixedSize()
+                .padding(.horizontal, 8)
+                .frame(minHeight: 32)
+                .background(
+                    on ? Pk.tint : Color.clear, in: RoundedRectangle(cornerRadius: Radius.radiusSm)
+                )
+                .overlay {
+                    if on {
+                        RoundedRectangle(cornerRadius: Radius.radiusSm).strokeBorder(
+                            Pk.inkMuted, lineWidth: 1)
+                    }
                 }
-            }
-            .contentShape(Rectangle().inset(by: -6))
+                .contentShape(Rectangle().inset(by: -6))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(L("speakers_chip_label", name))
