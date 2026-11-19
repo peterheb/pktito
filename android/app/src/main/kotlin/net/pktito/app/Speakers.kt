@@ -80,13 +80,6 @@ object Speakers {
         private set
 
     /**
-     * While finding, how much of the recording Android's decoder has read before the diarizer hears
-     * it, 0 to 1; -1 once it is read, or where the decoder says none (a WAV, a FLAC).
-     */
-    var decoding by mutableDoubleStateOf(-1.0)
-        private set
-
-    /**
      * While finding, the speaker bar so far: the stretches the diarizer has told apart, those ended
      * and those going where it has got to (Engine.Heard), for the bar to fill in as they are heard
      * (Peter, 2026-11-15).
@@ -273,7 +266,6 @@ object Speakers {
         val app = context.applicationContext
         finding = true
         heard = 0.0
-        decoding = -1.0
         growing = emptyList()
         // the strip's ring has play's place until they are found (Work)
         Player.pause(context)
@@ -296,16 +288,11 @@ object Speakers {
                             tr,
                             Recents.kept(app, id, uri),
                             object : Engine.Heard {
-                                override fun decoding(fraction: Double) {
-                                    main.post { decoding = fraction }
-                                }
-
                                 override fun done(fraction: Double, bar: String) {
                                     val o = JSONObject(bar)
                                     ended.addAll(Stretch.parse(o.optJSONArray("closed")))
                                     val now = ended + Stretch.parse(o.optJSONArray("open"))
                                     main.post {
-                                        decoding = -1.0
                                         heard = fraction
                                         growing = now
                                     }

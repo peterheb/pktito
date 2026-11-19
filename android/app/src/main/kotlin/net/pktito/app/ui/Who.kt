@@ -100,8 +100,6 @@ class SpeakersView(
      * shows it as it shows a transcription's progress (app.js, showFinding)
      */
     val heard: Double?,
-    /** while they are found, how much of the recording is decoded before it is heard; -1 */
-    val decoding: Double = -1.0,
     /** the names show: the switch on and a speaker or more */
     val shown: Boolean,
     /**

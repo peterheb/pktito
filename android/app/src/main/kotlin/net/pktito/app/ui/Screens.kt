@@ -937,12 +937,6 @@ fun Work(
                     duration = duration,
                     left =
                         when {
-                            // the waveform up already: decoding, not reading (Peter, 2026-11-18)
-                            spk.heard != null && spk.decoding >= 0 ->
-                                stringResource(
-                                    R.string.speakers_decoding,
-                                    (spk.decoding * 100).toInt(),
-                                )
                             spk.heard != null -> stringResource(R.string.speakers_finding)
                             review -> base.at(position)
                             step == "loading" -> stringResource(R.string.status_loading)

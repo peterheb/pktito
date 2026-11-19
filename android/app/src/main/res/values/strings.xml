@@ -312,7 +312,6 @@
     <string name="speakers_downloading">Downloading the speaker model, %1$d%%</string>
     <string name="speakers_ready">Speaker model ready</string>
     <string name="speakers_finding">Finding the speakers…</string>
-    <string name="speakers_decoding">Decoding the audio %1$d%%</string>
     <!-- the (i) after the names with all of the model's speakers in use; %1$d is 8 -->
     <string name="speakers_limit">Up to %1$d speakers</string>
     <string name="speakers_limit_about">The speaker model can tell up to %1$d speakers apart. With more voices than that, some get mixed up.</string>

@@ -722,45 +722,20 @@ pub extern "system" fn Java_net_pktito_app_Engine_findSpeakers<'a>(
                 Ok(t) => t,
                 Err(e) => return throw(env, &e.to_string()).map(|_| JObject::null()),
             };
-            // how far Android's decoder has got, before the diarizer hears any
-            // of it (progress.decoding)
-            let mut told = None;
-            // read before (audiocache): no decoding at all
+            // read before (audiocache): its samples as they were, in one
+            // push, in place of the decoder
             let hit = kept
                 .as_ref()
                 .and_then(|(dir, id, src)| audiocache::load(dir, id, src));
             let from_cache = hit.is_some();
-            let x = match hit {
-                Some(y) => Ok(y),
-                None => decode::decode_fd(fd, &name, &mut |fraction| {
-                    if told.is_none() {
-                        if let Err(e) = env.call_method(
-                            &progress,
-                            jni_str!("decoding"),
-                            jni_sig!("(D)V"),
-                            &[JValue::Double(fraction)],
-                        ) {
-                            told = Some(e);
-                        }
-                    }
-                    false
-                }),
-            };
-            if let Some(e) = told {
-                return Err(e);
-            }
-            let x = match x {
-                Ok(x) => x,
-                Err(e) => {
-                    let p = e.problem();
-                    let why = serde_json::json!({ "key": p.key, "detail": p.detail });
-                    return throw(env, &why.to_string()).map(|_| JObject::null());
-                }
-            };
-            if !from_cache {
-                if let Some((dir, id, src)) = &kept {
-                    let _ = audiocache::save(dir, id, src, &x);
-                }
+            // the recording as Android's decoder reads it, the diarizer
+            // hearing it as it fills (transcribe::find_growing), so that the
+            // two take about as long as the slower of them
+            let x = pktito::Growing::new();
+            if let Some(y) = hit {
+                x.set_estimate(y.len());
+                x.push(&y);
+                x.end();
             }
             let segments = std::mem::take(&mut t.segments);
             let (mut shown, mut sent, mut failed) = (0, 0, None);
@@ -789,11 +764,44 @@ pub extern "system" fn Java_net_pktito_app_Engine_findSpeakers<'a>(
                 });
                 if let Err(e) = call {
                     failed = Some(e);
+                    x.cancel();
                 }
             };
-            let found = transcribe::find(&d.model, &mut d.diar, &x, segments, tell);
+            let (found, decoded) = std::thread::scope(|sc| {
+                let decoder = (!from_cache).then(|| {
+                    sc.spawn(|| decode::decode_fd_into(fd, &name, &mut |_| x.cancelled(), &x))
+                });
+                let found = transcribe::find_growing(&d.model, &mut d.diar, &x, segments, tell);
+                // the diarizer failed: the decoder goes no further
+                if found.is_err() {
+                    x.cancel();
+                }
+                // the decoder ends x whatever happens, so this returns
+                let decoded = match decoder {
+                    Some(d) => d.join().unwrap_or(Err(decode::DecodeError::Stopped)),
+                    None => Ok(()),
+                };
+                (found, decoded)
+            });
             if let Some(e) = failed {
                 return Err(e);
+            }
+            // the decoder's trouble before the diarizer's: a recording that
+            // could not be read is said as transcribe() says it
+            match decoded {
+                Ok(()) | Err(decode::DecodeError::Stopped) => {}
+                Err(e) => {
+                    let p = e.problem();
+                    let why = serde_json::json!({ "key": p.key, "detail": p.detail });
+                    return throw(env, &why.to_string()).map(|_| JObject::null());
+                }
+            }
+            // read to its end, kept for finding its speakers or transcribing
+            // it again; a cache that can't be written is only slower later
+            if found.is_ok() && x.ended() && !from_cache {
+                if let Some((dir, id, src)) = &kept {
+                    let _ = audiocache::save(dir, id, src, &x.into_vec());
+                }
             }
             match found {
                 Ok((segments, stretches)) => {

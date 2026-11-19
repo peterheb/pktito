@@ -645,7 +645,6 @@ class MainActivity : ComponentActivity() {
                                 Speakers.finding ||
                                     (Downloads.speakers && Downloads.state?.step != "failed"),
                             heard = if (Speakers.finding) Speakers.heard else null,
-                            decoding = if (Speakers.finding) Speakers.decoding else -1.0,
                             shown = spoken,
                             turns = turns,
                             // and a speaker found, one voice or more, whose own turns it shows

@@ -238,6 +238,34 @@ pub fn find(
     diar: &mut Diar,
     x: &[f32],
     segments: Vec<Segment>,
+    progress: impl FnMut(f64, &SoFar),
+) -> Result<(Vec<Segment>, Vec<Stretch>), String> {
+    find_in(model, diar, &x, segments, progress)
+}
+
+/// The same of a recording still being read (LIB-8's Growing): the
+/// diarizer hears each piece as the decoder gets to it, so that finding the
+/// speakers of a transcript whose recording is not in the cache takes about
+/// as long as the decoder or the diarizer alone, not the two one after the
+/// other. Its rows are those of find on the decoded array: the pieces' sizes
+/// change none of them (pk_diar_feed), and the samples are the same bits
+/// (decode_fd_into). The progress is over the container's length until the
+/// decoder ends. A recording that fails or is cancelled fails the call.
+pub fn find_growing(
+    model: &Model,
+    diar: &mut Diar,
+    x: &pktito::Growing,
+    segments: Vec<Segment>,
+    progress: impl FnMut(f64, &SoFar),
+) -> Result<(Vec<Segment>, Vec<Stretch>), String> {
+    find_in(model, diar, &x, segments, progress)
+}
+
+fn find_in(
+    model: &Model,
+    diar: &mut Diar,
+    x: &impl Recording,
+    segments: Vec<Segment>,
     mut progress: impl FnMut(f64, &SoFar),
 ) -> Result<(Vec<Segment>, Vec<Stretch>), String> {
     let rate = model.rate() as f64;
@@ -253,14 +281,19 @@ pub fn find(
     diar.reset();
     let mut rows = Vec::new();
     let mut bar = Growing::new(model);
-    // a second at least, as fewer samples than that do nothing but call
-    let piece = (x.len() / 100).max(model.rate());
     let mut heard = 0;
-    for p in x.chunks(piece) {
-        diar.feed(p, &mut rows)?;
+    loop {
+        // a hundredth of it, a second at least, as fewer samples than that
+        // do nothing but call
+        let piece = (x.length().max(heard) / 100).max(model.rate());
+        let p = x.piece(heard, heard + piece)?;
+        if p.is_empty() {
+            break;
+        }
+        diar.feed(&p, &mut rows)?;
         heard += p.len();
         bar.grow(model, &rows, &spans);
-        progress(heard as f64 / x.len() as f64, &bar.so_far);
+        progress(heard as f64 / x.length().max(heard) as f64, &bar.so_far);
     }
     diar.finish(&mut rows)?;
     let column = pktito::speakers(model, &rows, FRAME, &spans);
@@ -582,6 +615,9 @@ trait Recording {
     fn piece(&self, from: usize, to: usize) -> Result<std::borrow::Cow<'_, [f32]>, String>;
     /// Whether it is still being read as it is transcribed.
     fn growing(&self) -> bool;
+    /// Its length in samples: a growing one's the container's word for it
+    /// until the decoder ends (Growing::estimate).
+    fn length(&self) -> usize;
 }
 
 impl Recording for &[f32] {
@@ -591,6 +627,9 @@ impl Recording for &[f32] {
     }
     fn growing(&self) -> bool {
         false
+    }
+    fn length(&self) -> usize {
+        self.len()
     }
 }
 
@@ -602,6 +641,9 @@ impl Recording for &pktito::Growing {
     }
     fn growing(&self) -> bool {
         true
+    }
+    fn length(&self) -> usize {
+        self.estimate()
     }
 }
 
@@ -1058,6 +1100,61 @@ mod files {
         for pieces in [(x.len() / 100).max(model.rate()), 43_520, 4321, 435_201] {
             assert_eq!(rows(pieces, &mut diar), whole, "pieces of {pieces}");
         }
+    }
+
+    /// `PKAPP_DIARIZER=nemotron-3-diarization.pkf PKAPP_SPEECH=talk.mp3
+    /// cargo test find_growing_is_find -- --ignored`: the speakers found
+    /// while another thread pushes the recording, 400 samples at a time as
+    /// Android's decoder does and slower than the diarizer hears it, so that
+    /// find waits, are those found in the decoded array, to the bit. A word
+    /// every 0.4 s stands in for a transcript's.
+    #[test]
+    #[ignore]
+    fn find_growing_is_find() {
+        use super::{Segment, Word};
+        let var = |k| std::path::PathBuf::from(std::env::var(k).expect(k));
+        let model = crate::pktito::Model::load(&var("PKAPP_DIARIZER")).unwrap();
+        let mut diar = crate::pktito::Diar::new(&model, 0).unwrap();
+        let x = crate::decode::decode(&var("PKAPP_SPEECH")).unwrap();
+        let secs = x.len() as f64 / model.rate() as f64;
+        let words = (0..(secs / 0.4) as usize)
+            .map(|i| Word {
+                start: i as f64 * 0.4,
+                end: i as f64 * 0.4 + 0.3,
+                text: "w".into(),
+            })
+            .collect();
+        let segments = vec![Segment {
+            start: 0.0,
+            end: secs,
+            text: String::new(),
+            words,
+            speaker: None,
+        }];
+        let json = |r: (Vec<Segment>, Vec<super::Stretch>)| serde_json::to_string(&r).unwrap();
+        let whole = json(super::find(&model, &mut diar, &x, segments.clone(), |_, _| {}).unwrap());
+        let g = crate::pktito::Growing::new();
+        let (mut calls, mut last) = (0, 0.0);
+        let streamed = std::thread::scope(|sc| {
+            sc.spawn(|| {
+                g.set_estimate(x.len());
+                for (i, p) in x.chunks(400).enumerate() {
+                    g.push(p);
+                    // 4 s of it every 20 ms: 200 times real time
+                    if i % 160 == 159 {
+                        std::thread::sleep(std::time::Duration::from_millis(20));
+                    }
+                }
+                g.end();
+            });
+            super::find_growing(&model, &mut diar, &g, segments, |done, _| {
+                calls += 1;
+                last = done;
+            })
+            .unwrap()
+        });
+        assert_eq!(json(streamed), whole);
+        assert!(calls >= 100 && last == 1.0, "{calls} calls, last {last}");
     }
 
     /// `PKAPP_DIARIZER=nemotron-3-diarization.pkf PKAPP_SPEECH=talk.mp3
