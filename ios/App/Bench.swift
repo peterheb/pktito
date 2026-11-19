@@ -123,6 +123,13 @@
                 }
             }
             let t0 = Date()
+            // how long the recording took to read, before any of it is heard
+            progress.audio = { _, _, _ in
+                print(
+                    String(
+                        format: "bench read %@ in %.1f s", url.lastPathComponent,
+                        Date().timeIntervalSince(t0)))
+            }
             let name = url.lastPathComponent
             // -speakers: who said what too, with the speaker model in the
             // models folder, loaded for the run as the app loads it
