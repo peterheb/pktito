@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -48,6 +50,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.FirstBaseline
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -68,9 +72,11 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 import net.pktito.app.R
 import net.pktito.app.Speakers
 import net.pktito.app.Stretch
@@ -191,20 +197,70 @@ fun Palette.speakerBar(n: Int): Color =
         else -> speakerBar8
     }
 
+/** mark-size, mark-size-sq, mark-radius-sq and mark-gap (design/tokens.json), in the text's em */
+private const val MARK = 0.75f
+private const val MARK_SQ = 0.68f
+private const val MARK_RADIUS = 0.15f
+private const val MARK_GAP = 0.6f
+/** Archivo's x-height, its OS/2 sxHeight: 526 of its 1000 units */
+private const val X_HEIGHT = 0.526f
+
 /**
- * A speaker's mark beside a name (app.css, .pk-mark): a 10 dp circle for speakers 1 to 4 and a 9 dp
- * square with 2 dp corners for 5 to 8, about the same area. Every pair close in color crosses that
- * line but magenta and orchid, 5 and 8 (the design's palette check).
+ * A speaker's mark beside a name (app.css, .pk-mark), sized from the name's text: a circle
+ * mark-size across for speakers 1 to 4, a square mark-size-sq for 5 to 8, about the same area, each
+ * in whole pixels, which a fraction draws soft. Every pair close in color crosses that line but
+ * magenta and orchid, 5 and 8 (the design's palette check). In a Row, its middle at the middle of
+ * the name's lowercase letters, half the x-height above the baseline the name's Text aligns by
+ * (alignBy(FirstBaseline)), and mark-gap after it: the design's Baseline rules (Peter, 2026-11-17:
+ * "make swatch 0.75em centered around x-height"). At 13 sp a 10 dp circle 8 from the name.
  */
 @Composable
-fun Mark(n: Int, modifier: Modifier = Modifier) {
+fun RowScope.Mark(n: Int, text: TextUnit = Type.ui.fontSize, gap: Boolean = true) {
     val square = Speakers.slotOf(n) > 4
+    val d = LocalDensity.current
+    val em = with(d) { text.toPx() }
+    val side = with(d) { (em * if (square) MARK_SQ else MARK).roundToInt().toDp() }
+    val half = (em * X_HEIGHT / 2).roundToInt()
     Box(
-        modifier
-            .size(if (square) 9.dp else 10.dp)
-            .background(pk.speaker(n), if (square) RoundedCornerShape(2.dp) else CircleShape)
+        Modifier.alignBy { it.measuredHeight / 2 + half }
+            .size(side)
+            .background(
+                pk.speaker(n),
+                if (square) RoundedCornerShape(with(d) { (em * MARK_RADIUS).toDp() })
+                else CircleShape,
+            )
     )
+    if (gap) Spacer(Modifier.width(markGap(text)))
 }
+
+/**
+ * A speaker's mark and name, a row of their own on the name's baseline (Mark), centred as one in
+ * the row they stand in: as two of its children, the baseline group was placed at the row's top,
+ * over a menu's radio and buttons' middles (the S24, 2026-11-19). small: 13 sp, the names' and
+ * Find's; else the menus' ui.
+ */
+@Composable
+fun Marked(n: Int, name: String, modifier: Modifier = Modifier, small: Boolean = false) {
+    val style =
+        if (small) Type.ui.copy(fontSize = 13.sp, lineHeight = 16.sp)
+        else Type.ui.copy(fontWeight = FontWeight.W500, lineHeight = 20.sp)
+    Row(modifier) {
+        Mark(n, style.fontSize)
+        Text(
+            name,
+            Modifier.alignBy(FirstBaseline),
+            style = style,
+            color = pk.ink,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** mark-gap at text's size, in whole pixels */
+@Composable
+fun markGap(text: TextUnit = Type.ui.fontSize): Dp =
+    with(LocalDensity.current) { (text.toPx() * MARK_GAP).roundToInt().toDp() }
 
 /**
  * The switch under the strip (app.css, .pk-spk), in a sunk track of its own: Speakers, raised to
@@ -291,19 +347,15 @@ fun SpeakersMenu(open: Boolean, close: () -> Unit, spk: SpeakersView, found: Int
                         .heightIn(min = 48.dp)
                         .padding(horizontal = 10.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Mark(n)
-                    Text(
-                        name,
-                        style = Type.ui.copy(fontWeight = FontWeight.W500, lineHeight = 20.sp),
-                        color = p.ink,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
+                    Marked(n, name, Modifier.weight(1f))
                     if (n == found)
-                        Icon(Icons.check, null, tint = p.ink, modifier = Modifier.size(16.dp))
+                        Icon(
+                            Icons.check,
+                            null,
+                            tint = p.ink,
+                            modifier = Modifier.padding(start = 8.dp).size(16.dp),
+                        )
                 }
                 Box(
                     Modifier.control(
@@ -375,17 +427,8 @@ fun Chips(
                     .heightIn(min = tall)
                     .padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Mark(n)
-                Text(
-                    name,
-                    style = Type.ui.copy(fontSize = 13.sp, lineHeight = 16.sp),
-                    color = p.ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = 240.dp),
-                )
+                Marked(n, name, Modifier.widthIn(max = 240.dp), small = true)
             }
         }
         for ((k, n) in present.withIndex()) {
@@ -577,7 +620,6 @@ private fun Radio(n: Int, name: String, checked: Boolean, onClick: () -> Unit) {
             .heightIn(min = 48.dp)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Box(
             Modifier.size(16.dp).border(2.dp, if (checked) p.ink else p.inkMuted, CircleShape),
@@ -585,15 +627,9 @@ private fun Radio(n: Int, name: String, checked: Boolean, onClick: () -> Unit) {
         ) {
             if (checked) Box(Modifier.size(7.dp).background(p.ink, CircleShape))
         }
-        Box(Modifier.width(12.dp), contentAlignment = Alignment.Center) { Mark(n) }
-        Text(
-            name,
-            style = Type.ui.copy(fontWeight = FontWeight.W500, lineHeight = 20.sp),
-            color = p.ink,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
+        // mark-gap either side of the mark, not a 12 dp column for it (design, Baseline)
+        Spacer(Modifier.width(markGap()))
+        Marked(n, name, Modifier.weight(1f))
     }
 }
 

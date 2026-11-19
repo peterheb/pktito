@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -50,7 +51,6 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.abs
@@ -521,19 +521,15 @@ fun WhoBadge(
                 .control(CornerSm, p.ground, label = drop, onClick = f::dropWho)
                 .padding(start = 8.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Mark(f.who)
-            if (full)
-                Text(
-                    name,
-                    Modifier.weight(1f, fill = false),
-                    style = Type.ui.copy(fontSize = 13.sp, lineHeight = 16.sp),
-                    color = p.ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            Icon(Icons.x, null, tint = p.inkMuted, modifier = Modifier.size(12.dp))
+            if (full) Marked(f.who, name, Modifier.weight(1f, fill = false), small = true)
+            else Row { Mark(f.who, 13.sp, gap = false) }
+            Icon(
+                Icons.x,
+                null,
+                tint = p.inkMuted,
+                modifier = Modifier.padding(start = 6.dp).size(12.dp),
+            )
         }
     Row(
         modifier.widthIn(max = 220.dp).height(28.dp).background(p.ground, CornerSm),
@@ -549,18 +545,14 @@ fun WhoBadge(
                 )
                 .padding(start = 8.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Mark(f.who)
-            Text(
-                name,
-                Modifier.weight(1f, fill = false),
-                style = Type.ui.copy(fontSize = 13.sp, lineHeight = 16.sp),
-                color = p.ink,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+            Marked(f.who, name, Modifier.weight(1f, fill = false), small = true)
+            Icon(
+                Icons.down,
+                null,
+                tint = p.inkMuted,
+                modifier = Modifier.padding(start = 6.dp).size(12.dp),
             )
-            Icon(Icons.down, null, tint = p.inkMuted, modifier = Modifier.size(12.dp))
         }
         Box(
             Modifier.fillMaxHeight()
