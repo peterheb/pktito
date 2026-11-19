@@ -549,18 +549,47 @@ fn download_model(app: AppHandle, state: State<'_, AppState>, name: String) -> R
             let _ = tell.emit("download", s);
         },
         move |_| {
-            if !fresh {
-                return;
+            if fresh {
+                if let Ok(data) = data_dir(&done) {
+                    let mut s = model::load_settings(&data);
+                    s.model = Some(e.name.into());
+                    s.model_file = None;
+                    let _ = model::save_settings(&data, &s);
+                }
             }
-            if let Ok(data) = data_dir(&done) {
-                let mut s = model::load_settings(&data);
-                s.model = Some(e.name.into());
-                s.model_file = None;
-                let _ = model::save_settings(&data, &s);
-            }
+            // apart from the download's thread, which is the job's until it ends
+            std::thread::spawn(move || ready(&done, e));
         },
     );
     Ok(())
+}
+
+/// A model downloaded, or its NPU edition, that transcriptions use: loaded
+/// now, so that Core ML compiles its encoder for this Mac (QNN loads its
+/// graph) while no one waits on it, the window saying so ("preparing",
+/// true then false). Left to the first transcription, the compile held it
+/// at "Loading the model" with no word of why (Peter, after Manage
+/// models' Update, 2026-11-18). A transcription meanwhile waits for the
+/// engine and finds it ready. Nothing where the model has no NPU encoder.
+fn ready(app: &AppHandle, e: &'static model::Entry) {
+    let Ok(data) = data_dir(app) else { return };
+    let settings = model::load_settings(&data);
+    let Some(path) = model::usable(&data, &settings) else {
+        return;
+    };
+    if model::catalog_file(&data, &path).map(|c| c.name) != Some(e.name)
+        || model::encoder_of(&data, &path).is_none()
+    {
+        return;
+    }
+    let state = app.state::<AppState>();
+    let _ = app.emit("preparing", true);
+    let mut slot = state.engine.lock().unwrap();
+    if let Err(why) = ensure_engine(&mut slot, &data, &path) {
+        eprintln!("pktito: {why}");
+    }
+    drop(slot);
+    let _ = app.emit("preparing", false);
 }
 
 /// Download the diarizer, after the first model in the setup or the first

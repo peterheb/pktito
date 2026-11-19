@@ -1090,6 +1090,22 @@ function updateDownload() {
   $("dl-next").textContent = w ? t("setup.waiting", { n: w }) : "";
 }
 
+/* a model just downloaded being made ready for this computer's Neural
+   Engine or NPU (main.rs, ready): said, and a transcription waiting on it
+   says so in place of loading */
+let preparing = false;
+const preparingKey = () =>
+  isMac()
+    ? "model.preparing_mac"
+    : isWin()
+      ? "model.preparing_pc"
+      : "model.preparing";
+listen("preparing", (e) => {
+  preparing = !!e.payload;
+  toast(t(preparing ? preparingKey() : "model.prepared"), { going: preparing });
+  const f = current();
+  if (f) renderWork();
+});
 listen("download", async (e) => {
   const s = e.payload;
   if (st.diarizer && s.name === st.diarizer.name) return diarizerDownload(s);
@@ -1751,7 +1767,7 @@ function rowBody(f) {
   else if (f.step === "reading")
     status = `<span class="pk-status">${esc(t("status.reading"))}</span>`;
   else if (f.step === "loading")
-    status = `<span class="pk-status">${esc(t("status.loading"))}</span>`;
+    status = `<span class="pk-status">${esc(t(preparing ? preparingKey() : "status.loading"))}</span>`;
   else if (f.step === "transcribing") {
     status =
       `<span class="pk-bar pk-mini"><i style="width:${(f.done * 100).toFixed(1)}%"></i></span>` +
@@ -2079,7 +2095,7 @@ function updateRunning(f) {
     f.step === "reading"
       ? t("status.reading")
       : f.step === "loading"
-        ? t("status.loading")
+        ? t(preparing ? preparingKey() : "status.loading")
         : going && f.done > 0 && f.pace > 0
           ? realTime(f.pace, 1)
           : "";
@@ -4466,11 +4482,12 @@ function toastErr(e) {
 /* A few words; what said so, if anything, in the tooltip */
 function toast(
   text,
-  { reveal = null, err = false, detail = "", undo = null } = {},
+  { reveal = null, err = false, detail = "", undo = null, going = false } = {},
 ) {
   const box = $("toast");
+  // going: something under way, which a check would say was done
   box.innerHTML =
-    `${err ? ICON.alert : ICON.check}<span></span>` +
+    `${err ? ICON.alert : going ? "" : ICON.check}<span></span>` +
     (reveal
       ? `<button class="pk-linkbtn" type="button">${esc(revealLabel())}</button>`
       : "") +
