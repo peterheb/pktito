@@ -41,7 +41,13 @@ for abi in arm64-v8a x86_64; do
   esac
   v=$(echo $t | tr - _)                 # the cc crate's spelling of the target
   V=$(echo $v | tr a-z A-Z)             # and cargo's
+  # unstripped and with its debug information (Cargo.toml's release strips
+  # it, for the desktop): Gradle strips the copy it packages with the NDK's
+  # llvm-strip and keeps this one as the bundle's native debug symbols
+  # (app/build.gradle.kts, debugSymbolLevel), which Play symbolicates a
+  # native crash with. -g changes no instruction the compilers emit
   env "CC_$v=$bin/$t$API-clang" "AR_$v=$bin/llvm-ar" "CARGO_TARGET_${V}_LINKER=$bin/$t$API-clang" \
+    CARGO_PROFILE_RELEASE_STRIP=false CARGO_PROFILE_RELEASE_DEBUG=true \
     cargo rustc --manifest-path "$here/../src-tauri/Cargo.toml" --lib --crate-type cdylib \
       --target $t $([ "$profile" = release ] && echo --release)
   mkdir -p "$here/app/src/main/jniLibs/$abi"

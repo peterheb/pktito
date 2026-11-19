@@ -23,6 +23,17 @@ val upload =
 android {
     namespace = "net.pktito.app"
     compileSdk = 37
+    // the NDK native.sh builds with, whose llvm-strip strips the native
+    // libraries Gradle packages (the bundle keeps them whole as its debug
+    // symbols, below); without one they would go in unstripped. Gradle
+    // takes an NDK only at the version it is told, so that is read from it
+    (System.getenv("NDK") ?: System.getenv("ANDROID_NDK_HOME"))?.let { ndk ->
+        ndkPath = ndk
+        ndkVersion =
+            Properties()
+                .apply { File(ndk, "source.properties").inputStream().use { load(it) } }
+                .getProperty("Pkg.Revision")
+    }
 
     defaultConfig {
         applicationId = "net.pktito.app"
@@ -68,6 +79,10 @@ android {
         release {
             if (upload != null) signingConfig = signingConfigs.getByName("upload")
             isMinifyEnabled = true
+            // the native libraries' symbols and debug information, unstripped,
+            // in the bundle (BUNDLE-METADATA), for Play to symbolicate a
+            // native crash with; what the phone installs is stripped
+            ndk { debugSymbolLevel = "FULL" }
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
