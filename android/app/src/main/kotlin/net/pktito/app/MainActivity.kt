@@ -149,11 +149,21 @@ class MainActivity : ComponentActivity() {
     private var about by mutableStateOf(false)
     /** Manage models is up, over the screen it was opened from (the model menu's). */
     private var managing by mutableStateOf(false)
-    /** About's version line: the app's, and the engine's code for this processor by its name. */
-    private val version by lazy {
-        val name = packageManager.getPackageInfo(packageName, 0).versionName ?: ""
-        getString(R.string.about_version, name, Engine.backend().substringBefore(" ("))
-    }
+    /**
+     * About's version line: the app's, the engine's code for this processor by its name, and the
+     * NPU's Hexagon where QNN found one ("69,79,8,1,0" is a V79: Editions.chip), so that a report
+     * says what the phone was read as able to run. Asked as About opens, as QNN may not have been
+     * asked yet when the app starts (Editions.ask).
+     */
+    private val version: String
+        get() {
+            val name = packageManager.getPackageInfo(packageName, 0).versionName ?: ""
+            val hexagon = Editions.chip(this)?.split(",")?.getOrNull(1)?.takeIf { it.isNotBlank() }
+            val engine =
+                Engine.backend().substringBefore(" (") + (hexagon?.let { ", QNN-V$it" } ?: "")
+            return getString(R.string.about_version, name, engine)
+        }
+
     /** The format being saved while the system's dialog is up. */
     private var saving: String? = null
     /**
