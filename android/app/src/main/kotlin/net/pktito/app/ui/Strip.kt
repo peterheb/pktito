@@ -20,11 +20,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -133,6 +135,8 @@ fun Strip(
     playLabel: String,
     onPlay: () -> Unit,
     onSeek: (Double) -> Unit,
+    /** each place a thumb dragging the playhead has it, 0 to 1, until it lets go */
+    onScrub: (Double) -> Unit = {},
     sound: Sound,
     base: Timebase,
     onBase: (Timebase) -> Unit,
@@ -174,6 +178,8 @@ fun Strip(
     // where a thumb dragging on the waveform or the lane has the playhead, 0 to 1, until it lets go
     var scrub by remember { mutableStateOf<Double?>(null) }
     val seek by rememberUpdatedState(onSeek)
+    val scrubbed by rememberUpdatedState(onScrub)
+    LaunchedEffect(Unit) { snapshotFlow { scrub }.collect { s -> s?.let { scrubbed(it) } } }
     val dragged =
         if (!finger || !review) Modifier
         else

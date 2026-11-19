@@ -1,5 +1,6 @@
 package net.pktito.app.ui
 
+import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -106,6 +107,27 @@ class Follow(val list: LazyListState) {
         val (k, offset) = asked ?: return
         asked = null
         list.requestScrollToItem(k, offset)
+    }
+
+    /**
+     * The reader back with the row playing, at the list's top (the transcript's Now button): the
+     * fling under way stopped, and the row followed from there on, as for a reader who never left.
+     */
+    suspend fun back(row: Int) {
+        if (row < 0) return
+        list.scroll(MutatePriority.PreventUserInput) {}
+        chasing = row
+        scroll { animateScrollToItem(row) }
+        chasing = -1
+    }
+
+    /**
+     * Row at the list's top at once, for a thumb scrubbing the waveform: the sentence under the
+     * playhead it drags, to read while looking for a place (Peter, 2026-11-18). Not under the
+     * reader's own hand on the list.
+     */
+    fun show(row: Int) {
+        if (row >= 0 && fingers == 0) list.requestScrollToItem(row)
     }
 
     /** A new row playing, -1 once playback stops: brought for a reader still with it (bring). */

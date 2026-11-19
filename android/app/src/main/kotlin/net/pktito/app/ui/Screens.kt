@@ -6,6 +6,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.offset
@@ -37,6 +39,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.contextmenu.builder.item
 import androidx.compose.foundation.text.contextmenu.modifier.appendTextContextMenuComponents
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -54,6 +57,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -64,6 +68,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -117,6 +122,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import net.pktito.app.R
 import net.pktito.app.Recents
 import net.pktito.app.Seg
@@ -931,6 +937,12 @@ fun Work(
                     duration = duration,
                     left =
                         when {
+                            // the waveform up already: decoding, not reading (Peter, 2026-11-18)
+                            spk.heard != null && spk.decoding >= 0 ->
+                                stringResource(
+                                    R.string.speakers_decoding,
+                                    (spk.decoding * 100).toInt(),
+                                )
                             spk.heard != null -> stringResource(R.string.speakers_finding)
                             review -> base.at(position)
                             step == "loading" -> stringResource(R.string.status_loading)
@@ -943,6 +955,11 @@ fun Work(
                     playLabel = stringResource(if (playing) R.string.pause else R.string.play),
                     onPlay = a.play,
                     onSeek = { a.jump(it * duration) },
+                    // the transcript at the sentence under a scrubbing thumb
+                    onScrub = { f ->
+                        val r = rows.indexOfLast { it.start <= f * duration + 1e-3 }
+                        follow.show(itemIn(view, maxOf(r, 0)))
+                    },
                     sound = sound,
                     base = base,
                     onBase = a.setBase,
@@ -988,6 +1005,7 @@ fun Work(
                         .padding(start = edge, end = edge, top = 16.dp),
                     spk,
                     a.only,
+                    compact,
                 )
             // with the names shown, each speaker's chip, which renames them (app.css, .pk-names),
             // where the screen is wider than a phone's
@@ -1038,7 +1056,9 @@ fun Work(
                 spk,
                 compact,
                 view,
-            )
+            ) {
+                if (find.typing) find.keys = Keys.Drop
+            }
         }
     }
 }
@@ -1132,10 +1152,14 @@ private fun SpeakersLine(
     modifier: Modifier,
     spk: SpeakersView,
     onOnly: () -> Unit = {},
+    /** a phone's width: the switch, while names are shown, opens SpeakersMenu */
+    compact: Boolean = false,
 ) {
     // the switch pressed while names are shown or being found: on with none
     // found yet, it finds them (MainActivity.toggleSpeakers)
     val pressed = spk.on && (spk.present.isNotEmpty() || spk.busy)
+    val menu = compact && pressed && spk.present.isNotEmpty() && !spk.busy
+    var menuOpen by remember { mutableStateOf(false) }
     val state =
         stringResource(
             when {
@@ -1159,13 +1183,25 @@ private fun SpeakersLine(
                 else -> 200.dp
             })
             .withText()
+    val gapDp = 12.dp
     SubcomposeLayout(modifier.fillMaxWidth()) { c ->
-        val gap = 12.dp.roundToPx()
+        val gap = gapDp.roundToPx()
         val loose = c.copy(minWidth = 0, minHeight = 0)
         // the switch, where the build offers a diarizer
         val v =
             if (spk.offered)
-                subcompose("switch") { SpeakersSwitch(pressed, spk.busy, state, spk.toggle) }
+                subcompose("switch") {
+                        Box {
+                            SpeakersSwitch(
+                                pressed,
+                                spk.busy,
+                                state,
+                                if (menu) ({ menuOpen = true }) else spk.toggle,
+                                menu = menu,
+                            )
+                            SpeakersMenu(menu && menuOpen, { menuOpen = false }, spk, find.who)
+                        }
+                    }
                     .first()
                     .measure(loose.copy(maxWidth = c.maxWidth - gap - 40.dp.roundToPx()))
             else null
@@ -1177,7 +1213,14 @@ private fun SpeakersLine(
             if (beside || opened || alone) {
                 val w = if (beside) field else c.maxWidth
                 subcompose("field") {
-                        FindField(find, hits, seek, find::clear, nameOf = spk.nameOf)
+                        FindField(
+                            find,
+                            hits,
+                            seek,
+                            find::clear,
+                            nameOf = spk.nameOf,
+                            whoInside = !compact,
+                        )
                     }
                     .first()
                     .measure(loose.copy(minWidth = w, maxWidth = w))
@@ -1189,7 +1232,26 @@ private fun SpeakersLine(
         // Only matches, after the field or under it
         val o =
             if (sought && !alone)
-                subcompose("only") { SpeakersSwitch(find.only, false, onlyState, onOnly, only) }
+                subcompose("only") {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(gapDp),
+                        ) {
+                            // a phone's speaker found, out of the field (FindField, whoInside), in
+                            // a
+                            // sunk track as tall as the switch beside it
+                            if (compact && find.who != 0)
+                                Box(
+                                    Modifier.background(pk.sunk, Corner)
+                                        .height(40.dp)
+                                        .padding(horizontal = 6.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    WhoBadge(find, spk.nameOf(find.who), true)
+                                }
+                            SpeakersSwitch(find.only, false, onlyState, onOnly, only)
+                        }
+                    }
                     .first()
                     .measure(loose)
             else null
@@ -1271,11 +1333,29 @@ private fun Rows(
      * then those rows alone, the n-th item the n-th of them (MainActivity, itemOf).
      */
     view: IntArray? = null,
+    /** a finger on the list: the Find field lets go of the keys (Finder.typing) */
+    letGo: () -> Unit = {},
 ) {
     val p = pk
     val current =
         if (review && (playing || position > 0)) rows.indexOfLast { it.start <= position + 1e-3 }
         else -1
+    // the row playing out of sight while it plays, the reader having scrolled away from it: which
+    // way it is, up (-1) or down (1), for the Now button; 0 in sight or not playing
+    val nowItem = itemIn(view, current)
+    val away by
+        remember(nowItem, playing) {
+            derivedStateOf {
+                val seen = follow.list.layoutInfo.visibleItemsInfo
+                when {
+                    !playing || nowItem < 0 || seen.isEmpty() -> 0
+                    seen.any { it.index == nowItem } -> 0
+                    nowItem < seen.first().index -> -1
+                    else -> 1
+                }
+            }
+        }
+    val scope = rememberCoroutineScope()
     // each row's matches, by their place among all of them
     val marks = remember(hits) { hits.withIndex().groupBy { it.value.row } }
     // the text selected, if any (SegRow)
@@ -1359,7 +1439,14 @@ private fun Rows(
     alone?.let { u -> WhoPicker(true, true, { alone = null }, u, spk) }
     // the first row's text 16 dp under the line above, past the row's own 6
     // (app.css, .pk-transcript; the spacing audit, 2026-11-15: it was 24)
-    BoxWithConstraints(modifier.fillMaxWidth().padding(top = 10.dp).scrollbar(bar).then(menu)) {
+    BoxWithConstraints(
+        modifier.fillMaxWidth().padding(top = 10.dp).scrollbar(bar).then(menu).pointerInput(Unit) {
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                letGo()
+            }
+        }
+    ) {
         // a column from 620 dp with an hour's times at the default text size,
         // the desktop's (app.css, max-width: 619px), where the text keeps 416
         // beside them: the list's 24 dp and the row's 16 either side, and the
@@ -1469,6 +1556,50 @@ private fun Rows(
                     }
             }
         }
+        if (away != 0)
+            NowButton(
+                away < 0,
+                base.at(position),
+                Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
+            ) {
+                scope.launch { follow.back(nowItem) }
+            }
+    }
+}
+
+/**
+ * Back to the row playing, for a reader who has scrolled away from it while it plays (Peter,
+ * 2026-11-18: "I find myself getting lost"): over the foot of the transcript, an arrow the way the
+ * row is and the playhead's time, in the toast's floating box. The time says what the arrow points
+ * at where no icon says "now". A touch brings the row to the top and follows it again
+ * (Follow.back).
+ */
+@Composable
+private fun NowButton(up: Boolean, time: String, modifier: Modifier, onClick: () -> Unit) {
+    val p = pk
+    val label = stringResource(R.string.follow_back, time)
+    Row(
+        modifier
+            .shadow(12.dp, CircleShape)
+            .border(1.dp, p.menuEdge, CircleShape)
+            .control(CircleShape, p.ground, label = label, onClick = onClick)
+            .heightIn(min = 40.dp)
+            .padding(start = 12.dp, end = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(
+            if (up) Icons.arrowUp else Icons.arrowDown,
+            null,
+            tint = p.ink,
+            modifier = Modifier.size(16.dp),
+        )
+        Text(
+            time,
+            style = Type.stamp.copy(fontSize = 13.sp, fontFeatureSettings = "tnum"),
+            color = p.ink,
+            maxLines = 1,
+        )
     }
 }
 

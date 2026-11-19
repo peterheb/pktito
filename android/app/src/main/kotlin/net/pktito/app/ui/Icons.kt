@@ -38,6 +38,9 @@ object Icons {
         )
     val down = icon("down", "M6 9L12 15L18 9")
     val up = icon("up", "M18 15L12 9L6 15")
+    // arrows with a shaft: where the row playing is (NowButton)
+    val arrowUp = icon("arrowUp", "M12 19V5", "M5 12L12 5L19 12")
+    val arrowDown = icon("arrowDown", "M12 5V19", "M19 12L12 19L5 12")
     // the finder's glass
     val search = icon("search", "M11 3a8 8 0 1 0 0 16a8 8 0 1 0 0-16z", "M21 21L16.65 16.65")
     val check = icon("check", "M20 6L9 17L4 12")
@@ -51,6 +54,14 @@ object Icons {
     val alert = icon("alert", "M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z", "M12 8v4", "M12 16h0.01")
     val info = icon("info", "M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z", "M12 16v-4", "M12 8h0.01")
     val x = icon("x", "M18 6L6 18", "M6 6L18 18")
+    // a person with a pencil: a speaker renamed, or a sentence given to another (ui/app.js, who)
+    val who =
+        icon(
+            "who",
+            "M9 3a4 4 0 1 0 0 8a4 4 0 1 0 0-8z",
+            "M3 21v-2a4 4 0 0 1 4-4h4",
+            "M19.5 12.5a1.77 1.77 0 1 1 2.5 2.5L15.5 21.5 12 22.5l1-3.5z",
+        )
     // a recent transcript's, before its name
     val file =
         icon(

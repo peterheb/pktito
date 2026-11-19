@@ -67,6 +67,7 @@ import net.pktito.app.ui.About
 import net.pktito.app.ui.Confirm
 import net.pktito.app.ui.Finder
 import net.pktito.app.ui.Follow
+import net.pktito.app.ui.Keys
 import net.pktito.app.ui.Manage
 import net.pktito.app.ui.ManageActions
 import net.pktito.app.ui.ModelButton
@@ -501,6 +502,10 @@ class MainActivity : ComponentActivity() {
         BackHandler(enabled = t.step.isNotEmpty() && !t.running) { back() }
         // a search is let go before the transcript is
         BackHandler(enabled = t.step.isNotEmpty() && finder.searching) { finder.clear() }
+        // the field holding the keys with nothing sought: Back lets go of it, not of the transcript
+        BackHandler(enabled = t.step.isNotEmpty() && finder.typing && !finder.searching) {
+            finder.keys = Keys.Drop
+        }
         BackHandler(enabled = about) { about = false }
 
         val readyActions =
@@ -632,15 +637,24 @@ class MainActivity : ComponentActivity() {
                                 Speakers.finding ||
                                     (Downloads.speakers && Downloads.state?.step != "failed"),
                             heard = if (Speakers.finding) Speakers.heard else null,
+                            decoding = if (Speakers.finding) Speakers.decoding else -1.0,
                             shown = spoken,
                             turns = turns,
+                            // and a speaker found, one voice or more, whose own turns it shows
+                            // (Peter, 2026-11-18)
                             place =
                                 (review && (turns || Speakers.finding)) ||
+                                    (review && spoken && finder.who != 0) ||
                                     (t.running && t.diarizing),
                             editable = review,
                             present = present,
                             nameOf = { n -> Speakers.nameOf(resources, t.names, n) },
-                            bar = if (Speakers.finding) Speakers.growing else bar,
+                            bar =
+                                when {
+                                    Speakers.finding -> Speakers.growing
+                                    finder.who != 0 -> bar.filter { it.speaker == finder.who }
+                                    else -> bar
+                                },
                             upto = if (t.running) t.done * t.duration else Double.MAX_VALUE,
                             toggle = ::toggleSpeakers,
                             move = ::moveSpeaker,

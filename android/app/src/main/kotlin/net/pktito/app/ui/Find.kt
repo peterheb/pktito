@@ -373,6 +373,12 @@ fun FindField(
     modifier: Modifier = Modifier,
     /** a speaker's name, for the one found (Finder.who) */
     nameOf: (Int) -> String = { "" },
+    /**
+     * the speaker found shown in the field, before the words; a phone's has them on the line under
+     * it instead (SpeakersLine), where in the field they left little room to type (Peter,
+     * 2026-11-18)
+     */
+    whoInside: Boolean = true,
 ) {
     val p = pk
     val focus = remember { FocusRequester() }
@@ -413,42 +419,15 @@ fun FindField(
         // .pk-find-who), which are sought in their sentences alone; in a
         // phone's field, with words typed, their mark alone, its name for
         // the screen reader
-        if (f.who != 0) {
-            val name = nameOf(f.who)
-            val full = roomy || f.query.isEmpty()
-            // a button, whose x lets them go and keeps the words (Finder.dropWho);
-            // the field's height to a finger, its 28 drawn
-            Box(
-                Modifier.fillMaxHeight().pointerInput(Unit) { detectTapGestures { f.dropWho() } },
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(
-                    Modifier.widthIn(max = 180.dp)
-                        .height(28.dp)
-                        .control(
-                            CornerSm,
-                            p.ground,
-                            label = stringResource(R.string.find_who_remove, name),
-                            onClick = f::dropWho,
-                        )
-                        .padding(start = 8.dp, end = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Mark(f.who)
-                    if (full)
-                        Text(
-                            name,
-                            Modifier.weight(1f, fill = false),
-                            style = Type.ui.copy(fontSize = 13.sp, lineHeight = 16.sp),
-                            color = p.ink,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    Icon(Icons.x, null, tint = p.inkMuted, modifier = Modifier.size(12.dp))
-                }
+        if (f.who != 0 && whoInside)
+            Box(Modifier.fillMaxHeight().pointerInput(Unit) { detectTapGestures { f.dropWho() } }) {
+                WhoBadge(
+                    f,
+                    nameOf(f.who),
+                    roomy || f.query.isEmpty(),
+                    Modifier.align(Alignment.Center),
+                )
             }
-        }
         val label = stringResource(R.string.find_label)
         BasicTextField(
             value = f.query,
@@ -506,7 +485,47 @@ fun FindField(
                 f.step(hits, 1, seek)
             }
         }
-        if (has || f.open) Step(Icons.x, stringResource(R.string.find_close), true, onClose)
+        // and while the keys are in it, empty or not, the way out of it: a phone's field had none
+        // until something was typed (Peter, 2026-11-18)
+        if (has || f.open || f.typing)
+            Step(Icons.x, stringResource(R.string.find_close), true, onClose)
+    }
+}
+
+/**
+ * The speaker found (app.css, .pk-find-who): their mark and name, whose words are sought in their
+ * sentences alone; in a phone's field, with words typed, their mark alone (full false), its name
+ * for the screen reader. A button, whose x lets them go and keeps the words (Finder.dropWho), 28 dp
+ * drawn.
+ */
+@Composable
+fun WhoBadge(f: Finder, name: String, full: Boolean, modifier: Modifier = Modifier) {
+    val p = pk
+    Row(
+        modifier
+            .widthIn(max = 180.dp)
+            .height(28.dp)
+            .control(
+                CornerSm,
+                p.ground,
+                label = stringResource(R.string.find_who_remove, name),
+                onClick = f::dropWho,
+            )
+            .padding(start = 8.dp, end = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Mark(f.who)
+        if (full)
+            Text(
+                name,
+                Modifier.weight(1f, fill = false),
+                style = Type.ui.copy(fontSize = 13.sp, lineHeight = 16.sp),
+                color = p.ink,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        Icon(Icons.x, null, tint = p.inkMuted, modifier = Modifier.size(12.dp))
     }
 }
 

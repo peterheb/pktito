@@ -94,6 +94,8 @@ class SpeakersView(
      * shows it as it shows a transcription's progress (app.js, showFinding)
      */
     val heard: Double?,
+    /** while they are found, how much of the recording is decoded before it is heard; -1 */
+    val decoding: Double = -1.0,
     /** the names show: the switch on and a speaker or more */
     val shown: Boolean,
     /**
@@ -210,6 +212,8 @@ fun SpeakersSwitch(
     onClick: () -> Unit,
     /** what it says: Speakers, or Only matches (Find.kt, Finder.only) */
     label: String = stringResource(R.string.speakers_switch),
+    /** a touch opens a menu (SpeakersMenu), not turns it off: a chevron after the word */
+    menu: Boolean = false,
 ) {
     val p = pk
     Box(Modifier.background(p.sunk, Corner).padding(2.dp)) {
@@ -237,6 +241,71 @@ fun SpeakersSwitch(
                 color = if (on) p.ink else p.inkMuted,
                 maxLines = 1,
             )
+            if (menu) Icon(Icons.down, null, tint = p.inkMuted, modifier = Modifier.size(12.dp))
+        }
+    }
+}
+
+/**
+ * On a phone, where the names over the transcript give way to the text (Chips), the switch while
+ * speakers are shown opens this, where a touch had turned them off (Peter, 2026-11-18: "my
+ * intuition is to click Speakers like I'll get a drop-down menu"): Hide speakers, then each
+ * speaker's mark and name, which finds where they speak as a chip does (the one found checked), and
+ * beside it a person with a pencil that renames them.
+ */
+@Composable
+fun SpeakersMenu(open: Boolean, close: () -> Unit, spk: SpeakersView, found: Int) {
+    val p = pk
+    Menu(open, close) {
+        Item(stringResource(R.string.speakers_hide), null) {
+            close()
+            spk.toggle()
+        }
+        if (spk.present.isNotEmpty()) MenuLine()
+        for (n in spk.present) {
+            val name = spk.nameOf(n)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.weight(1f)
+                        .control(
+                            CornerSm,
+                            label = stringResource(R.string.speakers_chip_label, name),
+                        ) {
+                            close()
+                            spk.find(n)
+                        }
+                        .semantics { selected = n == found }
+                        .heightIn(min = 48.dp)
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Mark(n)
+                    Text(
+                        name,
+                        style = Type.ui.copy(fontWeight = FontWeight.W500, lineHeight = 20.sp),
+                        color = p.ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (n == found)
+                        Icon(Icons.check, null, tint = p.ink, modifier = Modifier.size(16.dp))
+                }
+                Box(
+                    Modifier.control(
+                            CornerSm,
+                            label = stringResource(R.string.speakers_rename, name),
+                        ) {
+                            close()
+                            spk.rename(n)
+                        }
+                        .size(48.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.who, null, tint = p.inkMuted, modifier = Modifier.size(18.dp))
+                }
+            }
         }
     }
 }

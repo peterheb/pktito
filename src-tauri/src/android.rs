@@ -530,7 +530,25 @@ pub extern "system" fn Java_net_pktito_app_Engine_findSpeakers<'a>(
                 Ok(t) => t,
                 Err(e) => return throw(env, &e.to_string()).map(|_| JObject::null()),
             };
-            let x = match decode::decode_fd(fd, &name, &mut |_| {}) {
+            // how far Android's decoder has got, before the diarizer hears any
+            // of it (progress.decoding)
+            let mut told = None;
+            let x = decode::decode_fd(fd, &name, &mut |fraction| {
+                if told.is_none() {
+                    if let Err(e) = env.call_method(
+                        &progress,
+                        jni_str!("decoding"),
+                        jni_sig!("(D)V"),
+                        &[JValue::Double(fraction)],
+                    ) {
+                        told = Some(e);
+                    }
+                }
+            });
+            if let Some(e) = told {
+                return Err(e);
+            }
+            let x = match x {
                 Ok(x) => x,
                 Err(e) => {
                     let p = e.problem();
