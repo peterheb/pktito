@@ -68,6 +68,19 @@ Two families, shipped as files (`ui/fonts`, and the site's `fonts/`) with their 
 - Headings use `text-wrap: balance`. Running text stays near `measure`.
 - The floor is 12 px, for secondary detail only (stats, chips, license texts). Running text is 13 px or more.
 
+## Baseline
+
+Text on one line shares one baseline, whatever its face or size.
+
+- A row aligns its parts on their first baseline, not on their centres: a time in Commit Mono beside a sentence in Archivo, a name beside a length. In CSS that is `align-items: baseline`.
+- Centre only what is not text beside text: an icon in a button, a control in a row.
+- No nudges. A `translateY` or a margin that makes two faces agree in one place means the row's alignment is wrong; fix the row.
+- A speaker's mark is sized from the text beside it: `mark-size` for the circle, `mark-size-sq` for the square. Its middle sits at the middle of the lowercase letters, half the x-height above the baseline, so circle and square share a centre. In CSS, an inline mark with `vertical-align: middle`; on Android and iOS, the same offset from Archivo's x-height, rounded to a whole pixel where a fraction draws soft.
+- `mark-gap` separates the mark from the first letter of its name, in every place a mark appears. A place may differ only for a reason written beside it.
+- In a menu where the mark stands between a control and the name, the space on each side of the mark is the same: `mark-gap`.
+- The mark and its gap are in em, so they grow with the text, Dynamic Type included.
+- The wordmark's square is not a speaker's mark. It is part of the name and stands on the baseline.
+
 ## Layout
 
 **Site.** The page runs to `page-max` with `margin-page` outer margins (40 px; 20 px on a phone, with the safe-area insets). The hero sits on a 12-column grid; sections below use 3 or 4 columns that stack on a phone. Sections stand `space-7` apart. They are told apart by tone, alternating `ground`, `surface` and the `term` field for one dark band. Corners are square (`radius-0`).

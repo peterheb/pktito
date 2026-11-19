@@ -68,6 +68,10 @@
   --column-narrow: 560px;
   --window-min: 480px;
   --page-max: 1440px;
+  --mark-size: 0.75em;
+  --mark-size-sq: 0.68em;
+  --mark-radius-sq: 0.15em;
+  --mark-gap: 0.6em;
   --font-sans: Archivo, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "Commit Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }

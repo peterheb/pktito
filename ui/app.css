@@ -2606,9 +2606,7 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   min-width: 0;
 }
 .pk-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  display: inline-block;
   padding: 6px 8px;
   border: 0;
   border-radius: var(--radius-sm);
@@ -2668,17 +2666,22 @@ html:not([data-chrome="win"]) .pk-head > #stop {
    speakers 1 to 4 and a square a pixel smaller for 5 to 8, the same area. Every pair close in
    color crosses that line but magenta and orchid, 5 and 8 (the design's
    palette check, OKLab ΔE: neighbors 8.9 or more for color-blind readers). */
+/* Sized from the text beside it and inline in it, its middle at the middle
+   of the lowercase letters (vertical-align: middle), mark-gap before the
+   name: the design's Baseline rules (Peter, 2026-11-17: "make swatch 0.75em
+   centered around x-height"). At 13 px a 9.75 px circle, 7.8 from the name. */
 .pk-mark {
   display: inline-block;
-  width: 10px;
-  height: 10px;
+  width: var(--mark-size);
+  height: var(--mark-size);
   border-radius: 50%;
-  flex: none;
+  vertical-align: middle;
+  margin-right: var(--mark-gap);
 }
 .pk-mark.is-sq {
-  width: 9px;
-  height: 9px;
-  border-radius: 2px;
+  width: var(--mark-size-sq);
+  height: var(--mark-size-sq);
+  border-radius: var(--mark-radius-sq);
 }
 
 /* A turn's name opens its first row's text, sentence or caption, on the
@@ -2700,10 +2703,6 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   color: var(--ink);
   cursor: pointer;
   text-align: left;
-}
-.pk-speaker .pk-mark {
-  vertical-align: middle;
-  margin-right: 7px;
 }
 /* A turn's line (Peter's question of 2026-11-15): each row of a
    speaker's turn carries a 3 px line in the speaker's colour between the
@@ -2954,9 +2953,11 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 }
 .pk-radio {
   display: grid;
-  grid-template-columns: 16px 12px minmax(0, 1fr);
+  /* the radio, then the mark inside the name's text: mark-gap either side
+     of the mark (the design's Baseline rules), not a 12 px column for it */
+  grid-template-columns: 16px minmax(0, 1fr);
   align-items: center;
-  column-gap: 10px;
+  column-gap: var(--mark-gap);
   width: 100%;
   padding: 8px 10px;
   border: 0;

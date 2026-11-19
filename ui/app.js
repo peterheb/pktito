@@ -3195,7 +3195,7 @@ function showWho() {
     name = who && f ? nameOf(f, who) : "";
   el.hidden = !who;
   el.innerHTML = name
-    ? `${markHtml(who)}<span>${esc(name)}</span>${ICON.x}`
+    ? `<span>${markHtml(who)}${esc(name)}</span>${ICON.x}`
     : "";
   el.title = name ? t("find.who_remove", { name }) : "";
   el.setAttribute("aria-label", el.title);
@@ -3930,7 +3930,7 @@ function openWho(btn) {
     all
       .map(
         (x) =>
-          `<button class="pk-radio" type="button" role="menuitemradio" aria-checked="${x === u.s}" data-to="${x}"><span class="pk-dot"></span>${markHtml(x)}<span class="pk-rn">${esc(nameOf(f, x))}</span></button>`,
+          `<button class="pk-radio" type="button" role="menuitemradio" aria-checked="${x === u.s}" data-to="${x}"><span class="pk-dot"></span><span class="pk-rn">${markHtml(x)}${esc(nameOf(f, x))}</span></button>`,
       )
       .join("") +
     `<div class="pk-menu-sep" aria-hidden="true"></div>` +
