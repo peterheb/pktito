@@ -42,13 +42,15 @@ class TranscribeService : Service() {
         // Service's own call, not ServiceCompat's: androidx.core 1.19.1 keeps
         // only the types Android 14 had (0x40000fff), and mediaProcessing
         // (0x2000) came to none, which Android 17 refused
+        // a new recording's name before the notification is shown, which had
+        // the last one's while this one was read (the S24, 2026-11-18)
+        val uri = intent?.data?.takeIf { !Transcriber.running }
+        if (uri != null) Transcriber.begin(nameOf(uri), uri)
         startForeground(NOTE, note(getString(R.string.status_reading), -1), type())
-        val uri = intent?.data
-        if (uri == null || Transcriber.running) {
+        if (uri == null) {
             if (!Transcriber.running) stop(startId)
             return START_NOT_STICKY
         }
-        Transcriber.begin(nameOf(uri), uri)
         thread(name = "transcribe") {
             val wake =
                 getSystemService(PowerManager::class.java)
@@ -128,8 +130,22 @@ class TranscribeService : Service() {
         file.use { pfd ->
             val progress =
                 object : Engine.Progress {
+                    override fun reading(fraction: Double) {
+                        Transcriber.post { read = fraction }
+                        val now = SystemClock.elapsedRealtime()
+                        if (now - shown >= 500) {
+                            shown = now
+                            val percent = (fraction * 100).toInt()
+                            notes.notify(
+                                NOTE,
+                                note(getString(R.string.status_reading_at, percent), percent),
+                            )
+                        }
+                    }
+
                     override fun audio(duration: Double, fps: Double, peaks: ByteArray) {
                         began = SystemClock.elapsedRealtime()
+                        Log.i(TAG, "read $name: ${"%.1f".format((began - start) / 1000.0)} s")
                         video = fps
                         loudness = peaks
                         Transcriber.post {

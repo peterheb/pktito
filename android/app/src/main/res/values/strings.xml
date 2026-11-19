@@ -56,6 +56,7 @@
     <string name="times_video_rate">Video&#160;· %1$s</string><!-- times.video_rate -->
     <string name="status_loading">Loading the model</string>
     <string name="status_reading">Reading the audio</string>
+    <string name="status_reading_at">Reading the audio %1$d%%</string>
     <string name="status_transcribing">Transcribing %1$d%%</string>
     <string name="status_stopped_at">Stopped at %1$d%%</string>
     <string name="status_done">Done</string><!-- status.done -->

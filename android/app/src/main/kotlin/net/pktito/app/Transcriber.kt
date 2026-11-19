@@ -89,6 +89,8 @@ object Transcriber {
     var step by mutableStateOf("")
     /** The fraction of the audio transcribed. */
     var done by mutableStateOf(0.0)
+    /** The fraction of the recording Android's decoder has read, -1 where it says none. */
+    var read by mutableStateOf(-1.0)
     /** The audio's length in seconds, once it is read. */
     var duration by mutableStateOf(0.0)
     /** Its loudness for the strip (audio.rs's peaks), once it is read. */
@@ -150,6 +152,7 @@ object Transcriber {
         this.name = name
         step = "reading"
         done = 0.0
+        read = -1.0
         duration = 0.0
         peaks = null
         segments.clear()

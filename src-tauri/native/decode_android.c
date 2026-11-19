@@ -16,7 +16,9 @@
  * 0 on success, with *out malloc'd (the caller frees it) holding *n
  * samples (decode.rs says where they start and end against ffmpeg's); -1
  * if the file has no audio track Android shows, which a track it has no
- * decoder for is not; -2 if Android cannot read it, the reason in err. */
+ * decoder for is not; -2 if Android cannot read it, the reason in err.
+ * read, where it is not NULL, is told how far into the track the
+ * extractor has got, a fraction, each time it gains a whole percent. */
 #include <dlfcn.h>
 #include <media/NdkMediaCodec.h>
 #include <media/NdkMediaExtractor.h>
@@ -35,6 +37,29 @@ enum { PCM_16 = 2, PCM_FLOAT = 4 };
 /* How long the decoder may go without taking input or giving output
  * before it is given up on, in waits of 10 ms: 10 s. */
 #define STALL 1000
+
+/* The decoder for mime: Android's in-process one where it has one, else
+ * the one Android picks. Android's own c2.android decoders run in the
+ * media process (media.swcodec), every buffer handed across to it and
+ * back; Android 17 has an in-process twin of two of them, the same
+ * decoder in the app's own process. A Galaxy S24 Ultra's (Android 17)
+ * decoded a 39:31 AAC podcast (48 kHz stereo, 96 kb/s) in 61.7 s to the
+ * media process's 122.8 s, from adb's shell, and in 21.5 s on its fastest
+ * core; the 10 ms waits for a buffer below cost nothing measurable
+ * (122.8 s to 127.7 s with none or 1 ms; scratch decbench, 2026-11-18). */
+static AMediaCodec *decoder_for(const char *mime) {
+    static const char *const inproc[][2] = {
+        {"audio/mp4a-latm", "c2.android.inproc.aac.decoder"},
+        {"audio/opus", "c2.android.inproc.opus.decoder"},
+    };
+    for (size_t i = 0; i < sizeof inproc / sizeof inproc[0]; i++)
+        if (!strcmp(mime, inproc[i][0])) {
+            AMediaCodec *c = AMediaCodec_createCodecByName(inproc[i][1]);
+            if (c)
+                return c;
+        }
+    return AMediaCodec_createDecoderByType(mime);
+}
 
 static int fail(char *err, size_t errlen, const char *fmt, ...) {
     va_list ap;
@@ -81,7 +106,8 @@ int pkapp_binder_pool(void) {
     return 0;
 }
 
-int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *err, size_t errlen) {
+int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *err, size_t errlen,
+                    void (*read)(void *ctx, double fraction), void *ctx) {
     *out = NULL;
     *n = 0;
     struct stat st;
@@ -118,7 +144,11 @@ int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *err, si
         goto done;
     }
     AMediaExtractor_selectTrack(ex, t);
-    if (!(c = AMediaCodec_createDecoderByType(mime))) {
+    /* the track's length, for read: 0 where it says none */
+    int64_t length = 0;
+    AMediaFormat_getInt64(f, AMEDIAFORMAT_KEY_DURATION, &length);
+    int told = 0;
+    if (!(c = decoder_for(mime))) {
         rc = fail(err, errlen, "Android has no decoder for %s", mime);
         goto done;
     }
@@ -149,9 +179,13 @@ int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *err, si
                     AMediaCodec_queueInputBuffer(c, (size_t)ib, 0, 0, 0, AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM);
                     in_done = 1;
                 } else {
-                    AMediaCodec_queueInputBuffer(c, (size_t)ib, 0, (size_t)size,
-                                                 (uint64_t)AMediaExtractor_getSampleTime(ex), 0);
+                    int64_t at = AMediaExtractor_getSampleTime(ex);
+                    AMediaCodec_queueInputBuffer(c, (size_t)ib, 0, (size_t)size, (uint64_t)at, 0);
                     AMediaExtractor_advance(ex);
+                    if (read && length > 0 && at * 100 / length > told) {
+                        told = (int)(at * 100 / length);
+                        read(ctx, told < 100 ? told / 100.0 : 1.0);
+                    }
                 }
                 moved = 1;
             }

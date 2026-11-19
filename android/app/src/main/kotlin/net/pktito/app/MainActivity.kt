@@ -539,6 +539,7 @@ class MainActivity : ComponentActivity() {
                     name = t.name,
                     step = t.step,
                     done = t.done,
+                    read = t.read,
                     duration = t.duration,
                     peaks = t.peaks,
                     rows = t.segments,
@@ -706,7 +707,14 @@ class MainActivity : ComponentActivity() {
                     Side(
                         Recents.items,
                         readyActions,
-                        if (t.step.isEmpty()) null else Opened(t.id, t.name, t.step, t.done),
+                        if (t.step.isEmpty()) null
+                        else
+                            Opened(
+                                t.id,
+                                t.name,
+                                t.step,
+                                if (t.step == "reading") t.read else t.done,
+                            ),
                         model,
                         work,
                     )

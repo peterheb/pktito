@@ -22,6 +22,12 @@ object Engine {
          */
         fun audio(duration: Double, fps: Double, peaks: ByteArray)
 
+        /**
+         * While Android's decoder reads it: how far it has got, a fraction, a whole percent at a
+         * time. A WAV or FLAC, read in a moment by pktito's readers, tells nothing.
+         */
+        fun reading(fraction: Double)
+
         /** After each chunk: the fraction of the audio done, and the segments just done. */
         fun update(done: Double, segments: String)
     }

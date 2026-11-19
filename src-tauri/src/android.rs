@@ -231,7 +231,9 @@ pub extern "system" fn Java_net_pktito_app_Engine_npu<'a>(
 /// at fd (name: what to call it in an error), read and transcribed, as a
 /// Transcript's JSON; with diar (loadDiarizer's, or 0 for none) each
 /// segment one speaker's and saying whose, the diarizer fed in the same
-/// pass (transcribe::Speakers), and the speakers' stretches with them. Once it is read, progress.audio(seconds, a video's
+/// pass (transcribe::Speakers), and the speakers' stretches with them. While
+/// Android's decoder reads it, progress.reading(fraction), a whole percent at
+/// a time (decode::decode_fd). Once it is read, progress.audio(seconds, a video's
 /// frame rate or 0, the loudness in audio::PEAKS slices) draws the strip;
 /// progress.update(fraction, the segments just done, in JSON) after each
 /// chunk. All on this thread. The screen plays the recording itself (the
@@ -262,7 +264,25 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
             let name = name.try_to_string(env)?;
             STOP.store(false, Ordering::Relaxed);
             let fps = decode::frame_rate_fd(fd).unwrap_or(0.0);
-            let x = match decode::decode_fd(fd, &name) {
+            // how far Android's decoder has got, for the screen while it reads
+            // (progress.reading); a failed call ends the run as update's does
+            let mut told = None;
+            let x = decode::decode_fd(fd, &name, &mut |fraction| {
+                if told.is_none() {
+                    if let Err(e) = env.call_method(
+                        &progress,
+                        jni_str!("reading"),
+                        jni_sig!("(D)V"),
+                        &[JValue::Double(fraction)],
+                    ) {
+                        told = Some(e);
+                    }
+                }
+            });
+            if let Some(e) = told {
+                return Err(e);
+            }
+            let x = match x {
                 Ok(x) => x,
                 Err(e) => {
                     let p = e.problem();
@@ -510,7 +530,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_findSpeakers<'a>(
                 Ok(t) => t,
                 Err(e) => return throw(env, &e.to_string()).map(|_| JObject::null()),
             };
-            let x = match decode::decode_fd(fd, &name) {
+            let x = match decode::decode_fd(fd, &name, &mut |_| {}) {
                 Ok(x) => x,
                 Err(e) => {
                     let p = e.problem();

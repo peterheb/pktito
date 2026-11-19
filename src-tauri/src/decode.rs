@@ -230,7 +230,7 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
     }
     let f = std::fs::File::open(path)
         .map_err(|e| DecodeError::Unreadable(UNREADABLE, e.to_string()))?;
-    decode_fd(f.as_raw_fd(), &path.to_string_lossy())
+    decode_fd(f.as_raw_fd(), &path.to_string_lossy(), &mut |_| {})
 }
 
 /// The recording open at fd, which Android's document picker hands over
@@ -252,14 +252,22 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
 /// they are left. Vorbis in WebM ends earlier, where its sound does
 /// (ffmpeg's has 832 samples more). A FLAC is held to its STREAMINFO
 /// length, as every decoder's is.
+/// read is told how far Android's decoder has got, a fraction, a whole
+/// percent at a time: a 39-minute AAC podcast took it about a minute on a
+/// Galaxy S24 Ultra (decode_android.c, decoder_for). pktito's readers, a
+/// hundred times faster, tell it nothing.
 #[cfg(target_os = "android")]
-pub fn decode_fd(fd: c_int, name: &str) -> Result<Vec<f32>, DecodeError> {
-    if let Some(read) = wav_fd(fd, name) {
-        return read;
+pub fn decode_fd(
+    fd: c_int,
+    name: &str,
+    read: &mut dyn FnMut(f64),
+) -> Result<Vec<f32>, DecodeError> {
+    if let Some(x) = wav_fd(fd, name) {
+        return x;
     }
     let x = match flac_fd(fd) {
-        Some(read) => read?,
-        None => decode_android(fd)?,
+        Some(x) => x?,
+        None => decode_android(fd, read)?,
     };
     Ok(flac_cut_in(&mut copy_of(fd)?, x))
 }
@@ -413,7 +421,7 @@ fn wav_fd(fd: c_int, name: &str) -> Option<Result<Vec<f32>, DecodeError>> {
 
 /// Android's decoder's samples at 16 kHz.
 #[cfg(target_os = "android")]
-fn decode_android(fd: c_int) -> Result<Vec<f32>, DecodeError> {
+fn decode_android(fd: c_int, read: &mut dyn FnMut(f64)) -> Result<Vec<f32>, DecodeError> {
     extern "C" {
         fn pkapp_decode_fd(
             fd: c_int,
@@ -422,8 +430,15 @@ fn decode_android(fd: c_int) -> Result<Vec<f32>, DecodeError> {
             n: *mut usize,
             err: *mut c_char,
             errlen: usize,
+            read: Option<unsafe extern "C" fn(*mut c_void, f64)>,
+            ctx: *mut c_void,
         ) -> c_int;
     }
+    unsafe extern "C" fn told(ctx: *mut c_void, fraction: f64) {
+        let read = unsafe { &mut *(ctx as *mut &mut dyn FnMut(f64)) };
+        read(fraction);
+    }
+    let mut read = read;
     let mut out: *mut f32 = std::ptr::null_mut();
     let mut n = 0usize;
     let mut err = [0 as c_char; 512];
@@ -435,6 +450,8 @@ fn decode_android(fd: c_int) -> Result<Vec<f32>, DecodeError> {
             &mut n,
             err.as_mut_ptr(),
             err.len(),
+            Some(told),
+            &mut read as *mut &mut dyn FnMut(f64) as *mut c_void,
         )
     };
     match rc {

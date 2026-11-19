@@ -674,7 +674,9 @@ private fun LiveRow(o: Opened) {
     val (status, ink) =
         when (o.step) {
             "loading" -> stringResource(R.string.status_loading) to p.inkMuted
-            "reading" -> stringResource(R.string.status_reading) to p.inkMuted
+            "reading" ->
+                (if (o.done > 0) stringResource(R.string.status_reading_at, pct)
+                else stringResource(R.string.status_reading)) to p.inkMuted
             "transcribing" -> stringResource(R.string.status_transcribing, pct) to p.inkMuted
             "stopped" -> stringResource(R.string.status_stopped_at, pct) to p.inkMuted
             "done" -> stringResource(R.string.status_done) to p.ok
@@ -809,6 +811,8 @@ fun Work(
     name: String,
     step: String,
     done: Double,
+    /** While Android's decoder reads the recording, how far it has got; -1 where it says none. */
+    read: Double = -1.0,
     duration: Double,
     peaks: ByteArray?,
     rows: List<Seg>,
@@ -930,6 +934,8 @@ fun Work(
                             spk.heard != null -> stringResource(R.string.speakers_finding)
                             review -> base.at(position)
                             step == "loading" -> stringResource(R.string.status_loading)
+                            step == "reading" && read > 0 ->
+                                stringResource(R.string.status_reading_at, (read * 100).toInt())
                             step == "reading" -> stringResource(R.string.status_reading)
                             else -> pace ?: ""
                         },
