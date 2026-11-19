@@ -111,7 +111,13 @@ object Engine {
     }
         .getOrNull()
 
-    /** The transcription running stops before its next chunk. */
+    /** A new transcription is on its way: no stop or quiet before this is for it. */
+    @JvmStatic external fun begin()
+
+    /**
+     * The transcription running stops where it is: before it reads the recording, within a percent
+     * of reading it, or before its next chunk.
+     */
     @JvmStatic external fun stop()
 
     /** The transcription running goes on without its speakers from its next chunk. */

@@ -45,7 +45,11 @@ class TranscribeService : Service() {
         // a new recording's name before the notification is shown, which had
         // the last one's while this one was read (the S24, 2026-11-18)
         val uri = intent?.data?.takeIf { !Transcriber.running }
-        if (uri != null) Transcriber.begin(nameOf(uri), uri)
+        if (uri != null) {
+            // before the model loads, so that a Stop tapped while it does holds
+            Engine.begin()
+            Transcriber.begin(nameOf(uri), uri)
+        }
         startForeground(NOTE, note(getString(R.string.status_reading), -1), type())
         if (uri == null) {
             if (!Transcriber.running) stop(startId)
@@ -186,7 +190,8 @@ class TranscribeService : Service() {
             val o = JSONObject(t)
             val complete = o.getBoolean("complete")
             // for adb's logcat: what was done, and how fast
-            val secs = (SystemClock.elapsedRealtime() - began) / 1000.0
+            // none where it stopped before the audio was read
+            val secs = if (began > 0) (SystemClock.elapsedRealtime() - began) / 1000.0 else 0.0
             Log.i(
                 TAG,
                 "transcribed $name${if (complete) "" else ", stopped"}: " +

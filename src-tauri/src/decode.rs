@@ -42,6 +42,9 @@ pub enum DecodeError {
     /// It could not be read: what happened, as the catalog's key
     /// (strings.rs), and what said so.
     Unreadable(&'static str, String),
+    /// The reader was told to stop before the end (decode_fd's read).
+    #[cfg(target_os = "android")]
+    Stopped,
 }
 
 const UNREADABLE: &str = "decode.unreadable";
@@ -56,6 +59,10 @@ impl DecodeError {
         match self {
             DecodeError::NoAudio => Problem::new("decode.no_audio"),
             DecodeError::Unreadable(key, detail) => Problem::new(key).detail(detail),
+            // a stop the app asked for, which it says as a stop, never as
+            // a problem (android.rs, transcribe)
+            #[cfg(target_os = "android")]
+            DecodeError::Stopped => Problem::new("problem.unexpected").detail("stopped"),
         }
     }
 
@@ -230,7 +237,7 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
     }
     let f = std::fs::File::open(path)
         .map_err(|e| DecodeError::Unreadable(UNREADABLE, e.to_string()))?;
-    decode_fd(f.as_raw_fd(), &path.to_string_lossy(), &mut |_| {})
+    decode_fd(f.as_raw_fd(), &path.to_string_lossy(), &mut |_| false)
 }
 
 /// The recording open at fd, which Android's document picker hands over
@@ -255,12 +262,15 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
 /// read is told how far Android's decoder has got, a fraction, a whole
 /// percent at a time: a 39-minute AAC podcast took it about a minute on a
 /// Galaxy S24 Ultra (decode_android.c, decoder_for). pktito's readers, a
-/// hundred times faster, tell it nothing.
+/// hundred times faster, tell it nothing. read's true stops Android's
+/// decoder where it is (DecodeError::Stopped): the app's Stop, which
+/// waited out the whole decode while only the chunks heard it (0.9.8,
+/// 27 to 31 s on a Galaxy S25 Ultra).
 #[cfg(target_os = "android")]
 pub fn decode_fd(
     fd: c_int,
     name: &str,
-    read: &mut dyn FnMut(f64),
+    read: &mut dyn FnMut(f64) -> bool,
 ) -> Result<Vec<f32>, DecodeError> {
     if let Some(x) = wav_fd(fd, name) {
         return x;
@@ -421,7 +431,7 @@ fn wav_fd(fd: c_int, name: &str) -> Option<Result<Vec<f32>, DecodeError>> {
 
 /// Android's decoder's samples at 16 kHz.
 #[cfg(target_os = "android")]
-fn decode_android(fd: c_int, read: &mut dyn FnMut(f64)) -> Result<Vec<f32>, DecodeError> {
+fn decode_android(fd: c_int, read: &mut dyn FnMut(f64) -> bool) -> Result<Vec<f32>, DecodeError> {
     extern "C" {
         fn pkapp_decode_fd(
             fd: c_int,
@@ -430,13 +440,13 @@ fn decode_android(fd: c_int, read: &mut dyn FnMut(f64)) -> Result<Vec<f32>, Deco
             n: *mut usize,
             err: *mut c_char,
             errlen: usize,
-            read: Option<unsafe extern "C" fn(*mut c_void, f64)>,
+            read: Option<unsafe extern "C" fn(*mut c_void, f64) -> c_int>,
             ctx: *mut c_void,
         ) -> c_int;
     }
-    unsafe extern "C" fn told(ctx: *mut c_void, fraction: f64) {
-        let read = unsafe { &mut *(ctx as *mut &mut dyn FnMut(f64)) };
-        read(fraction);
+    unsafe extern "C" fn told(ctx: *mut c_void, fraction: f64) -> c_int {
+        let read = unsafe { &mut *(ctx as *mut &mut dyn FnMut(f64) -> bool) };
+        read(fraction) as c_int
     }
     let mut read = read;
     let mut out: *mut f32 = std::ptr::null_mut();
@@ -451,7 +461,7 @@ fn decode_android(fd: c_int, read: &mut dyn FnMut(f64)) -> Result<Vec<f32>, Deco
             err.as_mut_ptr(),
             err.len(),
             Some(told),
-            &mut read as *mut &mut dyn FnMut(f64) as *mut c_void,
+            &mut read as *mut &mut dyn FnMut(f64) -> bool as *mut c_void,
         )
     };
     match rc {
@@ -463,6 +473,7 @@ fn decode_android(fd: c_int, read: &mut dyn FnMut(f64)) -> Result<Vec<f32>, Deco
             Ok(x)
         }
         -1 => Err(DecodeError::NoAudio),
+        -3 => Err(DecodeError::Stopped),
         _ => {
             let why = unsafe { CStr::from_ptr(err.as_ptr()) }
                 .to_string_lossy()

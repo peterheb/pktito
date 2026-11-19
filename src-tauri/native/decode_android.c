@@ -18,7 +18,10 @@
  * if the file has no audio track Android shows, which a track it has no
  * decoder for is not; -2 if Android cannot read it, the reason in err.
  * read, where it is not NULL, is told how far into the track the
- * extractor has got, a fraction, each time it gains a whole percent. */
+ * extractor has got, a fraction, each time it gains a whole percent; a
+ * nonzero answer stops the decode there and gives -3, with nothing in
+ * *out. A percent of a 39-minute AAC podcast is 0.3 s of a Galaxy S25
+ * Ultra's 27 s read of it, so the app's Stop is that late at most. */
 #include <dlfcn.h>
 #include <media/NdkMediaCodec.h>
 #include <media/NdkMediaExtractor.h>
@@ -107,7 +110,7 @@ int pkapp_binder_pool(void) {
 }
 
 int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *err, size_t errlen,
-                    void (*read)(void *ctx, double fraction), void *ctx) {
+                    int (*read)(void *ctx, double fraction), void *ctx) {
     *out = NULL;
     *n = 0;
     struct stat st;
@@ -184,7 +187,10 @@ int pkapp_decode_fd(int fd, unsigned rate, float **out, size_t *n, char *err, si
                     AMediaExtractor_advance(ex);
                     if (read && length > 0 && at * 100 / length > told) {
                         told = (int)(at * 100 / length);
-                        read(ctx, told < 100 ? told / 100.0 : 1.0);
+                        if (read(ctx, told < 100 ? told / 100.0 : 1.0)) {
+                            rc = -3;
+                            goto done;
+                        }
                     }
                 }
                 moved = 1;

@@ -83,7 +83,9 @@ struct DiarLoaded {
     model: pktito::Model,
 }
 
-/// stop()'s word to the transcription running, read before each chunk.
+/// stop()'s word to the transcription running, read before it reads the
+/// recording, at each percent Android's decoder reads, and before each
+/// chunk; begin() clears it.
 static STOP: AtomicBool = AtomicBool::new(false);
 /// Speakers turned off while the run goes on (Engine.quiet): from the next
 /// chunk the diarizer is fed no more (transcribe::Speakers::off_when), as
@@ -245,7 +247,8 @@ pub extern "system" fn Java_net_pktito_app_Engine_npu<'a>(
 /// recording that can't be read throws its problem as JSON, the catalog's
 /// key and what said so: the app words the key from its own catalog and
 /// keeps the particulars to its log (Engine.problem), as iOS's does
-/// (ios.rs).
+/// (ios.rs). Stopped (Engine.stop) before or while the recording is read,
+/// it is a transcript of nothing, not complete, with no duration.
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
     mut unowned: EnvUnowned<'a>,
@@ -262,13 +265,28 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
             let mut d = (diar != 0).then(|| unsafe { &mut *(diar as *mut DiarLoaded) });
             // the diarizer's model's name, which the JSON names
             let heard_by = d.as_ref().map(|d| d.model.name()).unwrap_or_default();
-            QUIET.store(false, Ordering::Relaxed);
             let mut speakers = d.as_mut().map(|d| {
                 transcribe::Speakers::new(&d.model, &mut d.diar)
                     .off_when(|| QUIET.load(Ordering::Relaxed))
             });
             let name = name.try_to_string(env)?;
-            STOP.store(false, Ordering::Relaxed);
+            // stopped while the model loaded, or while the recording is read:
+            // nothing of it transcribed
+            let nothing = || {
+                let t = Transcript {
+                    duration: 0.0,
+                    complete: false,
+                    model: l.model.name(),
+                    segments: Vec::new(),
+                    names: Vec::new(),
+                    stretches: Vec::new(),
+                    diarizer: String::new(),
+                };
+                serde_json::to_string(&t).unwrap_or_default()
+            };
+            if STOP.load(Ordering::Relaxed) {
+                return Ok(env.new_string(nothing())?.into());
+            }
             let fps = decode::frame_rate_fd(fd).unwrap_or(0.0);
             // how far Android's decoder has got, for the screen while it reads
             // (progress.reading); a failed call ends the run as update's does
@@ -284,12 +302,16 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
                         told = Some(e);
                     }
                 }
+                STOP.load(Ordering::Relaxed)
             });
             if let Some(e) = told {
                 return Err(e);
             }
             let x = match x {
                 Ok(x) => x,
+                Err(decode::DecodeError::Stopped) => {
+                    return Ok(env.new_string(nothing())?.into());
+                }
                 Err(e) => {
                     let p = e.problem();
                     let why = serde_json::json!({ "key": p.key, "detail": p.detail });
@@ -375,7 +397,22 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
         .resolve::<ThrowRuntimeExAndDefault>()
 }
 
-/// Engine.stop(): the transcription running ends before its next chunk.
+/// Engine.begin(): a new transcription is on its way, which no stop() or
+/// quiet() before this is meant for. Called as the service takes the
+/// recording, not as transcribe() starts: the model may load between the
+/// two, and a Stop tapped then was lost (0.9.8).
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_begin<'a>(
+    _unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+) {
+    STOP.store(false, Ordering::Relaxed);
+    QUIET.store(false, Ordering::Relaxed);
+}
+
+/// Engine.stop(): the transcription running ends where it is: before it
+/// reads the recording, within a percent of Android's decoder's reading
+/// of it, or before its next chunk.
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_net_pktito_app_Engine_stop<'a>(
     _unowned: EnvUnowned<'a>,
@@ -560,6 +597,7 @@ pub extern "system" fn Java_net_pktito_app_Engine_findSpeakers<'a>(
                         told = Some(e);
                     }
                 }
+                false
             });
             if let Some(e) = told {
                 return Err(e);
