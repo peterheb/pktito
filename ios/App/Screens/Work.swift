@@ -142,7 +142,8 @@ struct Work: View {
                                 present: present, nameOf: { Speakers.nameOf(t.names, $0) },
                                 found: who, find: { s.finder.findWho($0) },
                                 rename: { s.renaming = $0 },
-                                hide: { s.toggleSpeakers() }) : nil
+                                hide: { s.toggleSpeakers() },
+                                undo: s.last?.text, onUndo: { s.undoLast() }) : nil
                     )
                     .padding(.horizontal, edge)
                     // alone, the search where the header's buttons were
@@ -841,6 +842,8 @@ private struct Rows: View {
             // the way the row is and the playhead's time, which brings the row
             // to the top and follows it again (Android's NowButton)
             .overlay(alignment: .bottom) {
+                let a = AppState.shared
+                let lifted = a.undo != nil || a.toast != nil || a.speakersNote != nil
                 let away: Int =
                     !p.playing || current < 0 || !(view?.contains(current) ?? true)
                         || seen.isEmpty || seen.contains(current)
@@ -851,7 +854,9 @@ private struct Rows: View {
                         tries = 0
                         withAnimation { list.scrollTo(current, anchor: .top) }
                     }
-                    .padding(.bottom, 16)
+                    // over a toast at the screen's foot (Root: its 24 and its
+                    // height, and 12 between), not under it
+                    .padding(.bottom, lifted ? 84 : 16)
                 }
             }
             // a seek on the waveform: its row, wherever the reader is

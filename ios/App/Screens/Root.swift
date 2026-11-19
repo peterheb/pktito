@@ -56,12 +56,9 @@ struct Root: View {
                 // model's download as it goes
                 if !s.managing {
                     if let u = s.undo {
-                        UndoToast(text: u.text) {
-                            s.undo = nil
-                            Speakers.shared.undo(u.before)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 24)
+                        UndoToast(text: u.text) { s.undoLast() }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 24)
                     } else if let toast = s.toast ?? s.speakersNote {
                         Toast(text: toast, err: s.toast != nil && s.toastErr)
                             .padding(.horizontal, 16)

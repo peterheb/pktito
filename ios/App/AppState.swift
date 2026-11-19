@@ -42,6 +42,10 @@ final class AppState {
     var toastErr = false
     /// an edit of the speakers that Undo takes back, and what its toast says
     var undo: (text: String, before: Speakers.Before)?
+    /// the last edit undo was, kept past its toast for the Speakers menu
+    /// (People.undo) until the next edit or another transcript (Peter,
+    /// 2026-11-18: a move made by mistake, and no Undo seen; Android's last)
+    var last: (text: String, before: Speakers.Before)?
     /// the speaker Rename is up for
     var renaming: Int?
     /// the speaker model's download, asked about
@@ -137,6 +141,7 @@ final class AppState {
     func leave(keeping url: URL? = nil) {
         // an edit's Undo is the transcript's that goes
         undo = nil
+        last = nil
         renaming = nil
         Player.shared.release()
         finder.clear()
@@ -157,6 +162,14 @@ final class AppState {
         if Transcriber.shared.step != .none && !Transcriber.shared.running { leave() }
     }
 
+    /// The last edit taken back, from its toast or the Speakers menu.
+    func undoLast() {
+        guard let u = last ?? undo else { return }
+        undo = nil
+        last = nil
+        Speakers.shared.undo(u.before)
+    }
+
     func back() {
         if finder.searching {
             finder.clear()
@@ -169,6 +182,7 @@ final class AppState {
     /// back, for 6 s, as Android's.
     func offerUndo(_ text: String, _ before: Speakers.Before) {
         undo = (text, before)
+        last = undo
         Task {
             try? await Task.sleep(for: .seconds(6))
             if undo?.text == text { undo = nil }

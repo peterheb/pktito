@@ -163,6 +163,9 @@ struct People {
     let find: (Int) -> Void
     let rename: (Int) -> Void
     let hide: () -> Void
+    /// the last edit, as its toast said it, still to undo (AppState.last)
+    var undo: String? = nil
+    var onUndo: () -> Void = {}
 }
 
 /// The speakers' menu (People), opened by label.
@@ -192,6 +195,16 @@ struct SpeakersMenu<Face: View>: View {
             Menu(L("speakers_rename_menu")) {
                 ForEach(people.present, id: \.self) { n in
                     Button(people.nameOf(n)) { people.rename(n) }
+                }
+            }
+            if let said = people.undo {
+                Section {
+                    Button {
+                        people.onUndo()
+                    } label: {
+                        Text(L("speakers_undo"))
+                        Text(said)
+                    }
                 }
             }
         } label: {
