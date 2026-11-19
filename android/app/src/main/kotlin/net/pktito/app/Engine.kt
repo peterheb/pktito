@@ -57,6 +57,20 @@ object Engine {
         fun state(json: String)
     }
 
+    /**
+     * Where a transcript's recording, as pktito heard it, is kept to be read again (audiocache.rs):
+     * dir, the cache's folder (Recents.kept); id, the transcript's; what, size and modified, the
+     * recording as the recent list knows it, so that a changed one is read afresh. A size of 0, not
+     * known, keeps nothing.
+     */
+    class Kept(
+        @JvmField val dir: String,
+        @JvmField val id: String,
+        @JvmField val what: String,
+        @JvmField val size: Long,
+        @JvmField val modified: Long,
+    )
+
     /** The model at path and a transcriber for it: a handle for the calls below. */
     @JvmStatic external fun load(path: String): Long
 
@@ -98,6 +112,7 @@ object Engine {
         diar: Long,
         fd: Int,
         name: String,
+        kept: Kept?,
         progress: Progress,
     ): String
 
@@ -170,6 +185,7 @@ object Engine {
         fd: Int,
         name: String,
         transcript: String,
+        kept: Kept?,
         heard: Heard,
     ): String
 
@@ -177,6 +193,12 @@ object Engine {
      * A kept transcript's speakers as transcript has them now, found or changed on the screen: its
      * segments, names and stretches in place of the ones it was kept with.
      */
+    /**
+     * The kept recordings in dir (Kept) of every transcript but keep's, a JSON list of the recent
+     * list's ids, newest first, let go, and the oldest past the cache's cap.
+     */
+    @JvmStatic external fun pruneKept(dir: String, keep: String)
+
     @JvmStatic external fun keepSpeakers(data: String, id: String, transcript: String)
 
     /**

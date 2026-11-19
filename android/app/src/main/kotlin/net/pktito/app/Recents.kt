@@ -86,6 +86,37 @@ object Recents {
      */
     private fun copies(context: Context) = File(context.noBackupFilesDir, "copies")
 
+    /**
+     * The recordings as pktito heard them, by transcript, to find speakers in or transcribe again
+     * without decoding them (Engine.Kept): the cache, which Android may empty, as a backup leaves
+     * out.
+     */
+    private fun heard(context: Context) = File(context.cacheDir, "heard")
+
+    /**
+     * What Engine.transcribe and findSpeakers keep transcript id's recording by: at uri, or its
+     * copy, as the recent list has its size and last change (TranscribeService).
+     */
+    fun kept(context: Context, id: String, uri: Uri): Engine.Kept {
+        // a transcript of the same file before this one, which this one takes
+        // the place of on the list (recent.rs, add): its recording is this
+        // one's, if it hasn't changed since (audiocache.rs, load)
+        val mine = File(heard(context), "$id.f32")
+        if (!mine.isFile)
+            items
+                .firstOrNull { it.uri == uri && it.id != id }
+                ?.let { File(heard(context), "${it.id}.f32").renameTo(mine) }
+        val copy = copyOf(context, id)
+        val (size, modified) = if (copy.isFile) copy.length() to 0L else stamp(context, uri)
+        return Engine.Kept(heard(context).path, id, uri.toString(), size, modified)
+    }
+
+    /** The kept recordings of transcripts off list let go, and the oldest past the cap. */
+    private fun prune(context: Context, list: List<Item>) {
+        val keep = listOf(Transcriber.id) + list.map { it.id }
+        Engine.pruneKept(heard(context).path, JSONArray(keep).toString())
+    }
+
     /** A transcript's copy of its recording, there if it was shared to pktito. */
     fun copyOf(context: Context, id: String) = File(copies(context), id)
 
@@ -129,6 +160,7 @@ object Recents {
     private fun drop(context: Context, list: List<Item>) {
         val keep = list.mapTo(HashSet()) { it.id } + Transcriber.id
         copies(context).listFiles { f -> f.name !in keep }?.forEach { it.delete() }
+        prune(context, list)
     }
 
     /**
@@ -320,6 +352,7 @@ object Recents {
     fun forget(context: Context, id: String) {
         items = parse(Engine.forget(data(context), id))
         copyOf(context, id).delete()
+        prune(context, items)
         release(context, items)
     }
 
@@ -328,6 +361,7 @@ object Recents {
         Engine.clearRecent(data(context))
         items = emptyList()
         copies(context).deleteRecursively()
+        heard(context).deleteRecursively()
         release(context, items)
     }
 

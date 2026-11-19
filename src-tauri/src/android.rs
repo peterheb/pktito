@@ -11,7 +11,9 @@
 //! back as an IOException with the reason, and a panic as a
 //! RuntimeException, never across into Java.
 
-use crate::{audio, decode, download, editions, format, model, pktito, recent, transcribe, view};
+use crate::{
+    audio, audiocache, decode, download, editions, format, model, pktito, recent, transcribe, view,
+};
 use jni::errors::ThrowRuntimeExAndDefault;
 use jni::objects::{JByteArray, JClass, JObject, JString, JValue};
 use jni::strings::JNIString;
@@ -233,8 +235,8 @@ pub extern "system" fn Java_net_pktito_app_Engine_npu<'a>(
         .resolve::<ThrowRuntimeExAndDefault>()
 }
 
-/// Engine.transcribe(handle, diar, fd, name, progress): the recording open
-/// at fd (name: what to call it in an error), read and transcribed, as a
+/// Engine.transcribe(handle, diar, fd, name, kept, progress): the recording
+/// open at fd (name: what to call it in an error), read and transcribed, as a
 /// Transcript's JSON; with diar (loadDiarizer's, or 0 for none) each
 /// segment one speaker's and saying whose, the diarizer fed in the same
 /// pass (transcribe::Speakers), and the speakers' stretches with them. While
@@ -243,7 +245,9 @@ pub extern "system" fn Java_net_pktito_app_Engine_npu<'a>(
 /// frame rate or 0, the loudness in audio::PEAKS slices) draws the strip;
 /// progress.update(fraction, the segments just done, in JSON) after each
 /// chunk. All on this thread. The screen plays the recording itself (the
-/// app's Player.kt, view.rs), so nothing of its samples is kept. A
+/// app's Player.kt, view.rs); its samples, read to the end, are kept for
+/// kept's transcript (Engine.Kept, audiocache), and read from there in place
+/// of the decoder the next time, as findSpeakers reads them. A
 /// recording that can't be read throws its problem as JSON, the catalog's
 /// key and what said so: the app words the key from its own catalog and
 /// keeps the particulars to its log (Engine.problem), as iOS's does
@@ -257,11 +261,13 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
     diar: jlong,
     fd: jint,
     name: JString<'a>,
+    kept: JObject<'a>,
     progress: JObject<'a>,
 ) -> JObject<'a> {
     unowned
         .with_env(|env| -> jni::errors::Result<JObject<'a>> {
             let l = unsafe { &mut *(handle as *mut Loaded) };
+            let kept = kept_as(env, &kept)?;
             let mut d = (diar != 0).then(|| unsafe { &mut *(diar as *mut DiarLoaded) });
             // the diarizer's model's name, which the JSON names
             let heard_by = d.as_ref().map(|d| d.model.name()).unwrap_or_default();
@@ -288,24 +294,37 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
                 return Ok(env.new_string(nothing())?.into());
             }
             let fps = decode::frame_rate_fd(fd).unwrap_or(0.0);
+            // read before (audiocache): its samples as they were, in one
+            // push, in place of the decoder
+            let hit = kept
+                .as_ref()
+                .and_then(|(dir, id, src)| audiocache::load(dir, id, src));
+            let from_cache = hit.is_some();
             // the recording transcribed as Android's decoder reads it
             // (LIB-8): the decoder on a thread of its own, filling x, the
             // transcription reading it as it fills; Stop, while the
             // decoder goes, cancels x, which ends both
             let x = pktito::Growing::new();
+            if let Some(y) = hit {
+                x.set_estimate(y.len());
+                x.push(&y);
+                x.end();
+            }
             let (run, decoded, failed) = std::thread::scope(|sc| {
-                let decoder = sc.spawn(|| {
-                    decode::decode_fd_into(
-                        fd,
-                        &name,
-                        &mut |_| {
-                            if STOP.load(Ordering::Relaxed) {
-                                x.cancel();
-                            }
-                            x.cancelled()
-                        },
-                        &x,
-                    )
+                let decoder = (!from_cache).then(|| {
+                    sc.spawn(|| {
+                        decode::decode_fd_into(
+                            fd,
+                            &name,
+                            &mut |_| {
+                                if STOP.load(Ordering::Relaxed) {
+                                    x.cancel();
+                                }
+                                x.cancelled()
+                            },
+                            &x,
+                        )
+                    })
                 });
                 let mut failed = None;
                 // the waveform as the decoder passes it, over the length the
@@ -368,7 +387,10 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
                     || STOP.load(Ordering::Relaxed),
                 );
                 // the decoder ends x whatever happens, so this returns
-                let decoded = decoder.join().unwrap_or(Err(decode::DecodeError::Stopped));
+                let decoded = match decoder {
+                    Some(d) => d.join().unwrap_or(Err(decode::DecodeError::Stopped)),
+                    None => Ok(()),
+                };
                 (run, decoded, failed)
             });
             if let Some(e) = failed {
@@ -394,6 +416,13 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
             let duration = length as f64 / decode::RATE as f64;
             if x.is_empty() {
                 return Ok(env.new_string(nothing())?.into());
+            }
+            // read to its end, kept for finding its speakers or transcribing
+            // it again; a cache that can't be written is only slower later
+            if whole && !from_cache {
+                if let Some((dir, id, src)) = &kept {
+                    let _ = audiocache::save(dir, id, src, &x);
+                }
             }
             // the waveform of the whole recording, its length now known
             let peaks = match whole {
@@ -608,7 +637,61 @@ pub extern "system" fn Java_net_pktito_app_Engine_freeDiarizer<'a>(
     }
 }
 
-/// Engine.findSpeakers(diar, fd, name, transcript, progress): who said what
+/// Engine.Kept's fields: the cache's folder, the transcript's id, and the
+/// recording as the recent list knows it (its URI, size and last change), for
+/// audiocache; None for a null one, or one whose size is not known, which
+/// could not tell a changed recording from the one it was.
+fn kept_as<'a>(
+    env: &mut Env<'a>,
+    k: &JObject<'a>,
+) -> jni::errors::Result<Option<(PathBuf, String, audiocache::Source)>> {
+    if k.is_null() {
+        return Ok(None);
+    }
+    let text = |env: &mut Env<'a>, field| -> jni::errors::Result<String> {
+        let o = env
+            .get_field(k, field, jni_sig!("Ljava/lang/String;"))?
+            .l()?;
+        JString::cast_local(env, o)?.try_to_string(env)
+    };
+    let dir = text(env, jni_str!("dir"))?;
+    let id = text(env, jni_str!("id"))?;
+    let what = text(env, jni_str!("what"))?;
+    let size = env.get_field(k, jni_str!("size"), jni_sig!("J"))?.j()?;
+    let modified = env.get_field(k, jni_str!("modified"), jni_sig!("J"))?.j()?;
+    if dir.is_empty() || id.is_empty() || size <= 0 {
+        return Ok(None);
+    }
+    let src = audiocache::Source {
+        what,
+        size: size as u64,
+        modified,
+    };
+    Ok(Some((PathBuf::from(dir), id, src)))
+}
+
+/// Engine.pruneKept(dir, keep): the cache's samples (audiocache) of every
+/// transcript but keep's, the recent list's ids newest first, let go, and the
+/// oldest past its cap.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_pruneKept<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+    dir: JString<'a>,
+    keep: JString<'a>,
+) {
+    unowned
+        .with_env(|env| -> jni::errors::Result<()> {
+            let dir = PathBuf::from(dir.try_to_string(env)?);
+            let keep: Vec<String> =
+                serde_json::from_str(&keep.try_to_string(env)?).unwrap_or_default();
+            audiocache::prune(&dir, &keep);
+            Ok(())
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
+/// Engine.findSpeakers(diar, fd, name, transcript, kept, progress): who said what
 /// in a finished transcript (a Transcript's JSON), from its recording open
 /// at fd, without transcribing it again (transcribe::find): the transcript
 /// with each segment one speaker's, its speakers' stretches, and no names
@@ -625,11 +708,13 @@ pub extern "system" fn Java_net_pktito_app_Engine_findSpeakers<'a>(
     fd: jint,
     name: JString<'a>,
     transcript: JString<'a>,
+    kept: JObject<'a>,
     progress: JObject<'a>,
 ) -> JObject<'a> {
     unowned
         .with_env(|env| -> jni::errors::Result<JObject<'a>> {
             let d = unsafe { &mut *(diar as *mut DiarLoaded) };
+            let kept = kept_as(env, &kept)?;
             let heard_by = d.model.name();
             let name = name.try_to_string(env)?;
             let json = transcript.try_to_string(env)?;
@@ -640,19 +725,27 @@ pub extern "system" fn Java_net_pktito_app_Engine_findSpeakers<'a>(
             // how far Android's decoder has got, before the diarizer hears any
             // of it (progress.decoding)
             let mut told = None;
-            let x = decode::decode_fd(fd, &name, &mut |fraction| {
-                if told.is_none() {
-                    if let Err(e) = env.call_method(
-                        &progress,
-                        jni_str!("decoding"),
-                        jni_sig!("(D)V"),
-                        &[JValue::Double(fraction)],
-                    ) {
-                        told = Some(e);
+            // read before (audiocache): no decoding at all
+            let hit = kept
+                .as_ref()
+                .and_then(|(dir, id, src)| audiocache::load(dir, id, src));
+            let from_cache = hit.is_some();
+            let x = match hit {
+                Some(y) => Ok(y),
+                None => decode::decode_fd(fd, &name, &mut |fraction| {
+                    if told.is_none() {
+                        if let Err(e) = env.call_method(
+                            &progress,
+                            jni_str!("decoding"),
+                            jni_sig!("(D)V"),
+                            &[JValue::Double(fraction)],
+                        ) {
+                            told = Some(e);
+                        }
                     }
-                }
-                false
-            });
+                    false
+                }),
+            };
             if let Some(e) = told {
                 return Err(e);
             }
@@ -664,6 +757,11 @@ pub extern "system" fn Java_net_pktito_app_Engine_findSpeakers<'a>(
                     return throw(env, &why.to_string()).map(|_| JObject::null());
                 }
             };
+            if !from_cache {
+                if let Some((dir, id, src)) = &kept {
+                    let _ = audiocache::save(dir, id, src, &x);
+                }
+            }
             let segments = std::mem::take(&mut t.segments);
             let (mut shown, mut sent, mut failed) = (0, 0, None);
             let tell = |done: f64, bar: &transcribe::SoFar| {

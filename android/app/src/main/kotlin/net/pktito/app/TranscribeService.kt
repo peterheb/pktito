@@ -125,6 +125,8 @@ class TranscribeService : Service() {
         // access to back once the task ends, played from a copy (Recents.copy)
         val copy = Recents.copy(this, uri, id)
         val (size, modified) = if (copy != null) copy.length() to 0L else Recents.stamp(this, uri)
+        // its samples kept, or read from where they were (audiocache.rs)
+        val kept = Recents.kept(this, id, uri)
         val file =
             copy?.let { ParcelFileDescriptor.open(it, ParcelFileDescriptor.MODE_READ_ONLY) }
                 ?: readable(this, uri)
@@ -187,10 +189,10 @@ class TranscribeService : Service() {
                     }
                 }
             val t =
-                if (diarizer == null) Engine.transcribe(handle, 0L, pfd.fd, name, progress)
+                if (diarizer == null) Engine.transcribe(handle, 0L, pfd.fd, name, kept, progress)
                 else
                     Speakers.with(diarizer) { diar ->
-                        Engine.transcribe(handle, diar, pfd.fd, name, progress)
+                        Engine.transcribe(handle, diar, pfd.fd, name, kept, progress)
                     }
             val o = JSONObject(t)
             val complete = o.getBoolean("complete")

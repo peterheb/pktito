@@ -19,6 +19,15 @@
     public void done(double, java.lang.String);
 }
 
+# and reads Engine.Kept's fields by their names (android.rs, kept_as)
+-keepclassmembers class net.pktito.app.Engine$Kept {
+    java.lang.String dir;
+    java.lang.String id;
+    java.lang.String what;
+    long size;
+    long modified;
+}
+
 # and Engine.Download's one (android.rs, download: "state" (Ljava/lang/String;)V)
 -keepclassmembers class * implements net.pktito.app.Engine$Download {
     public void state(java.lang.String);

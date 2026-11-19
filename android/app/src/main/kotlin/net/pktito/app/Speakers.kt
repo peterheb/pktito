@@ -294,6 +294,7 @@ object Speakers {
                             pfd.fd,
                             name,
                             tr,
+                            Recents.kept(app, id, uri),
                             object : Engine.Heard {
                                 override fun decoding(fraction: Double) {
                                     main.post { decoding = fraction }
