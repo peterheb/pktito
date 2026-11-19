@@ -826,6 +826,17 @@
         }
       }
     },
+    "find_who_change": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@: find another speaker"
+          }
+        }
+      }
+    },
     "find_who_remove": {
       "extractionState": "manual",
       "comment": "the speaker found, before the words in Find: a tap lets them go and keeps the words; the desktop's find.who_remove",
@@ -834,6 +845,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Remove %1$@ from the search"
+          }
+        }
+      }
+    },
+    "follow_back": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to the playhead, %1$@"
           }
         }
       }
@@ -2377,6 +2399,17 @@
         }
       }
     },
+    "speakers_decoding": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decoding the audio %1$lld%%"
+          }
+        }
+      }
+    },
     "speakers_default": {
       "extractionState": "manual",
       "localizations": {
@@ -2578,6 +2611,17 @@
         }
       }
     },
+    "speakers_rename_menu": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename"
+          }
+        }
+      }
+    },
     "speakers_rename_title": {
       "extractionState": "manual",
       "localizations": {
@@ -2736,6 +2780,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Reading the audio"
+          }
+        }
+      }
+    },
+    "status_reading_at": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading the audio %1$lld%%"
           }
         }
       }

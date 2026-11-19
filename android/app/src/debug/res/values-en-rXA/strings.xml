@@ -28,6 +28,7 @@
     <string name="find_next">[Ńęxț mąțčh ····· ·]</string>
     <string name="find_close">[Čłőșę fįńď ····· ·]</string>
     <string name="find_who_remove">[Řęmővę %1$s fřőm țhę șęąřčh ····· ·]</string>
+    <string name="find_who_change">[%1$s: fįńď ąńőțhęř șpęąkęř ······]</string>
     <string name="find_only">[Őńłý mąțčhęș ·····]</string>
     <string name="find_only_show">[Șhőw őńłý țhę șęńțęńčęș főűńď ····· ···]</string>
     <string name="find_only_all">[Șhőw țhę whőłę țřąńșčřįpț ····· ·]</string>
@@ -51,6 +52,8 @@
     <string name="times_video_rate">[Vįďęő&#160;· %1$s ····]</string>
     <string name="status_loading">[Łőąďįńg țhę mőďęł ····· ··]</string>
     <string name="status_reading">[Řęąďįńg țhę ąűďįő ····· ··]</string>
+    <string name="status_reading_at">[Řęąďįńg țhę ąűďįő %1$d%% ····· ··]</string>
+    <string name="follow_back">[Bąčk țő țhę płąýhęąď, %1$s ······]</string>
     <string name="status_transcribing">[Țřąńșčřįbįńg %1$d%% ·····]</string>
     <string name="status_stopped_at">[Șțőppęď ąț %1$d%% ····]</string>
     <string name="status_done">[Ďőńę ·]</string>
@@ -235,6 +238,7 @@
     <string name="speakers_find">[Fįńď whęřę %1$s șpęąkș ····· ··]</string>
     <string name="speakers_rename_title">[Řęńąmę %1$s ····]</string>
     <string name="speakers_rename_do">[Řęńąmę ···]</string>
+    <string name="speakers_rename_menu">[Řęńąmę ···]</string>
     <string name="speakers_name">[Ńąmę ·]</string>
     <string name="speakers_new">[Ńęw șpęąkęř ····]</string>
     <string name="speakers_joins">[Jőįńș %1$s ···]</string>
@@ -247,6 +251,7 @@
     <string name="speakers_downloading">[Ďőwńłőąďįńg țhę șpęąkęř mőďęł, %1$d%% ····· ····]</string>
     <string name="speakers_ready">[Șpęąkęř mőďęł řęąďý ····· ···]</string>
     <string name="speakers_finding">[Fįńďįńg țhę șpęąkęřș… ······]</string>
+    <string name="speakers_decoding">[Ďęčőďįńg țhę ąűďįő %1$d%% ····· ···]</string>
     <string name="speakers_limit">[Űp țő %1$d șpęąkęřș ······]</string>
     <string name="speakers_limit_about">[Țhę șpęąkęř mőďęł čąń țęłł űp țő %1$d șpęąkęřș ąpąřț. Wįțh mőřę vőįčęș țhąń țhąț, șőmę gęț mįxęď űp. ····· ····· ····· ····· ··]</string>
     <string name="speakers_no_model">[Țhę șpęąkęř mőďęł įșń’ț ďőwńłőąďęď ····· ·····]</string>

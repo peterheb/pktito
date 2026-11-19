@@ -33,6 +33,9 @@ struct Work: View {
     @State private var roomy = false
     /// the waveform's seeks, each a jump the rows bring into sight (Rows)
     @State private var jumped = 0
+    /// where a finger scrubbing the waveform has the playhead, in seconds, and
+    /// a count of its moves, for the transcript to follow it (Rows)
+    @State private var scrubbed = Scrub()
 
     /// What the matches are found anew for: a search, or a speaker found
     /// and their turns, which a change of speaker moves.
@@ -72,7 +75,11 @@ struct Work: View {
         let view = s.finder.only && sought ? shownRows(rows, hits, s.finder.query, who: who) : nil
         // the strip keeps the bar's place: the turns shown, the speakers being
         // found, or a transcription finding them as it goes (app.js, barShown)
-        let place = (review && (turns || spk.finding)) || (t.running && t.diarizing)
+        // and a speaker found, one voice or more, whose own turns it shows
+        // (Peter, 2026-11-18)
+        let place =
+            (review && (turns || spk.finding)) || (review && spoken && who != 0)
+            || (t.running && t.diarizing)
         VStack(spacing: 0) {
             VStack(spacing: 0) {
                 if !room { Header(review: review, edge: edge, shown: !rows.isEmpty) }
@@ -96,9 +103,14 @@ struct Work: View {
                         heard: spk.finding ? spk.heard : nil,
                         bar: place
                             ? Strip.Bar(
-                                stretches: spk.finding ? spk.growing : barOf(rows),
+                                stretches: spk.finding
+                                    ? spk.growing
+                                    : who != 0
+                                        ? barOf(rows).filter { $0.speaker == who } : barOf(rows),
                                 upto: t.running ? t.done * t.duration : .greatestFiniteMagnitude,
-                                finding: spk.finding) : nil
+                                finding: spk.finding) : nil,
+                        // the transcript at the sentence under a scrubbing finger
+                        onScrub: { scrubbed = Scrub(at: $0 * t.duration, n: scrubbed.n + 1) }
                     )
                     // 16 under the header's buttons: their 11 and 5
                     .padding(.horizontal, edge)
@@ -114,7 +126,14 @@ struct Work: View {
                                 on: s.finder.only, busy: false,
                                 hint: L(s.finder.only ? "find_only_all" : "find_only_show"),
                                 toggle: { s.finder.only.toggle() }) : nil,
-                        nameOf: { Speakers.nameOf(t.names, $0) }
+                        nameOf: { Speakers.nameOf(t.names, $0) },
+                        // a phone's: the names over the transcript give way to the text
+                        people: spoken && !roomy && spk.offer != nil
+                            ? People(
+                                present: present, nameOf: { Speakers.nameOf(t.names, $0) },
+                                found: who, find: { s.finder.findWho($0) },
+                                rename: { s.renaming = $0 },
+                                hide: { s.toggleSpeakers() }) : nil
                     )
                     .padding(.horizontal, edge)
                     // alone, the search where the header's buttons were
@@ -158,7 +177,7 @@ struct Work: View {
             }
             Rows(
                 rows: rows, review: review, marks: marks, hits: hits, view: view,
-                stats: stats(review), edge: edge, jump: jumped,
+                stats: stats(review), edge: edge, jump: jumped, scrub: scrubbed,
                 speakers: Rows.Voices(
                     turns: turns, editable: review && spoken, present: present, names: t.names,
                     joined: spk.joined)
@@ -467,6 +486,9 @@ struct FindLine: View {
     /// alone on the line, whose rows it would take.
     var only: Switch?
     var nameOf: (Int) -> String = { _ in "" }
+    /// on a phone, with the speakers shown: the switch opens their menu
+    /// (SpeakersMenu), and a speaker found sits under the field (WhoBadge)
+    var people: People?
     /// the line's width, and the switches'
     @State private var width: CGFloat = 0
     @State private var switchWidth: CGFloat = 0
@@ -489,15 +511,26 @@ struct FindLine: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
                 if let s = speakers, !across {
-                    SpeakersSwitch(on: s.on, busy: s.busy, hint: s.hint, action: s.toggle)
+                    if let people, !s.busy {
+                        SpeakersMenu(people: people) {
+                            SwitchFace(on: s.on, label: L("speakers_switch"), menu: true)
+                        }
                         .fixedSize()
+                        .accessibilityHint(s.hint)
+                    } else {
+                        SpeakersSwitch(on: s.on, busy: s.busy, hint: s.hint, action: s.toggle)
+                            .fixedSize()
+                    }
                 }
                 // one field, at its width or across the line, so that it keeps
                 // the keyboard from one to the other
                 if field != nil || across {
-                    FindField(finder: f, hits: hits, seek: seek, opened: across, nameOf: nameOf)
-                        .frame(width: across ? nil : field)
-                        .frame(maxWidth: across ? .infinity : nil)
+                    FindField(
+                        finder: f, hits: hits, seek: seek, opened: across, nameOf: nameOf,
+                        whoInside: people == nil
+                    )
+                    .frame(width: across ? nil : field)
+                    .frame(maxWidth: across ? .infinity : nil)
                 } else {
                     IconButton(icon: .search, label: L("find_label"), kind: .ghost) {
                         f.open = true
@@ -505,13 +538,18 @@ struct FindLine: View {
                 }
                 if let o, inline { onlySwitch(o) }
             }
-            if let o, !inline { onlySwitch(o) }
+            if let o, !inline {
+                HStack(spacing: 12) {
+                    if let people, f.who != 0 { WhoBadge(people: people, finder: f) }
+                    onlySwitch(o)
+                }
+            }
         }
         // the switches' widths, while they are given their places too
         .background(alignment: .leading) {
             ZStack(alignment: .leading) {
                 if let s = speakers {
-                    SpeakersSwitch(on: s.on, busy: s.busy, hint: s.hint, action: {})
+                    SwitchFace(on: s.on, label: L("speakers_switch"), menu: people != nil)
                         .fixedSize()
                         .hidden()
                         .onGeometryChange(for: CGFloat.self) {
@@ -585,6 +623,12 @@ struct Marked: Equatable {
 /// its line ending inside its first and last, and a run from inside a turn
 /// has the turn's name (app.js, applyOnly). Turned, the reader stays on
 /// their sentence, where it was on the screen (keep).
+/// Where a finger scrubbing the waveform has the playhead (Work, Rows).
+struct Scrub: Equatable {
+    var at: Double = 0
+    var n = 0
+}
+
 private struct Rows: View {
     let rows: [Segment]
     let review: Bool
@@ -597,6 +641,7 @@ private struct Rows: View {
     let edge: CGFloat
     /// the waveform's seeks so far, each a jump to bring into sight (Work)
     let jump: Int
+    let scrub: Scrub
     let speakers: Voices
     let seek: (Double, Bool) -> Void
 
@@ -766,6 +811,39 @@ private struct Rows: View {
             .onChange(of: p.playing ? current : -1) { was, now in
                 guard now >= 0, !hands, view?.contains(now) ?? true else { return }
                 if was < 0 || chasing != nil || seen.contains(was) { bring(now, list) }
+            }
+            // a finger scrubbing the waveform: the sentence under the playhead,
+            // at once, to read while looking for a place (Peter, 2026-11-18)
+            .onChange(of: scrub) {
+                guard !hands, let r = rows.lastIndex(where: { $0.start <= scrub.at + 1e-3 }),
+                    view?.contains(r) ?? true
+                else { return }
+                list.scrollTo(r, anchor: .top)
+            }
+            // the keys let go of by a finger on the transcript, or its scroll
+            .scrollDismissesKeyboard(.immediately)
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    UIApplication.shared.sendAction(
+                        #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+            )
+            // scrolled away from the row playing while it plays: Now, an arrow
+            // the way the row is and the playhead's time, which brings the row
+            // to the top and follows it again (Android's NowButton)
+            .overlay(alignment: .bottom) {
+                let away: Int =
+                    !p.playing || current < 0 || !(view?.contains(current) ?? true)
+                        || seen.isEmpty || seen.contains(current)
+                    ? 0 : current < seen.first! ? -1 : 1
+                if away != 0 {
+                    NowButton(up: away < 0, time: base.at(position)) {
+                        chasing = current
+                        tries = 0
+                        withAnimation { list.scrollTo(current, anchor: .top) }
+                    }
+                    .padding(.bottom, 16)
+                }
             }
             // a seek on the waveform: its row, wherever the reader is
             .onChange(of: jump) {
@@ -1306,4 +1384,34 @@ extension Pk {
                 red: g.0 * 0.55 + p.0 * 0.45, green: g.1 * 0.55 + p.1 * 0.45,
                 blue: g.2 * 0.55 + p.2 * 0.45, alpha: 1)
         })
+}
+
+/// Back to the row playing, for a reader who has scrolled away from it while
+/// it plays (Peter, 2026-11-18: "I find myself getting lost"): over the foot
+/// of the transcript, an arrow the way the row is and the playhead's time,
+/// in the toast's floating box. The time says what the arrow points at,
+/// where no icon says "now".
+private struct NowButton: View {
+    let up: Bool
+    let time: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                (up ? PkIcon.arrowUp : PkIcon.arrowDown).frame(width: 16, height: 16)
+                Text(time).font(PkType.stamp.font(13)).monospacedDigit().lineLimit(1)
+            }
+            .foregroundStyle(Pk.ink)
+            .padding(.leading, 12)
+            .padding(.trailing, 14)
+            .frame(minHeight: 40)
+            .background(Pk.ground, in: Capsule())
+            .overlay { Capsule().strokeBorder(Pk.menuEdge, lineWidth: 1) }
+            .shadow(color: .black.opacity(0.25), radius: 12, y: 4)
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L("follow_back", time))
+    }
 }

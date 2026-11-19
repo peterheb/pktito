@@ -80,34 +80,100 @@ struct SpeakersSwitch: View {
         Button {
             if !busy { action() }
         } label: {
-            HStack(spacing: 6) {
-                PkIcon.check.frame(width: 12, height: 12).opacity(on ? 1 : 0)
-                Text(label ?? L("speakers_switch"))
-                    .font(PkType.ui.font(13))
-                    .lineLimit(1)
-                    .frame(minHeight: 16)
-                    .offset(x: on ? 0 : -9)
-            }
-            .foregroundStyle(on ? Pk.ink : Pk.inkMuted)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(
-                on ? Pk.ground : Color.clear, in: RoundedRectangle(cornerRadius: Radius.radiusSm)
-            )
-            .overlay {
-                if on {
-                    RoundedRectangle(cornerRadius: Radius.radiusSm).strokeBorder(
-                        Pk.inkMuted, lineWidth: 1)
-                }
-            }
-            .padding(2)
-            .background(Pk.sunk, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
-            .animation(.easeInOut(duration: 0.15), value: on)
-            .contentShape(Rectangle())
+            SwitchFace(on: on, label: label ?? L("speakers_switch"))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(on ? .isSelected : [])
         .accessibilityHint(hint)
+    }
+}
+
+/// What the switch looks like (SpeakersSwitch), and a menu's that opens from
+/// it (SpeakersMenu): a chevron after the word then.
+struct SwitchFace: View {
+    let on: Bool
+    let label: String
+    var menu = false
+
+    var body: some View {
+        HStack(spacing: 6) {
+            PkIcon.check.frame(width: 12, height: 12).opacity(on ? 1 : 0)
+            Text(label)
+                .font(PkType.ui.font(13))
+                .lineLimit(1)
+                .frame(minHeight: 16)
+                .offset(x: on ? 0 : -9)
+            if menu {
+                PkIcon.down.frame(width: 12, height: 12).foregroundStyle(Pk.inkMuted)
+            }
+        }
+        .foregroundStyle(on ? Pk.ink : Pk.inkMuted)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            on ? Pk.ground : Color.clear, in: RoundedRectangle(cornerRadius: Radius.radiusSm)
+        )
+        .overlay {
+            if on {
+                RoundedRectangle(cornerRadius: Radius.radiusSm).strokeBorder(
+                    Pk.inkMuted, lineWidth: 1)
+            }
+        }
+        .padding(2)
+        .background(Pk.sunk, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
+        .animation(.easeInOut(duration: 0.15), value: on)
+        .contentShape(Rectangle())
+    }
+}
+
+/// The speakers of a transcript, for a phone, where the names over the
+/// transcript give way to the text (Chips): Hide speakers, each speaker,
+/// which finds where they speak as a name does (the one found checked), and
+/// Rename, a speaker each (Android's SpeakersMenu; Peter, 2026-11-18: "my
+/// intuition is to click Speakers like I'll get a drop-down menu").
+struct People {
+    let present: [Int]
+    let nameOf: (Int) -> String
+    /// the speaker found, 0 for none
+    let found: Int
+    let find: (Int) -> Void
+    let rename: (Int) -> Void
+    let hide: () -> Void
+}
+
+/// The speakers' menu (People), opened by label.
+struct SpeakersMenu<Face: View>: View {
+    let people: People
+    @ViewBuilder let label: () -> Face
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        Menu {
+            Button(L("speakers_hide")) { people.hide() }
+            Section {
+                ForEach(people.present, id: \.self) { n in
+                    Button {
+                        if n != people.found { people.find(n) }
+                    } label: {
+                        Label {
+                            Text(people.nameOf(n))
+                        } icon: {
+                            Image(uiImage: markImage(n, scheme))
+                        }
+                        if n == people.found { Image(systemName: "checkmark") }
+                    }
+                    .accessibilityLabel(L("speakers_chip_label", people.nameOf(n)))
+                }
+            }
+            Menu(L("speakers_rename_menu")) {
+                ForEach(people.present, id: \.self) { n in
+                    Button(people.nameOf(n)) { people.rename(n) }
+                }
+            }
+        } label: {
+            label()
+        }
+        .buttonStyle(.plain)
     }
 }
 

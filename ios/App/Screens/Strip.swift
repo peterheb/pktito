@@ -44,6 +44,8 @@ struct Strip: View {
     var heard: Double? = nil
     /// the speaker bar, where the speakers show
     var bar: Bar? = nil
+    /// each place a finger dragging the playhead has it, 0 to 1, until it lets go
+    var onScrub: ((Double) -> Void)? = nil
     @State private var scrub: Double?
 
     /// What the speaker bar draws: the turns, or while the speakers are
@@ -67,7 +69,10 @@ struct Strip: View {
         let gap: CGFloat = ticks.isEmpty ? 3 : 7
         let done = heard ?? t.done
         let at = scrub ?? (review ? (duration > 0 ? player.position / duration : 0) : done)
-        HStack(alignment: .top, spacing: Space.space4) {
+        // one gutter before play, between it and the waveform and after the
+        // waveform (Peter, 2026-11-18: 16, 24 and 16 read as uneven): 20,
+        // where the speed under play keeps about 9 from the time's
+        HStack(alignment: .top, spacing: 20) {
             if review && !silent {
                 VStack {
                     Button {
@@ -126,7 +131,10 @@ struct Strip: View {
                         .gesture(
                             review
                                 ? DragGesture(minimumDistance: 0)
-                                    .onChanged { scrub = x($0) }
+                                    .onChanged {
+                                        scrub = x($0)
+                                        onScrub?(x($0))
+                                    }
                                     .onEnded { v in
                                         scrub = nil
                                         seek(x(v))
@@ -202,7 +210,7 @@ struct Strip: View {
         // as tall as its lanes, play's column too, whose speed is then on
         // the times' line (Android's IntrinsicSize.Min)
         .fixedSize(horizontal: false, vertical: true)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 20)
         .padding(.vertical, 12)
         .background(Pk.term, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
     }

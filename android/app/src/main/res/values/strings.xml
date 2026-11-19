@@ -295,6 +295,7 @@
     <string name="speakers_rename_title">Rename %1$s</string>
     <!-- the rename's button: a phone's keyboard has no Enter for it, as the desktop's field has -->
     <string name="speakers_rename_do">Rename</string>
+    <string name="speakers_rename_menu">Rename</string>
     <string name="speakers_name">Name</string>
     <string name="speakers_new">New speaker</string>
     <string name="speakers_joins">Joins %1$s</string>

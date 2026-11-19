@@ -29,6 +29,9 @@ struct PkIcon: View {
     ])
     static let down = PkIcon(paths: ["M6 9L12 15L18 9"])
     static let up = PkIcon(paths: ["M18 15L12 9L6 15"])
+    /// arrows with a shaft: where the row playing is (Rows' Now)
+    static let arrowUp = PkIcon(paths: ["M12 19V5", "M5 12L12 5L19 12"])
+    static let arrowDown = PkIcon(paths: ["M12 5V19", "M19 12L12 19L5 12"])
     static let search = PkIcon(paths: [
         "M11 3a8 8 0 1 0 0 16a8 8 0 1 0 0-16z", "M21 21L16.65 16.65",
     ])

@@ -250,6 +250,10 @@ struct FindField: View {
     var opened = false
     /// a speaker's name, for the one found (Finder.who)
     var nameOf: (Int) -> String = { _ in "" }
+    /// the speaker found shown in the field; a phone's has them on the line
+    /// under it (FindLine, WhoBadge), where in the field they left little
+    /// room to type (Peter, 2026-11-18)
+    var whoInside = true
     @FocusState private var typing: Bool
     /// the field's width: under 360, with words typed, the speaker found is
     /// their mark alone, for room to see the words
@@ -260,7 +264,7 @@ struct FindField: View {
         HStack(spacing: 8) {
             PkIcon.search.frame(width: 16, height: 16).foregroundStyle(Pk.inkMuted)
             // a button, whose x lets them go and keeps the words (Finder.dropWho)
-            if finder.who != 0 {
+            if finder.who != 0 && whoInside {
                 Button {
                     finder.dropWho()
                 } label: {
@@ -309,7 +313,9 @@ struct FindField: View {
                 }
                 .disabled(hits.count < 2)
             }
-            if opened || !finder.query.isEmpty || finder.who != 0 {
+            // and while the keys are in it, empty or not, the way out of it
+            // (Peter, 2026-11-18: a phone's had none until something was typed)
+            if opened || !finder.query.isEmpty || finder.who != 0 || typing {
                 Button {
                     finder.clear()
                     typing = false
@@ -354,5 +360,48 @@ struct FindField: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
+    }
+}
+
+/// A phone's speaker found, on the line under the field (FindField,
+/// whoInside), in a sunk track as tall as the switch beside it: their mark
+/// and name, with a chevron, open the speakers to find another (People),
+/// where the search has taken the Speakers switch's place; the x lets them
+/// go and keeps the words (Finder.dropWho).
+struct WhoBadge: View {
+    let people: People
+    let finder: Finder
+
+    var body: some View {
+        let name = people.nameOf(finder.who)
+        HStack(spacing: 0) {
+            SpeakersMenu(people: people) {
+                HStack(spacing: 6) {
+                    SpeakerMark(n: finder.who)
+                    Text(name).font(PkType.ui.font(13)).foregroundStyle(Pk.ink).lineLimit(1)
+                    PkIcon.down.frame(width: 12, height: 12).foregroundStyle(Pk.inkMuted)
+                }
+                .padding(.leading, 8)
+                .padding(.trailing, 4)
+                .frame(minHeight: 28)
+                .contentShape(Rectangle())
+            }
+            .accessibilityLabel(L("find_who_change", name))
+            Button {
+                finder.dropWho()
+            } label: {
+                PkIcon.x.frame(width: 12, height: 12).foregroundStyle(Pk.inkMuted)
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(L("find_who_remove", name))
+        }
+        .frame(maxWidth: 220)
+        .background(Pk.ground, in: RoundedRectangle(cornerRadius: Radius.radiusSm))
+        .padding(.horizontal, 6)
+        .frame(minHeight: 40)
+        .background(Pk.sunk, in: RoundedRectangle(cornerRadius: Radius.radiusUi))
+        .fixedSize()
     }
 }
