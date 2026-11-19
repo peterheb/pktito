@@ -1247,7 +1247,9 @@ private fun SpeakersLine(
                                         .padding(horizontal = 6.dp),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    WhoBadge(find, spk.nameOf(find.who), true)
+                                    var picking by remember { mutableStateOf(false) }
+                                    WhoBadge(find, spk.nameOf(find.who), true) { picking = true }
+                                    SpeakersMenu(picking, { picking = false }, spk, find.who)
                                 }
                             SpeakersSwitch(find.only, false, onlyState, onOnly, only)
                         }

@@ -499,24 +499,59 @@ fun FindField(
  * drawn.
  */
 @Composable
-fun WhoBadge(f: Finder, name: String, full: Boolean, modifier: Modifier = Modifier) {
+fun WhoBadge(
+    f: Finder,
+    name: String,
+    full: Boolean,
+    modifier: Modifier = Modifier,
+    /**
+     * the mark and name open the speakers to find another (a phone's SpeakersMenu, where the
+     * Speakers switch has given its place to the search), the x alone lets them go; null, the whole
+     * badge lets them go
+     */
+    onOpen: (() -> Unit)? = null,
+) {
     val p = pk
+    val drop = stringResource(R.string.find_who_remove, name)
+    if (onOpen == null)
+        return Row(
+            modifier
+                .widthIn(max = 180.dp)
+                .height(28.dp)
+                .control(CornerSm, p.ground, label = drop, onClick = f::dropWho)
+                .padding(start = 8.dp, end = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Mark(f.who)
+            if (full)
+                Text(
+                    name,
+                    Modifier.weight(1f, fill = false),
+                    style = Type.ui.copy(fontSize = 13.sp, lineHeight = 16.sp),
+                    color = p.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            Icon(Icons.x, null, tint = p.inkMuted, modifier = Modifier.size(12.dp))
+        }
     Row(
-        modifier
-            .widthIn(max = 180.dp)
-            .height(28.dp)
-            .control(
-                CornerSm,
-                p.ground,
-                label = stringResource(R.string.find_who_remove, name),
-                onClick = f::dropWho,
-            )
-            .padding(start = 8.dp, end = 6.dp),
+        modifier.widthIn(max = 220.dp).height(28.dp).background(p.ground, CornerSm),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Mark(f.who)
-        if (full)
+        Row(
+            Modifier.weight(1f, fill = false)
+                .fillMaxHeight()
+                .control(
+                    CornerSm,
+                    label = stringResource(R.string.find_who_change, name),
+                    onClick = onOpen,
+                )
+                .padding(start = 8.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Mark(f.who)
             Text(
                 name,
                 Modifier.weight(1f, fill = false),
@@ -525,7 +560,16 @@ fun WhoBadge(f: Finder, name: String, full: Boolean, modifier: Modifier = Modifi
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-        Icon(Icons.x, null, tint = p.inkMuted, modifier = Modifier.size(12.dp))
+            Icon(Icons.down, null, tint = p.inkMuted, modifier = Modifier.size(12.dp))
+        }
+        Box(
+            Modifier.fillMaxHeight()
+                .control(CornerSm, label = drop, onClick = f::dropWho)
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.x, null, tint = p.inkMuted, modifier = Modifier.size(12.dp))
+        }
     }
 }
 

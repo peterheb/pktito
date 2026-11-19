@@ -202,11 +202,13 @@ fun Strip(
             .height(IntrinsicSize.Min)
             .testTag("strip")
             .background(p.term, Corner)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        // 24 between play and the waveform, the desktop's (app.css, #strip):
-        // the speed under play is wider than it from 1.25×, and at 14 its box
-        // came within 3 px of the time's
-        horizontalArrangement = Arrangement.spacedBy(Space.space4),
+            .padding(horizontal = GUTTER, vertical = 12.dp),
+        // one gutter before play, between it and the waveform and after the
+        // waveform, the desktop's (app.css, #strip; Peter, 2026-11-18: 16, 24
+        // and 16 read as uneven): 20, where the speed under play, wider than
+        // it from 1.25×, keeps about 9 px from the time's (at 14 it came
+        // within 3)
+        horizontalArrangement = Arrangement.spacedBy(GUTTER),
     ) {
         if (review && !silent)
             // play, and the speed at the foot, on the times' line (app.css, .pk-transport)
@@ -872,3 +874,6 @@ fun Waveform(
         }
     }
 }
+
+/** The strip's one gutter: before play, between it and the waveform, after the waveform. */
+private val GUTTER = 20.dp
