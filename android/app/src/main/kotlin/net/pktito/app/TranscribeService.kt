@@ -166,7 +166,9 @@ class TranscribeService : Service() {
                         val spent = (SystemClock.elapsedRealtime() - began) / 1000.0
                         Transcriber.post {
                             this.done = done
-                            this.segments.addAll(segs)
+                            // a chunk under way when speakers were turned off
+                            // comes with them still (MainActivity's quiet)
+                            this.segments.addAll(if (diarizing) segs else segs.map { it.by(null) })
                             chunk(spent, done * duration)
                         }
                         // Android drops a notification's updates past a few a second

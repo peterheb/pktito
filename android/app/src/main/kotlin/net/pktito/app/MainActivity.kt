@@ -673,6 +673,13 @@ class MainActivity : ComponentActivity() {
                                 Engine.quiet()
                                 Speakers.set(this, false)
                                 t.diarizing = false
+                                // what was found so far goes too, as the desktop's
+                                // does (app.js, spkWhileRunning): the transcript is
+                                // one without speakers, which the switch finds again
+                                // once it is done. Kept, they were saved with it
+                                // and the switch, seeing speakers, only hid them
+                                // (Peter, the S25, 2026-11-19)
+                                t.segments.replaceAll { it.by(null) }
                             },
                             undo = last?.first,
                             onUndo = {

@@ -326,7 +326,8 @@ final class Transcriber {
                     let spent = box.since()
                     Task { @MainActor in
                         self.done = done
-                        self.segments += segs
+                        // a chunk under way when speakers were turned off comes with them still (quiet)
+                        self.segments += self.diarizing ? segs : segs.map { $0.by(nil) }
                         self.chunk(spent, done * self.duration)
                         Continued.update()
                     }
@@ -392,6 +393,11 @@ final class Transcriber {
         Engine.quiet()
         Speakers.shared.set(false)
         diarizing = false
+        // what was found so far goes too, as the desktop's does (app.js,
+        // spkWhileRunning): the transcript is one without speakers, which the
+        // switch finds again once it is done; kept, they were saved with it
+        // and the switch only hid them (Peter, Android's on the S25, 2026-11-19)
+        segments = segments.map { $0.by(nil) }
     }
 
     /// A transcription finished with the catalog model loaded: the core
