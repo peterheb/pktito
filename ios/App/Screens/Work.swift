@@ -58,12 +58,14 @@ struct Work: View {
         // who said what (Speakers): those of the transcript in the order they
         // first speak, their names shown with the switch on, one as much as
         // eight: the model may have heard two voices as one, which New
-        // speaker puts right (Peter, 2026-11-14). The turns, the bar and the
-        // formats with a second voice only (app.js, turnsShown)
+        // speaker puts right (Peter, 2026-11-14); the formats name no one
+        // for one voice (app.js, turnsShown)
         let spk = Speakers.shared
         let present = Speakers.present(rows)
         let spoken = spk.on && !present.isEmpty
-        let turns = spoken && present.count > 1
+        // with one voice too, which the bar shows where it was heard (Peter,
+        // 2026-11-18; app.js, turnsShown)
+        let turns = spoken
         // a speaker found, their turns (Finder.findWho), or with words typed
         // the words' in their sentences alone, while their name shows:
         // switched off, or joined to another by a rename, the search is let go

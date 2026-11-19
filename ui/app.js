@@ -3381,12 +3381,13 @@ function present(f) {
    have heard two voices as one, which New speaker puts right (Peter,
    2026-11-14: the solo episode showed nothing, as if none were found) */
 const spkShown = (f) => !!prefs.speakers && !!f && present(f).length > 0;
-/* the turns shown, with a second voice: one voice's transcript, bar and
-   saved files look as with the switch off, no "Speaker 1:" and no line
-   (Peter, 2026-11-15, with speakers on by default). The name beside the
-   switch still says one was found, and each sentence's button still has
-   New speaker, for two voices heard as one. */
-const turnsShown = (f) => spkShown(f) && present(f).length > 1;
+/* the turns shown: the name at each turn's start, the line down its rows
+   and the bar, one voice as much as eight. One voice's were hidden while
+   every sentence had its name (2026-11-15); with the name once a turn, the
+   bar shows where the voice was heard and where music or silence is, and
+   the name is there to rename (Peter, 2026-11-18). The saved files still
+   name no one where there is one voice (format.rs). */
+const turnsShown = (f) => spkShown(f);
 const nameOf = (f, n) =>
   ((f.names && f.names[n - 1]) || "").trim() || t("speakers.default", { n });
 /* the names a file is saved with: a lone voice's too, which format.rs

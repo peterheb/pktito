@@ -315,11 +315,12 @@ class MainActivity : ComponentActivity() {
         // who said what (Speakers): those of the transcript in the order they
         // first speak, their names shown with the switch on, one as much as
         // eight: the model may have heard two voices as one, which New
-        // speaker puts right (Peter, 2026-11-14). The turns, the bar and the
-        // formats with a second voice only (app.js, turnsShown)
+        // speaker puts right (Peter, 2026-11-14). The turns and the bar with
+        // one voice too, which shows where it was heard (Peter, 2026-11-18);
+        // the formats name no one for one voice (app.js, turnsShown)
         val present by remember { derivedStateOf { Speakers.present(t.segments) } }
         val spoken = Speakers.on && present.isNotEmpty()
-        val turns = spoken && present.size > 1
+        val turns = spoken
         // the bar: the transcript's turns, the speakers its text shows, a
         // change included (app.js, drawBar)
         val bar by remember {
