@@ -332,6 +332,11 @@ struct Root: View {
                         }
                     }
                     let t = Transcriber.shared
+                    // with -open, once its transcription is done and three seconds on
+                    if toggle, t.running {
+                        while t.running { try? await Task.sleep(for: .milliseconds(100)) }
+                        try? await Task.sleep(for: .seconds(3))
+                    }
                     if toggle { s.toggleSpeakers() }
                     if let who { s.finder.findWho(who) }
                     if let move, let to, move < t.segments.count, let n = t.segments[move].speaker {
