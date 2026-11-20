@@ -227,6 +227,17 @@ final class AppState {
         spk.set(on)
     }
 
+    /// Download, the answer to the speaker model's question (Root): the
+    /// start screen's switch is on once its download is asked for; a
+    /// transcript's finds its speakers once the model is here (findAfter).
+    func downloadSpeakers(for ask: SpeakerAsk) {
+        switch ask {
+        case .setting: Speakers.shared.set(true)
+        case .find: findAfter = true
+        }
+        Downloads.shared.startSpeakers()
+    }
+
     /// The Speakers switch on a finished transcript (app.js, the switch's
     /// click), that transcript's alone, never the start screen's (Peter,
     /// 2026-11-19): with none found yet, it finds them, which takes seconds,

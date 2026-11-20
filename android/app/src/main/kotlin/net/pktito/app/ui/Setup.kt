@@ -77,6 +77,7 @@ import net.pktito.app.Editions
 import net.pktito.app.Models
 import net.pktito.app.Offer
 import net.pktito.app.R
+import net.pktito.app.Speakers
 import net.pktito.app.mb
 import net.pktito.app.percent
 import net.pktito.app.progress
@@ -499,7 +500,11 @@ private fun Downloading(offers: List<Offer>, d: Download, waiting: Int, a: Setup
         top = {
             WordmarkButton(a.about)
             Intro(
-                stringResource(R.string.download_title, label),
+                if (d.name == Speakers.offer?.name) {
+                    stringResource(R.string.download_title_speakers)
+                } else {
+                    stringResource(R.string.download_title, label)
+                },
                 stringResource(
                     R.string.download_from,
                     d.name,

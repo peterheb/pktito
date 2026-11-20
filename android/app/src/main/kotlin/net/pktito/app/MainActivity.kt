@@ -795,7 +795,8 @@ class MainActivity : ComponentActivity() {
                     val foot = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp)
                     val u = undo
                     val said = toast
-                    val note = speakersNote()
+                    // not on the setup screen, whose own title and bar say it
+                    val note = speakersNote().takeUnless { !about && t.step.isEmpty() && setup }
                     when {
                         u != null ->
                             UndoToast(

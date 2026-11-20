@@ -53,13 +53,15 @@ struct Root: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 // over Manage models while it is up, which has it too: an
                 // edit's Undo first, then what was said, then the speaker
-                // model's download as it goes
+                // model's download as it goes, but for on the setup screen,
+                // whose own title and bar say it
+                let onSetup = !s.about && t.step == .none && s.setup
                 if !s.managing {
                     if let u = s.undo {
                         UndoToast(text: u.text) { s.undoLast() }
                             .padding(.horizontal, 16)
                             .padding(.bottom, 24)
-                    } else if let toast = s.toast ?? s.speakersNote {
+                    } else if let toast = s.toast ?? (onSetup ? nil : s.speakersNote) {
                         Toast(text: toast, err: s.toast != nil && s.toastErr)
                             .padding(.horizontal, 16)
                             .padding(.bottom, 24)
@@ -133,13 +135,7 @@ struct Root: View {
             presenting: s.askSpeakers
         ) { ask in
             Button(L("ask_cancel"), role: .cancel) {}
-            Button(L("speakers_download")) {
-                switch ask {
-                case .setting: Speakers.shared.set(true)
-                case .find: s.findAfter = true
-                }
-                Downloads.shared.startSpeakers()
-            }
+            Button(L("speakers_download")) { s.downloadSpeakers(for: ask) }
         } message: { _ in
             Text(
                 L(
@@ -212,7 +208,12 @@ struct Root: View {
         /// those of the transcript opened; -who N finds speaker N; -moveRow I N
         /// gives sentence I to speaker N, as Change speaker does; -rename N
         /// asks to rename speaker N; -askSpeakers asks to download their
-        /// model. -only turns Only matches on once the search is set, and
+        /// model. -switch YES or NO sets the start screen's switch as a tap
+        /// does, and -acceptAsk answers its question with Download;
+        /// -dropSpeakers deletes the speaker model first; -toggleSpeakers
+        /// presses the switch on the transcript opened, after -findSpeakers
+        /// where both; -quietAfter S turns the speakers off S seconds into a
+        /// run that is finding them. -only turns Only matches on once the search is set, and
         /// -flipOnly S turns it again S seconds on. (A default's own -key
         /// value, as -times YES, sets it for the run.)
         private func debugArguments() {
@@ -301,8 +302,26 @@ struct Root: View {
             }
             let rename = value("-rename").flatMap(Int.init)
             let flip = value("-flipOnly").flatMap(Double.init)
+            if args.contains("-dropSpeakers") { _ = Speakers.shared.delete(part: false) }
+            if let on = value("-switch") {
+                s.switchSpeakers(on == "YES")
+                if args.contains("-acceptAsk"), let ask = s.askSpeakers {
+                    s.askSpeakers = nil
+                    s.downloadSpeakers(for: ask)
+                }
+            }
+            if let after = value("-quietAfter").flatMap(Double.init) {
+                Task {
+                    while !(Transcriber.shared.running && Transcriber.shared.diarizing) {
+                        try? await Task.sleep(for: .milliseconds(100))
+                    }
+                    try? await Task.sleep(for: .seconds(after))
+                    Transcriber.shared.quiet()
+                }
+            }
+            let toggle = args.contains("-toggleSpeakers")
             if args.contains("-findSpeakers") || who != nil || move != nil || rename != nil
-                || args.contains("-only") || flip != nil
+                || args.contains("-only") || flip != nil || toggle
             {
                 Task {
                     try? await Task.sleep(for: .seconds(1))
@@ -313,6 +332,7 @@ struct Root: View {
                         }
                     }
                     let t = Transcriber.shared
+                    if toggle { s.toggleSpeakers() }
                     if let who { s.finder.findWho(who) }
                     if let move, let to, move < t.segments.count, let n = t.segments[move].speaker {
                         let seg = t.segments[move]

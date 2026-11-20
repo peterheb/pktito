@@ -440,7 +440,8 @@ private struct Downloading: View {
         Screen {
             WordmarkButton()
             Intro(
-                title: L("download_title", name),
+                title: Downloads.shared.speakers
+                    ? L("download_title_speakers") : L("download_title", name),
                 text: L("download_from", d.name, "models.pktito.net"))
             VStack(spacing: 12) {
                 Spread {
