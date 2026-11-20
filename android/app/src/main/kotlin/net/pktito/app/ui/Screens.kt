@@ -1633,7 +1633,9 @@ private fun Rows(
         if (away != 0)
             NowButton(
                 away < 0,
-                base.at(position),
+                // whole seconds: the strip's hundredths running here as well, at the screen's
+                // top and its foot, drew the eye from the text (Peter, 2026-11-20)
+                hms(position, base.duration),
                 // over a toast at the screen's foot (its 24 and 48, and 12 between), not under it
                 Modifier.align(Alignment.BottomCenter)
                     .padding(bottom = if (spk.lifted) 84.dp else 16.dp),

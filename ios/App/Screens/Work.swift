@@ -850,7 +850,10 @@ private struct Rows: View {
                         || seen.isEmpty || seen.contains(current)
                     ? 0 : current < seen.first! ? -1 : 1
                 if away != 0 {
-                    NowButton(up: away < 0, time: base.at(position)) {
+                    // whole seconds: the strip's hundredths running here as well, at
+                    // the screen's top and its foot, drew the eye from the text
+                    // (Peter, 2026-11-20)
+                    NowButton(up: away < 0, time: hms(position, base.duration)) {
                         chasing = current
                         tries = 0
                         withAnimation { list.scrollTo(current, anchor: .top) }
