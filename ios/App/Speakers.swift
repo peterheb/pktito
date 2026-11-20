@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 /// Who said what (PKT-27; the speakers design, page version 7, every call
 /// Peter's of 2026-11-09), as the desktop's window and Android's app have it
@@ -79,6 +80,10 @@ final class Speakers {
     /// Of its recording, how much the diarizer has heard while finding, 0
     /// to 1: the strip's ring.
     private(set) var heard = 0.0
+    /// while finding: its recording is being read still, nothing of it
+    /// heard (a video's audio takes seconds: 3 for ten minutes of one on
+    /// an iPhone 16e), the strip's words then
+    private(set) var reading = false
     /// While finding, the speaker bar so far: the stretches the diarizer has
     /// told apart, those ended and those going where it has got to, for the
     /// bar to fill in as they are heard (Peter, 2026-11-15).
@@ -261,7 +266,12 @@ final class Speakers {
         // found to be shown, whatever its switch hid before
         t.hide(false)
         heard = 0
+        reading = true
         growing = []
+        // as a transcription: the screen stays on, and iOS is asked to let
+        // it go on if the person leaves
+        UIApplication.shared.isIdleTimerDisabled = true
+        Continued.begin(id: id)
         // the strip's ring has play's place until they are found (Work)
         Player.shared.pause()
         let heard = Diarizer.Heard()
@@ -272,7 +282,9 @@ final class Speakers {
             let now = ended + open
             Task { @MainActor in
                 self.heard = d
+                self.reading = false
                 self.growing = now
+                Continued.update()
             }
         }
         Task {
@@ -285,7 +297,15 @@ final class Speakers {
                     }
                 }
             }.value
+            UIApplication.shared.isIdleTimerDisabled = false
+            if case .success = got {
+                self.heard = 1
+                Continued.end(done: true)
+            } else {
+                Continued.end(done: false)
+            }
             finding = false
+            reading = false
             growing = []
             switch got {
             case .success(let found):

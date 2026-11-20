@@ -89,7 +89,9 @@ struct Work: View {
                 if t.step != .error && !room {
                     Strip(
                         review: review && !spk.finding,
-                        left: spk.finding ? L("speakers_finding") : left, why: t.why,
+                        left: spk.finding
+                            ? L(spk.reading ? "status_reading" : "speakers_finding") : left,
+                        why: t.why,
                         locate: t.locate ? { s.pick = .locate } : nil,
                         hits: hits, tickAt: s.finder.at,
                         // a tick: its match, and the playhead there (app.js,

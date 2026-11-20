@@ -303,7 +303,7 @@ final class Transcriber {
         // in the same pass (Speakers)
         let diarizer = Speakers.shared.on ? Speakers.shared.file : nil
         UIApplication.shared.isIdleTimerDisabled = true
-        Continued.begin(id: id, name: name)
+        Continued.begin(id: id)
         trace("transcribe: \(name)")
         Task {
             defer {
