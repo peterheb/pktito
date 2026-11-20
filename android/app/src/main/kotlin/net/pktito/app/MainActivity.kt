@@ -81,6 +81,7 @@ import net.pktito.app.ui.SetupActions
 import net.pktito.app.ui.Side
 import net.pktito.app.ui.Sound
 import net.pktito.app.ui.SpeakersView
+import net.pktito.app.ui.TellApart
 import net.pktito.app.ui.Timebase
 import net.pktito.app.ui.Toast
 import net.pktito.app.ui.UndoToast
@@ -143,8 +144,13 @@ class MainActivity : ComponentActivity() {
     private var last by mutableStateOf<Pair<String, Speakers.Before>?>(null)
     /** The speaker Rename is up for (RenameSpeaker). */
     private var renaming by mutableStateOf<Int?>(null)
-    /** The speaker model's download, asked about. */
-    private var askSpeakers by mutableStateOf(false)
+    /**
+     * The speaker model's download, asked about: for the start screen's switch (Speakers.on), or
+     * for the Speakers button on a transcript, which finds that transcript's once it is here.
+     */
+    private var askSpeakers by mutableStateOf<SpeakerAsk?>(null)
+    /** The speaker model downloading for the button on a transcript: find its speakers after. */
+    private var findAfter by mutableStateOf(false)
     /** About is up, over the start screen. */
     private var about by mutableStateOf(false)
     /** Manage models is up, over the screen it was opened from (the model menu's). */
@@ -329,7 +335,9 @@ class MainActivity : ComponentActivity() {
         // one voice too, which shows where it was heard (Peter, 2026-11-18);
         // the formats name no one for one voice (app.js, turnsShown)
         val present by remember { derivedStateOf { Speakers.present(t.segments) } }
-        val spoken = Speakers.on && present.isNotEmpty()
+        // shown unless the button on the transcript hid them, whatever the
+        // start screen's switch (Peter, 2026-11-19)
+        val spoken = !t.hidden && present.isNotEmpty()
         val turns = spoken
         // the bar: the transcript's turns, the speakers its text shows, a
         // change included (app.js, drawBar)
@@ -481,13 +489,16 @@ class MainActivity : ComponentActivity() {
                 undo = null
             }
         }
-        // the speaker model downloaded for the switch: the speakers of the
-        // transcript shown found, where it has none (app.js, diarizerDownload)
+        // the speaker model downloaded for the button on a transcript: the
+        // speakers of the transcript shown found, where it has none (app.js,
+        // diarizerDownload). One downloaded for the start screen's switch
+        // finds none: the switch is for the next transcription
         val diarizer = Speakers.offer?.have == true
         var hadDiarizer by remember { mutableStateOf(diarizer) }
         LaunchedEffect(diarizer) {
-            if (diarizer && !hadDiarizer && Speakers.on && review && present.isEmpty())
+            if (diarizer && !hadDiarizer && findAfter && review && present.isEmpty())
                 Speakers.find(this@MainActivity) { toast = it }
+            if (diarizer) findAfter = false
             hadDiarizer = diarizer
         }
         // a model downloaded, said so
@@ -534,6 +545,14 @@ class MainActivity : ComponentActivity() {
                 },
                 forget = { Recents.forget(this@MainActivity, it) },
                 clear = { Recents.clear(this@MainActivity) },
+                speakers =
+                    Speakers.offer?.let {
+                        TellApart(
+                            Speakers.on,
+                            Downloads.speakers && Downloads.state?.step != "failed",
+                            ::switchSpeakers,
+                        )
+                    },
             )
         val model =
             @Composable {
@@ -650,12 +669,11 @@ class MainActivity : ComponentActivity() {
                     spk =
                         SpeakersView(
                             offered = Speakers.offer != null && review && t.segments.isNotEmpty(),
-                            on = Speakers.on,
+                            on = !t.hidden,
                             busy =
                                 Speakers.finding ||
                                     (Downloads.speakers && Downloads.state?.step != "failed"),
                             heard = if (Speakers.finding) Speakers.heard else null,
-                            decoding = if (Speakers.finding) Speakers.decoding else -1.0,
                             shown = spoken,
                             turns = turns,
                             // and a speaker found, one voice or more, whose own turns it shows
@@ -679,9 +697,10 @@ class MainActivity : ComponentActivity() {
                             rename = { renaming = it },
                             find = finder::findWho,
                             running = t.running && t.diarizing,
+                            // this run's alone: the start screen's switch stays as
+                            // it was set (Peter, 2026-11-19)
                             quiet = {
                                 Engine.quiet()
-                                Speakers.set(this, false)
                                 t.diarizing = false
                                 // what was found so far goes too, as the desktop's
                                 // does (app.js, spkWhileRunning): the transcript is
@@ -811,17 +830,21 @@ class MainActivity : ComponentActivity() {
                     )
                 }
                 val offer = Speakers.offer
-                if (askSpeakers && offer != null)
+                val ask = askSpeakers
+                if (ask != null && offer != null)
                     Confirm(
                         getString(R.string.speakers_ask_title),
                         getString(R.string.speakers_ask_about, mb(offer.bytes), Speakers.MOST),
                         getString(R.string.speakers_download),
                         onYes = {
-                            askSpeakers = false
-                            Speakers.set(this@MainActivity, true)
+                            askSpeakers = null
+                            when (ask) {
+                                SpeakerAsk.Switch -> Speakers.set(this@MainActivity, true)
+                                SpeakerAsk.Find -> findAfter = true
+                            }
                             Downloads.startSpeakers(this@MainActivity)
                         },
-                        onCancel = { askSpeakers = false },
+                        onCancel = { askSpeakers = null },
                         safe = true,
                     )
             }
@@ -841,7 +864,7 @@ class MainActivity : ComponentActivity() {
                     Speakers.offer,
                     // a transcription with speakers, or a find, has the speaker
                     // model (Speakers.with)
-                    Speakers.finding || (t.running && Speakers.on),
+                    Speakers.finding || (t.running && t.diarizing),
                     free,
                     toast,
                     // a phone's sheet under Material's compact width, decided by
@@ -1051,15 +1074,36 @@ class MainActivity : ComponentActivity() {
         val tr = Transcriber.transcript ?: return null
         // the names with any voice: format.rs leaves a lone one out of the text, as the screen
         // does, and the JSON keeps it
-        val spoken = Speakers.on && Speakers.present(Transcriber.segments).isNotEmpty()
+        val spoken = !Transcriber.hidden && Speakers.present(Transcriber.segments).isNotEmpty()
         return Engine.format(tr, ext, Transcriber.name, times, spoken)
     }
 
     /**
-     * The switch (app.js, the switch's click): on, the first time it asks to download the speaker
-     * model, and for a transcript from before finds its speakers, which takes seconds, not a
-     * transcription again; pressed again, the names go from the screen and the formats, kept for
-     * when it is on again. On with none found yet, it finds them; while their model's download has
+     * The start screen's switch, Tell speakers apart (Speakers.on): whether a new transcription
+     * finds the speakers. On, the first time it asks to download the speaker model, and is on once
+     * the download is asked for; while that download has failed, it tries again. It finds none for
+     * a transcript from before: the button on that transcript does (toggleSpeakers).
+     */
+    private fun switchSpeakers(on: Boolean) {
+        val d = Downloads.state?.takeIf { Downloads.speakers }
+        if (on && d?.step == "failed") {
+            Speakers.set(this, true)
+            Downloads.retry(this)
+            return
+        }
+        if (on && Speakers.offer?.have == false && d == null) {
+            askSpeakers = SpeakerAsk.Switch
+            return
+        }
+        Speakers.set(this, on)
+    }
+
+    /**
+     * The Speakers button on a finished transcript (app.js, the switch's click), that transcript's
+     * alone, never the start screen's switch (Peter, 2026-11-19): with none found yet, it finds
+     * them, which takes seconds, not a transcription again, the first time asking to download the
+     * speaker model; with speakers, it hides them from the screen and the formats, or shows them
+     * again, kept with the transcript (Transcriber.hidden). While their model's download has
      * failed, it tries again.
      */
     private fun toggleSpeakers() {
@@ -1070,14 +1114,16 @@ class MainActivity : ComponentActivity() {
             if (d.step == "failed") Downloads.retry(this)
             return
         }
-        val none = Speakers.present(t.segments).isEmpty()
-        val on = !Speakers.on || none
-        if (on && Speakers.offer?.have == false) {
-            askSpeakers = true
+        if (Speakers.present(t.segments).isNotEmpty()) {
+            Speakers.hide(this, !t.hidden)
             return
         }
-        Speakers.set(this, on)
-        if (on && none) Speakers.find(this) { toast = it }
+        if (Speakers.offer?.have == false) {
+            askSpeakers = SpeakerAsk.Find
+            return
+        }
+        t.hidden = false
+        Speakers.find(this) { toast = it }
     }
 
     /** A turn given to a speaker in Who's speaking, a new one where fresh; its toast's Undo. */
@@ -1251,4 +1297,12 @@ private object CreateText : ActivityResultContract<Pair<String, String>, Uri?>()
 
     override fun parseResult(resultCode: Int, intent: Intent?): Uri? =
         intent?.data?.takeIf { resultCode == Activity.RESULT_OK }
+}
+
+/** What the speaker model's download is asked for (MainActivity.askSpeakers). */
+private enum class SpeakerAsk {
+    /** the start screen's switch, turned on */
+    Switch,
+    /** the Speakers button on a transcript, to find its speakers */
+    Find,
 }

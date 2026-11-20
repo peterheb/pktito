@@ -131,6 +131,12 @@ object Transcriber {
      * (TranscribeService), so that the strip keeps the bar's place from the start.
      */
     var diarizing by mutableStateOf(false)
+    /**
+     * Its speakers hidden by the Speakers button on the transcript, kept with it (recent.rs,
+     * hidden): this transcript's alone, never the start screen's switch (Speakers.on), which
+     * decides whether a new transcription finds them (Peter, 2026-11-19).
+     */
+    var hidden by mutableStateOf(false)
     /** A video's frame rate, for times in frames; 0 for audio. */
     var fps by mutableStateOf(0.0)
     /** Opened from the recent list, not transcribed in this run. */
@@ -184,6 +190,7 @@ object Transcriber {
         names = emptyList()
         stretches = emptyList()
         diarizing = false
+        hidden = false
         fps = 0.0
         reopened = false
         why = null
@@ -226,6 +233,7 @@ object Transcriber {
         segments.addAll(parse(segs))
         names = o.optJSONArray("names").strings()
         stretches = Stretch.parse(o.optJSONArray("stretches"))
+        hidden = o.optBoolean("hidden", false)
         transcribed = o.optDouble("transcribed", 0.0)
         // what Engine.format takes, as Engine.transcribe gave it
         transcript =

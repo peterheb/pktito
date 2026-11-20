@@ -280,6 +280,8 @@
     <string name="time_left_minutes">about&#160;%1$d&#160;min&#160;left</string>
     <!-- Speakers (PKT-27), the desktop's speakers.*: who said what, named Speaker 1 to 8 by first word -->
     <string name="speakers_switch">Speakers</string>
+    <string name="speakers_tell_apart">Tell speakers apart</string>
+    <string name="speakers_tell_apart_note">Transcribing takes longer</string>
     <string name="speakers_show">Show who said what</string>
     <string name="speakers_hide">Hide speakers</string>
     <string name="speakers_turn_off">Turn off speakers</string>
@@ -312,7 +314,6 @@
     <string name="speakers_downloading">Downloading the speaker model, %1$d%%</string>
     <string name="speakers_ready">Speaker model ready</string>
     <string name="speakers_finding">Finding the speakers…</string>
-    <string name="speakers_decoding">Decoding the audio %1$d%%</string>
     <!-- the (i) after the names with all of the model's speakers in use; %1$d is 8 -->
     <string name="speakers_limit">Up to %1$d speakers</string>
     <string name="speakers_limit_about">The speaker model can tell up to %1$d speakers apart. With more voices than that, some get mixed up.</string>

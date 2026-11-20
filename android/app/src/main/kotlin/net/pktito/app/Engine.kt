@@ -35,12 +35,6 @@ object Engine {
     /** Told how far findSpeakers has got, on its thread. */
     interface Heard {
         /**
-         * While Android's decoder reads the recording, before the diarizer hears any of it: how far
-         * it has got, a fraction, a whole percent at a time (Progress.reading's).
-         */
-        fun decoding(fraction: Double)
-
-        /**
          * The fraction of the recording the diarizer has heard, a whole percent at a time, and the
          * speaker bar so far as JSON: the stretches ended since the last ("closed") and those going
          * where it has got to ("open"), each as the transcript's stretches are.
