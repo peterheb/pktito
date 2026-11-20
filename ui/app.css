@@ -2417,7 +2417,11 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   width: 16px;
   height: 16px;
 }
-body:has(#toast:not([hidden])) .pk-nowbtn {
+/* (a class from app.js, not body:has(#toast:not([hidden])): with that rule
+   WebKit looked over the page again at each row Only matches hid or showed,
+   3.6 s a click on an hour's 1,106 rows, 65 ms without it; the UI harness,
+   2026-11-20) */
+.pk-nowbtn.is-lifted {
   bottom: 76px;
 }
 

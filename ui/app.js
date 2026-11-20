@@ -2883,6 +2883,10 @@ $("nowbtn").addEventListener("click", () => {
       behavior: calm.matches ? "auto" : "smooth",
     });
 });
+// above a toast while one shows, wherever it is shown and hidden from
+new MutationObserver(() =>
+  $("nowbtn").classList.toggle("is-lifted", !$("toast").hidden),
+).observe($("toast"), { attributeFilter: ["hidden"] });
 /* the reader's own scrolling, once a frame */
 let nowFrame = 0;
 $("transcript").addEventListener(
