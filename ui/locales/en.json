@@ -277,6 +277,7 @@
 
   "play.play": "Play",
   "play.pause": "Pause",
+  "play.back": "Back to the playhead, {time}",
   "play.cant": "Can't play",
   "play.reading": "Reading the audio…",
   "play.moved": "Can't play: the original file was moved or deleted",

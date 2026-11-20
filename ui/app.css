@@ -258,6 +258,7 @@ button.pk-wm:focus-visible {
     .pk-choice,
     .pk-find,
     .pk-find-step,
+    .pk-nowbtn,
     .pk-spk,
     .pk-timebtn,
     .pk-speed,
@@ -276,6 +277,7 @@ button.pk-wm:focus-visible {
     .pk-play,
     .pk-choice,
     .pk-find-step,
+    .pk-nowbtn,
     .pk-spk,
     .pk-timebtn,
     .pk-speed,
@@ -2382,6 +2384,43 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 /* its ring 1 px of menu-edge: sunk in light; in dark, where its shadow is
    lost on the ground it shares with the window, the toast's edge (Peter,
    2026-11-15) */
+/* Back to the row playing (app.js, nowBtn): over the transcript's foot, in
+   the middle, 12 px above its last line; a menu's floating box, 32 tall as
+   the header's buttons. Above a toast while one shows, 12 px over its 40. */
+.pk-now {
+  position: relative;
+  height: 0;
+}
+.pk-nowbtn {
+  position: absolute;
+  z-index: 30;
+  left: 50%;
+  bottom: calc(var(--space-3) + 12px);
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px 0 10px;
+  border: 0;
+  border-radius: 16px;
+  background-color: var(--ground);
+  color: var(--ink);
+  box-shadow:
+    var(--shadow-float),
+    0 0 0 1px var(--menu-edge);
+  font: 500 13px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.pk-nowbtn svg {
+  width: 16px;
+  height: 16px;
+}
+body:has(#toast:not([hidden])) .pk-nowbtn {
+  bottom: 76px;
+}
+
 .pk-menu {
   position: fixed;
   z-index: 40;

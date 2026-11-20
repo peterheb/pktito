@@ -2624,6 +2624,7 @@ function setPlayIcon() {
     $("mute").disabled =
     $("vol").disabled =
       !f || !playable(f);
+  nowBtn();
 }
 
 function togglePlay() {
@@ -2834,7 +2835,66 @@ function showTime(t, follow = false) {
   // a search's match after the playhead: where a jump lands, and as
   // playback passes one
   if (follow) followHit(t, follow === true);
+  nowBtn();
 }
+
+/* Back to the row playing, for a reader who has scrolled away from it while
+   it plays, or whom a turn renamed or a search stepped through left
+   elsewhere (Peter, 2026-11-20: "I get lost and can't find it again"; the
+   Android app's Now button, Screens.kt): over the transcript's foot, an
+   arrow the way the row is and the playhead's time, which says what the
+   arrow points at. A click brings the row to the middle, where playback
+   takes the reader along again (showTime). Not for a row Only matches
+   hides, which has no place to go to. */
+function nowBtn() {
+  const b = $("nowbtn"),
+    f = current();
+  let away = 0;
+  if (
+    playing &&
+    f &&
+    playId === f.id &&
+    curSeg?.isConnected &&
+    !curSeg.hidden
+  ) {
+    const r = curSeg.getBoundingClientRect(),
+      box = $("transcript").getBoundingClientRect();
+    away = r.bottom <= box.top ? -1 : r.top >= box.bottom ? 1 : 0;
+  }
+  if (!away) {
+    b.hidden = true;
+    return;
+  }
+  // whole seconds: hundredths running in a button draw the eye from the text
+  const time = hms(f.pos, f.duration || 0),
+    key = `${away} ${time}`;
+  if (b.dataset.key !== key) {
+    b.dataset.key = key;
+    b.innerHTML = `${away < 0 ? ICON.up : ICON.down}<span>${time}</span>`;
+    b.setAttribute("aria-label", t("play.back", { time }));
+    b.title = t("play.back", { time });
+  }
+  b.hidden = false;
+}
+$("nowbtn").addEventListener("click", () => {
+  if (curSeg)
+    curSeg.scrollIntoView({
+      block: "center",
+      behavior: calm.matches ? "auto" : "smooth",
+    });
+});
+/* the reader's own scrolling, once a frame */
+let nowFrame = 0;
+$("transcript").addEventListener(
+  "scroll",
+  () => {
+    nowFrame ||= requestAnimationFrame(() => {
+      nowFrame = 0;
+      nowBtn();
+    });
+  },
+  { passive: true },
+);
 
 /* The strip's time is where its format is chosen: seconds and hundredths,
    or frames. A video's frames are counted at its own rate, an audio file's
