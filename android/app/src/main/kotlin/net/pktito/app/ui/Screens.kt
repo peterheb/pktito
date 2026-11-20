@@ -334,7 +334,11 @@ private fun Drop(a: ReadyActions, modifier: Modifier) {
         // in the middle under Choose as the prompt and Choose are (Peter,
         // 2026-11-19: stretched to 360, its words at the left and the switch
         // at the right, the zone's three rows looked haphazard)
-        a.speakers?.let { TellApartRow(it) }
+        // 12 more above it than the zone's 16, 28 to Choose: a setting for
+        // the files to come, a group of its own under the prompt and Choose
+        // (Peter, 2026-11-19: at 16 it felt crowded against Choose; iOS's
+        // the same)
+        a.speakers?.let { TellApartRow(it, Modifier.padding(top = 12.dp)) }
     }
 }
 
