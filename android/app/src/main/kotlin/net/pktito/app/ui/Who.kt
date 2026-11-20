@@ -134,7 +134,10 @@ class SpeakersView(
     val find: (speaker: Int) -> Unit = {},
     /** a transcription finding its speakers as it goes, which quiet can stop doing */
     val running: Boolean = false,
-    /** that transcription goes on without them (Engine.quiet), and the switch is off */
+    /**
+     * that transcription goes on without them (Engine.quiet), this run alone: the start screen's
+     * switch stays as set (Peter, 2026-11-19)
+     */
     val quiet: () -> Unit = {},
     /**
      * the last change to the speakers, as its toast said it, which the menu can still undo after

@@ -39,6 +39,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.contextmenu.builder.item
 import androidx.compose.foundation.text.contextmenu.modifier.appendTextContextMenuComponents
@@ -46,6 +47,8 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.selection.SelectionState
 import androidx.compose.foundation.text.selection.rememberSelectionState
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -94,6 +97,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -130,7 +134,8 @@ import net.pktito.app.Speakers
 
 /**
  * What the start screen does with what it is asked: choose a file, About, and the recent list's
- * open, forget and clear, by a transcript's id.
+ * open, forget and clear, by a transcript's id; and the switch beside Choose, where the build
+ * offers a diarizer (TellApart).
  */
 class ReadyActions(
     val choose: () -> Unit,
@@ -138,7 +143,55 @@ class ReadyActions(
     val open: (id: String) -> Unit,
     val forget: (id: String) -> Unit,
     val clear: () -> Unit,
+    val speakers: TellApart? = null,
 )
+
+/**
+ * The start screen's switch, Tell speakers apart (Speakers.on): the one thing that decides whether
+ * a new transcription finds the speakers (Peter, 2026-11-19). busy while their model downloads.
+ */
+class TellApart(val on: Boolean, val busy: Boolean, val set: (Boolean) -> Unit)
+
+/**
+ * TellApart's row under Choose: its words, and the platform's own switch at its end, the whole row
+ * one target that turns it, as Android's settings rows are (android-platform-over-pixels). On in
+ * plume, as Choose is; off a muted thumb on the sunk track.
+ */
+@Composable
+private fun TellApartRow(s: TellApart, modifier: Modifier = Modifier) {
+    val p = pk
+    Row(
+        modifier
+            .toggleable(s.on, enabled = !s.busy, role = Role.Switch) { s.set(it) }
+            .heightIn(min = 48.dp)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.speakers_tell_apart), style = Type.ui, color = p.ink)
+            Text(
+                stringResource(R.string.speakers_tell_apart_note),
+                style = Type.small,
+                color = p.inkMuted,
+            )
+        }
+        Switch(
+            s.on,
+            null,
+            enabled = !s.busy,
+            colors =
+                SwitchDefaults.colors(
+                    checkedThumbColor = p.onPlume,
+                    checkedTrackColor = p.plume,
+                    checkedBorderColor = p.plume,
+                    uncheckedThumbColor = p.inkMuted,
+                    uncheckedTrackColor = p.sunk,
+                    uncheckedBorderColor = p.inkMuted,
+                ),
+        )
+    }
+}
 
 /**
  * The start screen (ui/index.html, #ready): the wordmark and the model in use, its menu
@@ -267,6 +320,8 @@ private fun Drop(a: ReadyActions, modifier: Modifier) {
             textAlign = TextAlign.Center,
         )
         PkButton(stringResource(R.string.choose), a.choose, kind = Kind.Primary, large = true)
+        // beside where the file is chosen, as wide as a phone's zone allows
+        a.speakers?.let { TellApartRow(it, Modifier.widthIn(max = 360.dp).fillMaxWidth()) }
     }
 }
 
@@ -332,6 +387,7 @@ fun Side(
                     Modifier.fillMaxWidth(),
                     enabled = !running,
                 )
+            if (open != null) a.speakers?.let { TellApartRow(it, Modifier.fillMaxWidth()) }
             if (recent.isNotEmpty() || live != null)
                 Recent(
                     recent,

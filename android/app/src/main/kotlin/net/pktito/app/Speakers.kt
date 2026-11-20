@@ -24,10 +24,11 @@ import org.json.JSONObject
  * the desktop's window has it (ui/app.js, speakers). A segment says its speaker, numbered from 1 by
  * first word as pktito-c numbers them, eight at most, the diarizer's; a change of speaker ends a
  * sentence, so a turn is a speaker's segments in a row. The names are the file's own, speaker n's
- * at n - 1, "" for Speaker n: no voice is remembered between recordings. The switch shows them,
- * kept for the next file, and every format shared or copied has them while it does. The transcript
- * itself is Transcriber's; this changes its speakers and keeps them on the recent list
- * (Engine.keepSpeakers).
+ * at n - 1, "" for Speaker n: no voice is remembered between recordings. The start screen's switch
+ * (on) alone decides whether a new transcription finds them; the Speakers button on a transcript
+ * finds, hides or shows that transcript's alone (Transcriber.hidden), and every format shared or
+ * copied has them while they show (Peter, 2026-11-19). The transcript itself is Transcriber's; this
+ * changes its speakers and keeps them on the recent list (Engine.keepSpeakers).
  */
 object Speakers {
     /** The diarizer's most, and the colors' (the tokens' speaker1 to speaker8). */
@@ -57,7 +58,12 @@ object Speakers {
      */
     class Joined(val seg: Seg, val words: Int, val speaker: Int, val at: Long)
 
-    /** The switch, kept for the next file. */
+    /**
+     * The start screen's switch, Tell speakers apart: whether a new transcription finds the
+     * speakers, a recording shared in from another app too. Off at first on a phone, where the
+     * speaker model takes as long again as the words or more (RunningSpeakers); nothing else turns
+     * it on or off, not the button on a transcript nor the menu while one runs (Peter, 2026-11-19).
+     */
     var on by mutableStateOf(false)
         private set
 
@@ -372,6 +378,12 @@ object Speakers {
         return before
     }
 
+    /** The transcript's speakers hidden or shown again, kept with it (Transcriber.hidden). */
+    fun hide(context: Context, value: Boolean) {
+        Transcriber.hidden = value
+        changed(context)
+    }
+
     /** The transcript's JSON as its speakers are now, for the formats and the list. */
     private fun changed(context: Context) {
         val t = Transcriber
@@ -381,6 +393,7 @@ object Speakers {
                 .put("segments", JSONArray(t.segments.map { it.json() }))
                 .put("names", JSONArray(t.names))
                 .put("stretches", JSONArray(t.stretches.map { it.json() }))
+                .put("hidden", t.hidden)
                 .toString()
         t.transcript = json
         keep(context.applicationContext, t.id, json)

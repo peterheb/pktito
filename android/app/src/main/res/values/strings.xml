@@ -280,6 +280,8 @@
     <string name="time_left_minutes">about&#160;%1$d&#160;min&#160;left</string>
     <!-- Speakers (PKT-27), the desktop's speakers.*: who said what, named Speaker 1 to 8 by first word -->
     <string name="speakers_switch">Speakers</string>
+    <string name="speakers_tell_apart">Tell speakers apart</string>
+    <string name="speakers_tell_apart_note">Transcribing takes longer</string>
     <string name="speakers_show">Show who said what</string>
     <string name="speakers_hide">Hide speakers</string>
     <string name="speakers_turn_off">Turn off speakers</string>
