@@ -77,7 +77,10 @@ struct Drop: View {
             PkButton(text: L("choose"), kind: .primary, large: true) {
                 AppState.shared.pick = .media
             }
-            TellApart()
+            // apart from Choose, 28 to the 16 between the prompt and Choose: a
+            // setting for the files to come, not part of choosing this one; at
+            // 16 it read as crowding the button (Peter, 2026-11-19)
+            TellApart().padding(.top, 12)
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 36)
