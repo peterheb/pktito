@@ -226,6 +226,8 @@
     <string name="time_left_seconds">[ąbőűț&#160;%1$d&#160;ș&#160;łęfț ····· ·]</string>
     <string name="time_left_minutes">[ąbőűț&#160;%1$d&#160;mįń&#160;łęfț ·····]</string>
     <string name="speakers_switch">[Șpęąkęřș ·····]</string>
+    <string name="speakers_tell_apart">[Țęłł șpęąkęřș ąpąřț ····· ···]</string>
+    <string name="speakers_tell_apart_note">[Țřąńșčřįbįńg țąkęș łőńgęř ····· ·]</string>
     <string name="speakers_show">[Șhőw whő șąįď whąț ····· ··]</string>
     <string name="speakers_hide">[Hįďę șpęąkęřș ·····]</string>
     <string name="speakers_turn_off">[Țűřń őff șpęąkęřș ····· ··]</string>
@@ -253,7 +255,6 @@
     <string name="speakers_downloading">[Ďőwńłőąďįńg țhę șpęąkęř mőďęł, %1$d%% ····· ····]</string>
     <string name="speakers_ready">[Șpęąkęř mőďęł řęąďý ····· ···]</string>
     <string name="speakers_finding">[Fįńďįńg țhę șpęąkęřș… ······]</string>
-    <string name="speakers_decoding">[Ďęčőďįńg țhę ąűďįő %1$d%% ····· ···]</string>
     <string name="speakers_limit">[Űp țő %1$d șpęąkęřș ······]</string>
     <string name="speakers_limit_about">[Țhę șpęąkęř mőďęł čąń țęłł űp țő %1$d șpęąkęřș ąpąřț. Wįțh mőřę vőįčęș țhąń țhąț, șőmę gęț mįxęď űp. ····· ····· ····· ····· ··]</string>
     <string name="speakers_no_model">[Țhę șpęąkęř mőďęł įșń’ț ďőwńłőąďęď ····· ·····]</string>
