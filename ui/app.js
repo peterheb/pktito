@@ -5024,8 +5024,31 @@ async function start() {
     recent = [];
   }
   render();
+  await speakersOnce();
   const given = await invoke("initial_files");
   if (given.length) await openPaths(given);
+}
+
+/* The speaker model for an install that has a speech model and not it, with
+   speakers on, as an update from before it came with the first model is:
+   fetched at the start, once, its toast saying how far it has got (Peter,
+   2026-11-19: on by default, so here by default). Once it has been here or
+   been sent for, prefs.speakers_fetched says so, and one deleted in Manage
+   models is not fetched again; the switch asks for it then. */
+async function speakersOnce() {
+  const d = st.diarizer;
+  if (!d || prefs.speakers_fetched) return;
+  if (!d.have) {
+    // the setup brings it with the first model (speakersNext)
+    if (!st.ready || dl || !prefs.speakers) return;
+    try {
+      await invoke("download_diarizer");
+      spkBusy = "downloading";
+    } catch (e) {
+      return toastErr(e);
+    }
+  }
+  await setPref("speakers_fetched", true);
 }
 
 /* Files the system opens with the app, at start or while it runs (main.rs,
