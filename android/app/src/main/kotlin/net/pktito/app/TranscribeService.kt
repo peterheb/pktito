@@ -154,14 +154,19 @@ class TranscribeService : Service() {
                     // waveform as far as the decoder has got; once more at
                     // the end, the recording's own
                     override fun audio(duration: Double, fps: Double, peaks: ByteArray) {
-                        if (began == 0L) began = SystemClock.elapsedRealtime()
+                        val first = began == 0L
+                        if (first) began = SystemClock.elapsedRealtime()
                         video = fps
                         loudness = peaks
                         Transcriber.post {
                             this.duration = duration
                             this.fps = fps
                             this.peaks = peaks
-                            diarizing = diarizer != null
+                            // at the first chunk alone: since LIB-8 this comes with
+                            // every chunk, and set again it undid Turn off speakers
+                            // (MainActivity's quiet) at the next chunk (the S25,
+                            // 2026-11-19)
+                            if (first) diarizing = diarizer != null
                             step = "transcribing"
                         }
                     }
