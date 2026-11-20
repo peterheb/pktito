@@ -158,17 +158,27 @@ class TellApart(val on: Boolean, val busy: Boolean, val set: (Boolean) -> Unit)
  * plume, as Choose is; off a muted thumb on the sunk track.
  */
 @Composable
-private fun TellApartRow(s: TellApart, modifier: Modifier = Modifier) {
+private fun TellApartRow(
+    s: TellApart,
+    modifier: Modifier = Modifier,
+    /**
+     * the side's: its words take the column, the switch at its end, as the list under it is laid
+     * out; in the zone, as wide as words and switch, in its middle as Choose is
+     */
+    spread: Boolean = false,
+) {
     val p = pk
     Row(
         modifier
             .toggleable(s.on, enabled = !s.busy, role = Role.Switch) { s.set(it) }
-            .heightIn(min = 48.dp)
-            .padding(vertical = 4.dp),
+            // as tall as its two lines, 40: at 48 for a finger its gap to
+            // Choose was 24 to the prompt's 20 (S25, 2026-11-19); the row is
+            // its words and switch wide, 210 dp or so, to touch
+            .heightIn(min = 40.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Column(Modifier.weight(1f)) {
+        Column(Modifier.weight(1f, fill = spread)) {
             Text(stringResource(R.string.speakers_tell_apart), style = Type.ui, color = p.ink)
             Text(
                 stringResource(R.string.speakers_tell_apart_note),
@@ -320,8 +330,11 @@ private fun Drop(a: ReadyActions, modifier: Modifier) {
             textAlign = TextAlign.Center,
         )
         PkButton(stringResource(R.string.choose), a.choose, kind = Kind.Primary, large = true)
-        // beside where the file is chosen, as wide as a phone's zone allows
-        a.speakers?.let { TellApartRow(it, Modifier.widthIn(max = 360.dp).fillMaxWidth()) }
+        // beside where the file is chosen: as wide as its words and switch,
+        // in the middle under Choose as the prompt and Choose are (Peter,
+        // 2026-11-19: stretched to 360, its words at the left and the switch
+        // at the right, the zone's three rows looked haphazard)
+        a.speakers?.let { TellApartRow(it) }
     }
 }
 
@@ -387,7 +400,8 @@ fun Side(
                     Modifier.fillMaxWidth(),
                     enabled = !running,
                 )
-            if (open != null) a.speakers?.let { TellApartRow(it, Modifier.fillMaxWidth()) }
+            if (open != null)
+                a.speakers?.let { TellApartRow(it, Modifier.fillMaxWidth(), spread = true) }
             if (recent.isNotEmpty() || live != null)
                 Recent(
                     recent,
