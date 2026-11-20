@@ -83,6 +83,10 @@ pub struct Transcript {
     /// JSON names; left out without speakers.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub diarizer: String,
+    /// Its speakers hidden by the window's switch: found and kept, and not
+    /// shown or saved until it shows them again. This transcript's alone.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub hidden: bool,
 }
 
 fn dir(data: &Path) -> PathBuf {
@@ -211,6 +215,7 @@ pub fn set_speakers(
     segments: Vec<Segment>,
     names: Vec<String>,
     stretches: Vec<Stretch>,
+    hidden: bool,
 ) -> Result<(), Problem> {
     let mut t = load(data, id)?;
     // what was said, however it is grouped: every word, and the text (a
@@ -230,6 +235,7 @@ pub fn set_speakers(
     t.segments = segments;
     t.names = names;
     t.stretches = stretches;
+    t.hidden = hidden;
     fs::write(
         dir(data).join(format!("{id}.json")),
         serde_json::to_vec(&t).unwrap(),
@@ -291,6 +297,7 @@ mod tests {
             names: Vec::new(),
             stretches: Vec::new(),
             diarizer: String::new(),
+            hidden: false,
         };
         add(&data, &t).unwrap();
         relink(&data, "17", Path::new("content://b/2"), 1234, 99).unwrap();
@@ -346,6 +353,7 @@ mod tests {
             names: Vec::new(),
             stretches: Vec::new(),
             diarizer: String::new(),
+            hidden: false,
         };
         add(&data, &t).unwrap();
         let mut one = cut[0].clone();
@@ -355,24 +363,30 @@ mod tests {
             one.words.extend(s.words.iter().cloned());
         }
         assert_eq!(one.text, "When it's up, you know, okay.");
-        set_speakers(&data, "21", vec![one.clone()], vec![], vec![])
+        set_speakers(&data, "21", vec![one.clone()], vec![], vec![], false)
             .ok()
             .unwrap();
         assert_eq!(load(&data, "21").ok().unwrap().segments.len(), 1);
-        set_speakers(&data, "21", cut.clone(), vec![], vec![])
+        // hidden is kept with it, and left out of the file while shown
+        assert!(!load(&data, "21").ok().unwrap().hidden);
+        set_speakers(&data, "21", vec![one.clone()], vec![], vec![], true)
+            .ok()
+            .unwrap();
+        assert!(load(&data, "21").ok().unwrap().hidden);
+        set_speakers(&data, "21", cut.clone(), vec![], vec![], false)
             .ok()
             .unwrap();
         assert_eq!(load(&data, "21").ok().unwrap().segments.len(), 3);
         // a word changed, one lost, the text changed: each refused
         let mut changed = one.clone();
         changed.words[3].text = "yew".into();
-        assert!(set_speakers(&data, "21", vec![changed], vec![], vec![]).is_err());
+        assert!(set_speakers(&data, "21", vec![changed], vec![], vec![], false).is_err());
         let mut lost = cut.clone();
         lost.pop();
-        assert!(set_speakers(&data, "21", lost, vec![], vec![]).is_err());
+        assert!(set_speakers(&data, "21", lost, vec![], vec![], false).is_err());
         let mut retold = one;
         retold.text = "When it's up, you know, fine.".into();
-        assert!(set_speakers(&data, "21", vec![retold], vec![], vec![]).is_err());
+        assert!(set_speakers(&data, "21", vec![retold], vec![], vec![], false).is_err());
         assert_eq!(load(&data, "21").ok().unwrap().segments.len(), 3);
         let _ = fs::remove_dir_all(&data);
     }

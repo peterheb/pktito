@@ -584,10 +584,12 @@ pub struct Prefs {
     /// A wide window's recent list's width in pixels; 0 for its default.
     pub side: f64,
     /// Who said what: a transcription runs the diarizer too, once its model
-    /// is here, and the window shows each turn's speaker. The switch under
-    /// the strip, kept for the next file (speakers UI, PKT-27); on to begin
-    /// with, one voice showing nothing more than without (Peter,
-    /// 2026-11-15).
+    /// is here. The ready screen's switch, and only that: a transcript's
+    /// own switch shows or hides its speakers and a running file's turns
+    /// them off or on for that file (Peter, 2026-11-19). On to begin with
+    /// on a desktop, one voice showing nothing more than without (Peter,
+    /// 2026-11-15); the phones begin with it off, where it takes about
+    /// twice as long (the S25: 54 to 57 s against 20 to 28 s).
     pub speakers: bool,
 }
 

@@ -506,6 +506,21 @@ html[data-chrome="win"] .pk-head {
   flex-wrap: wrap;
 }
 
+/* How a file is transcribed, at the top row's end: the Speakers switch, as
+   a transcript's own looks (.pk-spk on its track), and the model's menu.
+   With the model because both are the next transcription's, and in the top
+   row because the side keeps that row beside an open file; the drop zone
+   says only where a file goes (Peter, 2026-11-19: a checkbox in the zone
+   read as bolted on). */
+.pk-how {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pk-how .pk-track {
+  align-self: center;
+}
+
 /* the model choice */
 .pk-choices {
   border: 0;
@@ -921,6 +936,12 @@ html[data-side="open"] .pk-ready {
   grid-template-columns: minmax(0, 1fr);
 }
 html[data-side="open"] .pk-ready-drop {
+  display: none;
+}
+/* beside an open file the Speakers switch is that file's, under its strip:
+   the next transcription's is left to the ready screen, so that two
+   switches of one name never share a window */
+html[data-side="open"] #ready-spk-line {
   display: none;
 }
 html[data-side="open"] .pk-side-choose {

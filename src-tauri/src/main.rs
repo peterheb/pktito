@@ -716,6 +716,8 @@ fn speakers_of(app: &AppHandle, id: &str) -> Result<Found, Problem> {
     t.segments = segments;
     t.stretches = stretches;
     t.names = Vec::new();
+    // found because they were asked for: shown
+    t.hidden = false;
     recent::replace(&data, &t)?;
     Ok(Found {
         segments: t.segments,
@@ -1182,6 +1184,7 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
                     names: Vec::new(),
                     stretches: stretches.clone(),
                     diarizer: heard_by.clone(),
+                    hidden: false,
                 },
             );
             if let (Ok(gone), Ok(dir)) = (&kept, audio_dir(app)) {
@@ -1502,8 +1505,9 @@ fn set_speakers(
     segments: Vec<transcribe::Segment>,
     names: Vec<String>,
     stretches: Vec<transcribe::Stretch>,
+    hidden: bool,
 ) -> Result<(), Problem> {
-    recent::set_speakers(&data_dir(&app)?, &id, segments, names, stretches)
+    recent::set_speakers(&data_dir(&app)?, &id, segments, names, stretches, hidden)
 }
 
 /// pktito-cli on the PATH, from the macOS menu bar's Install Command Line

@@ -748,7 +748,10 @@ const held = (m) =>
    transcription with speakers has it (main.rs, delete_diarizer) */
 function heldOf(name) {
   if (st.diarizer && name === st.diarizer.name)
-    return spkBusy === "finding" || (running && !!prefs.speakers);
+    return (
+      spkBusy === "finding" ||
+      (running && (!!prefs.speakers || files.some((f) => f.diarizing)))
+    );
   const m = st.catalog.find((x) => x.name === name);
   return !!m && held(m);
 }
@@ -1171,6 +1174,7 @@ function renderReady() {
     b.innerHTML = `${ICON.plus}${esc(t("ready.choose"))}`;
     b.title = tip(t("ready.choose_tip"), "O");
   }
+  updateReadySpk();
   $("recent").hidden = !recent.length && !files.length;
   $("ready").classList.toggle("has-recent", !$("recent").hidden);
   $("clear-recent").hidden = !recent.length;
@@ -1264,6 +1268,7 @@ async function openRecent(id) {
       segments: t.segments,
       names: t.names || [],
       stretches: t.stretches || [],
+      hidden: !!t.hidden,
       diarizer: t.diarizer || "",
       took: t.took,
       transcribed: t.transcribed || 0,
@@ -3395,10 +3400,14 @@ function present(f) {
     if (s.speaker != null && !seen.includes(s.speaker)) seen.push(s.speaker);
   return seen;
 }
-/* shown with the switch on, one speaker as much as eight: the model may
-   have heard two voices as one, which New speaker puts right (Peter,
-   2026-11-14: the solo episode showed nothing, as if none were found) */
-const spkShown = (f) => !!prefs.speakers && !!f && present(f).length > 0;
+/* shown where found, one speaker as much as eight: the model may have
+   heard two voices as one, which New speaker puts right (Peter,
+   2026-11-14: the solo episode showed nothing, as if none were found).
+   Hidden for one transcript by its switch (f.hidden, kept with it on the
+   recent list): what the next transcription does is the ready screen's
+   switch, prefs.speakers, and no other (Peter, 2026-11-19: one switch that
+   hid these and slowed every later file had stopped being intuitive) */
+const spkShown = (f) => !!f && !f.hidden && present(f).length > 0;
 /* the turns shown: the name at each turn's start, the line down its rows
    and the bar, one voice as much as eight. One voice's were hidden while
    every sentence had its name (2026-11-15); with the name once a turn, the
@@ -3468,6 +3477,44 @@ function rowsHtml(f, rows, base, filling) {
 
 /* what the switch is doing, if anything: "downloading" or "finding" */
 let spkBusy = "";
+// the transcript whose switch asked for the model: found once it is here
+let spkFor = null;
+
+/* The ready screen's switch, where the build offers a diarizer: whether a
+   transcription finds the speakers too, which takes longer, as its tip
+   says (Peter, 2026-11-19: one choice for every new file, and the only
+   place it is made). On without the model, the model is asked for; a
+   transcription begun before it is here goes without, as main.rs has it. */
+function updateReadySpk() {
+  const d = st && st.diarizer,
+    b = $("ready-spk");
+  $("ready-spk-line").hidden = !d;
+  b.setAttribute("aria-pressed", String(!!d && !!prefs.speakers));
+  b.innerHTML = `${ICON.check}<span>${esc(t("speakers.switch"))}</span>`;
+  b.title = t("ready.speakers_tip");
+}
+$("ready-spk").onclick = async () => {
+  const on = !prefs.speakers,
+    d = st.diarizer;
+  if (on && d && !d.have && spkBusy !== "downloading") {
+    const yes = await ask(
+      t("speakers.ask_title"),
+      t("speakers.ask_about", { mb: num(d.bytes / 1e6), n: num(SPEAKERS) }),
+      t("speakers.download"),
+      $("ready-spk"),
+      { safe: true },
+    );
+    if (!yes) return;
+    try {
+      await invoke("download_diarizer");
+      spkBusy = "downloading";
+    } catch (err) {
+      return toastErr(err);
+    }
+  }
+  await setPref("speakers", on);
+  updateReadySpk();
+};
 
 /* The switch under the strip, where the build offers a diarizer
    (main.rs, DiarizerOffer), and with speakers shown each one's name,
@@ -3485,7 +3532,7 @@ function updateSpeakers(f, review) {
   // a transcription runs, while it finds them or will once it is done.
   const pressed = running
     ? !!f.diarizing || !!f.findAfter
-    : !!prefs.speakers && (n > 0 || !!spkBusy);
+    : !f.hidden && (n > 0 || !!spkBusy);
   b.setAttribute("aria-pressed", String(pressed));
   b.setAttribute("aria-busy", String(!!spkBusy));
   b.innerHTML = `${ICON.check}<span>${esc(t("speakers.switch"))}</span>`;
@@ -3493,7 +3540,7 @@ function updateSpeakers(f, review) {
     ? t(f.diarizing ? "speakers.stop" : "speakers.show")
     : pressed && n > 0
       ? t("speakers.hide")
-      : t("speakers.show");
+      : t(n > 0 ? "speakers.show" : "speakers.find");
   // the names once it is done: renamed while it runs, a name would have
   // to follow the turns as they come
   const on = offer && !running && spkShown(f);
@@ -3609,11 +3656,15 @@ $("spk").onclick = async () => {
   if (modeOf(f) === "running") return spkWhileRunning(f);
   if (modeOf(f) !== "review") return;
   closeMenu();
-  // on, or on with none found yet: found (updateSpeakers, pressed)
-  const on = !prefs.speakers || !present(f).length;
+  // found: shown or hidden, this transcript's alone
+  if (present(f).length) {
+    f.hidden = !f.hidden;
+    return spkChanged(f);
+  }
   const d = st.diarizer;
-  // the first time, the model: asked for, then downloaded
-  if (on && d && !d.have) {
+  // none found yet, and the first time the model: asked for, then
+  // downloaded, and this transcript's found once it is here (spkFor)
+  if (d && !d.have) {
     const yes = await ask(
       t("speakers.ask_title"),
       t("speakers.ask_about", { mb: num(d.bytes / 1e6), n: num(SPEAKERS) }),
@@ -3622,20 +3673,18 @@ $("spk").onclick = async () => {
       { safe: true },
     );
     if (!yes) return;
-    await setPref("speakers", true);
     try {
       await invoke("download_diarizer");
       spkBusy = "downloading";
+      spkFor = f;
     } catch (e) {
       toastErr(e);
     }
     return spkRefresh(f);
   }
-  await setPref("speakers", on);
-  // a transcript from before: its speakers from its recording, which takes
-  // seconds, not a transcription again
-  if (on && !present(f).length) return findSpeakers(f);
-  spkRefresh(f);
+  // its speakers from its recording, which takes seconds, not a
+  // transcription again
+  findSpeakers(f);
 };
 
 /* The switch while f is transcribed (Peter, 2026-11-15: one who knows a
@@ -3644,7 +3693,7 @@ $("spk").onclick = async () => {
    so that its transcript is one without speakers (main.rs, quiet); on,
    they are found from the recording once it is done, as for a transcript
    from before (finished), the model downloaded first where it isn't here.
-   Kept for the next file either way. */
+   This file's alone: the next one goes by the ready screen's switch. */
 async function spkWhileRunning(f) {
   closeMenu();
   if (f.diarizing || f.findAfter) {
@@ -3655,7 +3704,6 @@ async function spkWhileRunning(f) {
       invoke("quiet", { id: f.id }).catch(() => {});
       for (const s of f.segments) s.speaker = null;
     }
-    await setPref("speakers", false);
   } else {
     const d = st.diarizer;
     if (d && !d.have) {
@@ -3670,12 +3718,12 @@ async function spkWhileRunning(f) {
       try {
         await invoke("download_diarizer");
         spkBusy = "downloading";
+        spkFor = f;
       } catch (e) {
         return toastErr(e);
       }
     }
     f.findAfter = true;
-    await setPref("speakers", true);
   }
   if (current() !== f || modeOf(f) !== "running") return;
   updateSpeakers(f, false);
@@ -3705,8 +3753,13 @@ async function diarizerDownload(s) {
     await refresh().catch(toastErr);
     if (!$("manage").hidden) renderManage();
     toast(t("speakers.ready"));
-    if (f && prefs.speakers && modeOf(f) === "review" && !present(f).length)
+    const asked = spkFor;
+    spkFor = null;
+    updateReadySpk();
+    if (f && f === asked && modeOf(f) === "review" && !present(f).length) {
+      f.findAfter = false;
       return findSpeakers(f);
+    }
     return spkRefresh(f);
   }
   if (s.step === "cancelled" || s.problem) {
@@ -3715,6 +3768,8 @@ async function diarizerDownload(s) {
     await refresh().catch(toastErr);
     if (!$("manage").hidden) renderManage();
     if (s.problem) toastErr(s.problem);
+    spkFor = null;
+    updateReadySpk();
     return spkRefresh(f);
   }
   spkBusy = "downloading";
@@ -3743,6 +3798,7 @@ async function findSpeakers(f) {
       stretches: r.stretches,
       diarizer: r.diarizer || "",
       names: [],
+      hidden: false,
     });
   } catch (e) {
     toastErr(e);
@@ -3846,6 +3902,7 @@ function spkChanged(f, row, joined) {
       segments: f.segments,
       names: f.names,
       stretches: f.stretches,
+      hidden: !!f.hidden,
     }).catch(toastErr);
 }
 

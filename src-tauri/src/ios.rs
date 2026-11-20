@@ -49,6 +49,9 @@ struct Transcript {
     /// And the diarizer that found them, its model's name, for the JSON.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     diarizer: String,
+    /// Its speakers hidden by its own switch (recent.rs, Transcript).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    hidden: bool,
 }
 
 impl Transcript {
@@ -426,6 +429,7 @@ pub extern "C" fn pkapp_transcribe(
             names: Vec::new(),
             stretches: speakers.map(|s| s.stretches).unwrap_or_default(),
             diarizer,
+            hidden: false,
         };
         serde_json::to_value(&t).map_err(|e| e.to_string())
     })
@@ -626,6 +630,7 @@ pub extern "C" fn pkapp_keep_speakers(
         k.names = t.names;
         k.stretches = t.stretches;
         k.diarizer = t.diarizer;
+        k.hidden = t.hidden;
         recent::replace(&data, &k).map_err(|p| p.line())?;
         Ok(json!({}))
     })
@@ -678,6 +683,7 @@ pub unsafe extern "C" fn pkapp_keep(
                 names: t.names,
                 stretches: t.stretches,
                 diarizer: t.diarizer,
+                hidden: t.hidden,
             },
         )?;
         Ok(listed(&data))

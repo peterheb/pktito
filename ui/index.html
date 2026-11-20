@@ -37,13 +37,25 @@
             >
               pktito
             </button>
-            <button
-              class="pk-btn pk-btn-ghost"
-              id="ready-model"
-              type="button"
-              aria-haspopup="menu"
-              aria-expanded="false"
-            ></button>
+            <!-- how a file is transcribed: with its speakers told apart
+                 or not (app.js, updateReadySpk), and by which model -->
+            <div class="pk-how">
+              <div class="pk-track" id="ready-spk-line" hidden>
+                <button
+                  class="pk-spk"
+                  id="ready-spk"
+                  type="button"
+                  aria-pressed="false"
+                ></button>
+              </div>
+              <button
+                class="pk-btn pk-btn-ghost"
+                id="ready-model"
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded="false"
+              ></button>
+            </div>
           </div>
           <button
             class="pk-btn pk-side-choose"
@@ -221,7 +233,7 @@
             </div>
           </div>
         </div>
-        <!-- who said what: the switch, kept for the next file, then each
+        <!-- who said what: the switch, this transcript's, then each
              speaker's name, which finds their turns (app.js, speakers); and
              Find, where the header hasn't the room for it (placeFind) -->
         <div class="pk-spk-line" id="spk-line">
