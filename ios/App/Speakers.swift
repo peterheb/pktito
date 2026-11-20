@@ -6,10 +6,13 @@ import Foundation
 /// from 1 by first word as pktito-c numbers them, eight at most, the
 /// diarizer's; a change of speaker ends a sentence, so a turn is a speaker's
 /// segments in a row. The names are the file's own, speaker n's at n - 1, ""
-/// for Speaker n: no voice is remembered between recordings. The switch
-/// shows them, kept for the next file, and every format shared or copied has
-/// them while it does. The transcript itself is Transcriber's; this changes
-/// its speakers and keeps them on the recent list (Core.keepSpeakers).
+/// for Speaker n: no voice is remembered between recordings. The start
+/// screen's switch (on) alone decides whether a new transcription finds
+/// them; the Speakers switch on a transcript finds, hides or shows that
+/// transcript's alone (Transcriber.hidden), and every format shared or
+/// copied has them while they show (Peter, 2026-11-19). The transcript
+/// itself is Transcriber's; this changes its speakers and keeps them on the
+/// recent list (Core.keepSpeakers).
 @MainActor @Observable
 final class Speakers {
     static let shared = Speakers()
@@ -59,9 +62,12 @@ final class Speakers {
         let at: Date
     }
 
-    /// The switch, kept for the next file. Off until one is turned on: the
-    /// phones' default waits for a long file timed on the iPhone 16e, as
-    /// Android's waits for the S24's (the desktop's is on).
+    /// The start screen's switch, Tell speakers apart: whether a new
+    /// transcription finds the speakers, a recording shared in from another
+    /// app too. Off at first on a phone, where the speaker model takes as
+    /// long again as the words or more (the S25: 54 to 57 s with, 20 to 28 s
+    /// without, 2026-11-19); the desktop's is on. Nothing else turns it on or
+    /// off, not the switch on a transcript nor the menu while one runs.
     private(set) var on = false
     /// The last move's sentence made one again, its row lit a moment; nil
     /// after an Undo.
@@ -85,7 +91,7 @@ final class Speakers {
 
     private init() {}
 
-    /// The switch as it was kept, and the offer as the models folder has it.
+    /// The start screen's switch as it was kept, and the offer as the models folder has it.
     func load() {
         on = UserDefaults.standard.bool(forKey: "speakers")
         refresh()
@@ -94,6 +100,12 @@ final class Speakers {
     func set(_ value: Bool) {
         on = value
         UserDefaults.standard.set(value, forKey: "speakers")
+    }
+
+    /// The transcript's speakers hidden or shown again, kept with it.
+    func hide(_ value: Bool) {
+        Transcriber.shared.hide(value)
+        keep()
     }
 
     /// The offer again, after a download or a delete.
@@ -116,7 +128,7 @@ final class Speakers {
     /// download of it that stopped kept, and what it said, if anything: that
     /// a transcription or a find has it (with), whose Delete is dimmed then,
     /// or that it failed. The names found already stay with their
-    /// transcripts; turning the switch on asks for the model again.
+    /// transcripts; either switch asks for the model again.
     func delete(part: Bool) -> String? {
         guard Speakers.working.try() else { return L("manage_speakers_busy") }
         var failed = false
@@ -246,6 +258,8 @@ final class Speakers {
         let id = t.id
         let name = t.name
         finding = true
+        // found to be shown, whatever its switch hid before
+        t.hide(false)
         heard = 0
         growing = []
         // the strip's ring has play's place until they are found (Work)

@@ -26,6 +26,43 @@ private struct TopRow: View {
     }
 }
 
+/// Tell speakers apart, the switch beside where a file is chosen (Android's
+/// TellApartRow): whether a new transcription finds the speakers
+/// (Speakers.on), and what that costs under it, where a phone has no tip to
+/// say it. In the zone as wide as its words and switch, in the middle as
+/// Choose is; on the side, spread, its switch at the column's edge as the
+/// list under it is laid out. Not there where the build offers no speaker
+/// model; dimmed while that model downloads.
+private struct TellApart: View {
+    var spread = false
+
+    var body: some View {
+        let spk = Speakers.shared
+        let d = Downloads.shared
+        if spk.offer != nil {
+            Toggle(
+                isOn: Binding(get: { spk.on }, set: { AppState.shared.switchSpeakers($0) })
+            ) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L("speakers_tell_apart"))
+                        .font(PkType.ui.font)
+                        .foregroundStyle(Pk.ink)
+                    Text(L("speakers_tell_apart_note"))
+                        .font(PkType.small.font)
+                        .foregroundStyle(Pk.inkMuted)
+                }
+                .fixedSize(horizontal: !spread, vertical: true)
+                .frame(maxWidth: spread ? .infinity : nil, alignment: .leading)
+                // 16 to the switch, as Android's row has
+                .padding(.trailing, 8)
+            }
+            .tint(Pk.plume)
+            .fixedSize(horizontal: !spread, vertical: false)
+            .disabled(d.speakers && d.state?.step != .failed)
+        }
+    }
+}
+
 /// The drop zone (app.css, .pk-ready-drop): the prompt and Choose in a
 /// dashed zone. A phone has nothing to drop, so the zone says what it is for.
 struct Drop: View {
@@ -40,6 +77,7 @@ struct Drop: View {
             PkButton(text: L("choose"), kind: .primary, large: true) {
                 AppState.shared.pick = .media
             }
+            TellApart()
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 36)
@@ -121,6 +159,7 @@ struct Side: View {
                 if open {
                     PkButton(text: L("choose"), stretch: true) { AppState.shared.pick = .media }
                         .disabled(t.running)
+                    TellApart(spread: true)
                 }
                 if !Recents.shared.items.isEmpty
                     || (open && !Recents.shared.items.contains { $0.id == t.id })

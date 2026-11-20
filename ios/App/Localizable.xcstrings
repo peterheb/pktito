@@ -2399,17 +2399,6 @@
         }
       }
     },
-    "speakers_decoding": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Decoding the audio %1$lld%%"
-          }
-        }
-      }
-    },
     "speakers_default": {
       "extractionState": "manual",
       "localizations": {
@@ -2652,6 +2641,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Speakers"
+          }
+        }
+      }
+    },
+    "speakers_tell_apart": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tell speakers apart"
+          }
+        }
+      }
+    },
+    "speakers_tell_apart_note": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribing takes longer"
           }
         }
       }

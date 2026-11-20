@@ -48,8 +48,18 @@ final class AppState {
     var last: (text: String, before: Speakers.Before)?
     /// the speaker Rename is up for
     var renaming: Int?
-    /// the speaker model's download, asked about
-    var askSpeakers = false
+    /// What the speaker model's download is asked for.
+    enum SpeakerAsk {
+        /// the start screen's switch, turned on
+        case setting
+        /// the Speakers switch on a transcript, to find its speakers
+        case find
+    }
+    /// the speaker model's download, asked about, and for which
+    var askSpeakers: SpeakerAsk?
+    /// the speaker model downloading for the switch on a transcript: its
+    /// speakers found once it is here (Root)
+    var findAfter = false
     var about = false
     var managing = false
     /// a file to pick: a recording, a model file, or the recording of the
@@ -189,19 +199,42 @@ final class AppState {
         }
     }
 
-    /// Whether the formats name the speakers: the switch on and a voice or
-    /// more found. format.rs leaves a lone one out of the text, as the screen
+    /// Whether the formats name the speakers: a voice or more found, and not
+    /// hidden by the transcript's switch. format.rs leaves a lone one out of the text, as the screen
     /// does, and the JSON keeps it.
     private var spoken: Bool {
-        Speakers.shared.on && !Speakers.present(Transcriber.shared.segments).isEmpty
+        !Transcriber.shared.hidden && !Speakers.present(Transcriber.shared.segments).isEmpty
     }
 
-    /// The switch (app.js, the switch's click): on, the first time it asks
-    /// to download the speaker model, and for a transcript from before finds
-    /// its speakers, which takes seconds, not a transcription again; tapped
-    /// again, the names go from the screen and the formats, kept for when it
-    /// is on again. On with none found yet, it finds them; while their
-    /// model's download has failed, it tries again.
+    /// The start screen's switch, Tell speakers apart (Speakers.on): whether
+    /// a new transcription finds the speakers. On, the first time it asks to
+    /// download the speaker model, and is on once the download is asked for;
+    /// while that download has failed, it tries again. It finds none for a
+    /// transcript from before: the switch on that transcript does
+    /// (toggleSpeakers).
+    func switchSpeakers(_ on: Bool) {
+        let spk = Speakers.shared
+        let d = Downloads.shared
+        if on && d.speakers && d.state?.step == .failed {
+            spk.set(true)
+            d.retry()
+            return
+        }
+        if on && spk.offer?.have == false && !d.speakers {
+            askSpeakers = .setting
+            return
+        }
+        spk.set(on)
+    }
+
+    /// The Speakers switch on a finished transcript (app.js, the switch's
+    /// click), that transcript's alone, never the start screen's (Peter,
+    /// 2026-11-19): with none found yet, it finds them, which takes seconds,
+    /// not a transcription again, the first time asking to download the
+    /// speaker model; with speakers, it hides them from the screen and the
+    /// formats, or shows them again, kept with the transcript
+    /// (Transcriber.hidden). While their model's download has failed, it
+    /// tries again.
     func toggleSpeakers() {
         let t = Transcriber.shared
         let spk = Speakers.shared
@@ -210,14 +243,15 @@ final class AppState {
             if Downloads.shared.state?.step == .failed { Downloads.shared.retry() }
             return
         }
-        let none = Speakers.present(t.segments).isEmpty
-        let on = !spk.on || none
-        if on && spk.offer?.have == false {
-            askSpeakers = true
+        if !Speakers.present(t.segments).isEmpty {
+            spk.hide(!t.hidden)
             return
         }
-        spk.set(on)
-        if on && none { spk.find { self.say($0, err: true) } }
+        if spk.offer?.have == false {
+            askSpeakers = .find
+            return
+        }
+        spk.find { self.say($0, err: true) }
     }
 
     /// A turn given to a speaker in Who's speaking, a new one where fresh;

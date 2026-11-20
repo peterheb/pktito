@@ -30,8 +30,9 @@ struct RecentTranscript: Decodable {
     let names: [String]
     let stretches: [Stretch]
     let diarizer: String
+    let hidden: Bool
 
-    enum Keys: String, CodingKey { case peaks, segments, names, stretches, diarizer }
+    enum Keys: String, CodingKey { case peaks, segments, names, stretches, diarizer, hidden }
 
     init(from d: Decoder) throws {
         item = try RecentItem(from: d)
@@ -41,6 +42,7 @@ struct RecentTranscript: Decodable {
         names = try c.decodeIfPresent([String].self, forKey: .names) ?? []
         stretches = try c.decodeIfPresent([Stretch].self, forKey: .stretches) ?? []
         diarizer = try c.decodeIfPresent(String.self, forKey: .diarizer) ?? ""
+        hidden = try c.decodeIfPresent(Bool.self, forKey: .hidden) ?? false
     }
 }
 

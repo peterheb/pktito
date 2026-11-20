@@ -29,6 +29,11 @@ final class Transcriber {
     /// with speakers: the names given, speaker n's at n - 1, "" for Speaker
     /// n (Speakers.nameOf); and each one's stretches of speech, for the bar
     private(set) var names: [String] = []
+    /// Its speakers hidden by the Speakers switch on it, kept with it
+    /// (recent.rs, hidden): this transcript's alone, never the start
+    /// screen's switch (Speakers.on), which decides whether a new
+    /// transcription finds them (Peter, 2026-11-19).
+    private(set) var hidden = false
     private(set) var stretches: [Stretch] = []
     /// whether this run finds the speakers as it goes, the switch on and
     /// their model here: the strip keeps the bar's place for them
@@ -92,6 +97,7 @@ final class Transcriber {
         segments = []
         names = []
         stretches = []
+        hidden = false
         diarizing = false
         error = nil
         transcribed = 0
@@ -144,10 +150,11 @@ final class Transcriber {
         segments = t.segments
         names = t.names
         stretches = t.stretches
+        hidden = t.hidden
         transcribed = t.item.transcribed
         transcript = Transcript(
             duration: t.item.duration, complete: true, model: t.item.model, segments: t.segments,
-            names: t.names, stretches: t.stretches, diarizer: t.diarizer)
+            names: t.names, stretches: t.stretches, diarizer: t.diarizer, hidden: t.hidden)
         done = 1
         reopened = true
         step = .done
@@ -167,6 +174,12 @@ final class Transcriber {
         transcript?.names = names
         transcript?.stretches = stretches
         if let diarizer { transcript?.diarizer = diarizer }
+    }
+
+    /// Its speakers hidden, or shown again (Speakers.hide).
+    func hide(_ value: Bool) {
+        hidden = value
+        transcript?.hidden = value
     }
 
     /// The model loaded from name (a catalog model's, or the own file's
@@ -388,10 +401,10 @@ final class Transcriber {
     func stop() { Engine.stop() }
 
     /// The transcription running goes on without its speakers, from its next
-    /// chunk (Engine.quiet), and the switch is off, as the desktop's is.
+    /// chunk (Engine.quiet): this run's alone, the start screen's switch as
+    /// it was set (Peter, 2026-11-19).
     func quiet() {
         Engine.quiet()
-        Speakers.shared.set(false)
         diarizing = false
         // what was found so far goes too, as the desktop's does (app.js,
         // spkWhileRunning): the transcript is one without speakers, which the

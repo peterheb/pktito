@@ -56,13 +56,14 @@ struct Work: View {
         let room = makesRoom(review: review, rows: rows)
         let edge: CGFloat = roomy ? 24 : 16
         // who said what (Speakers): those of the transcript in the order they
-        // first speak, their names shown with the switch on, one as much as
+        // first speak, their names shown unless the transcript's switch hid
+        // them, whatever the start screen's (Peter, 2026-11-19), one as much as
         // eight: the model may have heard two voices as one, which New
         // speaker puts right (Peter, 2026-11-14); the formats name no one
         // for one voice (app.js, turnsShown)
         let spk = Speakers.shared
         let present = Speakers.present(rows)
-        let spoken = spk.on && !present.isEmpty
+        let spoken = !t.hidden && !present.isEmpty
         // with one voice too, which the bar shows where it was heard (Peter,
         // 2026-11-18; app.js, turnsShown)
         let turns = spoken
@@ -260,7 +261,7 @@ struct Work: View {
         let d = Downloads.shared
         guard spk.offer != nil else { return nil }
         let busy = spk.finding || (d.speakers && d.state?.step != .failed)
-        let pressed = spk.on && (!present.isEmpty || busy)
+        let pressed = !Transcriber.shared.hidden && (!present.isEmpty || busy)
         return FindLine.Switch(
             on: pressed, busy: busy,
             hint: L(pressed && !present.isEmpty ? "speakers_hide" : "speakers_show"),

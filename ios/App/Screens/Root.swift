@@ -123,30 +123,38 @@ struct Root: View {
         .onChange(of: s.renaming) { _, n in
             if let n { renamed = n <= t.names.count ? t.names[n - 1] : "" }
         }
-        // the speaker model, asked for the first time the switch is turned on
+        // the speaker model, asked for the first time either switch needs it:
+        // the start screen's is on once its download is asked for, cancelled
+        // it stays off; a transcript's finds its speakers once it is here
         .alert(
             L("speakers_ask_title"),
-            isPresented: Binding(get: { s.askSpeakers }, set: { s.askSpeakers = $0 })
-        ) {
+            isPresented: Binding(
+                get: { s.askSpeakers != nil }, set: { if !$0 { s.askSpeakers = nil } }),
+            presenting: s.askSpeakers
+        ) { ask in
             Button(L("ask_cancel"), role: .cancel) {}
             Button(L("speakers_download")) {
-                Speakers.shared.set(true)
+                switch ask {
+                case .setting: Speakers.shared.set(true)
+                case .find: s.findAfter = true
+                }
                 Downloads.shared.startSpeakers()
             }
-        } message: {
+        } message: { _ in
             Text(
                 L(
                     "speakers_ask_about", mb(Speakers.shared.offer?.bytes ?? 0), Speakers.most))
         }
-        // the speaker model downloaded for the switch: the speakers of the
-        // transcript shown found, where it has none (app.js, diarizerDownload)
+        // the speaker model downloaded for the switch on a transcript: the
+        // speakers of the transcript shown found, where it has none (app.js,
+        // diarizerDownload). One downloaded for the start screen's switch
+        // finds none: that switch is for the next transcription
         .onChange(of: Speakers.shared.offer?.have == true) { had, has in
             let review = t.step == .done || t.step == .stopped
-            if has && !had && Speakers.shared.on && review
-                && Speakers.present(t.segments).isEmpty
-            {
+            if has && !had && s.findAfter && review && Speakers.present(t.segments).isEmpty {
                 Speakers.shared.find { s.say($0, err: true) }
             }
+            if has { s.findAfter = false }
         }
         // the finished transcript's recording, ready to play; another's let
         // go. Where it can't be played, the strip says why in its times'
@@ -321,7 +329,7 @@ struct Root: View {
                     }
                 }
             }
-            if args.contains("-askSpeakers") { s.askSpeakers = true }
+            if args.contains("-askSpeakers") { s.askSpeakers = .setting }
             switch value("-show") {
             case "about": s.about = true
             case "manage": s.managing = true

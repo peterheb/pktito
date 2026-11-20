@@ -70,7 +70,7 @@ struct Stretch: Codable, Hashable {
 /// back as it is. With speakers, the names given in place of Speaker n,
 /// speaker n's at n - 1 ("" keeps Speaker n), each speaker's stretches for
 /// the bar, and the diarizer that found them, each left out of the JSON
-/// without them, as ios.rs's are.
+/// without them, as ios.rs's are, and hidden where its own switch hid them.
 struct Transcript: Codable {
     let duration: Double
     /// false where stop() ended it before the end
@@ -80,11 +80,13 @@ struct Transcript: Codable {
     var names: [String] = []
     var stretches: [Stretch] = []
     var diarizer = ""
+    /// its speakers hidden by the Speakers switch on it (recent.rs, hidden)
+    var hidden = false
 }
 
 extension Transcript {
     private enum Keys: String, CodingKey {
-        case duration, complete, model, segments, names, stretches, diarizer
+        case duration, complete, model, segments, names, stretches, diarizer, hidden
     }
 
     init(from d: Decoder) throws {
@@ -96,6 +98,7 @@ extension Transcript {
         names = try c.decodeIfPresent([String].self, forKey: .names) ?? []
         stretches = try c.decodeIfPresent([Stretch].self, forKey: .stretches) ?? []
         diarizer = try c.decodeIfPresent(String.self, forKey: .diarizer) ?? ""
+        hidden = try c.decodeIfPresent(Bool.self, forKey: .hidden) ?? false
     }
 
     func encode(to e: Encoder) throws {
@@ -107,6 +110,7 @@ extension Transcript {
         if !names.isEmpty { try c.encode(names, forKey: .names) }
         if !stretches.isEmpty { try c.encode(stretches, forKey: .stretches) }
         if !diarizer.isEmpty { try c.encode(diarizer, forKey: .diarizer) }
+        if hidden { try c.encode(hidden, forKey: .hidden) }
     }
 }
 
