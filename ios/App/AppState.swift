@@ -180,12 +180,12 @@ final class AppState {
         Speakers.shared.undo(u.before)
     }
 
+    /// The back button: out of the transcript, whatever is sought in it. A
+    /// search is let go by the Find field's own button; Android's system
+    /// Back, which lets go of a search first (MainActivity, BackHandler),
+    /// has no counterpart in a button on the screen.
     func back() {
-        if finder.searching {
-            finder.clear()
-        } else if !Transcriber.shared.running {
-            leave()
-        }
+        if !Transcriber.shared.running { leave() }
     }
 
     /// An edit of the speakers done, said in a toast whose Undo takes it
