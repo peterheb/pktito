@@ -7,8 +7,8 @@ import SwiftUI
 /// About as Privacy does. As the desktop's, the mascot is over the words in
 /// a portrait window or one under 600 wide, the words as tall as they are
 /// and the mascot the rest, 160 at the least; and beside them otherwise
-/// (app.css, .pk-about). Here the mascot is a picture of it at rest
-/// (android/mascot.js), where the desktop's turns and chirps.
+/// (app.css, .pk-about). The mascot turns and chirps as the desktop's does
+/// (Mascot).
 struct About: View {
     enum Sheet: String, Identifiable {
         case privacy, notices
@@ -108,14 +108,7 @@ struct About: View {
 
 /// The mascot on the surface, as large as its place lets it be.
 private struct Stage: View {
-    var body: some View {
-        Image("Mascot")
-            .resizable()
-            .scaledToFit()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Pk.surface)
-            .accessibilityLabel(L("about_mascot"))
-    }
+    var body: some View { Mascot() }
 }
 
 /// About's words, at most the desktop's measure wide (.pk-about-in): 34 em

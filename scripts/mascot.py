@@ -797,6 +797,9 @@ def main():
     )
     with open(args.out, "w") as fh:
         fh.write(js)
+    # the same, without its wrapper, for the iOS app (ios/App/UI/Mascot.swift)
+    with open(os.path.join(root, "ios", "App", "mascot.json"), "w") as fh:
+        fh.write(json.dumps(data, separators=(",", ":")) + "\n")
     print(
         f"{args.out}: {len(js) / 1024:.0f} KB, {voxels} voxels, {len(data['palette']) - 1} colours"
     )
