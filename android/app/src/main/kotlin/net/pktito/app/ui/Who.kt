@@ -78,6 +78,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import net.pktito.app.R
+import net.pktito.app.Seg
 import net.pktito.app.Speakers
 import net.pktito.app.Stretch
 
@@ -148,6 +149,20 @@ class SpeakersView(
     val onUndo: () -> Unit = {},
     /** a toast at the screen's foot, which the Now button stands over */
     val lifted: Boolean = false,
+    /**
+     * with a row's time over its text, the rows keep room before the text for the turns' lines:
+     * only where there are lines or will be (the turns shown, the speakers being found, a
+     * transcription finding them as it goes). A transcript without speakers has its text on the
+     * screen's edge, and wraps anew when they are turned on (Peter, 2026-11-20).
+     */
+    val gutter: Boolean = false,
+    /**
+     * while speakers are found for a transcript already made, who was heard in a sentence so far
+     * (heardIn), for the rows on the screen to fill in as the find reaches them, as a transcription
+     * with speakers draws them (Peter, 2026-11-20); null else, and for a sentence not yet wholly
+     * heard
+     */
+    val said: (Seg) -> Int? = { null },
 ) {
     companion object {
         val NONE =
@@ -508,6 +523,19 @@ fun AnnotatedString.Builder.speakerName(
  * inside the turn's first and last rows, 2 dp inside their text, round there.
  */
 class TurnLine(val speaker: Int, val first: Boolean, val last: Boolean)
+
+/**
+ * Of the stretches heard so far (Speakers.growing), up to upto seconds, whoever talks most of a
+ * sentence wholly heard: its line and name until the find's own answer replaces them at its end, a
+ * sentence two people share then split between them. Of two who talk as much, the lower number.
+ */
+fun heardIn(stretches: List<Stretch>, upto: Double, s: Seg): Int? {
+    if (s.end > upto) return null
+    val most = sortedMapOf<Int, Double>()
+    for (x in stretches) if (x.end > s.start && x.start < s.end)
+        most[x.speaker] = (most[x.speaker] ?: 0.0) + minOf(x.end, s.end) - maxOf(x.start, s.start)
+    return most.maxByOrNull { it.value }?.key
+}
 
 /** The turn's line, its middle mid from the row's start edge (Screens.kt, SegRow). */
 fun Modifier.turnLine(line: TurnLine, color: Color, mid: Dp): Modifier = drawBehind {

@@ -90,6 +90,7 @@ import net.pktito.app.ui.WorkActions
 import net.pktito.app.ui.byFinger
 import net.pktito.app.ui.clock
 import net.pktito.app.ui.findIn
+import net.pktito.app.ui.heardIn
 import net.pktito.app.ui.itemIn
 import net.pktito.app.ui.pk
 import net.pktito.app.ui.shownRows
@@ -682,8 +683,16 @@ class MainActivity : ComponentActivity() {
                                 (review && (turns || Speakers.finding)) ||
                                     (review && spoken && finder.who != 0) ||
                                     (t.running && t.diarizing),
-                            editable = review,
+                            // not the lines and names of a find still going (said)
+                            editable = review && !Speakers.finding,
                             present = present,
+                            gutter = turns || Speakers.finding || (t.running && t.diarizing),
+                            said =
+                                if (Speakers.finding && !turns) {
+                                    val heard = Speakers.growing
+                                    val upto = Speakers.heard * t.duration
+                                    { s: Seg -> heardIn(heard, upto, s) }
+                                } else { _ -> null },
                             nameOf = { n -> Speakers.nameOf(resources, t.names, n) },
                             bar =
                                 when {

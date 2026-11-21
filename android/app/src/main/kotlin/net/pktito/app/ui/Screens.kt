@@ -1530,7 +1530,14 @@ private fun Rows(
             LazyColumn(
                 Modifier.hands(follow),
                 state = follow.list,
-                contentPadding = PaddingValues(start = edge, end = edge, bottom = 16.dp),
+                // the time over the text: the text on the screen's edge, the row
+                // playing's ground its inset wider (SegRow)
+                contentPadding =
+                    PaddingValues(
+                        start = if (column != null) edge else edge - INSET,
+                        end = if (column != null) edge else edge - INSET,
+                        bottom = 16.dp,
+                    ),
             ) {
                 // with Only matches and nothing found, where the sentences would be
                 if (view != null && view.isEmpty())
@@ -1539,7 +1546,11 @@ private fun Rows(
                             stringResource(R.string.find_only_none),
                             style = Type.ui.copy(fontWeight = FontWeight.W400),
                             color = p.inkMuted,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                            modifier =
+                                Modifier.padding(
+                                    horizontal = if (column != null) 16.dp else INSET,
+                                    vertical = 6.dp,
+                                ),
                         )
                     }
                 items(view?.size ?: rows.size, key = { k -> keys[view?.get(k) ?: k] }) { k ->
@@ -1562,6 +1573,10 @@ private fun Rows(
                             while (a > 0 && rows[a - 1].speaker == s.speaker) a--
                             Speakers.turnAt(rows, a)
                         } else null
+                    // while they are found, the line and name of whoever was heard in
+                    // it so far (SpeakersView.said), no menu on them yet
+                    val said = spk.said(s)
+                    val opens = said != null && (i == 0 || spk.said(rows[i - 1]) != said)
                     // and each row has its turn's line, ending inside its first and last
                     val line =
                         s.speaker
@@ -1571,6 +1586,13 @@ private fun Rows(
                                     it,
                                     Speakers.turnStarts(rows, i) || from,
                                     i == rows.lastIndex || rows[i + 1].speaker != it || to,
+                                )
+                            }
+                            ?: said?.let {
+                                TurnLine(
+                                    it,
+                                    opens || from,
+                                    i == rows.lastIndex || spk.said(rows[i + 1]) != it || to,
                                 )
                             }
                     // the rows after a sentence made one again sliding up into its
@@ -1603,7 +1625,10 @@ private fun Rows(
                             review,
                             base,
                             selection,
-                            turn,
+                            turn
+                                ?: said
+                                    ?.takeIf { opens }
+                                    ?.let { Speakers.Turn(i, i, it, s.start, s.end) },
                             line,
                             spk,
                             compact,
@@ -1623,7 +1648,9 @@ private fun Rows(
                             color = p.inkMuted,
                             modifier =
                                 Modifier.padding(
-                                    start = if (column != null) 16.dp + column + GUTTER else 16.dp,
+                                    start =
+                                        if (column != null) 16.dp + column + GUTTER
+                                        else INSET + if (spk.gutter) LINES else 0.dp,
                                     top = 16.dp,
                                 ),
                         )
@@ -1644,6 +1671,14 @@ private fun Rows(
             }
     }
 }
+
+/**
+ * With a row's time over its text: the text this far inside the row's ground, on the screen's edge
+ * with the header's and the strip's; and the room before it for the turns' lines, where there are
+ * any (SpeakersView.gutter).
+ */
+private val INSET = 8.dp
+private val LINES = 16.dp
 
 /**
  * Back to the row playing, for a reader who has scrolled away from it while it plays (Peter,
@@ -1756,14 +1791,14 @@ private fun SegRow(
     // touch loose)
     val gap = if ((turn != null || apart) && !first) Modifier.padding(top = 16.dp) else Modifier
     // its turn's line in the middle of the gutter, past the row's 16 dp and
-    // the times; with the time over the text, 5 dp in, as the desktop's
-    // narrow window has it
+    // the times; with the time over the text, in the room before it, 5 dp
+    // in, as the desktop's narrow window has it
     val ruled =
         turnLine?.let {
             Modifier.turnLine(
                 it,
                 p.speaker(it.speaker),
-                if (column != null) 16.dp + column + GUTTER / 2 else 6.5.dp,
+                if (column != null) 16.dp + column + GUTTER / 2 else INSET + 6.5.dp,
             )
         } ?: Modifier
     if (column != null)
@@ -1794,7 +1829,14 @@ private fun SegRow(
     else
     // the time over the text
     Column(
-            gap.then(box).then(ruled).padding(horizontal = 16.dp, vertical = 6.dp),
+            gap.then(box)
+                .then(ruled)
+                .padding(
+                    start = INSET + if (spk.gutter) LINES else 0.dp,
+                    end = INSET,
+                    top = 6.dp,
+                    bottom = 6.dp,
+                ),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             time(Modifier)
