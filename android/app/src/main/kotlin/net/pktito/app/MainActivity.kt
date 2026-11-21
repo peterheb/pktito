@@ -463,6 +463,7 @@ class MainActivity : ComponentActivity() {
         // while it plays moves both, and this scroll, the later, takes the
         // list from that one, which would have left the row at the top
         LaunchedEffect(finder.moved) {
+            follow.moved()
             val h = hits.getOrNull(finder.at) ?: return@LaunchedEffect
             val item = itemOf(h.row)
             if (item < 0) return@LaunchedEffect
@@ -640,13 +641,15 @@ class MainActivity : ComponentActivity() {
                             play = { if (!Speakers.finding) Player.toggle(this@MainActivity) },
                             seek = seek,
                             jump = { s ->
+                                follow.moved()
                                 seek(s, false)
                                 val row = t.segments.indexOfLast { it.start <= s + 1e-3 }
                                 val item = itemOf(row)
                                 if (item >= 0) scope.launch { follow.bring(item) }
                             },
-                            // Only matches turned: the reader kept on the same
-                            // sentence, where it was on the screen
+                            // Only matches turned: the reader kept on their
+                            // sentence or given the match nearest it, and back
+                            // where they were once it is off (Follow.keep)
                             only = {
                                 val hit = hits.getOrNull(finder.at)?.row
                                 finder.only = !finder.only
@@ -655,6 +658,12 @@ class MainActivity : ComponentActivity() {
                                     if (finder.only) shownRows(t.segments, hits, finder.query, who)
                                     else null,
                                     hit,
+                                    if (Player.playing || Player.position > 0)
+                                        t.segments
+                                            .indexOfLast { it.start <= Player.position + 1e-3 }
+                                            .takeIf { it >= 0 }
+                                    else null,
+                                    Player.playing,
                                 )
                             },
                             setBase = {

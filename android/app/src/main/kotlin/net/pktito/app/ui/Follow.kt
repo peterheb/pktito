@@ -43,7 +43,10 @@ class Follow(val list: LazyListState) {
     var fingers = 0
         set(n) {
             field = n
-            if (n > 0) chasing = -1
+            if (n > 0) {
+                chasing = -1
+                back = null
+            }
         }
 
     /** Scrolls of ours under way (scroll), which hands does not take for a fling. */
@@ -87,33 +90,91 @@ class Follow(val list: LazyListState) {
     }
 
     /**
+     * Where the reader was when Only matches was turned on: their row, how far under the list's top
+     * it was, and whether they were with the row playing. Until they move (moved).
+     */
+    private class Back(val row: Int, val offset: Int, val following: Boolean)
+
+    private var back: Back? = null
+
+    /**
+     * The reader has moved since Only matches was turned on: a finger on the list, a seek, a move
+     * to a match. Turning it off leaves them where they are now (keep).
+     */
+    fun moved() {
+        back = null
+    }
+
+    /**
      * Only matches turned (Finder.only), the list's rows going from was to now, each the rows shown
-     * in order, or null for all (shownRows): the reader kept on their sentence, where it is on the
-     * screen, as the rows around it come and go (app.js, the switch's click; iOS's Rows.keep). The
-     * match they are on (hit, a row), where it is in sight; else the first row in sight that stays
-     * shown; with none of those, the match a third of the way down, as a move to it brings it. Read
-     * from the list as it is drawn before the change; asked of it once the rows have changed
+     * in order, or null for all (shownRows); the same on the desktop (app.js, the switch's click)
+     * and iOS (Rows.keep). The reader's row is the match they are on (hit) or the row at the
+     * playhead (playing), where one is in sight, else the first row wholly in sight.
+     *
+     * Turned on: their row stays where it is on the screen if it is a match, else the first match
+     * wholly in sight does; with none, the next match after their row (the last, past them all)
+     * comes to where their row was. Never the match they are on from out of sight: that took a
+     * reader 27 minutes from the playhead (Peter, the iPhone 16e, 2026-11-20).
+     *
+     * Turned off: back where they were when it was turned on, with the row at the playhead there
+     * instead for a reader who was with it as it played (plays); once they have moved (moved),
+     * their row now stays where it is.
+     *
+     * Read from the list as it is drawn before the change; asked of it once the rows have changed
      * (take).
      */
-    fun keep(was: IntArray?, now: IntArray?, hit: Int?) {
+    fun keep(
+        was: IntArray?,
+        now: IntArray?,
+        hit: Int?,
+        playing: Int? = null,
+        plays: Boolean = false,
+    ) {
         val info = list.layoutInfo
+        val top = info.viewportStartOffset
+        // an item's row; -1 for No matches and for the stats line
+        val rowOf = { k: Int ->
+            if (was == null) k.takeIf { it < info.totalItemsCount - 1 } ?: -1
+            else was.getOrElse(k) { -1 }
+        }
         val seen =
             info.visibleItemsInfo.filter {
-                it.offset + it.size > info.viewportStartOffset && it.offset < info.viewportEndOffset
+                it.offset + it.size > top &&
+                    it.offset < info.viewportEndOffset &&
+                    rowOf(it.index) >= 0
             }
-        // an item's row; -1 for No matches, and past the rows for the stats line
-        val rowOf = { k: Int -> if (was == null) k else was.getOrElse(k) { -1 } }
-        val place =
-            seen.firstOrNull { hit != null && it.index == itemIn(was, hit) }
-                ?: seen.firstOrNull { rowOf(it.index).let { r -> r >= 0 && itemIn(now, r) >= 0 } }
-        val k = place?.let { itemIn(now, rowOf(it.index)) } ?: -1
-        val match = hit?.let { itemIn(now, it) } ?: -1
-        asked =
-            when {
-                place != null && k >= 0 -> k to -place.offset
-                match >= 0 -> match to -info.viewportSize.height / 3
-                else -> 0 to 0
-            }
+        val item = { r: Int? -> seen.firstOrNull { r != null && rowOf(it.index) == r } }
+        val mine =
+            item(hit)
+                ?: item(playing)
+                ?: seen.firstOrNull { it.offset >= top }
+                ?: seen.firstOrNull()
+        if (now != null) {
+            back = mine?.let { Back(rowOf(it.index), it.offset, plays && item(playing) != null) }
+            val stay =
+                mine?.takeIf { itemIn(now, rowOf(it.index)) >= 0 }
+                    ?: seen.firstOrNull { it.offset >= top && itemIn(now, rowOf(it.index)) >= 0 }
+            asked =
+                when {
+                    stay != null -> itemIn(now, rowOf(stay.index)) to -stay.offset
+                    mine != null && now.isNotEmpty() -> {
+                        val r = rowOf(mine.index)
+                        val next = now.indexOfFirst { it > r }
+                        (if (next < 0) now.lastIndex else next) to -mine.offset
+                    }
+                    else -> 0 to 0
+                }
+        } else {
+            val b = back
+            back = null
+            asked =
+                when {
+                    b != null ->
+                        (if (b.following && playing != null) playing else b.row) to -b.offset
+                    mine != null -> rowOf(mine.index) to -mine.offset
+                    else -> 0 to 0
+                }
+        }
     }
 
     /** The place keep found, until the list is asked for it (take). */
@@ -149,6 +210,7 @@ class Follow(val list: LazyListState) {
      * reader's own hand on the list.
      */
     fun show(row: Int) {
+        back = null
         if (row >= 0 && fingers == 0) list.requestScrollToItem(row)
     }
 

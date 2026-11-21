@@ -2677,6 +2677,7 @@ function pausePlayback() {
 function seek(t, play) {
   const f = current();
   if (!f || !playable(f) || f.finding) return;
+  onlyMoved();
   f.pos = Math.max(0, Math.min(f.duration, t));
   showTime(f.pos, true);
   if (play && player.paused) playFrom(f.pos);
@@ -3211,6 +3212,7 @@ function goHit(k, scroll = true) {
   hitAt = k;
   for (const el of hitPieces(hitAt)) el.classList.add("is-on");
   // one voice's turn, with no name to mark, by its row
+  if (scroll) onlyMoved();
   if (scroll)
     (hitPieces(hitAt)[0] || rowEl(hits[hitAt].i))?.scrollIntoView({
       block: "center",
@@ -3342,7 +3344,10 @@ function shownRows(f) {
 /* the switch, while something is found; off again once nothing is */
 function showOnly(finding) {
   const f = current();
-  if (!finding) only = false;
+  if (!finding) {
+    only = false;
+    onlyBack = null;
+  }
   $("only-track").hidden = !finding || !f || modeOf(f) !== "review";
   const b = $("only");
   b.setAttribute("aria-pressed", String(only));
@@ -3350,24 +3355,74 @@ function showOnly(finding) {
   b.title = t(only ? "find.only_all" : "find.only_show");
 }
 
-/* turned, the reader kept on their sentence, where it is in the window, as
-   the rows around it come and go: the match they are on, where it is in
-   sight, else the first row in sight that stays shown; with none of those,
-   the match, brought as a move to it brings it (the same on Android and
-   iOS) */
+/* Turned, the same on Android (Follow.keep) and iOS (Rows.keep). The
+   reader's row is the match they are on or the row at the playhead, where
+   one is in sight, else the first row in sight.
+
+   Turned on: their row stays where it is in the window if it is a match,
+   else the first match in sight does; with none, the next match after
+   their row (the last, past them all) comes to where their row was. Never
+   the match they are on from out of sight: that took a reader 27 minutes
+   from the playhead (Peter, the iPhone 16e, 2026-11-20).
+
+   Turned off: back where they were when it was turned on (onlyBack), with
+   the row at the playhead there instead for a reader who was with it as it
+   played; once they have moved (a wheel, a key or a press on the
+   transcript, a seek, a move to a match), their row now stays where it
+   is. */
+let onlyBack = null;
+function onlyMoved() {
+  onlyBack = null;
+}
+for (const e of ["wheel", "pointerdown", "touchmove"])
+  $("transcript").addEventListener(e, onlyMoved, { passive: true });
+// the keys that scroll, but for Space on the switch itself, which turns it
+document.addEventListener("keydown", (e) => {
+  if (
+    /^(Page|Arrow)(Up|Down)$|^(Home|End| )$/.test(e.key) &&
+    !e.target.closest?.("button, input, select, textarea")
+  )
+    onlyMoved();
+});
+
 $("only").onclick = () => {
   const f = current();
   if (!f || !(query || who)) return;
-  const shown = only ? null : shownRows(f),
-    place = placeOf(
-      hitAt >= 0 ? rowEl(hits[hitAt].i) : null,
-      (i) => !shown || shown[i],
-    );
+  const sight = (el) =>
+      el && el.isConnected && !el.hidden && inSight(el) ? el : null,
+    hit = sight(hitAt >= 0 ? rowEl(hits[hitAt].i) : null),
+    now = sight(curSeg),
+    mine = placeOf(hit || now);
+  let place = mine;
+  if (!only) {
+    const shown = shownRows(f),
+      i = mine ? at(f.segments, mine.t) : -1;
+    onlyBack = mine && { ...mine, following: playing && !!now };
+    if (!(i >= 0 && shown[i])) {
+      place = placeOf(null, (k) => shown[k]);
+      if (!place && mine) {
+        let k = shown.indexOf(true, i + 1);
+        if (k < 0) k = shown.lastIndexOf(true);
+        // whole, where their row was partly over the top
+        if (k >= 0)
+          place = {
+            t: f.segments[k].start,
+            y: Math.max(mine.y, $("transcript").getBoundingClientRect().top),
+          };
+      }
+    }
+  } else if (onlyBack) {
+    place =
+      onlyBack.following && curSeg?.isConnected
+        ? { t: Number(curSeg.dataset.t), y: onlyBack.y }
+        : onlyBack;
+    onlyBack = null;
+  }
   only = !only;
   applyOnly(f);
   showOnly(true);
   if (place) toPlace(f, place);
-  else if (hitAt >= 0) goHit(hitAt);
+  nowBtn();
 };
 
 function clearFind() {

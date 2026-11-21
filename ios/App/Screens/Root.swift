@@ -214,7 +214,8 @@ struct Root: View {
         /// presses the switch on the transcript opened, after -findSpeakers
         /// where both; -quietAfter S turns the speakers off S seconds into a
         /// run that is finding them. -only turns Only matches on once the search is set, and
-        /// -flipOnly S turns it again S seconds on. (A default's own -key
+        /// -flipOnly S turns it again S seconds on, -flips N that many times,
+        /// S seconds apart. (A default's own -key
         /// value, as -times YES, sets it for the run.)
         private func debugArguments() {
             let args = CommandLine.arguments
@@ -349,8 +350,10 @@ struct Root: View {
                     if let rename { s.renaming = rename }
                     if args.contains("-only") { s.finder.only = true }
                     if let flip {
-                        try? await Task.sleep(for: .seconds(flip))
-                        s.finder.only.toggle()
+                        for _ in 0..<(value("-flips").flatMap(Int.init) ?? 1) {
+                            try? await Task.sleep(for: .seconds(flip))
+                            s.finder.only.toggle()
+                        }
                     }
                 }
             }

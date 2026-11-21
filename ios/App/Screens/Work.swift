@@ -637,8 +637,9 @@ struct Marked: Equatable {
 /// With Only matches (Finder.only), the rows found alone (shownRows), each
 /// still playing from its time: a run of them stands apart as a turn does,
 /// its line ending inside its first and last, and a run from inside a turn
-/// has the turn's name (app.js, applyOnly). Turned, the reader stays on
-/// their sentence, where it was on the screen (keep).
+/// has the turn's name (app.js, applyOnly). Turned on, the reader stays on
+/// their sentence or is given the match nearest it; turned off, they are
+/// back where they were, unless they have moved since (keep).
 /// Where a finger scrubbing the waveform has the playhead (Work, Rows).
 struct Scrub: Equatable {
     var at: Double = 0
@@ -719,12 +720,26 @@ private struct Rows: View {
     /// reader's sentence where it was (keep); held aside, as nothing drawn
     /// depends on it. What is in sight is reckoned from these, not from
     /// seen, which kept rows Only matches had just taken away (the iPhone 17
-    /// Simulator, 2026-11-15).
+    /// Simulator, 2026-11-15). Each with which list drew it, all the rows'
+    /// or the matches' alone: the turn makes the list anew, and the new
+    /// one's rows are drawn as the old one's go.
     @State private var drawn = Drawn()
+    /// where the reader was when Only matches was turned on, until they
+    /// move the list, seek or go to a match: where turning it off takes
+    /// them back to (keep)
+    @State private var back: Back?
 
     private final class Drawn {
-        var frames: [Int: CGRect] = [:]
+        var frames: [Int: (only: Bool, at: CGRect)] = [:]
         var height: CGFloat = 0
+    }
+
+    /// A row and where it was in the list's room (the anchor that puts it
+    /// there again), and whether the reader was with the row playing.
+    private struct Back {
+        let row: Int
+        let y: CGFloat
+        let following: Bool
     }
 
     var body: some View {
@@ -808,9 +823,11 @@ private struct Rows: View {
                         .onGeometryChange(for: CGRect.self) {
                             $0.frame(in: .scrollView)
                         } action: {
-                            drawn.frames[i] = $0
+                            drawn.frames[i] = (view != nil, $0)
                         }
-                        .onDisappear { drawn.frames[i] = nil }
+                        .onDisappear {
+                            if drawn.frames[i]?.only == (view != nil) { drawn.frames[i] = nil }
+                        }
                     }
                     // with Only matches and nothing found, where the sentences would be
                     if view?.isEmpty == true {
@@ -855,7 +872,10 @@ private struct Rows: View {
             }
             .onScrollPhaseChange { _, now in
                 phase = now
-                if hands { chasing = nil }
+                if hands {
+                    chasing = nil
+                    back = nil
+                }
                 // a follow that stopped short, once the list is still: twice more at most
                 if now == .idle, let r = chasing {
                     if seen.dropLast().contains(r) || tries >= 2 {
@@ -885,6 +905,7 @@ private struct Rows: View {
             .scrollDismissesKeyboard(.immediately)
             .simultaneousGesture(
                 TapGesture().onEnded {
+                    back = nil
                     UIApplication.shared.sendAction(
                         #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                 }
@@ -915,11 +936,12 @@ private struct Rows: View {
             }
             // a seek on the waveform: its row, wherever the reader is
             .onChange(of: jump) {
+                back = nil
                 if current >= 0 && !hands && view?.contains(current) ?? true {
                     bring(current, list)
                 }
             }
-            .onChange(of: f.only) { keep(list) }
+            .onChange(of: f.only) { keep(list, playing: current) }
             // the transcript's end followed as it comes, for a reader who is there
             .onChange(of: t.segments.count) { _, n in
                 if t.running && n > 0 && (seen.last ?? 0) >= n - 4 && !hands {
@@ -931,6 +953,7 @@ private struct Rows: View {
                 if !id.isEmpty { list.scrollTo(0, anchor: .top) }
             }
             .onChange(of: f.moved) {
+                back = nil
                 revealing = true
                 reveal(list)
             }
@@ -961,34 +984,66 @@ private struct Rows: View {
         return a
     }
 
-    /// Only matches turned (Finder.only): the reader kept on their sentence,
-    /// where it was on the screen (app.js, placeOf and toPlace), as the rows
-    /// around it come and go: the match they are on, where it is in sight,
-    /// else the first row wholly in sight the list still shows. Called as
-    /// the turn is drawn, while the rows' places are still the last
-    /// drawing's; a row at fraction y of the list's room, less its own
-    /// height, is put there again by the anchor y. Nothing in sight stays:
-    /// the match a third of the way down, as a move to it brings it.
-    private func keep(_ list: ScrollViewProxy) {
+    /// Only matches turned (Finder.only), the same on the desktop (app.js,
+    /// the switch's click) and Android (Follow.keep). The reader's row is
+    /// the match they are on or the row playing, where one is in sight,
+    /// else the first row wholly in sight.
+    ///
+    /// Turned on: their row stays where it was on the screen if it is a
+    /// match, else the first match in sight does; with no match in sight,
+    /// the next match after their row (the last, past them all) comes to
+    /// where their row was. Never the match they are on from out of sight:
+    /// that took a reader 27 minutes from the playhead (Peter, the iPhone
+    /// 16e, 2026-11-20).
+    ///
+    /// Turned off: back where they were when it was turned on (back), with
+    /// the row playing there instead for a reader who was with it; once
+    /// they have moved the list, tapped a row, sought or gone to a match,
+    /// their row now stays where it is.
+    ///
+    /// Called as the turn is drawn, from the places the list before the
+    /// turn drew its rows at; a row at fraction y of the list's room, less
+    /// its own height, is put there again by the anchor y.
+    private func keep(_ list: ScrollViewProxy, playing: Int) {
         let f = AppState.shared.finder
-        let hit = f.at >= 0 && f.at < hits.count ? hits[f.at].row : nil
+        let on = view != nil
         let h = drawn.height
-        let frames = drawn.frames
-        let stays = { (i: Int) in view?.contains(i) ?? true }
+        let frames = drawn.frames.filter { $0.value.only != on }.mapValues { $0.at }
+        drawn.frames = drawn.frames.filter { $0.value.only == on }
         let inSight = { (i: Int) in frames[i].map { $0.maxY > 0 && $0.minY < h } ?? false }
-        let row =
-            hit.flatMap { inSight($0) ? $0 : nil }
-            ?? frames.filter { $0.value.minY >= 0 && $0.value.minY < h && stays($0.key) }
-            .keys.min()
-        let to: (Int, UnitPoint)? =
-            if let row, let r = frames[row], h > r.height {
-                (row, UnitPoint(x: 0, y: min(max(r.minY / (h - r.height), 0), 1)))
-            } else if let hit {
-                (hit, UnitPoint(x: 0, y: 1.0 / 3))
-            } else {
-                view?.first.map { ($0, .top) }
+        let whole = { (i: Int) in frames[i].map { $0.minY >= 0 && $0.minY < h } ?? false }
+        let y = { (i: Int) -> CGFloat in
+            guard let r = frames[i], h > r.height else { return 0 }
+            return min(max(r.minY / (h - r.height), 0), 1)
+        }
+        let hit = f.at >= 0 && f.at < hits.count ? hits[f.at].row : -1
+        let mine =
+            [hit, playing].first { $0 >= 0 && inSight($0) }
+            ?? frames.keys.filter(whole).min() ?? frames.keys.filter(inSight).min()
+        var to: (Int, CGFloat)?
+        if let shown = view {
+            back = mine.map {
+                Back(
+                    row: $0, y: y($0),
+                    following: Player.shared.playing && playing >= 0 && inSight(playing))
             }
-        guard let (row, anchor) = to else { return }
+            if let mine, shown.contains(mine) {
+                to = (mine, y(mine))
+            } else if let first = shown.first(where: whole) {
+                to = (first, y(first))
+            } else if let mine, let near = shown.first(where: { $0 > mine }) ?? shown.last {
+                to = (near, y(mine))
+            } else {
+                to = shown.first.map { ($0, 0) }
+            }
+        } else if let b = back {
+            back = nil
+            to = (b.following && playing >= 0 ? playing : b.row, b.y)
+        } else {
+            to = mine.map { ($0, y($0)) }
+        }
+        guard let (row, at) = to else { return }
+        let anchor = UnitPoint(x: 0, y: at)
         // now, which the list made anew (id) applies as it first lays out its
         // rows, by their estimated heights; then once they are laid out, to
         // their measured places (the iPhone 17 Simulator, 2026-11-15: the
