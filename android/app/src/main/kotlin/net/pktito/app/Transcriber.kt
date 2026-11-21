@@ -107,17 +107,22 @@ object Transcriber {
      * 17x a minute later (Peter, the S24, 2026-11-18).
      */
     var pace by mutableStateOf(0.0)
-    /** (seconds spent, seconds of audio done) at each chunk, back to PACE seconds ago */
+    /**
+     * (seconds spent, seconds of audio done) at each chunk, back to PACE seconds ago, and before
+     * the first the work's start, (0, 0): two chunks that come together are then reckoned from
+     * there, where from one to the next, 27 s of audio 5 ms apart, the pace read 5424x for a moment
+     * (the S24, one.m4a, 2026-11-20).
+     */
     private val lately = ArrayDeque<Pair<Double, Double>>()
 
     /** A chunk done: spent seconds in, audio seconds of the recording transcribed. */
     fun chunk(spent: Double, audio: Double) {
         transcribed = spent
+        if (lately.isEmpty()) lately.addLast(0.0 to 0.0)
         lately.addLast(spent to audio)
         while (lately.size > 2 && spent - lately[1].first >= PACE) lately.removeFirst()
         val (s0, a0) = lately.first()
-        // the first chunk's own: from the start of the work, not of its reading
-        pace = if (lately.size > 1 && spent > s0) (audio - a0) / (spent - s0) else audio / spent
+        pace = if (spent > s0) (audio - a0) / (spent - s0) else 0.0
     }
 
     /** The finished transcript's JSON, for Engine.format. */

@@ -118,7 +118,13 @@ class TranscribeService : Service() {
         val id = Transcriber.id
         val name = Transcriber.name
         var shown = 0L
+        // when the work began, and whether its first chunk has come: the
+        // clock starts with the engine's call, not at the first chunk, which
+        // is said when it is done and read 3419x for a moment (Peter, the
+        // S25, 2026-11-20), and left the first chunk's seconds out of the
+        // finished transcript's time
         var began = 0L
+        var heard = false
         var video = 0.0
         var loudness = ByteArray(0)
         // a recording shared or opened with pktito, which Android takes the
@@ -154,8 +160,8 @@ class TranscribeService : Service() {
                     // waveform as far as the decoder has got; once more at
                     // the end, the recording's own
                     override fun audio(duration: Double, fps: Double, peaks: ByteArray) {
-                        val first = began == 0L
-                        if (first) began = SystemClock.elapsedRealtime()
+                        val first = !heard
+                        heard = true
                         video = fps
                         loudness = peaks
                         Transcriber.post {
@@ -194,16 +200,19 @@ class TranscribeService : Service() {
                     }
                 }
             val t =
-                if (diarizer == null) Engine.transcribe(handle, 0L, pfd.fd, name, kept, progress)
-                else
+                if (diarizer == null) {
+                    began = SystemClock.elapsedRealtime()
+                    Engine.transcribe(handle, 0L, pfd.fd, name, kept, progress)
+                } else
                     Speakers.with(diarizer) { diar ->
+                        began = SystemClock.elapsedRealtime()
                         Engine.transcribe(handle, diar, pfd.fd, name, kept, progress)
                     }
             val o = JSONObject(t)
             val complete = o.getBoolean("complete")
             // for adb's logcat: what was done, and how fast
             // none where it stopped before the audio was read
-            val secs = if (began > 0) (SystemClock.elapsedRealtime() - began) / 1000.0 else 0.0
+            val secs = if (heard) (SystemClock.elapsedRealtime() - began) / 1000.0 else 0.0
             Log.i(
                 TAG,
                 "transcribed $name${if (complete) "" else ", stopped"}: " +

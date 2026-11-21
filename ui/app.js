@@ -215,17 +215,20 @@ function clock(s) {
    work, while a file transcribes; a finished one's is the whole run's
    (transcribed), which while it ran was slow to show a change: speakers
    turned off partway, at 20x after 15x, read 17x a minute later (Peter, the
-   S24, 2026-11-18; Android's Transcriber.pace). */
+   S24, 2026-11-18; Android's Transcriber.pace). Before the first chunk the
+   work's start, [0, 0]: two chunks that come together are reckoned from
+   there, not from one to the next (Android's Transcriber.lately: 5424x for
+   a moment, the S24, 2026-11-20). */
 function paceNow(f) {
   const spent = f.transcribed,
     audio = f.done * f.duration,
     l = (f.lately ??= []);
   if (l.length && spent < l[l.length - 1][0]) l.length = 0; // transcribed again
+  if (!l.length) l.push([0, 0]);
   l.push([spent, audio]);
   while (l.length > 2 && spent - l[1][0] >= 10) l.shift();
   const [s0, a0] = l[0];
-  f.pace =
-    l.length > 1 && spent > s0 ? (audio - a0) / (spent - s0) : audio / spent;
+  f.pace = spent > s0 ? (audio - a0) / (spent - s0) : 0;
 }
 function realTime(audio, secs) {
   return t("time.real_time", { x: num(audio / secs, 1) });

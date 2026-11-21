@@ -48,16 +48,20 @@ final class Transcriber {
     /// speakers turned off partway, at 20x after 15x, read 17x a minute later
     /// (Peter, the S24, 2026-11-18; Android's Transcriber.pace)
     private(set) var pace = 0.0
-    /// (seconds spent, seconds of audio done) at each chunk, back 10 seconds
+    /// (seconds spent, seconds of audio done) at each chunk, back 10 seconds,
+    /// and before the first the work's start, (0, 0): two chunks that come
+    /// together are reckoned from there, not from one to the next (Android's
+    /// Transcriber.lately: 5424x for a moment, the S24, 2026-11-20)
     private var lately: [(Double, Double)] = []
 
     /// A chunk done: spent seconds in, audio seconds of the recording transcribed.
     private func chunk(_ spent: Double, _ audio: Double) {
         transcribed = spent
+        if lately.isEmpty { lately.append((0, 0)) }
         lately.append((spent, audio))
         while lately.count > 2 && spent - lately[1].0 >= 10 { lately.removeFirst() }
         let (s0, a0) = lately[0]
-        pace = lately.count > 1 && spent > s0 ? (audio - a0) / (spent - s0) : audio / spent
+        pace = spent > s0 ? (audio - a0) / (spent - s0) : 0
     }
     /// the finished transcript, for the formats
     private(set) var transcript: Transcript?
