@@ -108,8 +108,6 @@
     <string name="about_copyright"><![CDATA[Copyright (c) 2026 Peter Hebert, under the <a href="https://github.com/peterheb/pktito/blob/main/LICENSE">MIT license</a>]]></string>
     <string name="about_docs">Documentation</string>
     <string name="about_privacy">Privacy</string>
-    <string name="about_models"><![CDATA[NVIDIA\'s <a href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2">parakeet-tdt-0.6b-v2</a> and <a href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3">-v3</a>, under <a href="https://creativecommons.org/licenses/by/4.0/">CC&nbsp;BY&nbsp;4.0</a>, modified by pktito (partly quantized to int8). Provided as is, without warranties. pktito is not affiliated with or endorsed by NVIDIA.]]></string>
-    <string name="about_silero"><![CDATA[Voice activity detection, <a href="https://github.com/snakers4/silero-vad/blob/master/LICENSE">MIT</a><br>Copyright (c) 2020-present Silero Team]]></string>
     <!-- About's credit for the models, and the sheet it opens: every model
          the app can use, from the catalog (models.json: by, license,
          source, changes, notice), under what it does -->

@@ -1046,6 +1046,21 @@ pub extern "system" fn Java_net_pktito_app_Engine_backend<'a>(
         .resolve::<ThrowRuntimeExAndDefault>()
 }
 
+/// Engine.credits(): the credit of each model the app can use, for About's
+/// Models (build.rs, credits), as JSON: [{name, task, by, license,
+/// license_url, source, and changes and notice where it has them}].
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_net_pktito_app_Engine_credits<'a>(
+    mut unowned: EnvUnowned<'a>,
+    _class: JClass<'a>,
+) -> JObject<'a> {
+    unowned
+        .with_env(|env| -> jni::errors::Result<JObject<'a>> {
+            Ok(env.new_string(model::CREDITS)?.into())
+        })
+        .resolve::<ThrowRuntimeExAndDefault>()
+}
+
 /// The phone as Kotlin describes it (Editions.device), in JSON: an
 /// IOException's why for JSON that isn't one.
 fn device(json: &str) -> Result<editions::Device, String> {

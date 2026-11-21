@@ -80,17 +80,6 @@
         }
       }
     },
-    "about_models": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NVIDIA's [parakeet-tdt-0.6b-v2](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) and [-v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), modified by pktito (partly quantized to int8). Provided as is, without warranties. pktito is not affiliated with or endorsed by NVIDIA."
-          }
-        }
-      }
-    },
     "about_models_name": {
       "extractionState": "manual",
       "comment": "About's credit for the models, and the sheet it opens: every model the app can use, from the catalog (models.json: by, license, source, changes, notice), under what it does",
@@ -144,17 +133,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Privacy"
-          }
-        }
-      }
-    },
-    "about_silero": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Voice activity detection, [MIT](https://github.com/snakers4/silero-vad/blob/master/LICENSE)\nCopyright (c) 2020-present Silero Team"
           }
         }
       }

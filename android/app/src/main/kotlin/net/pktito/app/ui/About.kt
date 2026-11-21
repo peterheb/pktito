@@ -1,6 +1,7 @@
 package net.pktito.app.ui
 
 import android.content.Context
+import android.text.TextUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -44,6 +45,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -65,6 +67,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import net.pktito.app.Engine
 import net.pktito.app.R
 import org.json.JSONArray
 import org.json.JSONObject
@@ -178,6 +181,14 @@ fun About(version: String, onBack: () -> Unit, onLink: (String) -> Unit) {
                 ) {
                     Privacy(onLink, it)
                 }
+            "models" ->
+                Sheet(
+                    stringResource(R.string.models_title),
+                    narrow = true,
+                    onClose = { sheet = "" },
+                ) {
+                    ModelCredits(onLink, it)
+                }
             "notices" ->
                 Sheet(
                     stringResource(R.string.notices_title),
@@ -239,8 +250,10 @@ private fun Credits(
         }
         // the names in the desktop's column, its 7.5 em of their 14 px, while
         // the longest fits there whole, else each above its credit: at 1.3
-        // times the text size Parakeet-TDT broke in two there on a phone
-        val names = listOf("Parakeet-TDT", "Silero VAD", stringResource(R.string.about_else))
+        // times the text size Parakeet-TDT, a name it had, broke in two there on
+        // a phone
+        val names =
+            listOf(stringResource(R.string.about_models_name), stringResource(R.string.about_else))
         val measurer = rememberTextMeasurer()
         val fits =
             with(LocalDensity.current) {
@@ -254,12 +267,20 @@ private fun Credits(
             verticalArrangement = Arrangement.spacedBy(if (column != null) 10.dp else 12.dp),
         ) {
             Credit(names[0], column) {
-                Words(html(stringResource(R.string.about_models), onLink), Type.small, p.inkMuted)
+                Column {
+                    Text(
+                        stringResource(R.string.about_models_text),
+                        style = Type.small,
+                        color = p.inkMuted,
+                    )
+                    Words(
+                        button(stringResource(R.string.about_models_open)) { open("models") },
+                        Type.small.copy(lineHeight = 20.sp),
+                        p.inkMuted,
+                    )
+                }
             }
             Credit(names[1], column) {
-                Words(html(stringResource(R.string.about_silero), onLink), Type.small, p.inkMuted)
-            }
-            Credit(names[2], column) {
                 Column {
                     Text(
                         stringResource(R.string.about_else_list),
@@ -394,6 +415,102 @@ private fun external(s: AnnotatedString) = buildAnnotatedString {
         at = r.end
     }
     append(s.subSequence(at, s.length))
+}
+
+/**
+ * A model's credit (models.json): its name, what it does (transcribe, diarize, vad), who it is by,
+ * its license's short name and page, its source's page, what pktito changed of it (int8) and the
+ * notice its license asks to be kept, where it has them.
+ */
+private class ModelCredit(j: JSONObject) {
+    val name: String = j.getString("name")
+    val task: String = j.getString("task")
+    val by: String = j.getString("by")
+    val license: String = j.getString("license")
+    val licenseUrl: String = j.getString("license_url")
+    val source: String = j.getString("source")
+    val changes: String = j.optString("changes")
+    val notice: String = j.optString("notice")
+}
+
+/**
+ * The models the app can use (Engine.credits, from the catalog), under what each does: its name, a
+ * link to its source; who it is by and its license, a link to it; what pktito changed of it; and
+ * the notice its license asks to be kept.
+ */
+@Composable
+private fun ModelCredits(onLink: (String) -> Unit, modifier: Modifier) {
+    val p = pk
+    val all = remember {
+        val a = JSONArray(Engine.credits())
+        List(a.length()) { ModelCredit(a.getJSONObject(it)) }
+    }
+    // the tasks in the order About lists them, then any the catalog adds
+    val known =
+        mapOf(
+            "transcribe" to R.string.models_task_transcribe,
+            "diarize" to R.string.models_task_diarize,
+            "vad" to R.string.models_task_vad,
+        )
+    val tasks =
+        (known.keys.filter { k -> all.any { it.task == k } } + all.map { it.task }).distinct()
+    val heading =
+        TextStyle(
+            fontFamily = Fonts.sans,
+            fontWeight = FontWeight.W700,
+            fontSize = 17.sp,
+            lineHeight = 1.3.em,
+            lineHeightStyle = CssLine,
+            letterSpacing = (-0.005).em,
+            lineBreak = LineBreak.Heading,
+        )
+    SelectionContainer(modifier) {
+        Column(
+            Modifier.scrolls().padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 28.dp)
+        ) {
+            Text(
+                stringResource(R.string.models_intro),
+                style = Type.small,
+                color = p.inkMuted,
+                modifier = Modifier.widthIn(max = 560.dp),
+            )
+            for (task in tasks) {
+                Text(
+                    stringResource(known[task] ?: R.string.models_task_other),
+                    style = heading,
+                    color = p.ink,
+                    modifier = Modifier.padding(top = 24.dp).semantics { heading() },
+                )
+                for (m in all.filter { it.task == task }) {
+                    Column(Modifier.widthIn(max = 560.dp).padding(top = 10.dp)) {
+                        Words(link(m.name, m.source, onLink), CreditName, p.ink)
+                        val license =
+                            "<a href=\"${TextUtils.htmlEncode(m.licenseUrl)}\">${TextUtils.htmlEncode(m.license)}</a>"
+                        Words(
+                            html(
+                                stringResource(
+                                    R.string.models_by,
+                                    TextUtils.htmlEncode(m.by),
+                                    license,
+                                ),
+                                onLink,
+                            ),
+                            Type.small,
+                            p.inkMuted,
+                        )
+                        if (m.changes == "int8")
+                            Text(
+                                stringResource(R.string.models_changes_int8),
+                                style = Type.small,
+                                color = p.inkMuted,
+                            )
+                        if (m.notice.isNotEmpty())
+                            Text(m.notice, style = Type.small, color = p.inkMuted)
+                    }
+                }
+            }
+        }
+    }
 }
 
 /**

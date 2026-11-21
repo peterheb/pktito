@@ -95,6 +95,12 @@ object Engine {
     @JvmStatic external fun backend(): String
 
     /**
+     * The credit of each model the app can use, from the catalog, for About's Models, as JSON:
+     * [{name, task, by, license, license_url, source, and changes and notice where it has them}].
+     */
+    @JvmStatic external fun credits(): String
+
+    /**
      * The recording open at fd, read and transcribed on this thread: the transcript. fd stays the
      * caller's; name is what an error calls it. One that can't be read throws its problem
      * (problem). With diar (loadDiarizer's, or 0 for none), each segment one speaker's and saying
