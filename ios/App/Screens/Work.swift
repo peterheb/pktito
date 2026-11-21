@@ -193,7 +193,10 @@ struct Work: View {
                 stats: stats(review), edge: edge, jump: jumped, scrub: scrubbed,
                 speakers: Rows.Voices(
                     turns: turns, editable: review && spoken, present: present, names: t.names,
-                    joined: spk.joined)
+                    joined: spk.joined,
+                    gutter: turns || spk.finding || (t.running && t.diarizing),
+                    heard: spk.finding && !turns
+                        ? Rows.Heard(stretches: spk.growing, upto: spk.heard * t.duration) : nil)
             ) { time, play in
                 seek(time, play: play)
             }
@@ -661,13 +664,40 @@ private struct Rows: View {
     /// The speakers as the rows show them (Work): the turns, a second voice
     /// heard; whether a sentence's speaker can be changed, the names shown
     /// on a finished transcript; who is in it and their names; and the last
-    /// move's sentence made one again, lit a moment.
+    /// move's sentence made one again, lit a moment. The rows keep the
+    /// lines' gutter only where there are lines or will be: a transcript
+    /// without speakers has its text at the screen's edge, and wraps anew
+    /// when they are turned on (Peter, 2026-11-20). While they are found
+    /// for a transcript already made, heard: what the diarizer has so far.
     struct Voices {
         let turns: Bool
         let editable: Bool
         let present: [Int]
         let names: [String]
         let joined: Speakers.Joined?
+        let gutter: Bool
+        let heard: Heard?
+    }
+
+    /// The speakers found so far (Speakers.growing), up to a time: a
+    /// sentence wholly heard has the line and name of whoever talks most of
+    /// it, so the rows on the screen fill in as the find reaches them, as a
+    /// transcription with speakers draws them (Peter, 2026-11-20). The
+    /// find's own answer replaces them at its end, a sentence two people
+    /// share then split between them.
+    struct Heard {
+        let stretches: [Stretch]
+        let upto: Double
+
+        func speaker(_ s: Segment) -> Int? {
+            guard s.end <= upto else { return nil }
+            var most: [Int: Double] = [:]
+            for x in stretches where x.end > s.start && x.start < s.end {
+                most[x.speaker, default: 0] += min(x.end, s.end) - max(x.start, s.start)
+            }
+            // of two who talk as much, the lower number, the same each time
+            return most.max { ($0.value, -$0.key) < ($1.value, -$1.key) }?.key
+        }
     }
     /// the id of the current match's view in its row (Sentence)
     static let match = "match"
@@ -743,13 +773,23 @@ private struct Rows: View {
                             starts
                             ? Speakers.turnAt(rows, i)
                             : lent ? Speakers.turnAt(rows, turnStart(i)) : nil
+                        // while they are found, the line and name of
+                        // whoever was heard in it (Heard), no menu on them yet
+                        let said = v.heard?.speaker(s)
+                        let opens = said != nil && (i == 0 || v.heard?.speaker(rows[i - 1]) != said)
                         let line =
                             v.turns
                             ? s.speaker.map { n in
                                 TurnLine(
                                     speaker: n, first: starts || from,
                                     last: i == rows.count - 1 || rows[i + 1].speaker != n || to)
-                            } : nil
+                            }
+                            : said.map { n in
+                                TurnLine(
+                                    speaker: n, first: opens || from,
+                                    last: i == rows.count - 1
+                                        || v.heard?.speaker(rows[i + 1]) != n || to)
+                            }
                         SegRow(
                             s: s, index: i, now: now,
                             word: now
@@ -757,11 +797,12 @@ private struct Rows: View {
                                 : -1,
                             marks: mine, at: mine.contains { $0.k == f.at } ? f.at : -1,
                             column: wide ? column : nil, review: review, base: base,
-                            name: turn.map { Speakers.nameOf(v.names, $0.speaker) },
-                            turn: turn, line: line,
+                            name: turn.map { Speakers.nameOf(v.names, $0.speaker) }
+                                ?? (opens ? said.map { Speakers.nameOf(v.names, $0) } : nil),
+                            turn: turn, line: line, gutter: v.gutter,
                             who: v.editable ? Who(present: v.present, names: v.names) : nil,
                             lit: v.joined?.seg == s ? v.joined : nil, first: i == shown.first,
-                            apart: from
+                            apart: from || opens
                         ) { seek(s.start, true) }
                         .equatable()
                         .onGeometryChange(for: CGRect.self) {
@@ -776,7 +817,7 @@ private struct Rows: View {
                         Text(L("find_only_none"))
                             .font(PkType.ui.font(14))
                             .foregroundStyle(Pk.inkMuted)
-                            .padding(.horizontal, 16)
+                            .padding(.horizontal, wide ? 16 : SegRow.inset)
                             .padding(.vertical, 6)
                     }
                     // what the whole transcript cost says nothing of the matches shown
@@ -785,12 +826,19 @@ private struct Rows: View {
                             .font(PkType.small.font(12))
                             .monospacedDigit()
                             .foregroundStyle(Pk.inkMuted)
-                            .padding(.leading, wide ? 16 + column + 46 : 16)
+                            .padding(
+                                .leading,
+                                wide
+                                    ? 16 + column + 46
+                                    : SegRow.inset + (v.gutter ? SegRow.gutter : 0)
+                            )
                             .padding(.top, 16)
                     }
                 }
                 .scrollTargetLayout()
-                .padding(.horizontal, edge)
+                // the time over the text: the text at the screen's edge, the
+                // row playing's ground its inset wider (SegRow)
+                .padding(.horizontal, wide ? edge : edge - SegRow.inset)
                 .padding(.bottom, 16)
             }
             // a list anew for each set of rows Only matches shows: the rows
@@ -1032,6 +1080,14 @@ private struct SegRow: View, Equatable {
     let turn: Speakers.Turn?
     /// its turn's line, with the turns shown
     let line: TurnLine?
+    /// with the time over the text, room for the lines before it (Voices)
+    let gutter: Bool
+    /// with the time over the text: the text this far inside the row's
+    /// ground, at the screen's edge with the header's and the strip's; and
+    /// the lines' room before it, where there are any, a line 6.5 into it
+    /// as the desktop's narrow window has it
+    static let inset: CGFloat = 8
+    static let gutter: CGFloat = 16
     /// who it can be given to, where its speaker can be changed
     let who: Who?
     /// the sentence a move made one again, lit a moment
@@ -1048,7 +1104,7 @@ private struct SegRow: View, Equatable {
             && a.marks == b.marks && a.at == b.at && a.column == b.column
             && a.review == b.review && a.base == b.base && a.name == b.name && a.turn == b.turn
             && a.line == b.line && a.who == b.who && a.lit == b.lit && a.first == b.first
-            && a.apart == b.apart
+            && a.apart == b.apart && a.gutter == b.gutter
     }
 
     var body: some View {
@@ -1078,17 +1134,19 @@ private struct SegRow: View, Equatable {
         }
         // sentences 12 apart (app.css, .pk-seg; Peter, 2026-11-15: at 16, a
         // touch loose)
-        .padding(.horizontal, 16)
+        .padding(.leading, column != nil ? 16 : Self.inset + (gutter ? Self.gutter : 0))
+        .padding(.trailing, column != nil ? 16 : Self.inset)
         .padding(.vertical, 6)
         .frame(maxWidth: 716, alignment: .leading)
         // its turn's line in the middle of the gutter, past the row's 16 and
-        // the times; with the time over the text, 5 in, as the desktop's
-        // narrow window has it
+        // the times; with the time over the text, in the room before it
         .background(alignment: .leading) {
             if let line {
-                TurnLineShape(line: line, mid: column.map { 16 + $0 + 23 } ?? 6.5)
-                    .fill(Pk.speaker(line.speaker))
-                    .flipsForRightToLeftLayoutDirection(true)
+                TurnLineShape(
+                    line: line, mid: column.map { 16 + $0 + 23 } ?? Self.inset + 6.5
+                )
+                .fill(Pk.speaker(line.speaker))
+                .flipsForRightToLeftLayoutDirection(true)
             }
         }
         .background(
