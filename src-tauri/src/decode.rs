@@ -20,7 +20,11 @@
 // Android reads every file through decode_fd, and none of the desktop's decoders
 #![cfg_attr(target_os = "android", allow(dead_code))]
 
-#[cfg(target_os = "android")]
+#[cfg(any(
+    target_os = "android",
+    target_os = "ios",
+    all(test, target_os = "macos")
+))]
 use crate::pktito::Growing;
 use crate::strings::Problem;
 use std::env;
@@ -44,8 +48,13 @@ pub enum DecodeError {
     /// It could not be read: what happened, as the catalog's key
     /// (strings.rs), and what said so.
     Unreadable(&'static str, String),
-    /// The reader was told to stop before the end (decode_fd's read).
-    #[cfg(target_os = "android")]
+    /// The reader was told to stop before the end (decode_fd's read, or
+    /// decode_into's recording cancelled).
+    #[cfg(any(
+        target_os = "android",
+        target_os = "ios",
+        all(test, target_os = "macos")
+    ))]
     Stopped,
 }
 
@@ -63,7 +72,11 @@ impl DecodeError {
             DecodeError::Unreadable(key, detail) => Problem::new(key).detail(detail),
             // a stop the app asked for, which it says as a stop, never as
             // a problem (android.rs, transcribe)
-            #[cfg(target_os = "android")]
+            #[cfg(any(
+                target_os = "android",
+                target_os = "ios",
+                all(test, target_os = "macos")
+            ))]
             DecodeError::Stopped => Problem::new("problem.unexpected").detail("stopped"),
         }
     }
@@ -121,6 +134,9 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
     match decode_os(path) {
         Ok(x) => Ok(flac_cut(path, mp3_cut(path, edited(path, x), OS_READER))),
         Err(DecodeError::NoAudio) => Err(DecodeError::NoAudio),
+        // decode_os is told no stop
+        #[cfg(any(target_os = "ios", all(test, target_os = "macos")))]
+        Err(DecodeError::Stopped) => Err(DecodeError::Stopped),
         Err(DecodeError::Unreadable(why, detail)) => match (forced.as_str(), ffmpeg()) {
             ("os", _) => Err(DecodeError::Unreadable(why, detail)),
             // where ffmpeg can be had: an iPhone or an iPad has none to install
@@ -130,6 +146,167 @@ pub fn decode(path: &Path) -> Result<Vec<f32>, DecodeError> {
             (_, None) => Err(DecodeError::Unreadable(why, detail)),
             (_, Some(ff)) => decode_ffmpeg(&ff, path),
         },
+    }
+}
+
+/// The same samples as decode's into `into` as AVFoundation reads them, for
+/// the speakers of a transcript found while its recording is read
+/// (transcribe::find_growing; ios.rs, pkapp_find_speakers): run on a thread
+/// of its own while another reads `into`. AVFoundation hands them over a
+/// buffer at a time, the track's length as the estimate till the end;
+/// pktito's WAV reader in one push with the true length. The cuts decode
+/// makes of the whole - an MP3's to where its sound starts, a FLAC's to its
+/// STREAMINFO length - are made as the samples pass (Cut), so the two give
+/// the same samples (into_is_whole checks it on the Mac). On success `into`
+/// ends; on an error it fails, and on into.cancel() from outside, seen at
+/// the next buffer, the read stops (DecodeError::Stopped).
+#[cfg(any(target_os = "ios", all(test, target_os = "macos")))]
+pub fn decode_into(path: &Path, into: &Growing) -> Result<(), DecodeError> {
+    let r = fill_os(path, into);
+    match r {
+        Ok(()) => into.end(),
+        Err(DecodeError::Stopped) => into.cancel(),
+        Err(_) => into.fail(),
+    }
+    r
+}
+
+#[cfg(any(target_os = "ios", all(test, target_os = "macos")))]
+fn fill_os(path: &Path, into: &Growing) -> Result<(), DecodeError> {
+    if !path.is_file() {
+        return Err(DecodeError::Unreadable("decode.not_found", String::new()));
+    }
+    if let Some(read) = decode_wav(path, os_decoder) {
+        let x = read?;
+        into.set_estimate(x.len());
+        into.push(&x);
+        return Ok(());
+    }
+    type Span = unsafe extern "C" fn(*mut c_void, f64);
+    type Take = unsafe extern "C" fn(*mut c_void, *const f32, usize);
+    type Stop = unsafe extern "C" fn(*mut c_void) -> c_int;
+    extern "C" {
+        fn pkapp_decode_os_into(
+            path: *const c_char,
+            rate: c_int,
+            err: *mut c_char,
+            errlen: usize,
+            ctx: *mut c_void,
+            span: Option<Span>,
+            take: Option<Take>,
+            stop: Option<Stop>,
+        ) -> c_int;
+    }
+    struct To<'a> {
+        into: &'a Growing,
+        cut: Cut,
+    }
+    unsafe extern "C" fn span(ctx: *mut c_void, seconds: f64) {
+        let to = unsafe { &mut *(ctx as *mut To) };
+        let n = (seconds.max(0.0) * RATE as f64).round() as usize;
+        to.into.set_estimate(to.cut.of(n));
+    }
+    unsafe extern "C" fn take(ctx: *mut c_void, y: *const f32, n: usize) {
+        let to = unsafe { &mut *(ctx as *mut To) };
+        let x = unsafe { std::slice::from_raw_parts(y, n) };
+        to.cut.pass(x, to.into);
+    }
+    unsafe extern "C" fn stop(ctx: *mut c_void) -> c_int {
+        let to = unsafe { &mut *(ctx as *mut To) };
+        to.into.cancelled() as c_int
+    }
+    let limit = std::fs::File::open(path)
+        .ok()
+        .and_then(|mut f| flac_samples(&mut f));
+    let mut to = To {
+        into,
+        cut: Cut::new(crate::mp3::edit(path, OS_READER), limit),
+    };
+    let c = CString::new(path.to_string_lossy().as_bytes())
+        .map_err(|_| DecodeError::Unreadable(UNREADABLE, "bad file name".into()))?;
+    let mut err = [0 as c_char; 512];
+    let rc = unsafe {
+        pkapp_decode_os_into(
+            c.as_ptr(),
+            RATE as c_int,
+            err.as_mut_ptr(),
+            err.len(),
+            &mut to as *mut To as *mut c_void,
+            Some(span),
+            Some(take),
+            Some(stop),
+        )
+    };
+    match rc {
+        0 if to.cut.read == 0 => Err(DecodeError::NoAudio),
+        0 => Ok(()),
+        -1 => Err(DecodeError::NoAudio),
+        -3 => Err(DecodeError::Stopped),
+        _ => {
+            let why = unsafe { CStr::from_ptr(err.as_ptr()) }
+                .to_string_lossy()
+                .into_owned();
+            Err(DecodeError::Unreadable(UNREADABLE, why))
+        }
+    }
+}
+
+/// decode's cuts of a whole recording, made of one that passes a buffer at
+/// a time: an edit's (mp4::apply: its silence first, held to mp4's
+/// LEAD_MAX, then the samples after its skip, as many as it keeps), then no
+/// more than limit of what that leaves (flac_cut).
+#[cfg(any(target_os = "ios", all(test, target_os = "macos")))]
+struct Cut {
+    lead: usize,
+    skip: usize,
+    keep: usize,
+    limit: usize,
+    /// the decoder's samples so far, and those handed on, the silence too
+    read: usize,
+    given: usize,
+}
+
+#[cfg(any(target_os = "ios", all(test, target_os = "macos")))]
+impl Cut {
+    fn new(e: Option<crate::mp4::Edit>, limit: Option<usize>) -> Cut {
+        let rate = RATE as f64;
+        let at = |s: f64| (s * rate).round() as usize;
+        Cut {
+            lead: e.map_or(0, |e| at(e.lead.clamp(0.0, crate::mp4::LEAD_MAX))),
+            skip: e.map_or(0, |e| at(e.skip)),
+            keep: e.and_then(|e| e.keep).map_or(usize::MAX, at),
+            limit: limit.unwrap_or(usize::MAX),
+            read: 0,
+            given: 0,
+        }
+    }
+
+    /// What n decoded samples come to.
+    fn of(&self, n: usize) -> usize {
+        self.lead
+            .saturating_add(n.saturating_sub(self.skip).min(self.keep))
+            .min(self.limit)
+    }
+
+    fn pass(&mut self, x: &[f32], into: &Growing) {
+        if self.given == 0 && self.lead > 0 {
+            let lead = self.lead.min(self.limit);
+            into.push(&vec![0.0; lead]);
+            self.given = lead;
+        }
+        // x is the decoder's samples from read; those wanted are from skip,
+        // keep of them
+        let from = self.skip.saturating_sub(self.read).min(x.len());
+        let end = self.skip.saturating_add(self.keep);
+        let to = end.saturating_sub(self.read).min(x.len());
+        self.read += x.len();
+        if from < to {
+            let room = self.limit - self.given.min(self.limit);
+            let y = &x[from..to];
+            let y = &y[..y.len().min(room)];
+            into.push(y);
+            self.given += y.len();
+        }
     }
 }
 
@@ -1036,6 +1213,91 @@ fn decode_os(_path: &Path) -> Result<Vec<f32>, DecodeError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Cut's samples are mp4::apply's then a truncation's, however the
+    /// buffers fall.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn cut_is_apply() {
+        let x: Vec<f32> = (0..50_000).map(|i| i as f32).collect();
+        let at = |n: usize| n as f64 / RATE as f64;
+        let edits = [
+            None,
+            Some((0, 1105, None)),
+            Some((0, 1105, Some(40_000))),
+            Some((0, 1105, Some(60_000))),
+            Some((320, 0, None)),
+            Some((320, 2112, Some(100))),
+            Some((0, 70_000, None)),
+        ];
+        for e in edits {
+            let e = e.map(
+                |(lead, skip, keep): (usize, usize, Option<usize>)| crate::mp4::Edit {
+                    lead: at(lead),
+                    skip: at(skip),
+                    keep: keep.map(at),
+                },
+            );
+            for limit in [None, Some(0), Some(200), Some(45_000), Some(90_000)] {
+                let mut whole = match &e {
+                    Some(e) => crate::mp4::apply(x.clone(), e, RATE as f64),
+                    None => x.clone(),
+                };
+                if let Some(n) = limit {
+                    whole.truncate(n);
+                }
+                for piece in [1usize, 7, 1024, 4096, 50_000] {
+                    let into = Growing::new();
+                    let mut cut = Cut::new(e, limit);
+                    for b in x.chunks(piece) {
+                        cut.pass(b, &into);
+                    }
+                    assert_eq!(cut.of(x.len()), whole.len(), "{e:?} {limit:?}");
+                    assert!(into.into_vec() == whole, "{e:?} {limit:?} by {piece}");
+                }
+            }
+        }
+    }
+
+    /// decode_into's samples are decode's, bit for bit, on every file of
+    /// PKTITO_MEDIA (scripts/media-matrix.sh's directory, or any other);
+    /// passes with nothing to read where it is not set.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn into_is_whole() {
+        let Ok(dir) = env::var("PKTITO_MEDIA") else {
+            return;
+        };
+        let mut seen = 0;
+        for f in std::fs::read_dir(dir).unwrap().flatten() {
+            let path = f.path();
+            if !path.is_file() {
+                continue;
+            }
+            let into = Growing::new();
+            let (whole, piecewise) = (decode(&path), decode_into(&path, &into));
+            match (whole, piecewise) {
+                (Ok(x), Ok(())) => {
+                    let y = into.into_vec();
+                    assert_eq!(x.len(), y.len(), "{path:?}");
+                    assert!(
+                        x.iter().zip(&y).all(|(a, b)| a.to_bits() == b.to_bits()),
+                        "{path:?}"
+                    );
+                    seen += 1;
+                    eprintln!("{path:?}: {} samples, the same", x.len());
+                }
+                (Err(a), Err(b)) => eprintln!("{path:?}: {} / {}", a.message(), b.message()),
+                // read by ffmpeg, which an iPhone has none of, where
+                // AVFoundation can't
+                (Ok(_), Err(b)) if decode_os(&path).is_err() => {
+                    eprintln!("{path:?}: ffmpeg's / {}", b.message())
+                }
+                (a, b) => panic!("{path:?}: {:?} / {:?}", a.map(|x| x.len()), b),
+            }
+        }
+        eprintln!("{seen} files the same");
+    }
 
     #[test]
     fn flac_length_from_streaminfo() {

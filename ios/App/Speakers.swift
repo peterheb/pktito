@@ -287,6 +287,7 @@ final class Speakers {
                 Continued.update()
             }
         }
+        let began = Date()
         Task {
             let got = await Task.detached(priority: .userInitiated) {
                 Result { () throws -> Transcript in
@@ -299,6 +300,7 @@ final class Speakers {
             }.value
             UIApplication.shared.isIdleTimerDisabled = false
             if case .success = got {
+                trace(String(format: "speakers: found, %.1f s", Date().timeIntervalSince(began)))
                 self.heard = 1
                 Continued.end(done: true)
             } else {

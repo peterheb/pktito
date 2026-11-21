@@ -6,7 +6,14 @@
  *
  * 0 on success, with *out malloc'd (the caller frees it) holding *n
  * samples; -1 if the file has no audio track; -2 if AVFoundation cannot
- * read it, the reason in err. */
+ * read it, the reason in err.
+ *
+ * pkapp_decode_os_into hands the same samples over as they are made, for a
+ * caller that hears the recording while it is read (decode.rs,
+ * decode_into): span is told the track's length in seconds once it is
+ * open, take each buffer's samples (the mix's drain: the same samples, in
+ * the same order, as the whole, mix.h), and stop is asked after each
+ * whether to go on; its true ends the read with -3. */
 #import <AVFoundation/AVFoundation.h>
 #import <AudioToolbox/AudioToolbox.h>
 #include <stdlib.h>
@@ -92,10 +99,20 @@ static int feed(pkapp_mix *mix, CMSampleBufferRef sb, CMFormatDescriptionRef *no
     return 0;
 }
 
-int pkapp_decode_os(const char *path, int rate, float **out, size_t *n, char *err, size_t errlen) {
+/* What the mix has made since the last call, to take. */
+static void hand(pkapp_mix *mix, void (*take)(void *ctx, const float *y, size_t n), void *ctx) {
+    const float *y;
+    size_t n;
+    pkapp_mix_drain(mix, &y, &n);
+    if (n)
+        take(ctx, y, n);
+}
+
+/* Both: whole into *out and *n where take is NULL, else to take. */
+static int decode(const char *path, int rate, float **out, size_t *n, char *err, size_t errlen, void *ctx,
+                  void (*span)(void *ctx, double seconds), void (*take)(void *ctx, const float *y, size_t n),
+                  int (*stop)(void *ctx)) {
     @autoreleasepool {
-        *out = NULL;
-        *n = 0;
         NSURL *url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:path]];
         AVURLAsset *asset = [AVURLAsset URLAssetWithURL:url options:nil];
 
@@ -150,6 +167,12 @@ int pkapp_decode_os(const char *path, int rate, float **out, size_t *n, char *er
         if (![reader startReading])
             return fail(err, errlen, reader.error, "the audio could not be read");
 
+        if (span) {
+            double seconds = CMTimeGetSeconds(track.timeRange.duration);
+            if (seconds > 0)
+                span(ctx, seconds);
+        }
+
         pkapp_mix *mix = pkapp_mix_new((unsigned)rate);
         CMFormatDescriptionRef now = NULL;
         UInt32 ch = 0;
@@ -160,19 +183,38 @@ int pkapp_decode_os(const char *path, int rate, float **out, size_t *n, char *er
         while (!rc && (sb = [output copyNextSampleBuffer])) {
             rc = feed(mix, sb, &now, &ch, &tmp, &cap, err, errlen);
             CFRelease(sb);
+            if (!rc && take) {
+                hand(mix, take, ctx);
+                if (stop && stop(ctx))
+                    rc = -3;
+            }
         }
         if (rc)
             [reader cancelReading];
         else if (reader.status != AVAssetReaderStatusCompleted)
             rc = fail(err, errlen, reader.error, "the audio could not be read to its end");
-        else if (pkapp_mix_take(mix, out, n))
+        else if (take ? pkapp_mix_end(mix) : pkapp_mix_take(mix, out, n))
             rc = fail(err, errlen, nil, "out of memory");
+        else if (take)
+            hand(mix, take, ctx);
         if (now)
             CFRelease(now);
         free(tmp);
         pkapp_mix_free(mix);
         return rc;
     }
+}
+
+int pkapp_decode_os(const char *path, int rate, float **out, size_t *n, char *err, size_t errlen) {
+    *out = NULL;
+    *n = 0;
+    return decode(path, rate, out, n, err, errlen, NULL, NULL, NULL, NULL);
+}
+
+int pkapp_decode_os_into(const char *path, int rate, char *err, size_t errlen, void *ctx,
+                         void (*span)(void *ctx, double seconds),
+                         void (*take)(void *ctx, const float *y, size_t n), int (*stop)(void *ctx)) {
+    return decode(path, rate, NULL, NULL, err, errlen, ctx, span, take, stop);
 }
 
 /* The frame rate of the file's first video track, as AVFoundation names

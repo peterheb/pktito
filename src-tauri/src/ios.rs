@@ -573,18 +573,13 @@ pub extern "C" fn pkapp_find_speakers(
         let d = unsafe { &mut *(diar as usize as *mut DiarLoaded) };
         let heard_by = d.model.name();
         let mut t = parse(transcript)?;
-        let x = match decode::decode(&path) {
-            Ok(x) => x,
-            Err(e) => {
-                let p = e.problem();
-                let line = if name.is_empty() {
-                    p.line()
-                } else {
-                    format!("{name}: {}", p.line())
-                };
-                return Ok(json!({ "error": line, "key": p.key, "detail": p.detail }));
-            }
-        };
+        // the recording as AVFoundation reads it, the diarizer hearing it
+        // as it fills (transcribe::find_growing), as Android's: the meter
+        // moves from the start, where the audio was 3 s read first, and a
+        // 10:40 video's speakers are found in 9.4 to 9.8 s for 10.4 to
+        // 10.8 (an iPhone 16e, two runs each, 2026-11-20; the same
+        // speakers and stretches)
+        let x = pktito::Growing::new();
         let segments = std::mem::take(&mut t.segments);
         let (mut shown, mut sent) = (0, 0);
         let tell = |done: f64, bar: &transcribe::SoFar| {
@@ -600,7 +595,32 @@ pub extern "C" fn pkapp_find_speakers(
             let json = CString::new(json.replace('\0', "")).unwrap_or_default();
             done_fn(ctx, done, json.as_ptr());
         };
-        let (segments, stretches) = transcribe::find(&d.model, &mut d.diar, &x, segments, tell)?;
+        let (found, decoded) = std::thread::scope(|sc| {
+            let decoder = sc.spawn(|| decode::decode_into(&path, &x));
+            let found = transcribe::find_growing(&d.model, &mut d.diar, &x, segments, tell);
+            // the diarizer failed: the decoder goes no further
+            if found.is_err() {
+                x.cancel();
+            }
+            // the decoder ends x whatever happens, so this returns
+            let decoded = decoder.join().unwrap_or(Err(decode::DecodeError::Stopped));
+            (found, decoded)
+        });
+        // the decoder's trouble before the diarizer's: a recording that
+        // could not be read answers as pkapp_transcribe's does
+        match decoded {
+            Ok(()) | Err(decode::DecodeError::Stopped) => {}
+            Err(e) => {
+                let p = e.problem();
+                let line = if name.is_empty() {
+                    p.line()
+                } else {
+                    format!("{name}: {}", p.line())
+                };
+                return Ok(json!({ "error": line, "key": p.key, "detail": p.detail }));
+            }
+        }
+        let (segments, stretches) = found?;
         t.diarizer = match segments.iter().any(|s| s.speaker.is_some()) {
             true => heard_by,
             false => String::new(),

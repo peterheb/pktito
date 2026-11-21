@@ -26,7 +26,7 @@ const MOOV_MAX: u64 = 64 << 20;
 /// apply() makes it as samples, 64 KB a second at 16 kHz, where the day the
 /// edit's other times may run to would be 5.5 GB; a file that delays its
 /// sound longer than this is no edit.
-const LEAD_MAX: f64 = 600.0;
+pub(crate) const LEAD_MAX: f64 = 600.0;
 
 /// What the edit list makes of the decoded track, in seconds: silence before
 /// it (an empty edit: the sound starts that late), the decoded sound to drop
