@@ -489,6 +489,14 @@ fn set_prefs(app: AppHandle, prefs: model::Prefs) -> Result<(), Problem> {
     Ok(model::save_settings(&data, &s)?)
 }
 
+/// The credit of each model the app can use, for About's Models (build.rs,
+/// credits): JSON, [{name, task, by, license, license_url, source, and
+/// changes and notice where it has them}].
+#[tauri::command]
+fn credits() -> &'static str {
+    model::CREDITS
+}
+
 /// Qualcomm's notice files for the open-source code in the NPU's libraries,
 /// where they are beside the exe (scripts/qnn-windows.ps1): the SDK's
 /// version, then each file's name and text, for About's licenses. None in
@@ -2399,6 +2407,7 @@ fn main() {
             status,
             set_prefs,
             npu_notice,
+            credits,
             choose_model,
             download_model,
             pause_download,

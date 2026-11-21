@@ -4818,8 +4818,56 @@ async function openNotices() {
   openSheet("notices");
 }
 
-/* About's two sheets, the licenses and Privacy: one open at a time, over
-   About, the keyboard kept in it */
+/* Models, under About's Models: every model the app can use (the credits
+   command: the catalog's, by build.rs), under what each does: its name, a
+   link to its source; who it is by and its license, a link to it; what
+   pktito changed of it; and the notice its license asks to be kept. */
+function creditsHtml(all) {
+  const known = ["transcribe", "diarize", "vad"];
+  const tasks = [
+    ...known.filter((k) => all.some((m) => m.task === k)),
+    ...new Set(all.map((m) => m.task).filter((k) => !known.includes(k))),
+  ];
+  const link = (url, text) =>
+    `<a href="${esc(url)}"><span class="pk-nowrap">${esc(text)}${ICON.external}</span></a>`;
+  const one = (m) =>
+    `<div class="pk-mcredit"><div class="pk-mname">${link(m.source, m.name)}</div>` +
+    `<div>${t("credits.by_html", { by: esc(m.by), license: link(m.license_url, m.license) })}</div>` +
+    (m.changes === "int8"
+      ? `<div>${esc(t("credits.changes_int8"))}</div>`
+      : "") +
+    (m.notice ? `<div>${esc(m.notice)}</div>` : "") +
+    `</div>`;
+  return (
+    `<p class="pk-small">${esc(t("credits.intro"))}</p>` +
+    tasks
+      .map(
+        (k) =>
+          `<h3>${esc(t(known.includes(k) ? `credits.task_${k}` : "credits.task_other"))}</h3>` +
+          all
+            .filter((m) => m.task === k)
+            .map(one)
+            .join(""),
+      )
+      .join("")
+  );
+}
+
+async function openCredits() {
+  if (!about || !$("credits").hidden) return;
+  const body = $("credits-body");
+  if (!body.childElementCount) {
+    try {
+      body.innerHTML = creditsHtml(JSON.parse(await invoke("credits")));
+    } catch (e) {
+      return toastErr(e);
+    }
+  }
+  if (about) openSheet("credits");
+}
+
+/* About's sheets, the models, the licenses and Privacy: one open at a
+   time, over About, the keyboard kept in it */
 function openSheet(id) {
   if (!about || !$(id).hidden) return;
   $(`${id}-body`).scrollTop = 0;
@@ -4832,7 +4880,7 @@ function openSheet(id) {
 
 /* false if neither was open */
 function closeSheet() {
-  const id = ["notices", "privacy"].find((x) => !$(x).hidden);
+  const id = ["credits", "notices", "privacy"].find((x) => !$(x).hidden);
   if (!id) return false;
   $(id).hidden = true;
   $(`${id}-open`).focus({ preventScroll: true });
@@ -4840,6 +4888,7 @@ function closeSheet() {
   return true;
 }
 
+$("credits-open").onclick = () => openCredits();
 $("notices-open").onclick = () => openNotices();
 $("privacy-open").onclick = () => {
   // the Store edition's data, when in its package, goes when it is uninstalled
@@ -4847,7 +4896,7 @@ $("privacy-open").onclick = () => {
     $("privacy-uninstall").textContent = t("privacy.choice_uninstall_store");
   openSheet("privacy");
 };
-for (const id of ["notices", "privacy"]) {
+for (const id of ["credits", "notices", "privacy"]) {
   $(`${id}-close`).onclick = () => closeSheet();
   $(id).addEventListener("click", (e) => {
     if (e.target === $(id)) closeSheet();
@@ -5067,7 +5116,12 @@ async function start() {
   $("speed").title = t("speed.tip");
   showSpeed();
   showVolume();
-  for (const id of ["notices-close", "privacy-close", "manage-close"]) {
+  for (const id of [
+    "credits-close",
+    "notices-close",
+    "privacy-close",
+    "manage-close",
+  ]) {
     $(id).innerHTML = ICON.x;
     $(id).title = keyTip(t("sheet.close"), t("key.esc"));
   }

@@ -356,12 +356,16 @@
             </span>
           </p>
           <dl class="pk-credits">
-            <dt>Parakeet-TDT</dt>
-            <dd data-t-html="about.models_html"></dd>
-            <dt>Silero VAD</dt>
+            <dt data-t="about.models_name"></dt>
             <dd>
-              <span data-t-html="about.silero_html"></span><br />
-              Copyright (c) 2020-present Silero Team
+              <span data-t="about.models_text"></span><br />
+              <button
+                class="pk-linkbtn pk-linkbtn-sm"
+                id="credits-open"
+                type="button"
+                aria-haspopup="dialog"
+                data-t="about.models_open"
+              ></button>
             </dd>
             <dt data-t="about.else"></dt>
             <dd>
@@ -414,6 +418,32 @@
             <p data-t-html="privacy.ask_html"></p>
             <p class="pk-small" data-t="privacy.updated"></p>
           </div>
+        </div>
+      </div>
+      <!-- Models: every model the app can use and its credit, over About;
+       app.js fills it from the catalog's (the credits command) -->
+      <div class="pk-notices" id="credits" hidden>
+        <div
+          class="pk-notices-box pk-privacy-box"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="credits-title"
+        >
+          <div class="pk-notices-head">
+            <h2 class="pk-ui" id="credits-title" data-t="credits.title"></h2>
+            <button
+              class="pk-btn pk-btn-ghost pk-btn-ico"
+              id="credits-close"
+              type="button"
+              data-t-aria-label="sheet.close"
+            ></button>
+          </div>
+          <div
+            class="pk-notices-body pk-privacy pk-mcredits"
+            id="credits-body"
+            tabindex="0"
+            data-t-aria-label="credits.label"
+          ></div>
         </div>
       </div>
       <!-- Licenses: what pktito is built from, over About; app.js

@@ -89,6 +89,17 @@
     <string name="about_privacy">[Přįvąčý ····]</string>
     <string name="about_models"><![CDATA[[ŃVĮĎĮĄ\'ș <a href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2">pąřąkęęț-țďț-0.6b-v2</a> ąńď <a href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3">-v3</a>, űńďęř <a href="https://creativecommons.org/licenses/by/4.0/">ČČ&nbsp;BÝ&nbsp;4.0</a>, mőďįfįęď bý pkțįțő (pąřțłý qűąńțįżęď țő įńț8). Přővįďęď ąș įș, wįțhőűț wąřřąńțįęș. pkțįțő įș ńőț ąffįłįąțęď wįțh őř ęńďőřșęď bý ŃVĮĎĮĄ. ····· ····· ····· ····· ····· ····· ····· ····· ······]]]></string>
     <string name="about_silero"><![CDATA[[Vőįčę ąčțįvįțý ďęțęčțįőń, <a href="https://github.com/snakers4/silero-vad/blob/master/LICENSE">MĮȚ</a><br>Čőpýřįghț (č) 2020-přęșęńț Șįłęřő Țęąm ····· ····· ······]]]></string>
+    <string name="about_models_name">[Mőďęłș ···]</string>
+    <string name="about_models_text">[pkțįțő řűńș mőďęłș mąďę bý őțhęřș, ęąčh űńďęř įțș őwń łįčęńșę. ····· ····· ····]</string>
+    <string name="about_models_open">[Mőďęł čřęďįțș ·····]</string>
+    <string name="models_title">[Mőďęłș ···]</string>
+    <string name="models_intro">[pkțįțő űșęș țhęșę mőďęłș. Ęąčh įș přővįďęď ąș įș, wįțhőűț wąřřąńțįęș. pkțįțő įș ńőț ąffįłįąțęď wįțh őř ęńďőřșęď bý țhęįř mąkęřș. ····· ····· ····· ····· ····· ······]</string>
+    <string name="models_task_transcribe">[Șpęęčh țő țęxț ······]</string>
+    <string name="models_task_diarize">[Șpęąkęřș ·····]</string>
+    <string name="models_task_vad">[Vőįčę ďęțęčțįőń ······]</string>
+    <string name="models_task_other">[Őțhęř ··]</string>
+    <string name="models_by">[Bý %1$s, űńďęř %2$s ····]</string>
+    <string name="models_changes_int8">[Mőďįfįęď bý pkțįțő: pąřțłý qűąńțįżęď țő įńț8. ····· ····· ···]</string>
     <string name="about_else">[Ęvęřýțhįńg ęłșę ······]</string>
     <string name="about_else_list">[Jęțpąčk Čőmpőșę, Řűșț čřąțęș, țýpęfąčęș, įčőńș, ęțč. ····· ····· ·]</string>
     <string name="about_licenses">[Łįčęńșęș ·····]</string>
