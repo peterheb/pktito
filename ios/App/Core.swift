@@ -128,6 +128,12 @@ enum Core {
         try take(pkapp_catalog(Store.models.path, Editions.device), as: [ModelView].self)
     }
 
+    /// The credit of each model the app can use, from the catalog (build.rs,
+    /// credits), for About's Models.
+    static func credits() -> [ModelCredit] {
+        (try? take(pkapp_credits(), as: [ModelCredit].self)) ?? []
+    }
+
     /// Once a launch, off the main thread: files from before 0.9.6 given
     /// their records, swaps cut short finished (editions.rs, adopt).
     static func adopt() { pkapp_adopt(Store.models.path) }
@@ -378,4 +384,20 @@ final class Diarizer: @unchecked Sendable {
         }
         return try take(answer, as: Transcript.self)
     }
+}
+
+/// A model's credit (models.json): its name, what it does (transcribe,
+/// diarize, vad), who it is by, its license's short name and page, its
+/// source's page, what pktito changed of it (int8) and the notice its
+/// license asks to be kept, where it has them.
+struct ModelCredit: Decodable, Identifiable {
+    let name: String
+    let task: String
+    let by: String
+    let license: String
+    let license_url: String
+    let source: String
+    let changes: String?
+    let notice: String?
+    var id: String { name }
 }

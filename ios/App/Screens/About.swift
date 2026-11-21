@@ -3,15 +3,15 @@ import SwiftUI
 /// About (ui/index.html, #about; Android's About): the mascot, and under or
 /// beside it pktito's name, what it is, its version and the engine's code
 /// for this processor, its copyright and links, and the credits: the
-/// models, Silero's VAD, and everything else, whose licenses open over
-/// About as Privacy does. As the desktop's, the mascot is over the words in
+/// models, whose makers and licenses open over About as Privacy does, and
+/// everything else, whose licenses do. As the desktop's, the mascot is over the words in
 /// a portrait window or one under 600 wide, the words as tall as they are
 /// and the mascot the rest, 160 at the least; and beside them otherwise
 /// (app.css, .pk-about). The mascot turns and chirps as the desktop's does
 /// (Mascot).
 struct About: View {
     enum Sheet: String, Identifiable {
-        case privacy, notices
+        case privacy, models, notices
         var id: String { rawValue }
     }
 
@@ -85,7 +85,7 @@ struct About: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L("about_open"))
         #if DEBUG
-            // -sheet privacy or notices, with -show about (Root.debugArguments)
+            // -sheet privacy, models or notices, with -show about (Root.debugArguments)
             .onAppear {
                 let args = CommandLine.arguments
                 if let i = args.firstIndex(of: "-sheet"), i + 1 < args.count {
@@ -99,6 +99,8 @@ struct About: View {
             switch s {
             case .privacy:
                 SheetFrame(title: L("privacy_title")) { Privacy() }.presentationSizing(.form)
+            case .models:
+                SheetFrame(title: L("models_title")) { ModelCredits() }.presentationSizing(.form)
             case .notices:
                 SheetFrame(title: L("notices_title")) { Licenses() }.presentationSizing(.page)
             }
@@ -165,11 +167,17 @@ private struct Credits: View {
                 .padding(.top, 6)
             }
             VStack(alignment: .leading, spacing: twoColumns ? 10 : 12) {
-                Credit(name: "Parakeet-TDT", twoColumns: twoColumns) {
-                    linked(markdown: L("about_models")).pk(small).foregroundStyle(Pk.inkMuted)
-                }
-                Credit(name: "Silero VAD", twoColumns: twoColumns) {
-                    linked(markdown: L("about_silero")).pk(small).foregroundStyle(Pk.inkMuted)
+                Credit(name: L("about_models_name"), twoColumns: twoColumns) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(L("about_models_text")).pk(small).foregroundStyle(Pk.inkMuted)
+                        Button {
+                            open(.models)
+                        } label: {
+                            Text(L("about_models_open")).pk(small).underline().foregroundStyle(
+                                Pk.link)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
                 Credit(name: L("about_else"), twoColumns: twoColumns) {
                     VStack(alignment: .leading, spacing: 0) {
@@ -208,7 +216,7 @@ private struct Credit<What: View>: View {
     /// whether each credit's name fits its column on one line
     @MainActor static func namesFit(_ type: DynamicTypeSize) -> Bool {
         let font = style.uiFont(style.scaled(type))
-        return ["Parakeet-TDT", "Silero VAD", L("about_else")].allSatisfy {
+        return [L("about_models_name"), L("about_else")].allSatisfy {
             ($0 as NSString).size(withAttributes: [.font: font]).width <= 105
         }
     }
@@ -393,6 +401,72 @@ private struct Privacy: View {
         .foregroundStyle(Pk.ink)
         .frame(maxWidth: 560, alignment: .leading)
         .padding(.bottom, 6)
+    }
+}
+
+/// The models the app can use (Core.credits, from the catalog), under what
+/// each does: its name, a link to its source; who it is by and its
+/// license, a link to it; what pktito changed of it; and the notice its
+/// license asks to be kept.
+private struct ModelCredits: View {
+    @Environment(\.horizontalSizeClass) private var size
+    @State private var all = Core.credits()
+
+    /// the tasks in the order About lists them, then any the catalog adds
+    private var tasks: [String] {
+        let known = ["transcribe", "diarize", "vad"]
+        var seen = Set(known)
+        return known.filter { t in all.contains { $0.task == t } }
+            + all.map(\.task).filter { seen.insert($0).inserted }
+    }
+
+    private func heading(_ task: String) -> String {
+        ["transcribe", "diarize", "vad"].contains(task)
+            ? L("models_task_" + task) : L("models_task_other")
+    }
+
+    var body: some View {
+        let name = PkStyle(face: PkType.ui.face, size: 14, lineHeight: 1.45, tracking: 0)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(L("models_intro")).pk(PkType.small).foregroundStyle(Pk.inkMuted)
+                    .frame(maxWidth: 560, alignment: .leading)
+                ForEach(tasks, id: \.self) { task in
+                    Text(heading(task))
+                        .pk(
+                            PkStyle(
+                                face: PkType.figure.face, size: 17, lineHeight: 1.3,
+                                tracking: -0.005)
+                        )
+                        .foregroundStyle(Pk.ink)
+                        .accessibilityAddTraits(.isHeader)
+                        .padding(.top, 24)
+                    ForEach(all.filter { $0.task == task }) { m in
+                        VStack(alignment: .leading, spacing: 0) {
+                            linked(m.name, m.source).pk(name).foregroundStyle(Pk.ink)
+                            linked(
+                                markdown: L("models_by", m.by, "[\(m.license)](\(m.license_url))")
+                            )
+                            .pk(PkType.small).foregroundStyle(Pk.inkMuted)
+                            if m.changes == "int8" {
+                                Text(L("models_changes_int8")).pk(PkType.small).foregroundStyle(
+                                    Pk.inkMuted)
+                            }
+                            if let notice = m.notice {
+                                Text(verbatim: notice).pk(PkType.small).foregroundStyle(Pk.inkMuted)
+                            }
+                        }
+                        .frame(maxWidth: 560, alignment: .leading)
+                        .padding(.top, 10)
+                    }
+                }
+            }
+            .textSelection(.enabled)
+            .padding(.horizontal, sheetEdge(size))
+            .padding(.top, 16)
+            .padding(.bottom, 28)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }
 

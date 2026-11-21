@@ -180,6 +180,14 @@ pub extern "C" fn pkapp_catalog(dir: *const c_char, device: *const c_char) -> *m
     })
 }
 
+/// The models' credits for About's Models (build.rs's CREDITS, from
+/// models.json): [{name, task, by, license, license_url, source, changes?,
+/// notice?}].
+#[unsafe(no_mangle)]
+pub extern "C" fn pkapp_credits() -> *mut c_char {
+    give(model::CREDITS.to_string())
+}
+
 /// The files in dir from before 0.9.6 given their records, and swaps cut
 /// short finished (editions::adopt). Once a launch, off the main thread: a
 /// whole .pkf takes about 2 s.

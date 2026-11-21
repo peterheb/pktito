@@ -91,6 +91,40 @@
         }
       }
     },
+    "about_models_name": {
+      "extractionState": "manual",
+      "comment": "About's credit for the models, and the sheet it opens: every model the app can use, from the catalog (models.json: by, license, source, changes, notice), under what it does",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Models"
+          }
+        }
+      }
+    },
+    "about_models_open": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model credits"
+          }
+        }
+      }
+    },
+    "about_models_text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pktito runs models made by others, each under its own license."
+          }
+        }
+      }
+    },
     "about_open": {
       "extractionState": "manual",
       "comment": "About (about.*); the strings in CDATA are HTML, as the desktop's *_html are, for AnnotatedString.fromHtml",
@@ -1414,6 +1448,30 @@
         }
       }
     },
+    "models_by": {
+      "extractionState": "manual",
+      "comment": "who a model is by (NVIDIA) and its license's short name (CC-BY-4.0), which is a link",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By %1$@, under %2$@"
+          }
+        }
+      }
+    },
+    "models_changes_int8": {
+      "extractionState": "manual",
+      "comment": "changes: int8",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modified by pktito: partly quantized to int8."
+          }
+        }
+      }
+    },
     "models_download_size": {
       "extractionState": "manual",
       "comment": "a size and the words after it as one, so that a line breaks before the size, not inside it: the model menu on the Galaxy S24 broke \"753 MB\" from \"download\" (2026-11-03), as Faster's line did \"more\"",
@@ -1433,6 +1491,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Downloaded"
+          }
+        }
+      }
+    },
+    "models_intro": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pktito uses these models. Each is provided as is, without warranties. pktito is not affiliated with or endorsed by their makers."
           }
         }
       }
@@ -1489,6 +1558,61 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ model ready"
+          }
+        }
+      }
+    },
+    "models_task_diarize": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speakers"
+          }
+        }
+      }
+    },
+    "models_task_other": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other"
+          }
+        }
+      }
+    },
+    "models_task_transcribe": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speech to text"
+          }
+        }
+      }
+    },
+    "models_task_vad": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voice detection"
+          }
+        }
+      }
+    },
+    "models_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Models"
           }
         }
       }

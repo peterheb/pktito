@@ -110,6 +110,22 @@
     <string name="about_privacy">Privacy</string>
     <string name="about_models"><![CDATA[NVIDIA\'s <a href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2">parakeet-tdt-0.6b-v2</a> and <a href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3">-v3</a>, under <a href="https://creativecommons.org/licenses/by/4.0/">CC&nbsp;BY&nbsp;4.0</a>, modified by pktito (partly quantized to int8). Provided as is, without warranties. pktito is not affiliated with or endorsed by NVIDIA.]]></string>
     <string name="about_silero"><![CDATA[Voice activity detection, <a href="https://github.com/snakers4/silero-vad/blob/master/LICENSE">MIT</a><br>Copyright (c) 2020-present Silero Team]]></string>
+    <!-- About's credit for the models, and the sheet it opens: every model
+         the app can use, from the catalog (models.json: by, license,
+         source, changes, notice), under what it does -->
+    <string name="about_models_name">Models</string>
+    <string name="about_models_text">pktito runs models made by others, each under its own license.</string>
+    <string name="about_models_open">Model credits</string>
+    <string name="models_title">Models</string>
+    <string name="models_intro">pktito uses these models. Each is provided as is, without warranties. pktito is not affiliated with or endorsed by their makers.</string>
+    <string name="models_task_transcribe">Speech to text</string>
+    <string name="models_task_diarize">Speakers</string>
+    <string name="models_task_vad">Voice detection</string>
+    <string name="models_task_other">Other</string>
+    <!-- who a model is by (NVIDIA) and its license's short name (CC-BY-4.0), which is a link -->
+    <string name="models_by">By %1$s, under %2$s</string>
+    <!-- changes: int8 -->
+    <string name="models_changes_int8">Modified by pktito: partly quantized to int8.</string>
     <string name="about_else">Everything else</string>
     <!-- about.else_list: no Tauri on Android -->
     <string name="about_else_list">Jetpack Compose, Rust crates, typefaces, icons, etc.</string>

@@ -25,6 +25,9 @@ char *pkapp_backend(void);
  * "offer": {"kind", "bytes", "kept", "files", "parts": [{"file", "bytes",
  * "sha256", "url"}]} or null] */
 char *pkapp_catalog(const char *dir, const char *device);
+/* The models' credits, for About's Models: [{"name", "task", "by", "license",
+ * "license_url", "source", and "changes" and "notice" where it has them}] */
+char *pkapp_credits(void);
 /* Once a launch, off the main thread: records for files from before 0.9.6,
  * swaps cut short finished */
 void pkapp_adopt(const char *dir);

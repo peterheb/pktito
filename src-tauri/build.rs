@@ -298,7 +298,46 @@ fn catalog(json: &Path, engine: [u64; 3], out: &Path) {
     let names = offered("models.json", &v, engine, &mut rs);
     let _ = writeln!(rs, "#[cfg(test)]\npub const MODELS: &[&str] = &{names:?};");
     diarizer("models.json", &v, engine, &mut rs);
+    credits("models.json", &v, &mut rs);
     std::fs::write(out, rs).expect("OUT_DIR/catalog.rs");
+}
+
+/// The catalog's stable models and the models their files include, each
+/// once, with its credit, as CREDITS: the JSON About's Models lists (name,
+/// task, by, license, license_url, source; changes and notice where it has
+/// them). A model without one of the first six stops the build, so none is
+/// offered that About doesn't credit.
+fn credits(src: &str, v: &serde_json::Value, rs: &mut String) {
+    let mut out: Vec<serde_json::Value> = Vec::new();
+    let mut add = |m: &serde_json::Value, of: &str| {
+        let mut c = serde_json::Map::new();
+        for key in ["name", "task", "by", "license", "license_url", "source"] {
+            let s = m[key]
+                .as_str()
+                .unwrap_or_else(|| panic!("{src}: {of}: no {key}, which About shows"));
+            c.insert(key.into(), s.into());
+        }
+        for key in ["changes", "notice"] {
+            if let Some(s) = m[key].as_str() {
+                c.insert(key.into(), s.into());
+            }
+        }
+        if !out.iter().any(|o| o["name"] == c["name"]) {
+            out.push(c.into());
+        }
+    };
+    for m in v["models"].as_array().expect("models.json: models") {
+        if m["status"] != "stable" {
+            continue;
+        }
+        let name = m["name"].as_str().unwrap_or("a model");
+        add(m, name);
+        for inc in m["includes"].as_array().into_iter().flatten() {
+            add(inc, name);
+        }
+    }
+    let json = serde_json::Value::from(out).to_string();
+    let _ = writeln!(rs, "pub const CREDITS: &str = {json:?};");
 }
 
 /// The diarizer the app offers, as DIARIZER: the first diarize entry of a

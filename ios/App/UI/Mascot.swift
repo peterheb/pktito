@@ -151,7 +151,8 @@ func mascotMesh(_ cells: [UInt8], _ d: [Int], _ o: [Float], _ palette: [[UInt8]]
                                 ao[k] = s1 == 1 && s2 == 1 ? 0 : 3 - (s1 + s2 + c)
                                 let p = b &+ face.u &* du &+ face.v &* dv
                                 let at = (vi + k) * 20
-                                raw.storeBytes(of: o[0] + Float(p.x), toByteOffset: at, as: Float.self)
+                                raw.storeBytes(
+                                    of: o[0] + Float(p.x), toByteOffset: at, as: Float.self)
                                 raw.storeBytes(
                                     of: o[1] + Float(p.y), toByteOffset: at + 4, as: Float.self)
                                 raw.storeBytes(
@@ -291,7 +292,8 @@ final class MascotStage: MTKView, MTKViewDelegate {
         layout.layouts[0].stride = 20
         // the desktop's canvas: antialiased, and its bytes the palette's own,
         // not linear light's, so that the colours are the picture's
-        func pipeline(_ vertex: String, _ fragment: String, blend: Bool) -> MTLRenderPipelineState? {
+        func pipeline(_ vertex: String, _ fragment: String, blend: Bool) -> MTLRenderPipelineState?
+        {
             let p = MTLRenderPipelineDescriptor()
             p.vertexFunction = library.makeFunction(name: vertex)
             p.fragmentFunction = library.makeFunction(name: fragment)
@@ -688,14 +690,14 @@ final class MascotStage: MTKView, MTKViewDelegate {
 private let shaders = """
     #include <metal_stdlib>
     using namespace metal;
-    
+
     struct VoxIn {
         float3 pos [[attribute(0)]];
         // the face, how open the corner is (0 to 3), the cell's jitter; bytes
         float4 meta [[attribute(1)]];
         float4 col [[attribute(2)]];
     };
-    
+
     struct VoxU {
         float4x4 mvp;
         float4x4 mv;
@@ -704,14 +706,14 @@ private let shaders = """
         float4 l1;
         float4 l2;
     };
-    
+
     struct VoxV {
         float4 position [[position]];
         float3 col;
         float ao;
         float3 n;
     };
-    
+
     vertex VoxV mascot_vox_v(VoxIn in [[stage_in]], constant VoxU &u [[buffer(1)]]) {
         const float3 N[6] = {float3(1, 0, 0),  float3(-1, 0, 0), float3(0, 1, 0),
                              float3(0, -1, 0), float3(0, 0, 1),  float3(0, 0, -1)};
@@ -723,7 +725,7 @@ private let shaders = """
         out.col = in.col.rgb * (1.0 + (in.meta.z - 0.5) * u.off.w);
         return out;
     }
-    
+
     fragment float4 mascot_vox_f(VoxV in [[stage_in]], constant VoxU &u [[buffer(1)]]) {
         float3 n = normalize(in.n);
         float d1 = max(dot(n, u.l1.xyz), 0.0);
@@ -735,7 +737,7 @@ private let shaders = """
                      float3(0.72, 0.82, 1.0) * d2 * 0.14;
         return float4(min(in.col * lit * ao * 1.10, float3(1.0)), 1.0);
     }
-    
+
     struct GndU {
         float4x4 mvp;
         // the blob's middle and its radii, on the ground
@@ -744,12 +746,12 @@ private let shaders = """
         // in x, how strong: lighter while the bird is in the air
         float4 str;
     };
-    
+
     struct GndV {
         float4 position [[position]];
         float2 xz;
     };
-    
+
     vertex GndV mascot_gnd_v(uint i [[vertex_id]], constant GndU &u [[buffer(1)]]) {
         const float2 Q[4] = {float2(-90, -70), float2(110, -70), float2(-90, 70), float2(110, 70)};
         GndV out;
@@ -757,7 +759,7 @@ private let shaders = """
         out.position = u.mvp * float4(Q[i].x, 0.04, Q[i].y, 1.0);
         return out;
     }
-    
+
     fragment float4 mascot_gnd_f(GndV in [[stage_in]], constant GndU &u [[buffer(1)]]) {
         float2 d = (in.xz - u.blob.xy) / u.blob.zw;
         float a = smoothstep(1.0, 0.15, length(d)) * u.str.x * u.shadow.a;
