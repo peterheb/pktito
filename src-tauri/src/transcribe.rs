@@ -79,6 +79,11 @@ pub struct Speakers<'a> {
     pub model: &'a Model,
     pub diar: &'a mut Diar,
     pub stretches: Vec<Stretch>,
+    /// Whether a run heard the whole recording: not one stopped, nor one
+    /// whose speakers were turned off partway. The transcript names its
+    /// diarizer where it did, though no one spoke in it (the JSON's
+    /// "speakers": [], as pktito-c's)
+    pub heard: bool,
     /// Whether the window's switch has turned speakers off partway (off_when)
     off: Option<Box<dyn Fn() -> bool + 'a>>,
 }
@@ -89,6 +94,7 @@ impl<'a> Speakers<'a> {
             model,
             diar,
             stretches: Vec::new(),
+            heard: false,
             off: None,
         }
     }
@@ -769,6 +775,7 @@ impl<'s, 'a> Heard<'s, 'a> {
                 })
             })
             .collect();
+        self.s.heard = true;
         Ok(())
     }
 }
@@ -981,6 +988,7 @@ mod files {
             let (with, _) =
                 super::run(&model, &mut asr, &x, Some(&mut on), |_, _| {}, || false).unwrap();
             assert!(with.iter().any(|s| s.speaker.is_some()), "speakers when on");
+            assert!(on.heard, "heard to its end");
         }
         let chunks = Cell::new(0);
         let mut off = super::Speakers::new(&heard, &mut diar).off_when(|| chunks.get() > 0);
@@ -995,7 +1003,7 @@ mod files {
         .unwrap();
         assert!(whole && chunks.get() > 1, "{} chunks", chunks.get());
         assert!(without.iter().all(|s| s.speaker.is_none()));
-        assert!(off.stretches.is_empty());
+        assert!(off.stretches.is_empty() && !off.heard);
         let (plain, _) = super::run(&model, &mut asr, &x, None, |_, _| {}, || false).unwrap();
         assert_eq!(words(&without), words(&plain));
     }

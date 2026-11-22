@@ -717,10 +717,8 @@ fn speakers_of(app: &AppHandle, id: &str) -> Result<Found, Problem> {
         tell,
     )?;
     drop(slot);
-    t.diarizer = match segments.iter().any(|s| s.speaker.is_some()) {
-        true => heard_by,
-        false => String::new(),
-    };
+    // named though it found no one: the JSON's "speakers": []
+    t.diarizer = heard_by;
     t.segments = segments;
     t.stretches = stretches;
     t.names = Vec::new();
@@ -1145,6 +1143,11 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
     let transcribed = t1.elapsed().as_secs_f64();
     let name = model.name();
     let on_npu = *neural;
+    // the diarizer, where it heard the whole recording: not where the
+    // switch went off before the end
+    if !speakers.as_ref().is_some_and(|s| s.heard) {
+        heard_by = String::new();
+    }
     let stretches = speakers.map(|s| s.stretches).unwrap_or_default();
     drop(dslot);
     drop(slot);
@@ -1160,12 +1163,6 @@ fn job(app: &AppHandle, id: u32, path: &Path) {
     match r {
         Ok((segments, true)) => {
             let took = t0.elapsed().as_secs_f64();
-            // the diarizer, where it found speakers: not where the switch
-            // went off before the end
-            let heard_by = match segments.iter().any(|s| s.speaker.is_some()) {
-                true => heard_by,
-                false => String::new(),
-            };
             let (size, modified) = recent::stamp(path);
             let item = recent::Item {
                 id: key.clone(),

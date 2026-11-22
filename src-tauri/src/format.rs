@@ -484,6 +484,17 @@ fn vtt_text(s: &str) -> String {
         .replace('>', "&gt;")
 }
 
+/// Whether a phone's transcript is one its diarizer heard and found no one
+/// in, not hidden: the screen has no speakers to show and no switch for
+/// them, and the JSON still says who listened ("speakers": []).
+#[cfg_attr(
+    not(any(target_os = "android", target_os = "ios", test)),
+    allow(dead_code)
+)]
+pub fn no_one_spoke(diarizer: &str, hidden: bool, segments: &[Segment]) -> bool {
+    !hidden && !diarizer.is_empty() && segments.iter().all(|s| s.speaker.is_none())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -795,6 +806,11 @@ mod tests {
         assert!(
             json.contains("\n  \"diarizer\": \"Nemotron-3-Diarization\",\n  \"speakers\": [],\n"),
             "{json}"
+        );
+        assert!(super::no_one_spoke("Nemotron-3-Diarization", false, &[]));
+        assert!(
+            !super::no_one_spoke("", false, &[])
+                && !super::no_one_spoke("Nemotron-3-Diarization", true, &[])
         );
         let hidden = text(&Transcript { names: None, ..t }, "json", false).unwrap();
         assert!(

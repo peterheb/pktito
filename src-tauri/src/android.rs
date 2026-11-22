@@ -65,8 +65,13 @@ struct Transcript {
 
 impl Transcript {
     /// What format.rs takes of it, named name: with its speakers where the
-    /// switch shows them (speakers), as the window's formats have them.
+    /// switch shows them (speakers), as the window's formats have them; and
+    /// with none where the diarizer heard the recording and no one spoke,
+    /// which the screen has no switch for: the JSON's "speakers": [], as
+    /// pktito-c's and pktito-cli's.
     fn formatted<'t>(&'t self, name: &'t str, speakers: bool) -> format::Transcript<'t> {
+        let speakers =
+            speakers || format::no_one_spoke(&self.diarizer, self.hidden, &self.segments);
         format::Transcript {
             name,
             duration: self.duration,
@@ -463,9 +468,9 @@ pub extern "system" fn Java_net_pktito_app_Engine_transcribe<'a>(
                 }
                 Err(why) => return throw(env, &why).map(|_| JObject::null()),
             };
-            // the diarizer, where it found speakers: not where the switch
-            // went off before the end
-            let diarizer = match segments.iter().any(|s| s.speaker.is_some()) {
+            // the diarizer, where it heard the whole recording: not where the
+            // switch went off before the end
+            let diarizer = match speakers.as_ref().is_some_and(|s| s.heard) {
                 true => heard_by,
                 false => String::new(),
             };
@@ -810,10 +815,8 @@ pub extern "system" fn Java_net_pktito_app_Engine_findSpeakers<'a>(
             }
             match found {
                 Ok((segments, stretches)) => {
-                    t.diarizer = match segments.iter().any(|s| s.speaker.is_some()) {
-                        true => heard_by,
-                        false => String::new(),
-                    };
+                    // named though it found no one: the JSON's "speakers": []
+                    t.diarizer = heard_by;
                     t.segments = segments;
                     t.stretches = stretches;
                     t.names = Vec::new();

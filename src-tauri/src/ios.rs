@@ -56,8 +56,11 @@ struct Transcript {
 
 impl Transcript {
     /// What format.rs takes of it, named name: with its speakers where the
-    /// switch shows them (speakers), as android.rs's has it.
+    /// switch shows them (speakers), as android.rs's has it, and with none
+    /// where the diarizer heard no one.
     fn formatted<'t>(&'t self, name: &'t str, speakers: bool) -> format::Transcript<'t> {
+        let speakers =
+            speakers || format::no_one_spoke(&self.diarizer, self.hidden, &self.segments);
         format::Transcript {
             name,
             duration: self.duration,
@@ -423,9 +426,9 @@ pub extern "C" fn pkapp_transcribe(
             },
             || STOP.load(Ordering::Relaxed),
         )?;
-        // the diarizer, where it found speakers: not where the switch went
-        // off before the end
-        let diarizer = match segments.iter().any(|s| s.speaker.is_some()) {
+        // the diarizer, where it heard the whole recording: not where the
+        // switch went off before the end
+        let diarizer = match speakers.as_ref().is_some_and(|s| s.heard) {
             true => heard_by,
             false => String::new(),
         };
@@ -629,10 +632,8 @@ pub extern "C" fn pkapp_find_speakers(
             }
         }
         let (segments, stretches) = found?;
-        t.diarizer = match segments.iter().any(|s| s.speaker.is_some()) {
-            true => heard_by,
-            false => String::new(),
-        };
+        // named though it found no one: the JSON's "speakers": []
+        t.diarizer = heard_by;
         t.segments = segments;
         t.stretches = stretches;
         t.names = Vec::new();

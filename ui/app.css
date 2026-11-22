@@ -2110,6 +2110,17 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   flex: 0 1 auto;
   min-width: 0;
 }
+/* at the window's least width the field hadn't the 17 px that a found
+   speaker's whole name wanted, "Speak…" (the harness's lay-8-480-find):
+   there their mark and name stand where the magnifier did */
+.pk-spk-line > .pk-find-row {
+  container-type: inline-size;
+}
+@container (max-width: 460px) {
+  .pk-find.has-who > .pk-ico {
+    display: none;
+  }
+}
 /* the header's Speakers button: its check and its menu's arrow at the
    size of Save as's arrow */
 .pk-spk-btn[aria-busy="true"] {

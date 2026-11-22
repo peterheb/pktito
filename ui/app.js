@@ -3553,8 +3553,11 @@ const turnsShown = (f) => spkShown(f);
 const nameOf = (f, n) =>
   ((f.names && f.names[n - 1]) || "").trim() || t("speakers.default", { n });
 /* the names a file is saved with: a lone voice's too, which format.rs
-   leaves out of the text but keeps in the JSON */
-const namesSaved = (f) => (spkShown(f) ? f.names || [] : null);
+   leaves out of the text but keeps in the JSON; and none, not hidden,
+   where the diarizer heard the recording and no one spoke: the JSON's
+   "speakers": [], as pktito-c's and pktito-cli's */
+const namesSaved = (f) =>
+  spkShown(f) || (!!f && !f.hidden && !!f.diarizer) ? f.names || [] : null;
 const turnStarts = (segs, i) =>
   segs[i].speaker != null &&
   (i === 0 || segs[i - 1].speaker !== segs[i].speaker);

@@ -127,8 +127,9 @@ mod tests {
     use std::path::Path;
 
     /// Keys put together at run time, which no file names whole: each catalog
-    /// model's name and languages (model.rs, Entry::key; app.js, labelOf).
-    const MADE: &[&str] = &["catalog."];
+    /// model's name and languages (model.rs, Entry::key; app.js, labelOf),
+    /// and what a credited model does, by its task (app.js, the Models sheet).
+    const MADE: &[&str] = &["catalog.", "credits.task_"];
 
     /// How a key is named, up to its opening quote: the page's data-t
     /// attributes and t calls, and Rust's t, tf, Problem::new and Unreadable.
