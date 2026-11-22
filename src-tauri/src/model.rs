@@ -65,8 +65,9 @@ pub fn chip() -> Option<&'static str> {
 /// "DSP_INFO UNSUPPORTED_KEY" lines before every pktito-cli answer on a
 /// Snapdragon X Elite (snappy, 0.9.8's df0037e, 2026-11-22). Both the C
 /// library's descriptor 2 and the process's handle are turned, since a DLL
-/// may hold either, and both are put back; NUL stays open, for a DLL that
-/// kept the handle it was loaded under.
+/// may hold either, and both are put back (pktito-cli's own errors go
+/// there after); NUL stays open, for a DLL that kept the handle it was
+/// loaded under.
 #[cfg(all(windows, target_arch = "aarch64"))]
 fn hushed<T>(f: impl FnOnce() -> T) -> T {
     use std::os::raw::{c_char, c_int};
@@ -96,11 +97,15 @@ fn hushed<T>(f: impl FnOnce() -> T) -> T {
         }
         SetStdHandle(STD_ERROR_HANDLE, _get_osfhandle(nul));
         let out = f();
+        // turning descriptor 2 closed the handle it stood on, which was
+        // the process's: the one to put back is the descriptor's new one
         if fd >= 0 {
             _dup2(fd, 2);
             _close(fd);
+            SetStdHandle(STD_ERROR_HANDLE, _get_osfhandle(2));
+        } else {
+            SetStdHandle(STD_ERROR_HANDLE, handle);
         }
-        SetStdHandle(STD_ERROR_HANDLE, handle);
         out
     }
 }
