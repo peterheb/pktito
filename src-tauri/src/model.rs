@@ -36,15 +36,23 @@ pub fn neural() -> bool {
 
 /// This PC's NPU as QNN describes it (pktito::qnn_chip), on Windows on Arm,
 /// asked once: QNN loads the NPU's library to say. None where it finds none
-/// (a Snapdragon 7c, whose Hexagon QNN refuses), where the app's folder has
-/// no QNN DLLs, and on every other system (Device::this).
+/// (a Snapdragon 7c, whose Hexagon QNN refuses; an Arm PC that is no
+/// Snapdragon), where the app's folder has no QNN DLLs, and on every other
+/// system (Device::this). Finding none is the ordinary answer and says
+/// nothing: QNN's reason, seven lines of its own errors on an RTX Spark
+/// (pktito-cli models, 2026-11-21), is printed only where PKTITO_QNN_LOG
+/// asks for QNN's messages.
 pub fn chip() -> Option<&'static str> {
     #[cfg(all(windows, target_arch = "aarch64"))]
     {
         static CHIP: OnceLock<Option<String>> = OnceLock::new();
         CHIP.get_or_init(|| {
             crate::pktito::qnn_chip()
-                .map_err(|why| eprintln!("pktito: no NPU: {why}"))
+                .map_err(|why| {
+                    if std::env::var_os("PKTITO_QNN_LOG").is_some() {
+                        eprintln!("pktito: no NPU: {why}");
+                    }
+                })
                 .ok()
         })
         .as_deref()
