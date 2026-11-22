@@ -2,7 +2,6 @@ package net.pktito.app.ui
 
 import android.content.Context
 import android.text.TextUtils
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,12 +37,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.paneTitle
@@ -77,8 +74,8 @@ import org.json.JSONObject
  * version and the engine's code for this processor, its copyright and links, and the credits: the
  * models, Silero's VAD, and everything else, whose licenses open over About as Privacy does. As the
  * desktop's, the mascot is over the words in a portrait window or one under 600 dp wide, the words
- * as tall as they are and the mascot the rest, and beside them otherwise (app.css, .pk-about). Here
- * the mascot is a picture of it at rest (android/mascot.js), where the desktop's turns and chirps.
+ * as tall as they are and the mascot the rest, and beside them otherwise (app.css, .pk-about). The
+ * mascot turns and chirps as the desktop's does (Mascot).
  */
 @Composable
 fun About(version: String, onBack: () -> Unit, onLink: (String) -> Unit) {
@@ -96,14 +93,7 @@ fun About(version: String, onBack: () -> Unit, onLink: (String) -> Unit) {
             }
         val stage =
             @Composable { mod: Modifier ->
-                Box(mod.background(p.surface)) {
-                    Image(
-                        painterResource(R.drawable.mascot),
-                        stringResource(R.string.about_mascot),
-                        Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit,
-                    )
-                }
+                Mascot(mod)
             }
         if (stacked) {
             // the mascot what the words leave, and 160 dp at the least: a

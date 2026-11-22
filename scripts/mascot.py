@@ -798,8 +798,13 @@ def main():
     with open(args.out, "w") as fh:
         fh.write(js)
     # the same, without its wrapper, for the iOS app (ios/App/UI/Mascot.swift)
-    with open(os.path.join(root, "ios", "App", "mascot.json"), "w") as fh:
-        fh.write(json.dumps(data, separators=(",", ":")) + "\n")
+    # and the Android app (android/.../ui/Mascot.kt)
+    for out in (
+        os.path.join(root, "ios", "App", "mascot.json"),
+        os.path.join(root, "android", "app", "src", "main", "assets", "mascot.json"),
+    ):
+        with open(out, "w") as fh:
+            fh.write(json.dumps(data, separators=(",", ":")) + "\n")
     print(
         f"{args.out}: {len(js) / 1024:.0f} KB, {voxels} voxels, {len(data['palette']) - 1} colours"
     )
