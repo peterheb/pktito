@@ -229,6 +229,7 @@
   "speakers.switch": "Speakers",
   "speakers.show": "Show who said what",
   "speakers.hide": "Hide speakers",
+  "speakers.names": "Show speaker legend",
   "speakers.find": "Find the speakers",
   "speakers.stop": "Stop finding the speakers",
   "speakers.default": "Speaker {n}",

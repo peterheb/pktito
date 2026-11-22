@@ -113,47 +113,68 @@
           <h1 class="pk-ui pk-cut" id="title"></h1>
           <span class="pk-spin" id="spin" hidden aria-hidden="true"></span>
           <span class="pk-grow"></span>
-          <!-- for: the speaker's button before the field would be the
-               label's control otherwise -->
-          <label class="pk-find" id="find-box" for="find">
-            <svg class="pk-ico" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <button
-              class="pk-find-who"
-              id="find-who"
-              type="button"
-              hidden
-            ></button>
-            <input
-              id="find"
-              type="search"
-              data-t-placeholder="find.placeholder"
-              data-t-aria-label="find.label"
-              autocomplete="off"
-              spellcheck="false"
-            />
-            <span class="pk-kbd" id="find-n" aria-live="polite"></span>
-            <button
-              class="pk-find-step"
-              id="find-prev"
-              type="button"
-              data-t-aria-label="find.previous"
-            ></button>
-            <button
-              class="pk-find-step"
-              id="find-next"
-              type="button"
-              data-t-aria-label="find.next"
-            ></button>
-            <button
-              class="pk-find-step"
-              id="find-clear"
-              type="button"
-              data-t-aria-label="find.clear"
-            ></button>
-          </label>
+          <!-- Find, and Only matches while something is found (app.js,
+               applyOnly): one piece, here or after the speakers' names
+               under the strip (placeFind) -->
+          <div class="pk-find-row" id="find-row">
+            <!-- for: the speaker's button before the field would be the
+                 label's control otherwise -->
+            <label class="pk-find" id="find-box" for="find">
+              <svg class="pk-ico" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <button
+                class="pk-find-who"
+                id="find-who"
+                type="button"
+                hidden
+              ></button>
+              <input
+                id="find"
+                type="search"
+                data-t-placeholder="find.placeholder"
+                data-t-aria-label="find.label"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <span class="pk-kbd" id="find-n" aria-live="polite"></span>
+              <button
+                class="pk-find-step"
+                id="find-prev"
+                type="button"
+                data-t-aria-label="find.previous"
+              ></button>
+              <button
+                class="pk-find-step"
+                id="find-next"
+                type="button"
+                data-t-aria-label="find.next"
+              ></button>
+              <button
+                class="pk-find-step"
+                id="find-clear"
+                type="button"
+                data-t-aria-label="find.clear"
+              ></button>
+            </label>
+            <div class="pk-track" id="only-track" hidden>
+              <button
+                class="pk-spk"
+                id="only"
+                type="button"
+                aria-pressed="false"
+              ></button>
+            </div>
+          </div>
+          <!-- who said what: a touch finds or shows the speakers, and with
+               them shown opens their menu (app.js, speakersMenu) -->
+          <button
+            class="pk-btn pk-spk-btn"
+            id="spk"
+            type="button"
+            hidden
+          ></button>
           <button class="pk-btn pk-btn-ico" id="copy" type="button"></button>
           <!-- Start again before Save as: the primary at the right end, as on every screen -->
           <button
@@ -233,28 +254,11 @@
             </div>
           </div>
         </div>
-        <!-- who said what: the switch, this transcript's, then each
-             speaker's name, which finds their turns (app.js, speakers); and
+        <!-- each speaker's name, which finds their turns, where the
+             speakers' menu keeps them here (app.js, updateSpeakers); and
              Find, where the header hasn't the room for it (placeFind) -->
         <div class="pk-spk-line" id="spk-line">
-          <div class="pk-track" id="spk-track" hidden>
-            <button
-              class="pk-spk"
-              id="spk"
-              type="button"
-              aria-pressed="false"
-            ></button>
-          </div>
           <div class="pk-names" id="chips" hidden></div>
-          <!-- Only matches, while something is found (app.js, applyOnly) -->
-          <div class="pk-track" id="only-track" hidden>
-            <button
-              class="pk-spk"
-              id="only"
-              type="button"
-              aria-pressed="false"
-            ></button>
-          </div>
         </div>
         <p class="pk-msg" id="msg" role="status"></p>
         <details class="pk-details pk-msg-details" id="msg-details" hidden>

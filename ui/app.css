@@ -2045,13 +2045,17 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 /* ------------------------------------------------- under the strip -- */
 /* 16 px above, and the transcript's 16 px margin below: the same space
    either side when its first row is the current one, drawn as a block */
-/* the speakers' switch and names and, where the header hasn't the room
-   for it, Find beside them, a field that says what it is, not an icon
-   alone at the line's far end, where it went unnoticed (Peter, 2026-10-31;
-   app.js, placeFind); nothing at all while none of them shows. They wrap
-   to a second line before any of them is cut. */
-/* 16 px under the strip, and Find 16 under the switch where it wraps,
-   as the transcript is 16 under the line: one step down the screen */
+/* The speakers' names, for one who keeps them here (app.js,
+   updateSpeakers), and, where the header hasn't the room for it
+   (placeFind), Find: a field that says what it is, not an icon alone at
+   the line's far end, where it went unnoticed (Peter, 2026-10-31); nothing
+   at all while none of them shows.
+
+   The names are one block, 2 px between their lines; Find with Only
+   matches is beside it where 380 px are left, else on a line of its own,
+   and fills it either way. */
+/* 16 px under the strip, and Find 16 under the names where it wraps, as
+   the transcript is 16 under the line: one step down the screen */
 .pk-spk-line {
   display: flex;
   flex-wrap: wrap;
@@ -2059,8 +2063,79 @@ html:not([data-chrome="win"]) .pk-head > #stop {
   gap: var(--space-3) 12px;
   margin: var(--space-3) 24px 0;
 }
-.pk-spk-line:not(:has(> :not([hidden]))) {
+.pk-spk-line:not(:has(:is(.pk-names, .pk-find):not([hidden]))) {
   display: none;
+}
+/* Find and Only matches, which stay together: Only matches on a line
+   alone under Find was the fifth line at 480 px */
+.pk-find-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.pk-find-row:not(:has(> :not([hidden]))) {
+  display: none;
+}
+.pk-find-row > .pk-track {
+  flex: none;
+}
+/* in the header its two pieces are the header's own, sized as its
+   buttons are: as a box of its own it kept the width of an unshrunk field,
+   and the name 70 px of the 195 it had (the lay-8-1312-find scene) */
+.pk-head > .pk-find-row {
+  display: contents;
+}
+/* under the strip */
+.pk-spk-line > .pk-find-row {
+  flex: 1 1 380px;
+}
+.pk-spk-line > .pk-find-row > .pk-find {
+  flex: 1 1 auto;
+}
+/* room left for the words after a speaker's name in the field: beside
+   five names at 680 px the field was the name, the count and the arrows,
+   and its words had no width at all (the harness's alice12-only-esc) */
+.pk-spk-line > .pk-find-row:has(> .has-who) {
+  flex-basis: 470px;
+}
+.pk-spk-line .pk-find input {
+  flex: 1 1 40px;
+  width: auto;
+  min-width: 40px;
+}
+/* and the name gives way only where even that is too much: a long one,
+   renamed */
+.pk-spk-line .pk-find-who {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+/* the header's Speakers button: its check and its menu's arrow at the
+   size of Save as's arrow */
+.pk-spk-btn[aria-busy="true"] {
+  cursor: progress;
+}
+/* in the speakers' menu, a name after its mark; and what the model's 8
+   speakers mean, in the menu's width, not the sentence's */
+.pk-mi-who {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+/* a square mark is smaller than a round one: centred in the round one's
+   width here, where the names are a column */
+.pk-mi-who .pk-mark.is-sq {
+  margin-left: calc((var(--mark-size) - var(--mark-size-sq)) / 2);
+  margin-right: calc(
+    var(--mark-gap) + (var(--mark-size) - var(--mark-size-sq)) / 2
+  );
+}
+.pk-menu-note {
+  margin: 0;
+  padding: 4px 10px 8px;
+  max-width: 260px;
+  font: 400 13px/1.4 var(--font-sans);
+  color: var(--ink-muted);
 }
 /* the switch's sunk track */
 .pk-track {
@@ -2625,14 +2700,14 @@ html:not([data-chrome="win"]) .pk-head > #stop {
 }
 
 /* -------------------------------------------------------------- speakers -- */
-/* Who said what (PKT-27): the switch under the strip, a name on each turn,
+/* Who said what (PKT-27): the header's Speakers button, a name on each turn,
    the speaker bar on the strip, and Who's speaking; the design's measures
    (the speakers design, page version 7, Peter's calls of 2026-11-09). */
 
-/* the switch: a track of one, its check before its word, on one line:
-   Find beside it gives way first. 32 tall with the track, as Find beside
-   it and every button are: at 30 its middle sat 1 px above Find's (the
-   layout audit, 2026-11-01) */
+/* a switch (the start screen's Speakers, Only matches): a track of one,
+   its check before its word, on one line. 32 tall with the track, as Find
+   beside it and every button are: at 30 its middle sat 1 px above Find's
+   (the layout audit, 2026-11-01) */
 .pk-spk {
   display: inline-flex;
   align-items: center;

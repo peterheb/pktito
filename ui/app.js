@@ -2014,21 +2014,24 @@ function cutName(name) {
     : `<span>${esc(name.slice(0, at))}</span><span>${esc(name.slice(at))}</span>`;
 }
 
-/* Find in the header, beside the name, or on the line under the strip,
-   beside the speakers' switch, where the header hasn't the room for it
-   beside its buttons and 160 of the name:
-   the floor the phones' apps keep their name's (the out-of-space rules,
-   2026-10-31). And the name itself on a line of its own under the row,
-   on the strip's edge, where even without Find it would keep under 160
-   beside the buttons, as the phones' apps put it: at 480 px on a Mac,
-   beside Start again, Copy and Save as, the name kept 69 px, "c…-one.flac"
-   (the layout audit, 2026-11-01). Measured by the buttons alone, which
-   stay where they are, so that where Find and the name are doesn't change
-   where they go. */
+/* Find, with Only matches, in the header beside the name, or on the line
+   under the strip after the speakers' names, where the header hasn't the
+   room for it beside its buttons and 160 of the name: the floor the
+   phones' apps keep their name's (the out-of-space rules, 2026-10-31).
+   Its room is what it needs with a search in it, so that it stays where
+   it is as one starts: the field's 304 px with its count and arrows
+   (app.css, .pk-find.has-query), and Only matches beside it. And the name
+   itself on a line of its own under the row, on the strip's edge, where
+   even without Find it would keep under 160 beside the buttons, as the
+   phones' apps put it: at 480 px on a Mac, beside Start again, Copy and
+   Save as, the name kept 69 px, "c…-one.flac" (the layout audit,
+   2026-11-01). Measured by the buttons alone, Speakers among
+   them, which stay where they are, so that where Find and the name are
+   doesn't change where they go. */
 const NAME_FLOOR = 160;
 function placeFind() {
   const head = $("head"),
-    box = $("find-box"),
+    box = $("find-row"),
     line = $("spk-line"),
     nameLine = $("head-name"),
     cs = getComputedStyle(head),
@@ -2036,19 +2039,20 @@ function placeFind() {
       head.clientWidth -
       parseFloat(cs.paddingLeft) -
       parseFloat(cs.paddingRight),
-    shown = ["back", "copy", "again", "save-as", "stop"]
+    shown = ["back", "spk", "copy", "again", "save-as", "stop"]
       .map($)
       .filter((b) => b.offsetWidth > 0),
     gap = parseFloat(cs.columnGap) || 10,
     // the buttons, and a gap each between them, the name and the space that pushes them apart
     buttons =
       shown.reduce((n, b) => n + b.offsetWidth, 0) + gap * (shown.length + 1),
-    under = buttons + gap + 200 + NAME_FLOOR > room,
+    // the header's gap, and Only matches: 110 px in English
+    find = 304 + 10 + 110,
+    under = buttons + gap + find + NAME_FLOOR > room,
     stacked = buttons + NAME_FLOOR > room;
-  if (under && box.parentElement !== line)
-    line.insertBefore(box, $("only-track"));
+  if (under && box.parentElement !== line) line.append(box);
   else if (!under && box.parentElement === line)
-    head.insertBefore(box, $("copy"));
+    head.insertBefore(box, $("spk"));
   if (stacked && $("title").parentElement !== nameLine)
     nameLine.append($("title"), $("spin"));
   else if (!stacked && $("title").parentElement === nameLine) {
@@ -2056,6 +2060,15 @@ function placeFind() {
     head.insertBefore($("spin"), head.querySelector(".pk-grow"));
   }
   nameLine.hidden = !stacked;
+  // beside Find the name keeps what the field's 304 px leave it, and the
+  // field gives way: with a speaker found the field asks for 400 px, and
+  // the name, which shrinks first, was "yT… kbzI.mp3" at 1312 px (the
+  // harness's lay-8-1312-find)
+  const title = $("title");
+  title.style.minWidth = "";
+  if (!stacked && !under)
+    title.style.minWidth =
+      Math.min(room - buttons - gap - find, title.scrollWidth) + "px";
 }
 new ResizeObserver(placeFind).observe($("head"));
 
@@ -3638,35 +3651,51 @@ $("ready-spk").onclick = async () => {
   updateReadySpk();
 };
 
-/* The switch under the strip, where the build offers a diarizer
-   (main.rs, DiarizerOffer), and with speakers shown each one's name,
-   which finds their turns (findWho) */
+/* The header's Speakers button, where the build offers a diarizer
+   (main.rs, DiarizerOffer). A touch finds the speakers or shows them;
+   with them shown it opens their menu (speakersMenu), as the phones' does
+   (Peter, 2026-11-18: "my intuition is to click Speakers like I'll get a
+   drop-down menu"), and says so with Save as's arrow. Their names over the
+   transcript, each of which finds their turns (findWho), are for one who
+   asks for them in that menu: under the strip with eight names they were
+   two lines of every window, and the switch a third (Peter, 2026-11-21). */
 function updateSpeakers(f, review) {
   // and while a transcription runs, where turned off it stops that file's
   // speaker search at once (spkWhileRunning)
   const running = modeOf(f) === "running",
     offer = !!st.diarizer && (running || (review && f.segments.length > 0));
-  $("spk-track").hidden = !offer;
   const b = $("spk"),
     n = present(f).length;
-  // pressed while names are shown or being found: on with none found yet,
+  b.hidden = !offer;
+  // on while names are shown or being found: on with none found yet,
   // as a transcript from before the switch has, a click finds them. While
   // a transcription runs, while it finds them or will once it is done.
   const pressed = running
-    ? !!f.diarizing || !!f.findAfter
-    : !f.hidden && (n > 0 || !!spkBusy);
-  b.setAttribute("aria-pressed", String(pressed));
+      ? !!f.diarizing || !!f.findAfter
+      : !f.hidden && (n > 0 || !!spkBusy),
+    menu = spkMenu(f);
+  if (menu) {
+    b.removeAttribute("aria-pressed");
+    b.setAttribute("aria-haspopup", "menu");
+    b.setAttribute("aria-expanded", String(menuFor === b));
+  } else {
+    b.removeAttribute("aria-haspopup");
+    b.removeAttribute("aria-expanded");
+    b.setAttribute("aria-pressed", String(pressed));
+  }
   b.setAttribute("aria-busy", String(!!spkBusy));
-  b.innerHTML = `${ICON.check}<span>${esc(t("speakers.switch"))}</span>`;
-  b.title = running
-    ? t(f.diarizing ? "speakers.stop" : "speakers.show")
-    : pressed && n > 0
-      ? t("speakers.hide")
+  b.innerHTML = `${pressed ? ICON.check : ""}<span>${esc(t("speakers.switch"))}</span>${menu ? ICON.down : ""}`;
+  b.title = menu
+    ? ""
+    : running
+      ? t(f.diarizing ? "speakers.stop" : "speakers.show")
       : t(n > 0 ? "speakers.show" : "speakers.find");
   // the names once it is done: renamed while it runs, a name would have
   // to follow the turns as they come
-  const on = offer && !running && spkShown(f);
+  const on = offer && !running && spkShown(f) && !!prefs.names;
   $("chips").hidden = !on;
+  // the button is one of the header's, which Find's place is by
+  placeFind();
   const chip = (x) =>
     `<button class="pk-chip" type="button" data-s="${x}" aria-pressed="${x === who}" title="${esc(t("speakers.chip_tip"))}" aria-label="${esc(t("speakers.chip_label", { name: nameOf(f, x) }))}">${markHtml(x)}${esc(nameOf(f, x))}</button>`;
   // the (i) wraps with the last name, never on a line of its own
@@ -3679,6 +3708,53 @@ function updateSpeakers(f, review) {
         )
         .join("")
     : "";
+}
+
+/* Whether Speakers opens the menu: a finished transcript's, with its
+   speakers shown */
+const spkMenu = (f) =>
+  modeOf(f) === "review" && !spkBusy && !f.hidden && present(f).length > 0;
+
+/* The speakers' menu: Hide speakers; each speaker's mark and name, which
+   finds where they speak as a name over the transcript does, the one found
+   checked; with all 8 in use what the (i) after the names says; and
+   whether the names stay over the transcript. */
+function speakersMenu(f, anchor, keys) {
+  const all = present(f);
+  const html =
+    `<button class="pk-mi" type="button" role="menuitem" data-hide><span>${esc(t("speakers.hide"))}</span></button>` +
+    `<div class="pk-menu-sep" aria-hidden="true"></div>` +
+    all
+      .map(
+        (x) =>
+          `<button class="pk-mi" type="button" role="menuitemradio" aria-checked="${x === who}" data-s="${x}" ` +
+          `aria-label="${esc(t("speakers.chip_label", { name: nameOf(f, x) }))}"><span class="pk-mi-who">${markHtml(x)}${esc(nameOf(f, x))}</span>${x === who ? ICON.check : ""}</button>`,
+      )
+      .join("") +
+    (all.length >= SPEAKERS
+      ? `<p class="pk-menu-note">${esc(t("speakers.limit_about", { n: num(SPEAKERS) }))}</p>`
+      : "") +
+    `<div class="pk-menu-sep" aria-hidden="true"></div>` +
+    checkHtml("names", esc(t("speakers.names")));
+  openMenu(anchor, keys, html, "down right", (m) => {
+    m.onclick = (e) => {
+      if (e.target.closest("[data-hide]")) {
+        closeMenu();
+        f.hidden = true;
+        return spkChanged(f);
+      }
+      const b = e.target.closest("[data-s]");
+      if (!b) return;
+      closeMenu();
+      findWho(f, Number(b.dataset.s));
+    };
+    m.onchange = async (e) => {
+      const c = e.target.closest("[data-pref]");
+      if (!c) return;
+      await setPref(c.dataset.pref, c.checked);
+      spkRefresh(f);
+    };
+  });
 }
 
 /* With every one of the diarizer's 8 speakers in use, an (i) after their
@@ -3772,15 +3848,17 @@ function closeUp(was, joined) {
   }
 }
 
-$("spk").onclick = async () => {
+$("spk").onclick = async (e) => {
   const f = current();
   if (!f || spkBusy) return;
   if (modeOf(f) === "running") return spkWhileRunning(f);
   if (modeOf(f) !== "review") return;
+  // shown: their menu, where Hide speakers is
+  if (spkMenu(f)) return speakersMenu(f, e.currentTarget, !e.detail);
   closeMenu();
-  // found: shown or hidden, this transcript's alone
+  // found and hidden: shown again, this transcript's alone
   if (present(f).length) {
-    f.hidden = !f.hidden;
+    f.hidden = false;
     return spkChanged(f);
   }
   const d = st.diarizer;

@@ -596,6 +596,11 @@ pub struct Prefs {
     /// start with speakers on (app.js, speakersOnce), and one deleted in
     /// Manage models stays deleted.
     pub speakers_fetched: bool,
+    /// The speakers' names in a line over the transcript, each of which
+    /// finds where they speak. Off to begin with: they are in the Speakers
+    /// menu, and eight of them were two lines of a 680 px window (Peter,
+    /// 2026-11-21).
+    pub names: bool,
 }
 
 impl Default for Prefs {
@@ -611,6 +616,7 @@ impl Default for Prefs {
             side: 0.0,
             speakers: true,
             speakers_fetched: false,
+            names: false,
         }
     }
 }
