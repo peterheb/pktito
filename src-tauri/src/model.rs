@@ -47,18 +47,62 @@ pub fn chip() -> Option<&'static str> {
     {
         static CHIP: OnceLock<Option<String>> = OnceLock::new();
         CHIP.get_or_init(|| {
-            crate::pktito::qnn_chip()
-                .map_err(|why| {
-                    if std::env::var_os("PKTITO_QNN_LOG").is_some() {
-                        eprintln!("pktito: no NPU: {why}");
-                    }
-                })
-                .ok()
+            if std::env::var_os("PKTITO_QNN_LOG").is_some() {
+                return crate::pktito::qnn_chip()
+                    .map_err(|why| eprintln!("pktito: no NPU: {why}"))
+                    .ok();
+            }
+            hushed(|| crate::pktito::qnn_chip().ok())
         })
         .as_deref()
     }
     #[cfg(not(all(windows, target_arch = "aarch64")))]
     None
+}
+
+/// f with the program's standard error sent nowhere, for QNN's libraries,
+/// which print there themselves whatever log level they are given: six
+/// "DSP_INFO UNSUPPORTED_KEY" lines before every pktito-cli answer on a
+/// Snapdragon X Elite (snappy, 0.9.8's df0037e, 2026-11-22). Both the C
+/// library's descriptor 2 and the process's handle are turned, since a DLL
+/// may hold either, and both are put back; NUL stays open, for a DLL that
+/// kept the handle it was loaded under.
+#[cfg(all(windows, target_arch = "aarch64"))]
+fn hushed<T>(f: impl FnOnce() -> T) -> T {
+    use std::os::raw::{c_char, c_int};
+    const STD_ERROR_HANDLE: u32 = -12i32 as u32;
+    const O_WRONLY: c_int = 1;
+    extern "C" {
+        fn _open(path: *const c_char, flags: c_int, ...) -> c_int;
+        fn _dup(fd: c_int) -> c_int;
+        fn _dup2(from: c_int, to: c_int) -> c_int;
+        fn _close(fd: c_int) -> c_int;
+        fn _get_osfhandle(fd: c_int) -> isize;
+    }
+    extern "system" {
+        fn GetStdHandle(which: u32) -> isize;
+        fn SetStdHandle(which: u32, handle: isize) -> i32;
+    }
+    unsafe {
+        let nul = _open(c"NUL".as_ptr(), O_WRONLY);
+        if nul < 0 {
+            return f();
+        }
+        let handle = GetStdHandle(STD_ERROR_HANDLE);
+        // -1 in a window's program, which has no descriptor 2 to turn
+        let fd = _dup(2);
+        if fd >= 0 {
+            _dup2(nul, 2);
+        }
+        SetStdHandle(STD_ERROR_HANDLE, _get_osfhandle(nul));
+        let out = f();
+        if fd >= 0 {
+            _dup2(fd, 2);
+            _close(fd);
+        }
+        SetStdHandle(STD_ERROR_HANDLE, handle);
+        out
+    }
 }
 
 #[derive(Clone, Copy, Debug, Serialize)]
