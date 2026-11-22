@@ -181,6 +181,7 @@ pktito-cli --srt *.mp4                   # subtitles beside each file
 pktito-cli -m multilingual -f json -o out interview.m4a
 pktito-cli models                        # which are here, which is in use
 pktito-cli download parakeet-tdt-0.6b-v3
+pktito-cli download nemotron-3-diarization   # the speaker model, for --speakers
 ```
 
 `-m` takes a model's name, its label (`english`, `multilingual`) or a

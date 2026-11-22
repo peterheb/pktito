@@ -262,11 +262,40 @@ fn diarizer_path(named: Option<&Path>) -> Result<PathBuf, String> {
     let p = data.join("models").join(d.model.file);
     if !p.is_file() {
         return Err(format!(
-            "no diarizer at {}: name one with --diarizer",
-            p.display()
+            "the speaker model isn't downloaded: pktito-cli download {} downloads it, or name one with --diarizer",
+            speaker_name(&d)
         ));
     }
     Ok(p)
+}
+
+/// The speaker model's name on the command line: its file's, as the speech
+/// models' are (nemotron-3-diarization).
+fn speaker_name(d: &model::Diarizer) -> &'static str {
+    d.model.file.strip_suffix(".pkf").unwrap_or(d.model.file)
+}
+
+/// The speaker model, if m names it: by its file's name or the model's own,
+/// in any case.
+fn speaker_model(m: &str) -> Option<model::Diarizer> {
+    model::DIARIZER
+        .filter(|d| m.eq_ignore_ascii_case(speaker_name(d)) || m.eq_ignore_ascii_case(d.name))
+}
+
+/// The speaker model downloaded as a speech model is (fetch): into the
+/// app's models, where --speakers and the window's switch find it, or into
+/// the folder --to names, for --diarizer.
+fn fetch_speakers(d: &model::Diarizer, to: Option<PathBuf>) -> Result<i32, String> {
+    let data = model::data_dir().ok_or("no data folder for the app on this system")?;
+    let dir = to.unwrap_or_else(|| data.join("models"));
+    let w = model::Wanted::diarizer(&dir, d);
+    if !w.here() {
+        fs::create_dir_all(&dir)
+            .map_err(|err| format!("couldn't make {}: {err}", dir.display()))?;
+        fetch_file(&w)?;
+    }
+    println!("{}", w.dst.display());
+    Ok(0)
 }
 
 /// The files bench times: each one named, and a folder's audio and video
@@ -692,7 +721,7 @@ fn models() -> Result<i32, String> {
             format!("downloaded{editions}")
         };
         println!(
-            "{:<22}{:<14}{:<24}{:>4} MB  {state}",
+            "{:<24}{:<14}{:<24}{:>4} MB  {state}",
             e.name,
             e.label,
             e.about,
@@ -700,7 +729,22 @@ fn models() -> Result<i32, String> {
         );
     }
     if let Some(own) = s.model_file.as_ref().filter(|p| p.is_file()) {
-        println!("{:<22}{}  in use", "your own file", own.display());
+        println!("{:<24}{}  in use", "your own file", own.display());
+    }
+    // the speaker model, --speakers': one for every speech model
+    if let Some(d) = model::DIARIZER {
+        let state = if model::Wanted::diarizer(&dir, &d).here() {
+            "downloaded"
+        } else {
+            "not downloaded"
+        };
+        println!(
+            "{:<24}{:<14}{:<24}{:>4} MB  {state}",
+            speaker_name(&d),
+            "Speakers",
+            "for --speakers",
+            (d.model.bytes as f64 / 1e6).round()
+        );
     }
     Ok(0)
 }
@@ -709,6 +753,9 @@ fn models() -> Result<i32, String> {
 /// resuming what a stopped one kept, trying again, and checked against its
 /// size and SHA-256. The app then uses it if it had none.
 fn fetch(m: &str, cpu: bool, to: Option<PathBuf>) -> Result<i32, String> {
+    if let Some(d) = speaker_model(m) {
+        return fetch_speakers(&d, to);
+    }
     let e = entry(m)?;
     let data = model::data_dir().ok_or("no data folder for the app on this system")?;
     let dir = to.clone().unwrap_or_else(|| data.join("models"));

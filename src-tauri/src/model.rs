@@ -591,11 +591,6 @@ pub struct Prefs {
     /// 2026-11-15); the phones begin with it off, where it takes about
     /// twice as long (the S25: 54 to 57 s against 20 to 28 s).
     pub speakers: bool,
-    /// The speaker model has been here once, or been sent for: an install
-    /// from before it came with the first model fetches it at its first
-    /// start with speakers on (app.js, speakersOnce), and one deleted in
-    /// Manage models stays deleted.
-    pub speakers_fetched: bool,
     /// The speakers' names in a line over the transcript, each of which
     /// finds where they speak. Off to begin with: they are in the Speakers
     /// menu, and eight of them were two lines of a 680 px window (Peter,
@@ -615,7 +610,6 @@ impl Default for Prefs {
             volume: 1.0,
             side: 0.0,
             speakers: true,
-            speakers_fetched: false,
             names: false,
         }
     }

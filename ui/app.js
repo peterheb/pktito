@@ -3621,20 +3621,28 @@ let spkFor = null;
 /* The ready screen's switch, where the build offers a diarizer: whether a
    transcription finds the speakers too, which takes longer, as its tip
    says (Peter, 2026-11-19: one choice for every new file, and the only
-   place it is made). On without the model, the model is asked for; a
-   transcription begun before it is here goes without, as main.rs has it. */
+   place it is made). Without the speaker model it shows off, whatever
+   prefs.speakers says, and turning it on asks before downloading: so too
+   for an install updated from before the model, and for a model deleted
+   behind the app's back (Peter, 2026-11-21: a download is asked for, never
+   begun at the first open). A transcription begun before the model is
+   here goes without, as main.rs has it. */
+const readySpkOn = () =>
+  !!prefs.speakers &&
+  !!st.diarizer &&
+  (st.diarizer.have || spkBusy === "downloading");
 function updateReadySpk() {
   const d = st && st.diarizer,
     b = $("ready-spk");
   $("ready-spk-line").hidden = !d;
-  b.setAttribute("aria-pressed", String(!!d && !!prefs.speakers));
+  b.setAttribute("aria-pressed", String(!!st && readySpkOn()));
   b.innerHTML = `${ICON.check}<span>${esc(t("speakers.switch"))}</span>`;
   b.title = t("ready.speakers_tip");
 }
 $("ready-spk").onclick = async () => {
-  const on = !prefs.speakers,
+  const on = !readySpkOn(),
     d = st.diarizer;
-  if (on && d && !d.have && spkBusy !== "downloading") {
+  if (on && d && !d.have) {
     const yes = await ask(
       t("speakers.ask_title"),
       t("speakers.ask_about", { mb: num(d.bytes / 1e6), n: num(SPEAKERS) }),
@@ -5281,31 +5289,8 @@ async function start() {
     recent = [];
   }
   render();
-  await speakersOnce();
   const given = await invoke("initial_files");
   if (given.length) await openPaths(given);
-}
-
-/* The speaker model for an install that has a speech model and not it, with
-   speakers on, as an update from before it came with the first model is:
-   fetched at the start, once, its toast saying how far it has got (Peter,
-   2026-11-19: on by default, so here by default). Once it has been here or
-   been sent for, prefs.speakers_fetched says so, and one deleted in Manage
-   models is not fetched again; the switch asks for it then. */
-async function speakersOnce() {
-  const d = st.diarizer;
-  if (!d || prefs.speakers_fetched) return;
-  if (!d.have) {
-    // the setup brings it with the first model (speakersNext)
-    if (!st.ready || dl || !prefs.speakers) return;
-    try {
-      await invoke("download_diarizer");
-      spkBusy = "downloading";
-    } catch (e) {
-      return toastErr(e);
-    }
-  }
-  await setPref("speakers_fetched", true);
 }
 
 /* Files the system opens with the app, at start or while it runs (main.rs,
