@@ -90,9 +90,9 @@ Windows 10 updated through Edge. The manifest's minimum is Windows 10 1809.
 
 The MSIX is the better fit: updates come through the Store, which the setup
 program can't offer. Partner Center can't turn one kind of product into
-the other, so the MSIX needs a product made as an "MSIX or PWA app". Once
-listed, the app is in winget's `msstore` source too
-(`winget install <Store ID> -s msstore`).
+the other, so the MSIX needs a product made as an "MSIX or PWA app". Listed,
+the app is in winget's `msstore` source too
+(`winget install 9MW58B2T1ZVW -s msstore`).
 
 ## Making a package
 
@@ -115,25 +115,25 @@ with no prompt. Either has its own identity, so it sits beside the setup
 program's copy and beside a Store install. Installed again, a test package
 needs a higher `-Version`, or Windows keeps the last one's icons.
 
-## Before the first submission
+## In the Store
 
-- Partner Center: the product is an "MSIX or PWA app", Store ID
-  9MW58B2T1ZVW. Its identity is msix.ps1's store identity (copied from
-  Product identity, 2026-11-05), and its Display must be the reserved name,
-  Pktito, exactly.
-- The listing:
-  - a description;
-  - screenshots of at least 1366×768 (the site's standard shots, 682×832,
-    are too small);
-  - the privacy policy URL (pktito.net/privacy);
-  - the age rating questionnaire;
-  - the runFullTrust justification;
-  - certification notes, saying the first run downloads a model of about
-    650 MB from models.pktito.net.
-- The Windows App Certification Kit on the bundle (it needs an
-  administrator).
+pktito is live in the Microsoft Store, Store ID 9MW58B2T1ZVW: an "MSIX or
+PWA app" product whose identity is msix.ps1's store identity (copied from
+Product identity, 2026-11-05) and whose Display is the reserved name,
+Pktito, exactly. The listing and runFullTrust were accepted; submission 2
+was 0.9.7 (2026-11-10).
+
+A release is a new submission (Start update on the product's overview):
+
+- Packages: the release's msixbundle. Partner Center removes the older
+  bundle on Save, as a higher version that reaches the same customers.
+- Store listings: What's new in this version is the release's notes, as
+  pktito-site's src/lib/releases.ts has them.
 - Version: Cargo.toml's, with a fourth part of 0, which the Store keeps for
   itself.
+
+Screenshots must be at least 1366×768; the site's standard shots, 682×832,
+are too small on their own.
 
 ## Tested
 
