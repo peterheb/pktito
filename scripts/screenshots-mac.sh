@@ -41,7 +41,7 @@ cache="$HOME/.cache/pktito-screenshots"
 mp3="$cache/wonderland_ch_01_64kb.mp3"
 
 [ -d "$app" ] || { echo "no $app: cargo tauri build --bundles app first, or set PKTITO_APP" >&2; exit 2; }
-[ -f "$data/models/parakeet-tdt-0.6b-v3.pkf" ] || { echo "the multilingual model isn't downloaded: pktito-cli download v3" >&2; exit 2; }
+ls "$data/models/"parakeet-tdt-0.6b-v3*.pkf >/dev/null 2>&1 || { echo "the multilingual model isn't downloaded: pktito-cli download v3" >&2; exit 2; }
 mkdir -p "$out" "$cache"
 if [ ! -f "$mp3" ] || [ "$(shasum -a 256 "$mp3" | cut -c1-64)" != "$mp3_sha" ]; then
     curl -fsSL -o "$mp3.part" "$mp3_url"
