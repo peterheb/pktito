@@ -1,0 +1,6 @@
+# Every file as it is in the repository, on every system: Git for Windows'
+# core.autocrlf=true otherwise checks text out with CRLF (351 of 432 files
+# in a clone there, 2026-11-20; PKT-40), which the formatters, the tests'
+# byte comparisons and the shell scripts don't expect. The one file stored
+# with CRLF, android/gradlew.bat, keeps it. As libpktito's (4bf71ed).
+* -text
